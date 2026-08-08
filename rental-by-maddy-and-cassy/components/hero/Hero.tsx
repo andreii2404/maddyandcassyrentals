@@ -2,11 +2,15 @@ import Link from "next/link";
 import ProductShowcase from "@/components/product-showcase/ProductShowcase";
 import Stats from "@/components/stats/Stats";
 import CalendarIcon from "@/components/icons/CalendarIcon";
-import { getActiveProducts } from "@/src/services/productService";
+import SearchIcon from "@/components/icons/SearchIcon";
+import type { Product } from "@/types/product";
 import styles from "./Hero.module.css";
 
-export default async function Hero() {
-  const products = await getActiveProducts();
+interface HeroProps {
+  products: Product[];
+}
+
+export default function Hero({ products }: HeroProps) {
   const categoryCount = new Set(products.map((product) => product.category).filter(Boolean)).size;
 
   return (
@@ -29,6 +33,19 @@ export default async function Hero() {
             Premium cameras and iPhones for daily rental. Quality equipment,
             simple booking, and transparent pricing—all in one place.
           </p>
+
+          <form action="/catalog" method="get" role="search" className={styles.searchForm}>
+            <SearchIcon size={19} className={styles.searchIcon} />
+            <label className={styles.srOnly} htmlFor="storefront-search">Search rental products</label>
+            <input
+              id="storefront-search"
+              name="q"
+              type="search"
+              autoComplete="off"
+              placeholder="Search iPhones, cameras, or models"
+            />
+            <button type="submit">Search</button>
+          </form>
 
           <div className={styles.buttons}>
             <Link href="/catalog" className={styles.primaryButton}>

@@ -15,9 +15,15 @@ import styles from "./catalog.module.css";
 
 interface CatalogViewProps {
   products: Product[];
+  initialSearch?: string;
+  initialCategory?: string;
 }
 
-export default function CatalogView({ products }: CatalogViewProps) {
+export default function CatalogView({
+  products,
+  initialSearch = "",
+  initialCategory = "All",
+}: CatalogViewProps) {
   const categories = useMemo(
     () => ["All", ...Array.from(new Set(products.map((product) => product.category).filter(Boolean)))],
     [products]
@@ -34,8 +40,10 @@ export default function CatalogView({ products }: CatalogViewProps) {
     ])
   );
 
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState<CategoryFilter>("All");
+  const [search, setSearch] = useState(initialSearch);
+  const [category, setCategory] = useState<CategoryFilter>(
+    categories.includes(initialCategory) ? initialCategory : "All",
+  );
   const [sort, setSort] = useState<SortOption>("featured");
   const [availableOnly, setAvailableOnly] = useState(false);
   const { toggleFavorite, isFavorite } = useFavorites();
@@ -49,15 +57,24 @@ export default function CatalogView({ products }: CatalogViewProps) {
       const matchesCategory = category === "All" || product.category === category;
       const matchesSearch =
         !query ||
-        product.name.toLowerCase().includes(query) ||
-        (product.brand ?? "").toLowerCase().includes(query);
+        [
+          product.name,
+          product.brand ?? "",
+          product.category,
+          product.shortDescription ?? "",
+          product.description ?? "",
+          ...Object.values(product.specs),
+          ...product.included,
+        ].some((value) => value.toLowerCase().includes(query));
       const matchesAvailability =
-        !availableOnly || (units?.totalUnits ?? product.totalUnits) > 0;
+        !availableOnly || (units?.availableUnits ?? product.availableUnits) > 0;
       return matchesCategory && matchesSearch && matchesAvailability;
     });
 
     const sorted = [...filtered];
-    if (sort === "price-asc") {
+    if (sort === "featured") {
+      sorted.sort((a, b) => Number(b.isFeatured) - Number(a.isFeatured));
+    } else if (sort === "price-asc") {
       sorted.sort((a, b) => a.pricePerDay - b.pricePerDay);
     } else if (sort === "price-desc") {
       sorted.sort((a, b) => b.pricePerDay - a.pricePerDay);
@@ -121,9 +138,10 @@ export default function CatalogView({ products }: CatalogViewProps) {
             type="button"
             className={styles.resetButton}
             onClick={() => {
-              setSearch("");
-              setCategory("All");
-              setAvailableOnly(false);
+            setSearch("");
+            setCategory("All");
+            setSort("featured");
+            setAvailableOnly(false);
             }}
           >
             Reset filters

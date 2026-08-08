@@ -27,7 +27,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={poppins.variable} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={poppins.variable}
+      data-scroll-behavior="smooth"
+      suppressHydrationWarning
+    >
       <body>
         <AuthProvider>
           <ToastProvider>{children}</ToastProvider>

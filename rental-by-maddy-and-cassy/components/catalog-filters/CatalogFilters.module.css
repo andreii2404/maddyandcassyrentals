@@ -131,13 +131,40 @@
 }
 
 @media (max-width: 640px) {
+  .categoryRow {
+    margin-right: -1.5rem;
+    margin-left: -1.5rem;
+    padding: 0 1.5rem 0.3rem;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .categoryRow::-webkit-scrollbar {
+    display: none;
+  }
+
+  .categoryPill {
+    flex: 0 0 auto;
+  }
+
   .controlsRow {
     flex-direction: column;
     align-items: stretch;
+    gap: 0.8rem;
   }
 
-  .selectField,
-  .checkboxField {
+  .searchField {
+    min-height: 44px;
+    flex: 0 0 auto;
+  }
+
+  .selectField {
     justify-content: space-between;
+  }
+
+  .checkboxField {
+    justify-content: flex-start;
+    padding: 0.15rem 0.1rem;
   }
 }

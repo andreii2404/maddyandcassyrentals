@@ -1,5 +1,6 @@
 :root {
   --color-background: #f7f7f5;
+  --color-background-soft: #fbf5f3;
   --color-blush: #f2d2cf;
   --color-dusty-rose: #d7a5a5;
   --color-primary: #9a5965;
@@ -43,6 +44,16 @@ body {
   margin: 0;
   max-width: 100vw;
   overflow-x: hidden;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }
 
 body {

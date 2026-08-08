@@ -11,14 +11,23 @@ export const metadata: Metadata = {
     "Browse premium iPhones and cameras available for daily rental in Metro Manila.",
 };
 
-export default async function CatalogPage() {
+interface CatalogPageProps {
+  searchParams: Promise<{ q?: string; category?: string }>;
+}
+
+export default async function CatalogPage({ searchParams }: CatalogPageProps) {
+  const params = await searchParams;
   const products = await getActiveProducts();
 
   return (
     <div>
       <Navbar />
       <main>
-        <CatalogView products={products} />
+        <CatalogView
+          products={products}
+          initialSearch={params.q ?? ""}
+          initialCategory={params.category ?? "All"}
+        />
       </main>
     </div>
   );

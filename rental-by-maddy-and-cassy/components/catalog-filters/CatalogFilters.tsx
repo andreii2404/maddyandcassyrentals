@@ -33,13 +33,12 @@ export default function CatalogFilters({
 }: CatalogFiltersProps) {
   return (
     <div className={styles.filters}>
-      <div className={styles.categoryRow} role="tablist" aria-label="Filter by category">
+      <div className={styles.categoryRow} role="group" aria-label="Filter by category">
         {categories.map((item) => (
           <button
             key={item}
             type="button"
-            role="tab"
-            aria-selected={category === item}
+            aria-pressed={category === item}
             className={`${styles.categoryPill} ${category === item ? styles.categoryPillActive : ""}`}
             onClick={() => onCategoryChange(item)}
           >
@@ -52,7 +51,8 @@ export default function CatalogFilters({
         <label className={styles.searchField}>
           <SearchIcon size={17} className={styles.searchIcon} />
           <input
-            type="text"
+            type="search"
+            autoComplete="off"
             value={search}
             onChange={(event) => onSearchChange(event.target.value)}
             placeholder="Search products..."
@@ -67,7 +67,7 @@ export default function CatalogFilters({
             value={sort}
             onChange={(event) => onSortChange(event.target.value as SortOption)}
             className={styles.select}
-            aria-label="Sort by price"
+            aria-label="Sort products"
           >
             <option value="featured">Featured</option>
             <option value="price-asc">Price: Low to High</option>
@@ -87,7 +87,7 @@ export default function CatalogFilters({
         </label>
       </div>
 
-      <p className={styles.resultCount}>
+      <p className={styles.resultCount} aria-live="polite">
         {resultCount} {resultCount === 1 ? "product" : "products"} found
       </p>
     </div>
