@@ -47,6 +47,8 @@ export default function StepPaymentSubmission({
   onContinue,
 }: StepPaymentSubmissionProps) {
   const total = product.pricePerDay * getDayCount(draft.startDate, draft.endDate);
+  const listTotal = product.listPricePerDay * getDayCount(draft.startDate, draft.endDate);
+  const discountSavings = Math.max(0, listTotal - total);
   const dueNow = draft.paymentOption === "deposit_50" ? Math.round(total * 50) / 100 : total;
   const paid = paymentState === "paid" || paymentState === "partially_paid";
 
@@ -94,6 +96,12 @@ export default function StepPaymentSubmission({
       </fieldset>
 
       <dl className={styles.summary}>
+        {discountSavings > 0 ? (
+          <div>
+            <dt>{product.discountLabel || "Catalog discount"}</dt>
+            <dd className={styles.savings}>-{money(discountSavings)}</dd>
+          </div>
+        ) : null}
         <div>
           <dt>Rental total</dt>
           <dd>{money(total)}</dd>

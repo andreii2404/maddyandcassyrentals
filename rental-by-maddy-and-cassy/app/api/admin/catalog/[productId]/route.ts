@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
-import { parseCatalogInput, reconcileInventoryUnits, resolveBrandId, resolveCategoryId } from "@/src/lib/server/catalog";
+import {
+  buildStoredSpecifications,
+  parseCatalogInput,
+  reconcileInventoryUnits,
+  resolveBrandId,
+  resolveCategoryId,
+} from "@/src/lib/server/catalog";
 import { enforceRateLimit, requireActiveAdmin, RequestSecurityError } from "@/src/lib/server/requestSecurity";
 
 export const runtime = "nodejs";
@@ -19,6 +25,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ pr
       resolveCategoryId(supabase, input.category),
     ]);
 
+    await reconcileInventoryUnits(supabase, productId, input.totalUnits);
+
     const { error } = await supabase
       .from("products")
       .update({
@@ -31,13 +39,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ pr
         refundable_deposit: input.refundableDeposit,
         status: input.status,
         is_featured: input.isFeatured,
-        specifications: input.specifications,
+        specifications: buildStoredSpecifications(input),
         updated_by: user.id,
       })
       .eq("id", productId);
     if (error) throw new Error(error.message);
-
-    await reconcileInventoryUnits(supabase, productId, input.totalUnits);
 
     if (existing.daily_rate !== input.dailyRate) {
       await supabase.rpc("log_audit_event", {
@@ -64,6 +70,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ pr
     if (error instanceof Error && error.message === "INVALID_CATALOG_INPUT") {
       return NextResponse.json({ error: "Check the product details and try again." }, { status: 400 });
     }
+    if (error instanceof Error && error.message === "INVENTORY_UNITS_IN_USE") {
+      return NextResponse.json({ error: "Booked units cannot be removed from active inventory." }, { status: 409 });
+    }
     console.error("Catalog product update failed", error);
     return NextResponse.json({ error: "The product could not be updated." }, { status: 500 });
   }
@@ -72,14 +81,15 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ pr
 /** Deactivates rather than deletes — historical bookings reference this product. */
 export async function DELETE(request: Request, { params }: { params: Promise<{ productId: string }> }): Promise<NextResponse> {
   try {
+    enforceRateLimit(request, "admin-catalog", 30, 60_000);
     const { supabase } = await requireActiveAdmin();
     const { productId } = await params;
 
     const { data: existing } = await supabase.from("products").select("name").eq("id", productId).maybeSingle();
     if (!existing) return NextResponse.json({ error: "The product no longer exists." }, { status: 404 });
 
-    await supabase.from("products").update({ status: "inactive" }).eq("id", productId);
-    await reconcileInventoryUnits(supabase, productId, 0);
+    const { error } = await supabase.from("products").update({ status: "inactive" }).eq("id", productId);
+    if (error) throw new Error(error.message);
 
     await supabase.rpc("log_audit_event", {
       p_action: "catalog.product_deactivated",

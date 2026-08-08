@@ -11,10 +11,6 @@ import ImageGallery from "@/components/image-gallery/ImageGallery";
 import ProductTabs from "@/components/product-tabs/ProductTabs";
 import SimilarProducts from "@/components/similar-products/SimilarProducts";
 import { useInventoryMap } from "@/hooks/useInventory";
-import {
-  createUnitCountsFromAvailability,
-  useProductAvailability,
-} from "@/hooks/useProductAvailability";
 import styles from "./details.module.css";
 
 interface ProductDetailsClientProps {
@@ -26,9 +22,14 @@ export default function ProductDetailsClient({
   product,
   similarProducts,
 }: ProductDetailsClientProps) {
-  const currentAvailability = useProductAvailability(product.id, product.totalUnits);
-
-  const defaultsById: Record<string, UnitCounts> = {};
+  const defaultsById: Record<string, UnitCounts> = {
+    [product.id]: {
+      totalUnits: product.totalUnits,
+      availableUnits: product.availableUnits,
+      reservedUnits: product.reservedUnits,
+      rentedUnits: product.rentedUnits,
+    },
+  };
   for (const item of similarProducts) {
     defaultsById[item.id] = {
       totalUnits: item.totalUnits,
@@ -39,10 +40,22 @@ export default function ProductDetailsClient({
   }
 
   const unitsByProductId = useInventoryMap(defaultsById);
-  const units = createUnitCountsFromAvailability(product.totalUnits, currentAvailability.availableUnits);
+  const units = unitsByProductId.get(product.id) ?? defaultsById[product.id];
 
   const images = product.images.length ? product.images.map((image) => image.url) : [product.image];
   const specificationEntries = Object.entries(product.specs);
+  const rentalName = product.brand && !product.name.toLowerCase().startsWith(product.brand.toLowerCase())
+    ? `${product.brand} ${product.name}`
+    : product.name;
+  const fallbackDescription = [
+    `Rent the ${rentalName} by the day from Rental by Maddy & Cassy.`,
+    specificationEntries.length > 0
+      ? `Key details include ${specificationEntries.map(([label, value]) => `${label.toLowerCase()}: ${value}`).join(", ")}.`
+      : "Check the listing details and live calendar before choosing your rental dates.",
+    product.included.length > 0
+      ? `The rental package includes ${product.included.join(", ")}.`
+      : "Package inclusions can be confirmed with the rental team before pickup or delivery.",
+  ].join(" ");
 
   return (
     <>
@@ -76,16 +89,22 @@ export default function ProductDetailsClient({
             </p>
           ) : null}
 
-          {product.description ? <p className={styles.description}>{product.description}</p> : null}
+          <p className={styles.description}>{product.description || product.shortDescription || fallbackDescription}</p>
 
           <div className={styles.infoCards}>
             <div className={styles.infoCard}>
               <p className={styles.infoCardLabel}>Daily Rate</p>
+              {product.discountPercent > 0 ? (
+                <p className={styles.originalRate}>{product.currency}{product.listPricePerDay.toLocaleString()} / day</p>
+              ) : null}
               <p className={styles.infoCardValue}>
                 {product.currency}
                 {product.pricePerDay.toLocaleString()}
                 <span className={styles.perDay}>/day</span>
               </p>
+              {product.discountPercent > 0 ? (
+                <p className={styles.discountNote}>{product.discountLabel || `${product.discountPercent}% discount applied`}</p>
+              ) : null}
             </div>
             <div className={styles.infoCard}>
               <p className={styles.infoCardLabel}>Availability Status</p>

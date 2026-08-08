@@ -41,6 +41,41 @@ export interface AdminPriceHistoryEntry {
 export interface AdminCatalogData {
   products: Product[];
   priceHistory: AdminPriceHistoryEntry[];
+  categories: AdminCatalogCategory[];
+  inventoryUnits: AdminInventoryUnit[];
+  reviews: AdminProductReview[];
+}
+
+export interface AdminCatalogCategory {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  isActive: boolean;
+  sortOrder: number;
+  productCount: number;
+}
+
+export interface AdminInventoryUnit {
+  id: string;
+  productId: string;
+  unitCode: string;
+  serialNumber: string | null;
+  lifecycleStatus: "active" | "maintenance" | "retired";
+  conditionNotes: string | null;
+  acquiredAt: string | null;
+  retiredAt: string | null;
+  hasActiveReservation: boolean;
+}
+
+export interface AdminProductReview {
+  id: string;
+  productId: string;
+  productName: string;
+  rating: number;
+  comment: string | null;
+  status: "pending" | "approved" | "rejected";
+  createdAt: string;
 }
 
 export interface AdminPaymentsData {

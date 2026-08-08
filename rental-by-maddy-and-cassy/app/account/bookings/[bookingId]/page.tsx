@@ -18,6 +18,7 @@ import formStyles from "@/components/ui/Form.module.css";
 import styles from "./bookingDetail.module.css";
 import BookingPaymentPanel from "@/components/payment/BookingPaymentPanel";
 import { useToast } from "@/components/ui/ToastProvider";
+import CustomerReviewPanel from "@/components/reviews/CustomerReviewPanel";
 
 const REQUIREMENTS_STATUS_LABEL: Record<string, string> = {
   not_submitted: "Not Submitted",
@@ -140,6 +141,19 @@ function BookingDetailContent() {
       ) : null}
 
       <BookingPaymentPanel booking={booking} payments={payments} />
+
+      {booking.status === "returned" ? (
+        <section className={styles.section}>
+          <h3>Rate Your Rental</h3>
+          <CustomerReviewPanel
+            bookingId={booking.id}
+            productId={booking.productId}
+            productName={booking.productSnapshot.name}
+            existingReview={details.review}
+            onSubmitted={loadDetails}
+          />
+        </section>
+      ) : null}
 
       <section className={styles.section}>
         <h3>Status Overview</h3>

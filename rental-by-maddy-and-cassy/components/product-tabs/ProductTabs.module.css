@@ -79,6 +79,20 @@
   color: var(--color-charcoal);
 }
 
+.emptyReviews {
+  padding: 1rem 0;
+  text-align: center;
+  color: var(--color-charcoal);
+}
+
+.emptyReviews strong {
+  color: var(--color-text-primary);
+}
+
+.emptyReviews p {
+  margin: 0.35rem 0 0;
+}
+
 .reviewSummary {
   margin: 0 0 1.2rem;
   color: var(--color-text-primary);

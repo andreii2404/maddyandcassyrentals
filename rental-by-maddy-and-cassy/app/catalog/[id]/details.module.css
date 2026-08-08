@@ -158,6 +158,20 @@
   margin-top: 0.8rem;
 }
 
+.originalRate {
+  margin: 0;
+  color: var(--color-charcoal);
+  font-size: 0.72rem;
+  text-decoration: line-through;
+}
+
+.discountNote {
+  margin: 0;
+  color: var(--color-status-green);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
 .reserveCard {
   padding: 1rem 1.1rem;
   border-radius: 20px;

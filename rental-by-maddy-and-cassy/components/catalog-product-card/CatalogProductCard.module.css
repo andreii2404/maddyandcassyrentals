@@ -138,11 +138,30 @@
   color: var(--color-primary);
 }
 
-.price {
+.priceBlock {
+  display: grid;
+  gap: 0.08rem;
   margin: 0.2rem 0 0.6rem;
+}
+
+.price {
+  margin: 0;
   font-size: 1.1rem;
   font-weight: 700;
   color: var(--color-primary);
+}
+
+.listPrice {
+  margin: 0;
+  color: var(--color-charcoal);
+  font-size: 0.72rem;
+  text-decoration: line-through;
+}
+
+.discountText {
+  color: var(--color-status-green);
+  font-size: 0.68rem;
+  font-weight: 700;
 }
 
 .perDay {

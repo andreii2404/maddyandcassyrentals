@@ -64,11 +64,19 @@ export default function CatalogProductCard({
         {Object.keys(product.specs).length > 0 ? (
           <p className={styles.specSummary}>{Object.values(product.specs).join(" · ")}</p>
         ) : null}
-        <p className={styles.price}>
-          {product.currency}
-          {product.pricePerDay.toLocaleString()}
-          <span className={styles.perDay}>/day</span>
-        </p>
+        <div className={styles.priceBlock}>
+          {product.discountPercent > 0 ? (
+            <p className={styles.listPrice}>{product.currency}{product.listPricePerDay.toLocaleString()}/day</p>
+          ) : null}
+          <p className={styles.price}>
+            {product.currency}
+            {product.pricePerDay.toLocaleString()}
+            <span className={styles.perDay}>/day</span>
+          </p>
+          {product.discountPercent > 0 ? (
+            <span className={styles.discountText}>{product.discountLabel || `${product.discountPercent}% catalog discount`}</span>
+          ) : null}
+        </div>
         {product.reviewCount > 0 ? (
           <p className={styles.rating}>
             {product.rating.toFixed(1)} ★{" "}

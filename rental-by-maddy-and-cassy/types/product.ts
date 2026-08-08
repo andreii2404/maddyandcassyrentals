@@ -34,6 +34,12 @@ export interface Product {
   shortDescription?: string;
   description?: string;
   dailyRate: number;
+  /** Daily rate before an applicable catalog discount. */
+  listPricePerDay: number;
+  /** Percentage discount configured by an administrator (0 when none). */
+  discountPercent: number;
+  /** Optional customer-facing explanation for the discount. */
+  discountLabel?: string;
   refundableDeposit: number;
   currency: "PHP";
   status: ProductStatus;

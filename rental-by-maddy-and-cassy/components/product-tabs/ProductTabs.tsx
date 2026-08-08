@@ -18,7 +18,7 @@ export default function ProductTabs({ specs, included, reviews, rating, reviewCo
   const tabs: { id: TabId; label: string }[] = [];
   if (Object.keys(specs).length > 0) tabs.push({ id: "specifications", label: "Specifications" });
   if (included.length > 0) tabs.push({ id: "included", label: "What’s Included" });
-  if (reviews.length > 0) tabs.push({ id: "reviews", label: "Reviews" });
+  tabs.push({ id: "reviews", label: reviewCount > 0 ? `Reviews (${reviewCount})` : "Reviews" });
 
   const [activeTab, setActiveTab] = useState<TabId | null>(() => tabs[0]?.id ?? null);
 
@@ -74,23 +74,32 @@ export default function ProductTabs({ specs, included, reviews, rating, reviewCo
         </div>
       ) : null}
 
-      {reviews.length > 0 ? (
-        <div role="tabpanel" id="panel-reviews" aria-labelledby="tab-reviews" hidden={activeTab !== "reviews"} className={styles.panel}>
-          <p className={styles.reviewSummary}><strong>{rating.toFixed(1)}</strong> average rating from {reviewCount} reviews</p>
-          <ul className={styles.reviewList}>
-            {reviews.map((review) => (
-              <li key={review.id} className={styles.reviewItem}>
-                <div className={styles.reviewHeader}>
-                  <span className={styles.reviewAuthor}>{review.author}</span>
-                  <span className={styles.reviewRating}>{review.rating.toFixed(1)} ★</span>
-                </div>
-                <p className={styles.reviewComment}>{review.comment}</p>
-                <span className={styles.reviewDate}>{review.date}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
+      <div role="tabpanel" id="panel-reviews" aria-labelledby="tab-reviews" hidden={activeTab !== "reviews"} className={styles.panel}>
+        {reviews.length > 0 ? (
+          <>
+            <p className={styles.reviewSummary}><strong>{rating.toFixed(1)}</strong> average rating from {reviewCount} verified renter reviews</p>
+            <ul className={styles.reviewList}>
+              {reviews.map((review) => (
+                <li key={review.id} className={styles.reviewItem}>
+                  <div className={styles.reviewHeader}>
+                    <span className={styles.reviewAuthor}>{review.author}</span>
+                    <span className={styles.reviewRating}>{review.rating.toFixed(1)} ★</span>
+                  </div>
+                  <p className={styles.reviewComment}>{review.comment || "Rating submitted without a written comment."}</p>
+                  <time className={styles.reviewDate} dateTime={review.date}>
+                    {new Date(review.date).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })}
+                  </time>
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <div className={styles.emptyReviews}>
+            <strong>No customer reviews yet</strong>
+            <p>Verified renters can leave a rating after their rental is returned.</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

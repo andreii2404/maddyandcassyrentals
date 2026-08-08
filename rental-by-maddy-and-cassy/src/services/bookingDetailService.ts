@@ -138,6 +138,13 @@ export interface BookingDetails {
   documents: BookingDocument[];
   payments: PaymentRecord[];
   receipts: BookingReceipt[];
+  review: {
+    id: string;
+    rating: number;
+    comment: string | null;
+    status: "pending" | "approved" | "rejected";
+    createdAt: string;
+  } | null;
 }
 
 export async function getBookingDetails(
@@ -154,6 +161,7 @@ export async function getBookingDetails(
     { data: requirements },
     { data: payments },
     { data: receipts },
+    { data: bookingItems },
   ] = await Promise.all([
     supabase.from("booking_emergency_contacts").select("*").eq("booking_id", bookingId).maybeSingle(),
     supabase.from("booking_agreements").select("*").eq("booking_id", bookingId).maybeSingle(),
@@ -180,6 +188,10 @@ export async function getBookingDetails(
       .eq("booking_id", bookingId)
       .order("created_at", { ascending: false }),
     supabase.from("booking_receipts").select("*").eq("booking_id", bookingId).order("created_at", { ascending: false }),
+    supabase
+      .from("booking_items")
+      .select("reviews(id, rating, comment, status, created_at)")
+      .eq("booking_id", bookingId),
   ]);
 
   let agreement: AgreementDoc | null = null;
@@ -205,6 +217,13 @@ export async function getBookingDetails(
   const documents = ((requirements ?? []) as unknown as RequirementRow[])
     .map(mapRequirementToDocument)
     .filter((document): document is BookingDocument => document !== null);
+  const reviewRow = (bookingItems?.[0]?.reviews as unknown as Array<{
+    id: string;
+    rating: number;
+    comment: string | null;
+    status: "pending" | "approved" | "rejected";
+    created_at: string;
+  }> | null)?.[0];
 
   return {
     booking,
@@ -226,6 +245,13 @@ export async function getBookingDetails(
         createdAt: row.created_at,
       }),
     ),
+    review: reviewRow ? {
+      id: reviewRow.id,
+      rating: reviewRow.rating,
+      comment: reviewRow.comment,
+      status: reviewRow.status,
+      createdAt: reviewRow.created_at,
+    } : null,
   };
 }
 

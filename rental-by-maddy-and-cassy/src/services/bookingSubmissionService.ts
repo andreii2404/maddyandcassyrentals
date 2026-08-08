@@ -48,6 +48,10 @@ export async function createBookingReservation(
   const startDate = draft.startDate!;
   const endDate = draft.endDate!;
   const fulfillmentMethod = draft.fulfillmentMethod!;
+  const rentalDays = getDayCount(startDate, endDate);
+  const discountAmount = Math.round(
+    product.dailyRate * rentalDays * (product.discountPercent / 100) * 100,
+  ) / 100;
 
   const result = await submitBookingWithDateGuard(supabase, {
     productId: product.id,
@@ -59,14 +63,15 @@ export async function createBookingReservation(
     location: fulfillmentMethod === "delivery" ? draft.customerLocation.trim() : undefined,
     cityMunicipality: fulfillmentMethod === "delivery" ? draft.cityMunicipality.trim() : undefined,
     province: fulfillmentMethod === "delivery" ? draft.province.trim() : undefined,
+    discountAmount,
     productSnapshot: {
       name: product.name,
       brand: product.brand ?? "",
       category: product.category,
       image: product.images[0]?.url || "/images/product-placeholder.png",
-      pricePerDay: product.dailyRate,
+      pricePerDay: product.pricePerDay,
       currency: product.currency,
-      included: [],
+      included: product.included,
     },
     customerSnapshot: {
       fullName: customerInfo.fullName.trim(),

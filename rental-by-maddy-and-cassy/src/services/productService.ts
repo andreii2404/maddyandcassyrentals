@@ -69,7 +69,7 @@ async function mapProduct(
 
   const images = (row.product_images ?? [])
     .slice()
-    .sort((a, b) => a.sort_order - b.sort_order)
+    .sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.sort_order - b.sort_order)
     .map((image) => ({
       id: image.id,
       storagePath: image.storage_path,
@@ -84,10 +84,20 @@ async function mapProduct(
     : 0;
 
   const specifications = (row.specifications as Record<string, string>) ?? {};
-  const { included: includedText, ...displaySpecifications } = specifications;
+  const {
+    included: includedText,
+    discountPercent: discountPercentText,
+    discountLabel,
+    ...displaySpecifications
+  } = specifications;
   const included = includedText
     ? includedText.split(",").map((item) => item.trim()).filter(Boolean)
     : [];
+  const parsedDiscount = Number(discountPercentText ?? 0);
+  const discountPercent = Number.isFinite(parsedDiscount)
+    ? Math.min(Math.max(parsedDiscount, 0), 90)
+    : 0;
+  const discountedDailyRate = Math.round(row.daily_rate * (1 - discountPercent / 100) * 100) / 100;
 
   return {
     id: row.id,
@@ -98,6 +108,9 @@ async function mapProduct(
     shortDescription: row.short_description ?? undefined,
     description: row.description ?? undefined,
     dailyRate: row.daily_rate,
+    listPricePerDay: row.daily_rate,
+    discountPercent,
+    discountLabel: discountLabel || undefined,
     refundableDeposit: row.refundable_deposit,
     currency: "PHP",
     status: row.status as Product["status"],
@@ -114,10 +127,10 @@ async function mapProduct(
     reviews,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-    pricePerDay: row.daily_rate,
+    pricePerDay: discountedDailyRate,
     image: images[0]?.url || "/images/product-placeholder.png",
     included,
-    badge: row.is_featured ? "Featured" : undefined,
+    badge: discountPercent > 0 ? `${discountPercent}% OFF` : row.is_featured ? "Featured" : undefined,
     specs: displaySpecifications,
     isActive: row.status === "active",
   };
@@ -171,32 +184,38 @@ export interface CatalogEditorInput {
   description: string;
   dailyRate: number;
   refundableDeposit: number;
+  discountPercent: number;
+  discountLabel: string;
   specifications: Record<string, string>;
   totalUnits: number;
   isFeatured: boolean;
   status: Product["status"];
 }
 
-async function adminCatalogRequest(
+async function adminCatalogRequest<T = void>(
   path: string,
   method: "POST" | "PATCH" | "DELETE",
   input?: CatalogEditorInput,
-): Promise<void> {
+): Promise<T> {
   const response = await fetch(path, {
     method,
     credentials: "same-origin",
     headers: input ? { "Content-Type": "application/json" } : undefined,
     body: input ? JSON.stringify(input) : undefined,
   });
-  if (response.ok) return;
+  if (response.ok) {
+    if (response.status === 204) return undefined as T;
+    return (await response.json().catch(() => undefined)) as T;
+  }
   const body = (await response.json().catch(() => null)) as { error?: unknown } | null;
   throw new Error(
     typeof body?.error === "string" ? body.error : "The catalog change could not be saved.",
   );
 }
 
-export async function createCatalogProductAsAdmin(input: CatalogEditorInput): Promise<void> {
-  return adminCatalogRequest("/api/admin/catalog", "POST", input);
+export async function createCatalogProductAsAdmin(input: CatalogEditorInput): Promise<string> {
+  const result = await adminCatalogRequest<{ productId: string }>("/api/admin/catalog", "POST", input);
+  return result.productId;
 }
 
 export async function updateCatalogProductAsAdmin(
@@ -210,23 +229,73 @@ export async function deactivateCatalogProductAsAdmin(productId: string): Promis
   return adminCatalogRequest(`/api/admin/catalog/${encodeURIComponent(productId)}`, "DELETE");
 }
 
+async function adminJsonRequest(path: string, method: "POST" | "PATCH" | "DELETE", body?: unknown): Promise<void> {
+  const response = await fetch(path, {
+    method,
+    credentials: "same-origin",
+    headers: body ? { "Content-Type": "application/json" } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (response.ok) return;
+  const result = (await response.json().catch(() => null)) as { error?: string } | null;
+  throw new Error(result?.error || "The catalog change could not be saved.");
+}
+
+export interface CatalogCategoryInput {
+  name: string;
+  description: string;
+  sortOrder: number;
+}
+
+export function createCatalogCategoryAsAdmin(input: CatalogCategoryInput): Promise<void> {
+  return adminJsonRequest("/api/admin/catalog/categories", "POST", input);
+}
+
+export function updateCatalogCategoryAsAdmin(categoryId: string, input: CatalogCategoryInput): Promise<void> {
+  return adminJsonRequest(`/api/admin/catalog/categories/${encodeURIComponent(categoryId)}`, "PATCH", input);
+}
+
+export function deleteCatalogCategoryAsAdmin(categoryId: string): Promise<void> {
+  return adminJsonRequest(`/api/admin/catalog/categories/${encodeURIComponent(categoryId)}`, "DELETE");
+}
+
+export interface InventoryUnitEditorInput {
+  unitCode: string;
+  serialNumber: string;
+  lifecycleStatus: "active" | "maintenance" | "retired";
+  conditionNotes: string;
+  acquiredAt: string;
+}
+
+export function updateInventoryUnitAsAdmin(unitId: string, input: InventoryUnitEditorInput): Promise<void> {
+  return adminJsonRequest(`/api/admin/catalog/units/${encodeURIComponent(unitId)}`, "PATCH", input);
+}
+
+export function moderateProductReviewAsAdmin(
+  reviewId: string,
+  status: "approved" | "rejected",
+): Promise<void> {
+  return adminJsonRequest(`/api/admin/catalog/reviews/${encodeURIComponent(reviewId)}`, "PATCH", { status });
+}
+
 export async function uploadCatalogImage(
-  supabase: SupabaseClient<Database>,
   productId: string,
   file: File,
 ): Promise<{ storagePath: string; url: string }> {
-  const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
-  const storagePath = `${productId}/catalog-${Date.now()}.${extension}`;
-
-  const { error } = await supabase.storage.from("product-images").upload(storagePath, file, {
-    upsert: true,
+  const form = new FormData();
+  form.set("image", file);
+  const response = await fetch(`/api/admin/catalog/${encodeURIComponent(productId)}/images`, {
+    method: "POST",
+    credentials: "same-origin",
+    body: form,
   });
-  if (error) throw new Error(error.message);
-
-  return {
-    storagePath,
-    url: supabase.storage.from("product-images").getPublicUrl(storagePath).data.publicUrl,
-  };
+  const body = (await response.json().catch(() => null)) as
+    | { storagePath?: string; url?: string; error?: string }
+    | null;
+  if (!response.ok || !body?.storagePath || !body.url) {
+    throw new Error(body?.error || "The product image could not be uploaded.");
+  }
+  return { storagePath: body.storagePath, url: body.url };
 }
 
 export interface PriceHistoryEntry {
@@ -245,7 +314,7 @@ export async function getPriceHistory(
 ): Promise<PriceHistoryEntry[]> {
   const { data, error } = await supabase
     .from("audit_logs")
-    .select("id, entity_id, actor_user_id, metadata, created_at")
+    .select("id, entity_id, actor_user_id, previous_values, new_values, metadata, created_at")
     .eq("entity_type", "product")
     .eq("action", "catalog.price_changed")
     .order("created_at", { ascending: false });
@@ -254,13 +323,27 @@ export async function getPriceHistory(
 
   return (data ?? []).map((row) => {
     const metadata = (row.metadata as Record<string, unknown>) ?? {};
+    const previousValues = (row.previous_values as Record<string, unknown>) ?? {};
+    const newValues = (row.new_values as Record<string, unknown>) ?? {};
     return {
       id: row.id,
       productId: row.entity_id ?? "",
-      previousPrice: typeof metadata.previousPrice === "number" ? metadata.previousPrice : null,
-      newPrice: typeof metadata.newPrice === "number" ? metadata.newPrice : 0,
+      previousPrice: typeof previousValues.previousPrice === "number"
+        ? previousValues.previousPrice
+        : typeof metadata.previousPrice === "number"
+          ? metadata.previousPrice
+          : null,
+      newPrice: typeof newValues.newPrice === "number"
+        ? newValues.newPrice
+        : typeof metadata.newPrice === "number"
+          ? metadata.newPrice
+          : 0,
       changedBy: row.actor_user_id,
-      reason: typeof metadata.reason === "string" ? metadata.reason : "",
+      reason: typeof newValues.reason === "string"
+        ? newValues.reason
+        : typeof metadata.reason === "string"
+          ? metadata.reason
+          : "",
       createdAt: row.created_at,
     };
   });

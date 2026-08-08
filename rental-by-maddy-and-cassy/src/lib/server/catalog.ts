@@ -16,11 +16,15 @@ export function parseCatalogInput(value: unknown): CatalogEditorInput {
   };
   const dailyRate = Number(input.dailyRate);
   const refundableDeposit = Number(input.refundableDeposit ?? 0);
+  const discountPercent = Number(input.discountPercent ?? 0);
   const totalUnits = Number(input.totalUnits);
   if (!Number.isFinite(dailyRate) || dailyRate <= 0 || dailyRate > 1_000_000) {
     throw new Error("INVALID_CATALOG_INPUT");
   }
   if (!Number.isFinite(refundableDeposit) || refundableDeposit < 0) {
+    throw new Error("INVALID_CATALOG_INPUT");
+  }
+  if (!Number.isFinite(discountPercent) || discountPercent < 0 || discountPercent > 90) {
     throw new Error("INVALID_CATALOG_INPUT");
   }
   if (!Number.isInteger(totalUnits) || totalUnits < 0 || totalUnits > 1000) {
@@ -30,10 +34,18 @@ export function parseCatalogInput(value: unknown): CatalogEditorInput {
   if (status !== "draft" && status !== "active" && status !== "inactive" && status !== "archived") {
     throw new Error("INVALID_CATALOG_INPUT");
   }
-  const specifications =
+  const rawSpecifications =
     typeof input.specifications === "object" && input.specifications !== null && !Array.isArray(input.specifications)
-      ? (input.specifications as Record<string, string>)
+      ? (input.specifications as Record<string, unknown>)
       : {};
+  const specifications: Record<string, string> = {};
+  for (const [rawKey, rawValue] of Object.entries(rawSpecifications).slice(0, 30)) {
+    const key = rawKey.trim().slice(0, 80);
+    const specificationValue = typeof rawValue === "string" ? rawValue.trim().slice(0, 500) : "";
+    if (key && specificationValue && !["discountPercent", "discountLabel"].includes(key)) {
+      specifications[key] = specificationValue;
+    }
+  }
 
   return {
     name: string("name", 150),
@@ -43,11 +55,24 @@ export function parseCatalogInput(value: unknown): CatalogEditorInput {
     description: string("description", 3000, false),
     dailyRate,
     refundableDeposit,
+    discountPercent,
+    discountLabel: string("discountLabel", 120, false),
     specifications,
     totalUnits,
     isFeatured: input.isFeatured === true,
     status,
   };
+}
+
+export function buildStoredSpecifications(input: CatalogEditorInput): Record<string, string> {
+  const stored = { ...input.specifications };
+  const included = input.specifications.included?.trim();
+  if (included) stored.included = included;
+  if (input.discountPercent > 0) {
+    stored.discountPercent = String(input.discountPercent);
+    if (input.discountLabel.trim()) stored.discountLabel = input.discountLabel.trim();
+  }
+  return stored;
 }
 
 function slugify(value: string, fallback: string): string {
@@ -120,32 +145,65 @@ export async function reconcileInventoryUnits(
   productId: string,
   totalUnits: number,
 ): Promise<void> {
-  const { data: units } = await admin
+  const { data: units, error: unitsError } = await admin
     .from("inventory_units")
     .select("id, unit_code, lifecycle_status")
     .eq("product_id", productId)
     .order("unit_code", { ascending: true });
+  if (unitsError) throw new Error(unitsError.message);
 
   const existing = units ?? [];
+  const activeUnits = existing.filter((unit) => unit.lifecycle_status === "active");
 
-  if (existing.length < totalUnits) {
-    const newRows = Array.from({ length: totalUnits - existing.length }, (_, index) => ({
-      product_id: productId,
-      unit_code: `UNIT-${(existing.length + index + 1).toString().padStart(3, "0")}`,
-      lifecycle_status: "active" as const,
-    }));
-    await admin.from("inventory_units").insert(newRows);
-  }
-
-  for (const [index, unit] of existing.entries()) {
-    const shouldBeActive = index < totalUnits;
-    const nextStatus = shouldBeActive
-      ? unit.lifecycle_status === "retired"
-        ? "active"
-        : unit.lifecycle_status
-      : "retired";
-    if (nextStatus !== unit.lifecycle_status) {
-      await admin.from("inventory_units").update({ lifecycle_status: nextStatus }).eq("id", unit.id);
+  if (activeUnits.length < totalUnits) {
+    const retiredUnits = existing.filter((unit) => unit.lifecycle_status === "retired");
+    const reactivationCount = Math.min(totalUnits - activeUnits.length, retiredUnits.length);
+    const toReactivate = retiredUnits.slice(0, reactivationCount);
+    if (toReactivate.length > 0) {
+      const { error } = await admin
+        .from("inventory_units")
+        .update({ lifecycle_status: "active", retired_at: null })
+        .in("id", toReactivate.map((unit) => unit.id));
+      if (error) throw new Error(error.message);
     }
+
+    const createCount = totalUnits - activeUnits.length - reactivationCount;
+    if (createCount > 0) {
+      const usedCodes = new Set(existing.map((unit) => unit.unit_code));
+      const prefix = `INV-${productId.slice(0, 8).toUpperCase()}`;
+      let sequence = 1;
+      const newRows = Array.from({ length: createCount }, () => {
+        let unitCode = "";
+        do {
+          unitCode = `${prefix}-${sequence.toString().padStart(3, "0")}`;
+          sequence += 1;
+        } while (usedCodes.has(unitCode));
+        usedCodes.add(unitCode);
+        return { product_id: productId, unit_code: unitCode, lifecycle_status: "active" as const };
+      });
+      const { error } = await admin.from("inventory_units").insert(newRows);
+      if (error) throw new Error(error.message);
+    }
+    return;
   }
+
+  const retireCount = activeUnits.length - totalUnits;
+  if (retireCount <= 0) return;
+
+  const { data: heldReservations, error: reservationError } = await admin
+    .from("unit_reservations")
+    .select("inventory_unit_id")
+    .in("inventory_unit_id", activeUnits.map((unit) => unit.id))
+    .in("status", ["tentative", "confirmed", "in_use"]);
+  if (reservationError) throw new Error(reservationError.message);
+
+  const heldUnitIds = new Set((heldReservations ?? []).map((reservation) => reservation.inventory_unit_id));
+  const removableUnits = activeUnits.filter((unit) => !heldUnitIds.has(unit.id)).slice(-retireCount);
+  if (removableUnits.length < retireCount) throw new Error("INVENTORY_UNITS_IN_USE");
+
+  const { error } = await admin
+    .from("inventory_units")
+    .update({ lifecycle_status: "retired", retired_at: new Date().toISOString().slice(0, 10) })
+    .in("id", removableUnits.map((unit) => unit.id));
+  if (error) throw new Error(error.message);
 }

@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
-import { parseCatalogInput, reconcileInventoryUnits, resolveBrandId, resolveCategoryId } from "@/src/lib/server/catalog";
+import {
+  buildStoredSpecifications,
+  parseCatalogInput,
+  reconcileInventoryUnits,
+  resolveBrandId,
+  resolveCategoryId,
+} from "@/src/lib/server/catalog";
 import { enforceRateLimit, requireActiveAdmin, RequestSecurityError } from "@/src/lib/server/requestSecurity";
 import { getAllProductsForAdmin, getPriceHistory } from "@/src/services/productService";
 
@@ -10,12 +16,70 @@ export async function GET(request: Request): Promise<NextResponse> {
     enforceRateLimit(request, "admin-catalog-read", 60, 60_000);
     const { supabase } = await requireActiveAdmin();
 
-    const [products, priceHistory] = await Promise.all([
+    const [products, priceHistory, categoriesResult, unitsResult, reservationsResult, reviewsResult] = await Promise.all([
       getAllProductsForAdmin(supabase),
       getPriceHistory(supabase),
+      supabase.from("categories").select("id, name, slug, description, is_active, sort_order").order("sort_order"),
+      supabase
+        .from("inventory_units")
+        .select("id, product_id, unit_code, serial_number, lifecycle_status, condition_notes, acquired_at, retired_at")
+        .order("unit_code"),
+      supabase
+        .from("unit_reservations")
+        .select("inventory_unit_id")
+        .in("status", ["tentative", "confirmed", "in_use"]),
+      supabase
+        .from("reviews")
+        .select("id, rating, comment, status, created_at, booking_items(product_id, products(name))")
+        .order("created_at", { ascending: false }),
     ]);
+    if (categoriesResult.error) throw new Error(categoriesResult.error.message);
+    if (unitsResult.error) throw new Error(unitsResult.error.message);
+    if (reservationsResult.error) throw new Error(reservationsResult.error.message);
+    if (reviewsResult.error) throw new Error(reviewsResult.error.message);
 
-    return NextResponse.json({ products, priceHistory });
+    const productCountByCategory = new Map<string, number>();
+    for (const product of products) {
+      productCountByCategory.set(product.category, (productCountByCategory.get(product.category) ?? 0) + 1);
+    }
+    const categories = (categoriesResult.data ?? []).map((category) => ({
+      id: category.id,
+      name: category.name,
+      slug: category.slug,
+      description: category.description,
+      isActive: category.is_active,
+      sortOrder: category.sort_order,
+      productCount: productCountByCategory.get(category.name) ?? 0,
+    }));
+    const heldUnitIds = new Set((reservationsResult.data ?? []).map((row) => row.inventory_unit_id));
+    const inventoryUnits = (unitsResult.data ?? []).map((unit) => ({
+      id: unit.id,
+      productId: unit.product_id,
+      unitCode: unit.unit_code,
+      serialNumber: unit.serial_number,
+      lifecycleStatus: unit.lifecycle_status,
+      conditionNotes: unit.condition_notes,
+      acquiredAt: unit.acquired_at,
+      retiredAt: unit.retired_at,
+      hasActiveReservation: heldUnitIds.has(unit.id),
+    }));
+    const reviews = (reviewsResult.data ?? []).map((review) => {
+      const bookingItem = review.booking_items as unknown as {
+        product_id: string;
+        products: { name: string } | null;
+      } | null;
+      return {
+        id: review.id,
+        productId: bookingItem?.product_id ?? "",
+        productName: bookingItem?.products?.name ?? "Rental item",
+        rating: review.rating,
+        comment: review.comment,
+        status: review.status,
+        createdAt: review.created_at,
+      };
+    });
+
+    return NextResponse.json({ products, priceHistory, categories, inventoryUnits, reviews });
   } catch (error) {
     if (error instanceof RequestSecurityError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
@@ -55,7 +119,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         refundable_deposit: input.refundableDeposit,
         status: input.status,
         is_featured: input.isFeatured,
-        specifications: input.specifications,
+        specifications: buildStoredSpecifications(input),
         created_by: user.id,
         updated_by: user.id,
       })
@@ -64,7 +128,12 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     if (error || !product) throw new Error(error?.message ?? "Product could not be created.");
 
-    await reconcileInventoryUnits(supabase, product.id, input.totalUnits);
+    try {
+      await reconcileInventoryUnits(supabase, product.id, input.totalUnits);
+    } catch (inventoryError) {
+      await supabase.from("products").delete().eq("id", product.id);
+      throw inventoryError;
+    }
 
     await supabase.rpc("log_audit_event", {
       p_action: "catalog.product_created",
@@ -80,6 +149,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
     if (error instanceof Error && error.message === "INVALID_CATALOG_INPUT") {
       return NextResponse.json({ error: "Check the product details and try again." }, { status: 400 });
+    }
+    if (error instanceof Error && error.message === "INVENTORY_UNITS_IN_USE") {
+      return NextResponse.json({ error: "Booked units cannot be removed from active inventory." }, { status: 409 });
     }
     console.error("Catalog product creation failed", error);
     return NextResponse.json({ error: "The product could not be created." }, { status: 500 });
