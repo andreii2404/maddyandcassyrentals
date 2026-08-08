@@ -158,6 +158,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
     const agreementSnapshot = {
       customerName: booking.customerSnapshot.fullName || input.typedFullName,
       productName: booking.productSnapshot.name || "Rental item",
+      quantity: booking.quantity,
       startDate: booking.startDate,
       endDate: booking.endDate,
       dayCount: booking.dayCount || 1,

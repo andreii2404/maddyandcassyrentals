@@ -122,6 +122,7 @@ function assembleBooking(
     customerId: row.customer_id,
     productId: item?.product_id ?? "",
     inventoryUnitId,
+    quantity,
     status: row.status,
     fulfillmentMethod: (fulfillment?.method ?? "pickup") as FulfillmentMethod,
     startDate,

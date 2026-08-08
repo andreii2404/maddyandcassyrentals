@@ -6,6 +6,7 @@ export interface AgreementDocumentData {
   bookingRef: string;
   customerName: string;
   productName: string;
+  quantity: number;
   brand: string;
   startDate: Date;
   endDate: Date;
@@ -39,6 +40,10 @@ export default function AgreementDocument({ data }: { data: AgreementDocumentDat
           </dd>
         </div>
         <div>
+          <dt>Quantity</dt>
+          <dd>{data.quantity} {data.quantity === 1 ? "unit" : "units"}</dd>
+        </div>
+        <div>
           <dt>Rental Period</dt>
           <dd>
             {format(data.startDate, "MMM d, yyyy")} – {format(data.endDate, "MMM d, yyyy")} (
@@ -57,7 +62,7 @@ export default function AgreementDocument({ data }: { data: AgreementDocumentDat
           <dt>Rental Rate</dt>
           <dd>
             {data.currency}
-            {data.pricePerDay.toLocaleString()} / day
+            {data.pricePerDay.toLocaleString()} / unit / day
           </dd>
         </div>
         <div className={styles.fullWidth}>
@@ -86,6 +91,10 @@ export default function AgreementDocument({ data }: { data: AgreementDocumentDat
             Any damage, loss, or missing accessories will be assessed by the business, and the
             customer agrees to cooperate in resolving any related costs directly with the
             business.
+          </li>
+          <li>
+            The reservation payment and any deposit shown in the checkout summary are
+            non-refundable once payment is verified and the unit is reserved.
           </li>
           <li>
             The reservation is secured after PayMongo verifies the initial payment. The booking

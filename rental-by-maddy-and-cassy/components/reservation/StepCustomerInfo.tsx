@@ -13,6 +13,7 @@ interface StepCustomerInfoProps {
   onUpdate: (patch: Partial<CustomerInfoDraft>) => void;
   onBack?: () => void;
   onContinue: () => void;
+  isGuest?: boolean;
 }
 
 export default function StepCustomerInfo({
@@ -21,6 +22,7 @@ export default function StepCustomerInfo({
   onUpdate,
   onBack,
   onContinue,
+  isGuest = false,
 }: StepCustomerInfoProps) {
   const [errors, setErrors] = useState<Partial<Record<keyof CustomerInfoDraft, string>>>({});
   const [saving, setSaving] = useState(false);
@@ -47,6 +49,7 @@ export default function StepCustomerInfo({
     setSaving(true);
     try {
       await updateUserProfile(uid, {
+        email: customerInfo.email.trim(),
         displayName: customerInfo.fullName,
         phoneNumber: customerInfo.phone,
         fullAddress: formatCustomerAddress(customerInfo),
@@ -66,6 +69,11 @@ export default function StepCustomerInfo({
         Confirm the renter information that will appear on this reservation, invoice, receipt,
         and rental agreement.
       </p>
+      {isGuest ? (
+        <p className={styles.confirmCallout}>
+          Guest checkout is active. Use an email you can access because PayMongo and booking updates will use it.
+        </p>
+      ) : null}
 
       <div className={formStyles.row}>
         <div className={formStyles.field}>

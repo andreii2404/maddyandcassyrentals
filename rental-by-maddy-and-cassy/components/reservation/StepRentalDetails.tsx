@@ -67,7 +67,12 @@ export default function StepRentalDetails({
       draft.cityMunicipality.trim().length > 0 &&
       draft.province.trim().length > 0);
   const canContinue =
-    !!draft.startDate && !!draft.endDate && !!draft.fulfillmentMethod && hasValidLocation;
+    !!draft.startDate &&
+    !!draft.endDate &&
+    !!draft.fulfillmentMethod &&
+    hasValidLocation &&
+    draft.quantity >= 1 &&
+    draft.quantity <= availability.availableUnits;
 
   function handleFulfillmentChange(method: FulfillmentMethod) {
     if (method === "pickup") {
@@ -104,13 +109,14 @@ export default function StepRentalDetails({
     const stillAvailable = await isRangeAvailable(
       product.id,
       draft.startDate,
-      draft.endDate
+      draft.endDate,
+      draft.quantity,
     );
     setChecking(false);
 
     if (!stillAvailable) {
       setError(
-        "One or more of your selected dates were just booked by someone else. Please choose different dates."
+        `Only ${availability.availableUnits} unit${availability.availableUnits === 1 ? " is" : "s are"} available for those dates. Reduce the quantity or choose different dates.`
       );
       const keys = await getFullyBookedDateKeys(product.id);
       setDisabledDateKeys(keys);
@@ -179,6 +185,25 @@ export default function StepRentalDetails({
               {dayCount} {dayCount === 1 ? "day" : "days"} selected
             </p>
           ) : null}
+
+          <div className={styles.quantityPanel}>
+            <div>
+              <label htmlFor="rentalQuantity">Rental quantity</label>
+              <span>Reserve multiple units of this exact product under one booking.</span>
+            </div>
+            <div className={styles.quantityControl}>
+              <button type="button" onClick={() => onUpdate({ quantity: draft.quantity - 1 })} disabled={draft.quantity <= 1} aria-label="Decrease rental quantity">−</button>
+              <input
+                id="rentalQuantity"
+                type="number"
+                min={1}
+                max={Math.max(1, availability.availableUnits)}
+                value={draft.quantity}
+                onChange={(event) => onUpdate({ quantity: Math.max(1, Math.min(Math.max(1, availability.availableUnits), Number(event.target.value) || 1)) })}
+              />
+              <button type="button" onClick={() => onUpdate({ quantity: draft.quantity + 1 })} disabled={draft.quantity >= availability.availableUnits} aria-label="Increase rental quantity">+</button>
+            </div>
+          </div>
         </div>
 
         <div className={styles.fulfillmentColumn}>

@@ -78,6 +78,10 @@
   color: var(--color-status-green);
 }
 
+.summary .finalAmount { background: var(--color-background-soft); }
+.summary .finalAmount dd { color: var(--color-primary); }
+.feeNote { margin: -.65rem 0 0; color: var(--color-charcoal); font-size: .72rem; line-height: 1.5; }
+
 .reference,
 .notice,
 .success {

@@ -47,6 +47,8 @@ export interface AgreementDraft {
 }
 
 export interface ReservationDraft {
+  /** Number of physical units of the selected product to reserve. */
+  quantity: number;
   startDate: Date | null;
   endDate: Date | null;
   fulfillmentMethod: FulfillmentMethod | null;
@@ -64,6 +66,7 @@ export interface ReservationDraft {
 
 export function createEmptyDraft(): ReservationDraft {
   return {
+    quantity: 1,
     startDate: null,
     endDate: null,
     fulfillmentMethod: null,

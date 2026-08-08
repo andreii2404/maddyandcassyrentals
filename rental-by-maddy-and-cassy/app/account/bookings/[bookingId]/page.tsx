@@ -120,6 +120,7 @@ function BookingDetailContent() {
         startDate={new Date(booking.startDate)}
         endDate={new Date(booking.endDate)}
         dayCount={booking.dayCount}
+        quantity={booking.quantity}
         fulfillmentMethod={booking.fulfillmentMethod}
         customerLocation={booking.location ?? ""}
       />

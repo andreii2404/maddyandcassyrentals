@@ -5,6 +5,12 @@
   scroll-margin-top: 6rem;
 }
 
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .65rem;
+}
+
 .reserveButton {
   align-self: flex-start;
   padding: 0.85rem 2.2rem;
@@ -17,6 +23,22 @@
   cursor: pointer;
   transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
 }
+
+.cartButton {
+  padding: .85rem 1.5rem;
+  border: 1px solid var(--color-dusty-rose);
+  border-radius: 999px;
+  background: var(--color-white);
+  color: var(--color-primary);
+  font-size: .9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cartButton:hover:not(:disabled) { background: var(--color-blush); }
+.cartButton:disabled { opacity: .6; cursor: not-allowed; }
+.cartLink { align-self: flex-start; color: var(--color-primary); font-size: .78rem; font-weight: 700; text-decoration: none; }
+.cartLink:hover { text-decoration: underline; }
 
 .reserveButton:hover:not(:disabled) {
   background: var(--color-primary-hover);

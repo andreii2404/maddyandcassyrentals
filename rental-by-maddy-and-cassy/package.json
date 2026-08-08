@@ -10,7 +10,8 @@
     "render:pdf-samples": "tsx scripts/renderCustomerDocumentSamples.ts",
     "migrate:inventory": "tsx scripts/migrateFirebaseInventory.ts",
     "test:payments": "tsx --test scripts/testPayments.ts",
-    "verify": "npm run lint && tsc --noEmit && npm run test:payments && npm run build"
+    "test:checkout": "tsx --test scripts/testCheckout.ts",
+    "verify": "npm run lint && tsc --noEmit && npm run test:payments && npm run test:checkout && npm run build"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.5.3",

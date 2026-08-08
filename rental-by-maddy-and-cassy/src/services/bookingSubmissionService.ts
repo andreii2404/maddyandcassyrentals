@@ -50,11 +50,12 @@ export async function createBookingReservation(
   const fulfillmentMethod = draft.fulfillmentMethod!;
   const rentalDays = getDayCount(startDate, endDate);
   const discountAmount = Math.round(
-    product.dailyRate * rentalDays * (product.discountPercent / 100) * 100,
+    product.dailyRate * rentalDays * draft.quantity * (product.discountPercent / 100) * 100,
   ) / 100;
 
   const result = await submitBookingWithDateGuard(supabase, {
     productId: product.id,
+    quantity: draft.quantity,
     rentalStartDate: toDateKey(startDate),
     rentalEndDate: toDateKey(endDate),
     fulfillmentMethod,

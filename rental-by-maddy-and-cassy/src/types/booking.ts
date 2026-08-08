@@ -53,6 +53,7 @@ export interface Booking {
   customerId: string;
   productId: string;
   inventoryUnitId: string | null;
+  quantity: number;
   status: BookingStatus;
   fulfillmentMethod: FulfillmentMethod;
   startDate: string;
@@ -142,6 +143,7 @@ export interface RequirementDocumentReview {
 export interface AgreementSnapshot {
   customerName: string;
   productName: string;
+  quantity?: number;
   startDate: string;
   endDate: string;
   dayCount: number;

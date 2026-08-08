@@ -1712,8 +1712,9 @@ export type Database = {
           p_discount_amount: number
           p_emergency_contact?: Json
           p_fulfillment_method: string
-          p_location: string
-          p_product_id: string
+            p_location: string
+            p_quantity?: number
+            p_product_id: string
           p_product_snapshot: Json
           p_province?: string
           p_rental_end_date: string

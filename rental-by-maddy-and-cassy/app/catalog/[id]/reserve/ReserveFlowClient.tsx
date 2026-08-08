@@ -6,7 +6,7 @@ import type { Product } from "@/types/product";
 import type { UnitCounts } from "@/lib/availability";
 import { useAuth } from "@/hooks/useAuth";
 import { createClient } from "@/src/lib/supabase/client";
-import RequireAuth from "@/components/route-guards/RequireAuth";
+import Spinner from "@/components/ui/Spinner";
 import ReservationStepper from "@/components/reservation/ReservationStepper";
 import StepRentalDetails from "@/components/reservation/StepRentalDetails";
 import StepCustomerInfo from "@/components/reservation/StepCustomerInfo";
@@ -24,6 +24,9 @@ import {
 } from "@/src/services/bookingSubmissionService";
 import { createPaymentCheckout, reconcilePayment } from "@/src/services/paymentService";
 import { getBookingById } from "@/src/services/bookingService";
+import { startGuestCheckout } from "@/src/services/authService";
+import { useCart } from "@/hooks/useCart";
+import { calculateReservationPricing } from "@/src/lib/reservationPricing";
 import styles from "./reserve.module.css";
 
 const STEP_LABELS = [
@@ -40,9 +43,10 @@ interface ReserveFlowClientProps {
   units: UnitCounts;
 }
 
-function ReserveFlowInner({ product, units }: ReserveFlowClientProps) {
+function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & { isGuest: boolean }) {
   const { user, profile } = useAuth();
   const { showToast } = useToast();
+  const { items: cartItems, removeItem: removeCartItem } = useCart();
   const [step, setStep] = useState(1);
   const [draft, setDraft] = useState<ReservationDraft>(createEmptyDraft());
   const [bookingId, setBookingId] = useState<string | null>(null);
@@ -62,8 +66,8 @@ function ReserveFlowInner({ product, units }: ReserveFlowClientProps) {
     setDraft((current) => ({
       ...current,
       customerInfo: {
-        fullName: profile?.displayName ?? (user.user_metadata?.display_name as string | undefined) ?? "",
-        email: profile?.email ?? user.email ?? "",
+        fullName: isGuest ? "" : profile?.displayName ?? (user.user_metadata?.display_name as string | undefined) ?? "",
+        email: isGuest ? "" : profile?.email ?? user.email ?? "",
         phone: profile?.phoneNumber ?? "",
         ...parseCustomerAddress(profile?.fullAddress),
         facebookLink: profile?.facebookLink ?? "",
@@ -76,7 +80,18 @@ function ReserveFlowInner({ product, units }: ReserveFlowClientProps) {
       },
     }));
     setPrefilled(true);
-  }, [user, profile, prefilled]);
+  }, [user, profile, prefilled, isGuest]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("cartItem") !== product.id) return;
+    const cartItem = cartItems.find((item) => item.productId === product.id);
+    if (!cartItem) return;
+    const quantity = Math.min(Math.max(1, cartItem.quantity), Math.max(1, units.totalUnits));
+    // Sync the persisted browser cart into the editable reservation draft.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setDraft((current) => current.quantity === quantity ? current : { ...current, quantity });
+  }, [cartItems, product.id, units.totalUnits]);
 
   useEffect(() => {
     if (!user) return;
@@ -150,6 +165,7 @@ function ReserveFlowInner({ product, units }: ReserveFlowClientProps) {
       setIsDemoPayment(demo);
       setDraft((current) => ({
         ...current,
+        quantity: booking.quantity,
         startDate: new Date(booking.startDate),
         endDate: new Date(booking.endDate),
         fulfillmentMethod: booking.fulfillmentMethod,
@@ -234,6 +250,7 @@ function ReserveFlowInner({ product, units }: ReserveFlowClientProps) {
     setSubmittingDocuments(true);
     try {
       await submitBookingDocuments(bookingId, draft);
+      removeCartItem(product.id);
       showToast("Verification documents and signed agreement submitted.", "success");
       goToStep(6);
     } catch (error) {
@@ -257,9 +274,11 @@ function ReserveFlowInner({ product, units }: ReserveFlowClientProps) {
     fulfillmentMethod: draft.fulfillmentMethod ?? "pickup",
     customerLocation: draft.fulfillmentMethod ? formatCustomerLocation(draft) || "-" : "-",
     pricePerDay: product.pricePerDay,
+    quantity: draft.quantity,
     currency: product.currency,
     includedAccessories: product.included,
   } as const;
+  const pricing = calculateReservationPricing(product, draft);
 
   return (
     <div className={styles.wrapper}>
@@ -301,6 +320,14 @@ function ReserveFlowInner({ product, units }: ReserveFlowClientProps) {
               <dd>{units.totalUnits} {units.totalUnits === 1 ? "unit" : "units"} total</dd>
             </div>
             <div>
+              <dt>Quantity</dt>
+              <dd>{draft.quantity} {draft.quantity === 1 ? "unit" : "units"}</dd>
+            </div>
+            <div>
+              <dt>Current total</dt>
+              <dd>{pricing.rentalDays > 0 ? `${product.currency}${pricing.finalAmount.toLocaleString()}` : "Choose dates"}</dd>
+            </div>
+            <div>
               <dt>Included with rental</dt>
               <dd>{product.included.length ? `${product.included.length} items` : "See item details"}</dd>
             </div>
@@ -331,6 +358,7 @@ function ReserveFlowInner({ product, units }: ReserveFlowClientProps) {
               updateDraft({ customerInfo: { ...draft.customerInfo, ...patch } })
             }
             onContinue={() => goToStep(2)}
+            isGuest={isGuest}
           />
         ) : null}
 
@@ -389,6 +417,7 @@ function ReserveFlowInner({ product, units }: ReserveFlowClientProps) {
             bookingId={bookingId}
             bookingNumber={bookingNumber}
             isDemo={isDemoPayment}
+            isGuest={isGuest}
           />
         ) : null}
         </div>
@@ -398,9 +427,67 @@ function ReserveFlowInner({ product, units }: ReserveFlowClientProps) {
 }
 
 export default function ReserveFlowClient(props: ReserveFlowClientProps) {
-  return (
-    <RequireAuth>
-      <ReserveFlowInner {...props} />
-    </RequireAuth>
-  );
+  const { user, loading } = useAuth();
+  const [startingGuest, setStartingGuest] = useState(false);
+  const [guestError, setGuestError] = useState<string | null>(null);
+
+  if (loading) {
+    return <div className={styles.gateLoading}><Spinner size={28} label="Preparing checkout" /></div>;
+  }
+
+  if (!user) {
+    const reservePath = `/catalog/${props.product.id}/reserve`;
+    return (
+      <section className={styles.checkoutGate} aria-labelledby="checkout-access-heading">
+        <p className={styles.eyebrow}>CHECKOUT ACCESS</p>
+        <h1 id="checkout-access-heading">Reserve with or without an account.</h1>
+        <p>
+          Guest checkout keeps this booking on the current browser. Signing in is recommended
+          if you want permanent access to payment history, receipts, and invoices on other devices.
+        </p>
+        <div className={styles.gateOptions}>
+          <div>
+            <strong>Continue as guest</strong>
+            <span>No password required. You will still provide an email for PayMongo and booking updates.</span>
+            <button
+              type="button"
+              disabled={startingGuest}
+              onClick={async () => {
+                setStartingGuest(true);
+                setGuestError(null);
+                try {
+                  await startGuestCheckout();
+                } catch (error) {
+                  setGuestError(error instanceof Error ? error.message : "Guest checkout could not be started.");
+                  setStartingGuest(false);
+                }
+              }}
+            >
+              {startingGuest ? "Starting guest checkout…" : "Continue as Guest"}
+            </button>
+          </div>
+          <div>
+            <strong>Use a customer account</strong>
+            <span>Save booking history and open receipts or invoices from any signed-in device.</span>
+            <Link href={`/sign-in?redirect=${encodeURIComponent(reservePath)}`}>Sign In</Link>
+            <Link href={`/sign-up?redirect=${encodeURIComponent(reservePath)}`} className={styles.secondaryGateLink}>Create Account</Link>
+          </div>
+        </div>
+        {guestError ? <p className={styles.gateError} role="alert">{guestError}</p> : null}
+        <Link href="/cart" className={styles.backToCart}>← Back to rental cart</Link>
+      </section>
+    );
+  }
+
+  if (!user.email_confirmed_at && !user.is_anonymous) {
+    return (
+      <section className={styles.checkoutGate}>
+        <h1>Verify your email to continue.</h1>
+        <p>Your customer account needs a verified email before a payment or document submission can begin.</p>
+        <Link href={`/verify-email?redirect=${encodeURIComponent(`/catalog/${props.product.id}/reserve`)}`}>Verify Email</Link>
+      </section>
+    );
+  }
+
+  return <ReserveFlowInner {...props} isGuest={user.is_anonymous === true} />;
 }

@@ -18,7 +18,7 @@ const sections: GuideSection[] = [
   {
     title: "Is a security deposit required?",
     paragraphs: [
-      "Yes. A refundable ₱1,000 security deposit is required. It is returned after the unit is returned in good condition and passes inspection. The deposit should be paid before or during pickup.",
+      "A non-refundable security deposit may apply. Its exact amount is shown on the product page and included in the final checkout amount before you continue to PayMongo.",
     ],
   },
   {
@@ -30,7 +30,7 @@ const sections: GuideSection[] = [
   {
     title: "What happens if I return the item late?",
     paragraphs: [
-      "Late returns incur a ₱100 per hour fee. If the delay affects another renter's booking, an additional full-day charge or loss of the security deposit may apply. Notify the team immediately when a delay is expected.",
+      "Late returns incur a ₱100 per hour fee. If the delay affects another renter's booking, an additional full-day charge may apply. Notify the team immediately when a delay is expected.",
     ],
   },
   {

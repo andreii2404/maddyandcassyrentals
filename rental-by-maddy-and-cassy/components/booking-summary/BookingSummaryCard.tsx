@@ -13,6 +13,7 @@ export interface BookingSummaryCardProps {
   startDate: Date;
   endDate: Date;
   dayCount: number;
+  quantity?: number;
   fulfillmentMethod: FulfillmentMethod;
   customerLocation: string;
   statusSlot?: React.ReactNode;
@@ -28,6 +29,7 @@ export default function BookingSummaryCard({
   startDate,
   endDate,
   dayCount,
+  quantity = 1,
   fulfillmentMethod,
   customerLocation,
   statusSlot,
@@ -62,6 +64,10 @@ export default function BookingSummaryCard({
             <dd>
               {dayCount} {dayCount === 1 ? "day" : "days"}
             </dd>
+          </div>
+          <div>
+            <dt>Quantity</dt>
+            <dd>{quantity} {quantity === 1 ? "unit" : "units"}</dd>
           </div>
           <div>
             <dt>Fulfillment</dt>

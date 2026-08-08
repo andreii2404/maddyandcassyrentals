@@ -39,13 +39,14 @@ export async function updateUserProfile(
   updates: Partial<
     Pick<
       UserProfile,
-      "displayName" | "phoneNumber" | "fullAddress" | "facebookLink" | "instagramLink"
+      "email" | "displayName" | "phoneNumber" | "fullAddress" | "facebookLink" | "instagramLink"
     >
   >,
 ): Promise<void> {
   const { error } = await createClient()
     .from("profiles")
     .update({
+      contact_email: updates.email,
       display_name: updates.displayName,
       phone_number: updates.phoneNumber,
       full_address: updates.fullAddress,

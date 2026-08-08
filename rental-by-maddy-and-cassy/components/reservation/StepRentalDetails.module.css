@@ -80,6 +80,16 @@
   color: var(--color-primary);
 }
 
+.quantityPanel { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: .9rem; padding: .9rem; border: 1px solid var(--color-light-gray); border-radius: 14px; background: var(--color-background-soft); }
+.quantityPanel label { display: block; color: var(--color-text-primary); font-size: .82rem; font-weight: 700; }
+.quantityPanel span { display: block; margin-top: .2rem; color: var(--color-charcoal); font-size: .68rem; line-height: 1.4; }
+.quantityControl { display: grid; grid-template-columns: 32px 44px 32px; flex: 0 0 auto; overflow: hidden; border: 1px solid var(--color-dusty-rose); border-radius: 999px; background: var(--color-white); }
+.quantityControl button, .quantityControl input { height: 32px; border: 0; background: transparent; text-align: center; font: inherit; }
+.quantityControl button { color: var(--color-primary); font-weight: 800; cursor: pointer; }
+.quantityControl button:disabled { color: var(--color-light-gray); cursor: not-allowed; }
+.quantityControl input { width: 44px; border-right: 1px solid var(--color-light-gray); border-left: 1px solid var(--color-light-gray); appearance: textfield; }
+.quantityControl input::-webkit-inner-spin-button { appearance: none; }
+
 .availabilityStatus {
   margin: 0.5rem 0 0;
   font-size: 0.85rem;

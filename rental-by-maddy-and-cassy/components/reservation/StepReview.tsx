@@ -82,6 +82,7 @@ export default function StepReview({
             startDate={draft.startDate}
             endDate={draft.endDate}
             dayCount={dayCount}
+            quantity={draft.quantity}
             fulfillmentMethod={draft.fulfillmentMethod}
             customerLocation={formatCustomerLocation(draft)}
           />

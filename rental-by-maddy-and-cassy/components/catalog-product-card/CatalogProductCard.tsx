@@ -6,6 +6,8 @@ import type { Product } from "@/types/product";
 import type { UnitCounts } from "@/lib/availability";
 import HeartIcon from "@/components/icons/HeartIcon";
 import AvailabilityBadge from "@/components/availability-badge/AvailabilityBadge";
+import { useCart } from "@/hooks/useCart";
+import { useToast } from "@/components/ui/ToastProvider";
 import styles from "./CatalogProductCard.module.css";
 
 interface CatalogProductCardProps {
@@ -23,6 +25,8 @@ export default function CatalogProductCard({
   onToggleFavorite,
   ctaLabel = "Reserve Now",
 }: CatalogProductCardProps) {
+  const { addItem } = useCart();
+  const { showToast } = useToast();
   const detailsHref = `/catalog/${product.id}`;
   const unavailable = units.totalUnits <= 0;
 
@@ -95,8 +99,19 @@ export default function CatalogProductCard({
           <Link href={detailsHref} className={styles.detailsButton}>
             View Details
           </Link>
+          <button
+            type="button"
+            className={styles.cartButton}
+            disabled={unavailable}
+            onClick={() => {
+              addItem(product.id);
+              showToast(`${product.name} added to your rental cart.`, "success");
+            }}
+          >
+            Add to Cart
+          </button>
           <Link
-            href={`${detailsHref}#reserve`}
+            href={`${detailsHref}/reserve`}
             className={`${styles.reserveButton} ${unavailable ? styles.reserveDisabled : ""}`}
             aria-disabled={unavailable}
             onClick={(event) => {

@@ -116,7 +116,7 @@ export default function ProductDetailsClient({
               />
             </div>
             <div className={styles.infoCard}>
-              <p className={styles.infoCardLabel}>Refundable Deposit</p>
+              <p className={styles.infoCardLabel}>Non-refundable Deposit</p>
               <p className={styles.infoCardValue}>
                 {product.currency}{product.refundableDeposit.toLocaleString()}
               </p>

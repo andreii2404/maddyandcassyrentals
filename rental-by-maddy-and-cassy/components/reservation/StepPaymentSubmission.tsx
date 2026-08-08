@@ -2,7 +2,7 @@
 
 import type { Product } from "@/types/product";
 import type { ReservationDraft } from "@/src/types/reservationDraft";
-import { getDayCount } from "@/src/types/reservationDraft";
+import { calculateReservationPricing } from "@/src/lib/reservationPricing";
 import formStyles from "@/components/ui/Form.module.css";
 import sharedStyles from "./StepShared.module.css";
 import styles from "./StepPaymentSubmission.module.css";
@@ -46,10 +46,10 @@ export default function StepPaymentSubmission({
   onPay,
   onContinue,
 }: StepPaymentSubmissionProps) {
-  const total = product.pricePerDay * getDayCount(draft.startDate, draft.endDate);
-  const listTotal = product.listPricePerDay * getDayCount(draft.startDate, draft.endDate);
-  const discountSavings = Math.max(0, listTotal - total);
-  const dueNow = draft.paymentOption === "deposit_50" ? Math.round(total * 50) / 100 : total;
+  const pricing = calculateReservationPricing(product, draft);
+  const dueNow = draft.paymentOption === "deposit_50"
+    ? Math.round(pricing.finalAmount * 50) / 100
+    : pricing.finalAmount;
   const paid = paymentState === "paid" || paymentState === "partially_paid";
 
   return (
@@ -63,7 +63,8 @@ export default function StepPaymentSubmission({
         <strong>Your selected rental dates are secured once PayMongo verifies your payment.</strong>
         <span>
           Paying 50% guarantees the reservation while leaving the remaining balance visible in
-          your account. Paying in full settles the rental amount immediately.
+          your account. The reservation payment and listed deposit are non-refundable. Paying in
+          full settles the online booking amount immediately.
         </span>
       </div>
 
@@ -78,7 +79,7 @@ export default function StepPaymentSubmission({
           />
           <span>
             <strong>Pay 50% to reserve</strong>
-            <small>{money(Math.round(total * 50) / 100)} due now</small>
+            <small>{money(Math.round(pricing.finalAmount * 50) / 100)} due now</small>
           </span>
         </label>
         <label className={styles.option}>
@@ -90,21 +91,37 @@ export default function StepPaymentSubmission({
           />
           <span>
             <strong>Pay in full</strong>
-            <small>{money(total)} due now</small>
+            <small>{money(pricing.finalAmount)} due now</small>
           </span>
         </label>
       </fieldset>
 
       <dl className={styles.summary}>
-        {discountSavings > 0 ? (
+        <div>
+          <dt>Product subtotal ({pricing.quantity} × {pricing.rentalDays} {pricing.rentalDays === 1 ? "day" : "days"})</dt>
+          <dd>{money(pricing.listSubtotal)}</dd>
+        </div>
+        {pricing.discountAmount > 0 ? (
           <div>
             <dt>{product.discountLabel || "Catalog discount"}</dt>
-            <dd className={styles.savings}>-{money(discountSavings)}</dd>
+            <dd className={styles.savings}>-{money(pricing.discountAmount)}</dd>
           </div>
         ) : null}
         <div>
-          <dt>Rental total</dt>
-          <dd>{money(total)}</dd>
+          <dt>Rental subtotal</dt>
+          <dd>{money(pricing.productSubtotal)}</dd>
+        </div>
+        <div>
+          <dt>Non-refundable deposit</dt>
+          <dd>{money(pricing.depositAmount)}</dd>
+        </div>
+        <div>
+          <dt>Online fees</dt>
+          <dd>{pricing.fees > 0 ? money(pricing.fees) : "Free"}</dd>
+        </div>
+        <div className={styles.finalAmount}>
+          <dt>Final amount</dt>
+          <dd>{money(pricing.finalAmount)}</dd>
         </div>
         <div>
           <dt>Amount due now</dt>
@@ -112,9 +129,13 @@ export default function StepPaymentSubmission({
         </div>
         <div>
           <dt>Balance after payment</dt>
-          <dd>{money(Math.max(0, total - dueNow))}</dd>
+          <dd>{money(Math.max(0, pricing.finalAmount - dueNow))}</dd>
         </div>
       </dl>
+
+      <p className={styles.feeNote}>
+        Delivery courier costs are arranged separately with the business and are not part of this online payment.
+      </p>
 
       {bookingNumber ? <p className={styles.reference}>Reservation: {bookingNumber}</p> : null}
 

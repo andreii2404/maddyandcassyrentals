@@ -344,6 +344,9 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
           <div><dt>Start date</dt><dd>{formatDate(booking.startDate)}</dd></div>
           <div><dt>End date</dt><dd>{formatDate(booking.endDate)}</dd></div>
           <div><dt>Duration</dt><dd>{booking.dayCount} day(s)</dd></div>
+          <div><dt>Quantity</dt><dd>{booking.quantity} unit(s)</dd></div>
+          <div><dt>Rental subtotal</dt><dd>PHP {booking.rentalSubtotal.toLocaleString("en-PH")}</dd></div>
+          <div><dt>Non-refundable deposit</dt><dd>PHP {booking.refundableDeposit.toLocaleString("en-PH")}</dd></div>
           <div><dt>Total amount</dt><dd>{totalAmount}</dd></div>
           <div><dt>Handover method</dt><dd>{formatStatus(booking.fulfillmentMethod)}</dd></div>
           <div><dt>Assigned unit</dt><dd>{booking.inventoryUnitId || "Not assigned"}</dd></div>

@@ -45,6 +45,7 @@ export async function isRangeAvailable(
   productId: string,
   startDate: Date,
   endDate: Date,
+  requestedUnits = 1,
 ): Promise<boolean> {
   const supabase = createPublicClient();
   const { data, error } = await supabase.rpc("get_product_availability", {
@@ -54,5 +55,5 @@ export async function isRangeAvailable(
   });
 
   if (error) throw new Error(error.message);
-  return (data?.[0]?.available_units ?? 0) > 0;
+  return (data?.[0]?.available_units ?? 0) >= requestedUnits;
 }

@@ -74,6 +74,28 @@ export async function loginWithEmail(email: string, password: string): Promise<U
   return data.user;
 }
 
+/**
+ * Creates a temporary Supabase user for a real guest checkout. The session is
+ * also copied into the server cookies so protected payment and document routes
+ * can authorize the same guest booking after redirects.
+ */
+export async function startGuestCheckout(): Promise<User> {
+  const supabase = createClient();
+  const { data, error } = await supabase.auth.signInAnonymously();
+  if (error || !data.user || !data.session) {
+    if (error?.message.toLowerCase().includes("anonymous sign-ins are disabled")) {
+      throw new Error(
+        "Guest checkout is not enabled for this store yet. Please sign in or create an account to continue.",
+      );
+    }
+    throw new Error(
+      error?.message ?? "Guest checkout could not be started. Please sign in or create an account.",
+    );
+  }
+  await syncServerSession(data.session.access_token, data.session.refresh_token);
+  return data.user;
+}
+
 export async function requestPasswordReset(email: string): Promise<void> {
   const supabase = createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {

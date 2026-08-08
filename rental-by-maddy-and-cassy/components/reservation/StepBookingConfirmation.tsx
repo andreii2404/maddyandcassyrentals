@@ -7,10 +7,12 @@ export default function StepBookingConfirmation({
   bookingId,
   bookingNumber,
   isDemo = false,
+  isGuest = false,
 }: {
   bookingId: string;
   bookingNumber: string;
   isDemo?: boolean;
+  isGuest?: boolean;
 }) {
   return (
     <div className={sharedStyles.wrapper}>
@@ -25,6 +27,11 @@ export default function StepBookingConfirmation({
         its status will change to Confirmed. Your {isDemo ? "demo-labeled" : "PayMongo"} receipt,
         proof of payment, and booking invoice are available in your account.
       </p>
+      {isGuest ? (
+        <p className={styles.reference}>
+          Guest access is saved only in this browser. Keep your booking reference and avoid signing out or clearing browser data until the rental is complete.
+        </p>
+      ) : null}
       <div className={sharedStyles.footer}>
         <Link href="/account/payments" className={formStyles.secondaryButton}>
           Payment History

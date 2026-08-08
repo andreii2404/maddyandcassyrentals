@@ -4,6 +4,20 @@
   padding: 2rem 1.5rem 5rem;
 }
 
+.gateLoading { display: grid; min-height: 55vh; place-items: center; }
+.checkoutGate { max-width: 900px; margin: 3rem auto 5rem; padding: clamp(1.5rem, 4vw, 2.5rem); border: 1px solid var(--color-dusty-rose); border-radius: 26px; background: linear-gradient(135deg, var(--color-blush), var(--color-white)); box-shadow: 0 18px 48px rgba(36,36,36,.07); }
+.checkoutGate h1 { margin: 0; color: var(--color-text-primary); font-size: clamp(1.8rem,4vw,2.7rem); letter-spacing: -.035em; }
+.checkoutGate > p:not(.eyebrow):not(.gateError) { max-width: 720px; color: var(--color-charcoal); line-height: 1.65; }
+.gateOptions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 1rem; margin-top: 1.5rem; }
+.gateOptions > div { display: flex; align-items: flex-start; flex-direction: column; gap: .65rem; padding: 1.25rem; border: 1px solid var(--color-light-gray); border-radius: 18px; background: rgba(255,255,255,.85); }
+.gateOptions strong { color: var(--color-text-primary); }
+.gateOptions span { min-height: 3.2em; color: var(--color-charcoal); font-size: .8rem; line-height: 1.55; }
+.gateOptions button, .gateOptions a, .checkoutGate > a { display: inline-flex; align-items: center; justify-content: center; padding: .72rem 1.1rem; border: 0; border-radius: 999px; background: var(--color-primary); color: var(--color-white); font: inherit; font-size: .82rem; font-weight: 700; text-decoration: none; cursor: pointer; }
+.gateOptions button:disabled { opacity: .65; cursor: wait; }
+.gateOptions .secondaryGateLink { margin-top: -.2rem; border: 1px solid var(--color-dusty-rose); background: var(--color-white); color: var(--color-primary); }
+.checkoutGate .backToCart { margin-top: 1.5rem; padding: 0; background: transparent; color: var(--color-primary); }
+.gateError { margin-top: 1rem; padding: .8rem 1rem; border-radius: 12px; background: #fff0ee; color: var(--color-status-red); font-size: .82rem; font-weight: 600; }
+
 .reserveHeader {
   position: relative;
   display: flex;
@@ -255,4 +269,7 @@
     flex-direction: column;
     gap: 0.25rem;
   }
+
+  .checkoutGate { margin: 1.5rem 1rem 3rem; }
+  .gateOptions { grid-template-columns: 1fr; }
 }

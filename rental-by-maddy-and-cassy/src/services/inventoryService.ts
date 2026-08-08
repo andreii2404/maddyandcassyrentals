@@ -39,6 +39,7 @@ export class DeliveryAddressRequiredError extends Error {
 
 export interface SubmitBookingInput {
   productId: string;
+  quantity?: number;
   rentalStartDate: string;
   rentalEndDate: string;
   fulfillmentMethod: FulfillmentMethod;
@@ -76,6 +77,7 @@ export async function submitBookingWithDateGuard(
 ): Promise<SubmitBookingResult> {
   const { data, error } = await supabase.rpc("create_booking", {
     p_product_id: input.productId,
+    p_quantity: input.quantity ?? 1,
     p_rental_start_date: input.rentalStartDate,
     p_rental_end_date: input.rentalEndDate,
     p_fulfillment_method: input.fulfillmentMethod,
@@ -104,6 +106,7 @@ export async function submitBookingWithDateGuard(
     }
     if (error.message.includes("ACCOUNT_SUSPENDED")) throw new AccountSuspendedError();
     if (error.message.includes("DELIVERY_ADDRESS_REQUIRED")) throw new DeliveryAddressRequiredError();
+    if (error.message.includes("INVALID_QUANTITY")) throw new Error("Choose a valid rental quantity.");
     throw new Error(error.message);
   }
 

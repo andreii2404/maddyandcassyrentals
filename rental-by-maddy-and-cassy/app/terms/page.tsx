@@ -14,7 +14,7 @@ const sections: GuideSection[] = [
     number: "02",
     title: "Security Deposit",
     paragraphs: [
-      "A refundable ₱1,000 security deposit is required for phones and cameras. It is returned after the unit and all included accessories have been inspected and cleared.",
+      "A non-refundable security deposit may apply. The exact amount is shown on the product page and in the checkout summary before payment.",
     ],
   },
   {
@@ -91,7 +91,7 @@ export default function TermsPage() {
         introduction="These policies apply to booking requests, verification, equipment handover, proper use, and return of every rental unit."
         sections={sections}
         layout="stack"
-        notice="Payment and deposit arrangements are completed directly with the rental team. No payment is collected through this website."
+        notice="Online reservation payments and applicable non-refundable deposits are processed through PayMongo. Courier delivery costs are arranged separately with the rental team."
       />
     </div>
   );
