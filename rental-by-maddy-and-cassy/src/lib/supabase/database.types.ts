@@ -1703,6 +1703,23 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      update_own_booking_details: {
+        Args: {
+          p_booking_id: string
+          p_city_municipality?: string
+          p_customer_notes?: string
+          p_fulfillment_method: string
+          p_location?: string
+          p_province?: string
+        }
+        Returns: Database["public"]["Tables"]["bookings"]["Row"]
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       confirm_booking: {
         Args: { p_booking_id: string; p_note?: string }
         Returns: {

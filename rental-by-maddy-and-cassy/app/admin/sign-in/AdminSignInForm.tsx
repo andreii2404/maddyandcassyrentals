@@ -37,6 +37,9 @@ export default function AdminSignInForm() {
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
   const redirectTo = getAdminRedirect(searchParams.get("redirect"));
+  const resetNotice = searchParams.get("reset") === "success"
+    ? "Your password was updated. Sign in with your new password."
+    : null;
 
   async function onSubmit(values: FormValues) {
     setFormError(null);
@@ -81,6 +84,7 @@ export default function AdminSignInForm() {
       </p>
 
       <form className={styles.form} onSubmit={handleSubmit(onSubmit)} noValidate>
+        {resetNotice ? <p className={styles.successNotice} role="status">{resetNotice}</p> : null}
         {formError ? <p className={styles.formError}>{formError}</p> : null}
 
         <div className={formStyles.field}>
@@ -94,6 +98,8 @@ export default function AdminSignInForm() {
             className={`${formStyles.input} ${errors.email ? formStyles.inputError : ""}`}
             aria-invalid={!!errors.email}
             aria-describedby={errors.email ? "admin-email-error" : undefined}
+            autoCapitalize="none"
+            spellCheck={false}
             {...register("email")}
           />
           {errors.email ? (
@@ -120,6 +126,11 @@ export default function AdminSignInForm() {
               {errors.password.message}
             </p>
           ) : null}
+          <div className={styles.forgotRow}>
+            <Link href="/forgot-password?source=admin" className={styles.forgotLink}>
+              Forgot password?
+            </Link>
+          </div>
         </div>
 
         <div className={styles.submitRow}>

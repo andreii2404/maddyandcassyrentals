@@ -7,7 +7,7 @@ const sections: GuideSection[] = [
     number: "01",
     title: "Information We Collect",
     paragraphs: [
-      "Account creation collects only your email address and login credentials. When you submit a booking request, the reservation process collects your name, phone number, address, Facebook and Instagram profile links, two valid IDs, a selfie holding an ID, and consent records. It also collects the emergency contact's name, relationship, phone number, Facebook link, and government-issued ID.",
+      "Customer account creation collects your full name, active phone number, email address, and email-verification record. Administrator accounts also use password-based credentials. When you submit a booking request, the reservation process collects your address, Facebook and Instagram profile links, two valid IDs, a selfie holding an ID, and consent records. It also collects the emergency contact's name, relationship, phone number, Facebook link, and government-issued ID.",
     ],
   },
   {

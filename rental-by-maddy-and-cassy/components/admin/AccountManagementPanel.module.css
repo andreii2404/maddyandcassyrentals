@@ -5,6 +5,7 @@
 .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.8rem; margin:1rem 0; }
 .grid label { display:flex; gap:.35rem; flex-direction:column; }
 .grid label span { color:var(--color-charcoal); font-size:.72rem; font-weight:700; }
+.grid label small { color:var(--color-charcoal); font-size:.68rem; }
 .grid input,.grid select { padding:.68rem .75rem; border:1px solid var(--color-border); border-radius:10px; background:var(--color-white); font:inherit; }
 .wide { grid-column:1/-1; }
 .panel>button { padding:.65rem .9rem; border:0; border-radius:999px; background:var(--color-primary); color:#fff; font-weight:700; cursor:pointer; }

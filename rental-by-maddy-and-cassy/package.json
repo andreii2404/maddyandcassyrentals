@@ -11,7 +11,9 @@
     "migrate:inventory": "tsx scripts/migrateFirebaseInventory.ts",
     "test:payments": "tsx --test scripts/testPayments.ts",
     "test:checkout": "tsx --test scripts/testCheckout.ts",
-    "verify": "npm run lint && tsc --noEmit && npm run test:payments && npm run test:checkout && npm run build"
+    "test:bookings": "tsx --test scripts/testBookingManagement.ts",
+    "test:auth": "tsx --test scripts/testAuthValidation.ts",
+    "verify": "npm run lint && tsc --noEmit && npm run test:payments && npm run test:checkout && npm run test:bookings && npm run test:auth && npm run build"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.5.3",

@@ -27,6 +27,11 @@ import { getBookingById, getCustomerRewardProgress } from "@/src/services/bookin
 import { startGuestCheckout } from "@/src/services/authService";
 import { useCart } from "@/hooks/useCart";
 import { calculateReservationPricing } from "@/src/lib/reservationPricing";
+import {
+  reservationProgressKey,
+  restoreReservationProgress,
+  serializeReservationProgress,
+} from "@/src/lib/reservationProgress";
 import type { RewardProgress } from "@/src/lib/promotions";
 import styles from "./reserve.module.css";
 
@@ -59,34 +64,121 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [submittingDocuments, setSubmittingDocuments] = useState(false);
   const [prefilled, setPrefilled] = useState(false);
+  const [progressHydrated, setProgressHydrated] = useState(false);
+  const [progressRestored, setProgressRestored] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [rewardProgress, setRewardProgress] = useState<RewardProgress>({
     completedRentals: 0,
     loyaltyRewardUsed: false,
   });
 
+  const progressKey = reservationProgressKey(user!.id, product.id);
+
   useEffect(() => {
-    if (prefilled || !user) return;
+    let rawProgress: string | null = null;
+    try {
+      rawProgress = window.localStorage.getItem(progressKey);
+    } catch {
+      // Some privacy modes disable localStorage. The live form still works.
+    }
+    const restored = restoreReservationProgress(rawProgress);
+    if (restored) {
+      const hasVerifiedPayment = restored.paymentState === "paid" || restored.paymentState === "partially_paid";
+      // Verification files and signature images are intentionally never saved
+      // to localStorage. Return to the document step when those files are needed.
+      const safeStep = !restored.bookingId
+        ? Math.min(restored.step, 3)
+        : hasVerifiedPayment
+          ? Math.min(restored.step, 4)
+          : Math.min(restored.step, 3);
+      // One-time hydration from the browser-owned draft backup.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setDraft(restored.draft);
+      setStep(safeStep);
+      setBookingId(restored.bookingId);
+      setBookingNumber(restored.bookingNumber);
+      setPaymentState(restored.paymentState);
+      setIsDemoPayment(restored.isDemoPayment);
+      setLastSavedAt(new Date(restored.savedAt));
+      setProgressRestored(true);
+    }
+    setProgressHydrated(true);
+  }, [progressKey]);
+
+  useEffect(() => {
+    if (!progressHydrated || prefilled || !user) return;
+    const profileAddress = parseCustomerAddress(profile?.fullAddress);
     // One-time hydration of the locally editable booking form from async auth/profile data.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setDraft((current) => ({
       ...current,
       customerInfo: {
-        fullName: isGuest ? "" : profile?.displayName ?? (user.user_metadata?.display_name as string | undefined) ?? "",
-        email: isGuest ? "" : profile?.email ?? user.email ?? "",
-        phone: profile?.phoneNumber ?? "",
-        birthDate: profile?.birthDate ?? "",
-        ...parseCustomerAddress(profile?.fullAddress),
-        facebookLink: profile?.facebookLink ?? "",
-        instagramLink: profile?.instagramLink ?? "",
+        ...current.customerInfo,
+        fullName: current.customerInfo.fullName || (isGuest ? "" : profile?.displayName ?? (user.user_metadata?.display_name as string | undefined) ?? ""),
+        email: current.customerInfo.email || (isGuest ? "" : profile?.email ?? user.email ?? ""),
+        phone: current.customerInfo.phone || profile?.phoneNumber || "",
+        birthDate: current.customerInfo.birthDate || profile?.birthDate || "",
+        streetBarangay: current.customerInfo.streetBarangay || profileAddress.streetBarangay,
+        cityMunicipality: current.customerInfo.cityMunicipality || profileAddress.cityMunicipality,
+        province: current.customerInfo.province || profileAddress.province,
+        address: current.customerInfo.address || profileAddress.address,
+        facebookLink: current.customerInfo.facebookLink || profile?.facebookLink || "",
+        instagramLink: current.customerInfo.instagramLink || profile?.instagramLink || "",
       },
       requirements: {
         ...current.requirements,
-        facebookLink: profile?.facebookLink ?? "",
-        instagramLink: profile?.instagramLink ?? "",
+        facebookLink: current.requirements.facebookLink || profile?.facebookLink || "",
+        instagramLink: current.requirements.instagramLink || profile?.instagramLink || "",
       },
     }));
     setPrefilled(true);
-  }, [user, profile, prefilled, isGuest]);
+  }, [user, profile, prefilled, isGuest, progressHydrated]);
+
+  useEffect(() => {
+    if (!progressHydrated || !prefilled || step === 6) return;
+    const saveProgress = () => {
+      const savedAt = Date.now();
+      try {
+        window.localStorage.setItem(
+          progressKey,
+          serializeReservationProgress({
+            draft,
+            step,
+            bookingId,
+            bookingNumber,
+            paymentState,
+            isDemoPayment,
+            savedAt,
+          }),
+        );
+        setLastSavedAt(new Date(savedAt));
+      } catch {
+        // Saving is a convenience; never interrupt an active booking if the
+        // browser refuses storage or its quota is full.
+      }
+    };
+    const saveWhenHidden = () => {
+      if (document.visibilityState === "hidden") saveProgress();
+    };
+    const timer = window.setTimeout(saveProgress, 250);
+    document.addEventListener("visibilitychange", saveWhenHidden);
+    window.addEventListener("pagehide", saveProgress);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", saveWhenHidden);
+      window.removeEventListener("pagehide", saveProgress);
+    };
+  }, [
+    bookingId,
+    bookingNumber,
+    draft,
+    isDemoPayment,
+    paymentState,
+    prefilled,
+    progressHydrated,
+    progressKey,
+    step,
+  ]);
 
   useEffect(() => {
     if (!user || isGuest) return;
@@ -271,6 +363,11 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
     setSubmittingDocuments(true);
     try {
       await submitBookingDocuments(bookingId, draft);
+      try {
+        window.localStorage.removeItem(progressKey);
+      } catch {
+        // A completed booking no longer depends on the local draft backup.
+      }
       removeCartItem(product.id);
       showToast("Verification documents and signed agreement submitted.", "success");
       goToStep(6);
@@ -318,6 +415,18 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
           <small>per rental day</small>
         </div>
       </header>
+
+      <div className={styles.progressSaved} role="status">
+        <span aria-hidden="true">✓</span>
+        <div>
+          <strong>{progressRestored ? "Your saved progress was restored" : "Progress saved on this device"}</strong>
+          <small>
+            {lastSavedAt
+              ? `Last saved ${lastSavedAt.toLocaleTimeString("en-PH", { hour: "numeric", minute: "2-digit" })}. Verification files and signature images are not stored.`
+              : "Your form will stay in place when you switch tabs or return to this browser."}
+          </small>
+        </div>
+      </div>
 
       <ReservationStepper steps={STEP_LABELS} currentStep={step} />
 

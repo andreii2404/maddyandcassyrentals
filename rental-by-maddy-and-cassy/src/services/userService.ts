@@ -3,6 +3,7 @@
 import { createClient } from "@/src/lib/supabase/client";
 import type { Database, Tables } from "@/src/lib/supabase/database.types";
 import type { UserProfile } from "@/src/types/database";
+import { isValidPhoneNumber } from "@/src/lib/authValidation";
 
 function mapProfile(row: Tables<"profiles">): UserProfile {
   return {
@@ -45,6 +46,9 @@ export async function updateUserProfile(
     >
   >,
 ): Promise<void> {
+  if (updates.phoneNumber !== undefined && !isValidPhoneNumber(updates.phoneNumber)) {
+    throw new Error("Phone number must contain exactly 11 digits.");
+  }
   const payload: Database["public"]["Tables"]["profiles"]["Update"] = {
     contact_email: updates.email,
     display_name: updates.displayName,

@@ -1,0 +1,94 @@
+.statusHero,
+.timelineSection,
+.management { border: 1px solid var(--color-border); border-radius: 20px; background: white; box-shadow: 0 12px 34px rgba(40,32,34,0.045); }
+.statusHero { padding: clamp(1.25rem, 4vw, 1.8rem); background: radial-gradient(circle at 100% 0%, rgba(242,210,207,0.7), transparent 42%), white; }
+.statusTopline,
+.sectionHeading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.statusTopline p,
+.sectionHeading p { margin: 0 0 0.25rem; color: var(--color-primary); font-size: 0.64rem; font-weight: 800; letter-spacing: 0.1em; }
+.statusTopline h2,
+.sectionHeading h2 { margin: 0; font-size: 1.12rem; letter-spacing: -0.02em; }
+.statusMessage { max-width: 680px; margin: 0.85rem 0 1.1rem; color: var(--color-charcoal); font-size: 0.8rem; line-height: 1.65; }
+.statusFacts { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 0.7rem; margin: 0; }
+.statusFacts div { padding: 0.75rem; border: 1px solid rgba(154,89,101,0.1); border-radius: 12px; background: rgba(255,255,255,0.65); }
+.statusFacts dt { color: #837b7a; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+.statusFacts dd { margin: 0.22rem 0 0; color: var(--color-text-primary); font-size: 0.74rem; font-weight: 700; overflow-wrap: anywhere; }
+
+.timelineSection,
+.management { padding: clamp(1.25rem, 4vw, 1.6rem); }
+.sectionHeading > span { padding: 0.35rem 0.6rem; border-radius: 999px; background: var(--color-background-soft); color: var(--color-primary); font-size: 0.64rem; font-weight: 700; white-space: nowrap; }
+.milestones { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 0; margin: 1.4rem 0 0; padding: 0; list-style: none; }
+.milestones li { position: relative; min-width: 0; padding: 0 0.55rem; text-align: center; }
+.milestones li::before { position: absolute; top: 13px; right: 50%; left: -50%; height: 2px; background: var(--color-light-gray); content: ""; }
+.milestones li:first-child::before { display: none; }
+.milestoneCompleted::before { background: var(--color-dusty-rose) !important; }
+.milestoneDot { position: relative; z-index: 1; display: grid; width: 28px; height: 28px; margin: 0 auto 0.65rem; place-items: center; border: 2px solid var(--color-light-gray); border-radius: 999px; background: white; color: white; font-size: 0.64rem; font-weight: 800; }
+.milestoneCompleted .milestoneDot { border-color: var(--color-primary); background: var(--color-primary); }
+.milestoneCurrent .milestoneDot { box-shadow: 0 0 0 5px rgba(154,89,101,0.12); }
+.milestones strong { display: block; font-size: 0.68rem; line-height: 1.35; }
+.milestones p { margin: 0.25rem 0 0; color: #817a79; font-size: 0.57rem; line-height: 1.45; }
+.milestones small { display: block; margin-top: 0.35rem; color: var(--color-primary); font-size: 0.54rem; }
+.activity { margin-top: 1.3rem; border-top: 1px solid var(--color-light-gray); }
+.activity summary { padding: 1rem 0 0; color: var(--color-primary); font-size: 0.7rem; font-weight: 700; cursor: pointer; }
+.activity ol { display: grid; gap: 0.5rem; margin: 0.8rem 0 0; padding: 0; list-style: none; }
+.activity li { padding: 0.75rem; border-radius: 11px; background: var(--color-background); }
+.activity li > div { display: flex; justify-content: space-between; gap: 0.75rem; }
+.activity strong { font-size: 0.68rem; }
+.activity small { color: #817a79; font-size: 0.58rem; white-space: nowrap; }
+.activity p { margin: 0.25rem 0 0; color: var(--color-charcoal); font-size: 0.64rem; }
+
+.managementGrid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 0.75rem; margin-top: 1.15rem; }
+.managementGrid article { position: relative; padding: 1rem; border: 1px solid var(--color-light-gray); border-radius: 15px; background: var(--color-background); }
+.actionNumber { color: var(--color-primary); font-size: 0.6rem; font-weight: 800; }
+.managementGrid h3 { margin: 0.35rem 0 0; font-size: 0.86rem; }
+.managementGrid p { min-height: 42px; margin: 0.4rem 0 0.8rem; color: var(--color-charcoal); font-size: 0.66rem; line-height: 1.55; }
+.managementGrid button,
+.saveButton,
+.cancelPanel button { min-height: 38px; padding: 0.5rem 0.75rem; border: 1px solid var(--color-primary); border-radius: 10px; background: white; color: var(--color-primary); font: inherit; font-size: 0.68rem; font-weight: 700; cursor: pointer; }
+.managementGrid button:disabled { border-color: var(--color-light-gray); color: #9a9493; background: #f7f7f5; cursor: not-allowed; }
+.managementGrid .cancelButton:not(:disabled) { border-color: var(--color-status-red-border); color: var(--color-status-red); }
+
+.editForm,
+.cancelPanel { display: grid; gap: 0.9rem; margin-top: 1rem; padding: 1rem; border: 1px solid rgba(154,89,101,0.18); border-radius: 15px; background: var(--color-background-soft); }
+.formHeading { display: flex; justify-content: space-between; gap: 1rem; }
+.formHeading strong,
+.cancelPanel > strong { font-size: 0.8rem; }
+.formHeading span { color: var(--color-charcoal); font-size: 0.62rem; }
+.editForm fieldset { display: flex; gap: 1rem; margin: 0; padding: 0; border: 0; }
+.editForm legend { margin-bottom: 0.45rem; color: var(--color-charcoal); font-size: 0.62rem; font-weight: 700; }
+.editForm fieldset label { display: flex; align-items: center; gap: 0.35rem; font-size: 0.7rem; }
+.addressGrid { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 0.65rem; }
+.addressGrid label,
+.notesField,
+.cancelPanel label { display: grid; gap: 0.3rem; }
+.addressGrid span,
+.notesField span,
+.cancelPanel label span { color: var(--color-charcoal); font-size: 0.61rem; font-weight: 700; }
+.addressGrid input,
+.notesField textarea,
+.cancelPanel textarea { width: 100%; padding: 0.65rem 0.7rem; border: 1px solid var(--color-light-gray); border-radius: 10px; outline: 0; background: white; color: var(--color-text-primary); font: inherit; font-size: 0.7rem; }
+.addressGrid input:focus,
+.notesField textarea:focus,
+.cancelPanel textarea:focus { border-color: var(--color-dusty-rose); box-shadow: 0 0 0 3px rgba(215,165,165,0.15); }
+.saveButton { justify-self: start; background: var(--color-primary); color: white; }
+.cancelPanel { border-color: var(--color-status-red-border); background: var(--color-status-red-bg); }
+.cancelPanel > p { margin: 0; color: var(--color-charcoal); font-size: 0.66rem; line-height: 1.6; }
+.cancelPanel button { justify-self: start; border-color: var(--color-status-red); background: var(--color-status-red); color: white; }
+
+@media (max-width: 760px) {
+  .milestones { grid-template-columns: 1fr; gap: 0.15rem; }
+  .milestones li { display: grid; grid-template-columns: auto 1fr; gap: 0.75rem; padding: 0 0 1rem; text-align: left; }
+  .milestones li::before { top: -100%; bottom: 50%; left: 13px; width: 2px; height: auto; }
+  .milestoneDot { margin: 0; }
+  .milestones li > div { padding-top: 0.25rem; }
+  .managementGrid,
+  .addressGrid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 520px) {
+  .statusTopline,
+  .sectionHeading,
+  .formHeading { align-items: flex-start; flex-direction: column; }
+  .statusFacts { grid-template-columns: 1fr; }
+  .activity li > div { flex-direction: column; gap: 0.2rem; }
+}

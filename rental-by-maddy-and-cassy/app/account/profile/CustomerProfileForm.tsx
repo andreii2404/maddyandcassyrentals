@@ -10,6 +10,7 @@ import formStyles from "@/components/ui/Form.module.css";
 import Spinner from "@/components/ui/Spinner";
 import styles from "./profile.module.css";
 import PushNotificationButton from "@/components/push/PushNotificationButton";
+import { isValidPhoneNumber, normalizePhoneInput, PHONE_DIGIT_COUNT } from "@/src/lib/authValidation";
 
 interface ProfileDraft {
   displayName: string;
@@ -93,8 +94,8 @@ function CustomerProfileEditor({
       return;
     }
 
-    if (!draft.phoneNumber.trim()) {
-      showToast("Phone number is required.", "error");
+    if (!isValidPhoneNumber(draft.phoneNumber)) {
+      showToast(`Phone number must contain exactly ${PHONE_DIGIT_COUNT} digits.`, "error");
       return;
     }
 
@@ -190,12 +191,17 @@ function CustomerProfileEditor({
             </label>
             <input
               id="profile-phone"
+              type="tel"
+              inputMode="numeric"
               className={formStyles.input}
               value={draft.phoneNumber}
-              onChange={(event) => updateDraft("phoneNumber", event.target.value)}
+              onChange={(event) => updateDraft("phoneNumber", normalizePhoneInput(event.target.value))}
               autoComplete="tel"
+              maxLength={PHONE_DIGIT_COUNT}
+              placeholder="09XXXXXXXXX"
               required
             />
+            <p className={formStyles.helpText}>Use exactly 11 digits.</p>
           </div>
 
           <div className={formStyles.field}>

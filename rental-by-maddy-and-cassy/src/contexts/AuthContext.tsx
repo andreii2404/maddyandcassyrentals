@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
 import { subscribeToAuthChanges } from "@/src/services/authService";
 import { isActiveAdmin } from "@/src/services/adminService";
@@ -28,6 +28,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const activeUserIdRef = useRef<string | null | undefined>(undefined);
+  const accountLoadRef = useRef(0);
 
   async function loadAccount() {
     const [userProfile, adminAccess] = await Promise.all([
@@ -40,7 +42,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = subscribeToAuthChanges(async (nextUser) => {
+      const nextUserId = nextUser?.id ?? null;
+      const identityChanged = activeUserIdRef.current !== nextUserId;
+      activeUserIdRef.current = nextUserId;
       setUser(nextUser);
+
+      // Supabase can emit SIGNED_IN/TOKEN_REFRESHED again when a browser tab
+      // regains focus. The account has not changed, so do not re-enter the
+      // loading gate and unmount customer forms that are already in progress.
+      if (!identityChanged) return;
+
+      const loadId = ++accountLoadRef.current;
       setLoading(true);
 
       try {
@@ -49,8 +61,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             getUserProfile(nextUser.id).catch(() => null),
             isActiveAdmin().catch(() => false),
           ]);
-          setProfile(userProfile);
-          setIsAdmin(adminAccess);
+          if (loadId === accountLoadRef.current) {
+            setProfile(userProfile);
+            setIsAdmin(adminAccess);
+          }
         } else {
           setProfile(null);
           setIsAdmin(false);
@@ -59,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(null);
         setIsAdmin(false);
       } finally {
-        setLoading(false);
+        if (loadId === accountLoadRef.current) setLoading(false);
       }
     });
 

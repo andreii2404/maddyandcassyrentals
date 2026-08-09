@@ -60,22 +60,36 @@ export interface AuthenticatedRequestContext {
  */
 export async function requireUser(): Promise<AuthenticatedRequestContext> {
   const supabase = await createClient();
+  let user: User | null = null;
   try {
     const {
-      data: { user },
+      data,
       error,
     } = await supabase.auth.getUser();
 
-    if (error || !user) {
+    if (error || !data.user) {
       throw new RequestSecurityError("Your session is invalid or expired.", 401);
     }
-
-    return { supabase, user };
+    user = data.user;
   } catch {
     // Stale/invalid refresh-token cookies can throw from auth.getUser().
     // Normalize that into a stable 401 for callers.
     throw new RequestSecurityError("Your session is invalid or expired.", 401);
   }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("account_status")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (profileError) {
+    throw new RequestSecurityError("Your account access could not be verified.", 503);
+  }
+  if (profile?.account_status === "suspended") {
+    throw new RequestSecurityError("This account is suspended. Please contact support.", 403);
+  }
+
+  return { supabase, user };
 }
 
 export type AuthenticatedAdminContext = AuthenticatedRequestContext;

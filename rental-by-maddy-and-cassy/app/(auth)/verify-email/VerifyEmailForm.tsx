@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { checkActiveAdmin } from "@/src/services/adminService";
 import { logout, sendEmailOtp, verifyEmailOtp } from "@/src/services/authService";
+import { getUserProfile } from "@/src/services/userService";
 import Spinner from "@/components/ui/Spinner";
 import formStyles from "@/components/ui/Form.module.css";
 import styles from "../auth.module.css";
@@ -115,6 +116,17 @@ export default function VerifyEmailForm() {
         setVerifying(false);
         return;
       }
+      const profile = await getUserProfile(user.id);
+      if (!profile || profile.accountStatus !== "active") {
+        await logout();
+        setError(
+          profile?.accountStatus === "suspended"
+            ? "This customer account is suspended. Please contact support for assistance."
+            : "Your customer profile could not be prepared. Please contact support.",
+        );
+        setVerifying(false);
+        return;
+      }
       setVerified(true);
     } catch (verifyError) {
       setError(describeOtpError(verifyError));
@@ -125,7 +137,7 @@ export default function VerifyEmailForm() {
 
   function useAnotherEmail() {
     router.replace(
-      `/${flow === "sign-up" ? "sign-in" : "sign-up"}?redirect=${encodeURIComponent(redirectTo)}`,
+      `/${flow === "sign-up" ? "sign-up" : "sign-in"}?redirect=${encodeURIComponent(redirectTo)}`,
     );
   }
 

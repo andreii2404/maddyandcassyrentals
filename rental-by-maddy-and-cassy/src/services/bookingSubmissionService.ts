@@ -5,6 +5,7 @@ import type { ReservationDraft } from "@/src/types/reservationDraft";
 import { formatCustomerAddress, getDayCount } from "@/src/types/reservationDraft";
 import { toDateKey } from "@/src/services/availabilityService";
 import { submitBookingWithDateGuard } from "@/src/services/inventoryService";
+import { isValidPhoneNumber } from "@/src/lib/authValidation";
 
 export interface SubmitBookingResult {
   bookingId: string;
@@ -35,6 +36,10 @@ function validateReservationDetails(draft: ReservationDraft): void {
     !customerInfo.instagramLink.trim()
   ) {
     throw new Error("Missing required customer information.");
+  }
+
+  if (!isValidPhoneNumber(customerInfo.phone)) {
+    throw new Error("The customer phone number must contain exactly 11 digits.");
   }
 }
 
@@ -139,6 +144,10 @@ export async function submitBookingDocuments(bookingId: string, draft: Reservati
     !requirements.emergencyContact.idFile
   ) {
     throw new Error("Missing required rental information or documents.");
+  }
+
+  if (!isValidPhoneNumber(requirements.emergencyContact.phone)) {
+    throw new Error("The emergency contact phone number must contain exactly 11 digits.");
   }
 
   const { agreement } = draft;
