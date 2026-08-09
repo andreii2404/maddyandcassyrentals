@@ -4,6 +4,33 @@ import type { BookingReceipt, PaymentOption, PaymentRecord } from "@/src/types/p
 
 export type { PaymentOption };
 
+export interface ReservationResumeState {
+  paymentState: "unpaid" | "pending" | "partially_paid" | "paid";
+  isDemoPayment: boolean;
+  receiptReady: boolean;
+  booking: {
+    id: string;
+    bookingRef: string;
+    productId: string;
+    quantity: number;
+    startDate: string;
+    endDate: string;
+    fulfillmentMethod: "pickup" | "delivery";
+    location: string | null;
+    cityMunicipality: string | null;
+    province: string | null;
+    totalAmount: number;
+    customerSnapshot: {
+      fullName: string;
+      email: string;
+      phone: string;
+      address: string;
+      facebookLink: string;
+      instagramLink: string;
+    };
+  };
+}
+
 export async function createPaymentCheckout(
   bookingId: string,
   paymentOption: PaymentOption = "full",
@@ -48,6 +75,26 @@ export async function reconcilePayment(
     );
   }
   return body!.status as "verified" | "pending" | "failed" | "unpaid";
+}
+
+export async function getReservationResumeState(
+  bookingId: string,
+): Promise<ReservationResumeState> {
+  const response = await fetch(`/api/bookings/${encodeURIComponent(bookingId)}/resume`, {
+    method: "GET",
+    credentials: "same-origin",
+    cache: "no-store",
+  });
+  const body = (await response.json().catch(() => null)) as
+    | (Partial<ReservationResumeState> & { error?: unknown })
+    | null;
+
+  if (!response.ok || !body?.booking || typeof body.booking.id !== "string") {
+    throw new Error(
+      typeof body?.error === "string" ? body.error : "This reservation could not be resumed.",
+    );
+  }
+  return body as ReservationResumeState;
 }
 
 export async function completeDemoPayment(

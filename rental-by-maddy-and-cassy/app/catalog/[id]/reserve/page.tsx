@@ -6,6 +6,7 @@ import ReserveFlowClient from "./ReserveFlowClient";
 
 interface ReservePageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export async function generateMetadata({ params }: ReservePageProps): Promise<Metadata> {
@@ -16,12 +17,19 @@ export async function generateMetadata({ params }: ReservePageProps): Promise<Me
   };
 }
 
-export default async function ReservePage({ params }: ReservePageProps) {
+export default async function ReservePage({ params, searchParams }: ReservePageProps) {
   const { id } = await params;
+  const query = await searchParams;
   const product = await getProductById(id);
 
   if (!product || !product.isActive) {
     notFound();
+  }
+
+  const returnParams = new URLSearchParams();
+  for (const key of ["bookingId", "payment", "cartItem"]) {
+    const value = query[key];
+    if (typeof value === "string" && value) returnParams.set(key, value);
   }
 
   return (
@@ -36,6 +44,7 @@ export default async function ReservePage({ params }: ReservePageProps) {
             reservedUnits: product.reservedUnits,
             rentedUnits: product.rentedUnits,
           }}
+          returnQuery={returnParams.toString()}
         />
       </main>
     </div>

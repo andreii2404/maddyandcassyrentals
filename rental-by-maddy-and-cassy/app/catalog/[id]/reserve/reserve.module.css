@@ -9,6 +9,7 @@
 .checkoutGate h1 { margin: 0; color: var(--color-text-primary); font-size: clamp(1.8rem,4vw,2.7rem); letter-spacing: -.035em; }
 .checkoutGate > p:not(.eyebrow):not(.gateError) { max-width: 720px; color: var(--color-charcoal); line-height: 1.65; }
 .gateOptions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 1rem; margin-top: 1.5rem; }
+.resumeGate { max-width: 560px; grid-template-columns: minmax(0, 1fr); }
 .gateOptions > div { display: flex; align-items: flex-start; flex-direction: column; gap: .65rem; padding: 1.25rem; border: 1px solid var(--color-light-gray); border-radius: 18px; background: rgba(255,255,255,.85); }
 .gateOptions strong { color: var(--color-text-primary); }
 .gateOptions span { min-height: 3.2em; color: var(--color-charcoal); font-size: .8rem; line-height: 1.55; }

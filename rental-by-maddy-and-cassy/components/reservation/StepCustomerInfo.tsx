@@ -31,6 +31,7 @@ export default function StepCustomerInfo({
 }: StepCustomerInfoProps) {
   const [errors, setErrors] = useState<Partial<Record<keyof CustomerInfoDraft, string>>>({});
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   function validate(): boolean {
     const nextErrors: Partial<Record<keyof CustomerInfoDraft, string>> = {};
@@ -57,6 +58,7 @@ export default function StepCustomerInfo({
     if (!validate()) return;
 
     setSaving(true);
+    setSaveError(null);
     try {
       await updateUserProfile(uid, {
         email: customerInfo.email.trim(),
@@ -67,10 +69,17 @@ export default function StepCustomerInfo({
         facebookLink: customerInfo.facebookLink,
         instagramLink: customerInfo.instagramLink,
       });
+      onContinue();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      setSaveError(
+        /session|expired|unauthenticated|permission denied/i.test(message)
+          ? "Your sign-in session expired. Sign in again, then this reservation will resume from the same booking."
+          : message || "We couldn't save your rental details. Please try again.",
+      );
     } finally {
       setSaving(false);
     }
-    onContinue();
   }
 
   return (
@@ -240,6 +249,8 @@ export default function StepCustomerInfo({
           {errors.instagramLink ? <p className={formStyles.errorText}>{errors.instagramLink}</p> : null}
         </div>
       </div>
+
+      {saveError ? <p className={formStyles.errorText} role="alert">{saveError}</p> : null}
 
       <div className={styles.footer}>
         {onBack ? (

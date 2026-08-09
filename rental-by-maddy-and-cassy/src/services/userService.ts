@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient } from "@/src/lib/supabase/client";
-import type { Database, Tables } from "@/src/lib/supabase/database.types";
+import type { Tables } from "@/src/lib/supabase/database.types";
 import type { UserProfile } from "@/src/types/database";
 import { isValidPhoneNumber } from "@/src/lib/authValidation";
 
@@ -38,7 +38,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 }
 
 export async function updateUserProfile(
-  uid: string,
+  _uid: string,
   updates: Partial<
     Pick<
       UserProfile,
@@ -49,22 +49,18 @@ export async function updateUserProfile(
   if (updates.phoneNumber !== undefined && !isValidPhoneNumber(updates.phoneNumber)) {
     throw new Error("Phone number must contain exactly 11 digits.");
   }
-  const payload: Database["public"]["Tables"]["profiles"]["Update"] = {
-    contact_email: updates.email,
-    display_name: updates.displayName,
-    phone_number: updates.phoneNumber,
-    full_address: updates.fullAddress,
-    facebook_url: updates.facebookLink,
-    instagram_url: updates.instagramLink,
-  };
-  if (updates.birthDate !== undefined) payload.birth_date = updates.birthDate || null;
+  const response = await fetch("/api/account/profile", {
+    method: "PATCH",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(updates),
+  });
+  if (response.ok) return;
 
-  const { error } = await createClient()
-    .from("profiles")
-    .update(payload)
-    .eq("id", uid);
-
-  if (error) throw new Error(error.message);
+  const body = (await response.json().catch(() => null)) as { error?: unknown } | null;
+  throw new Error(
+    typeof body?.error === "string" ? body.error : "Your profile could not be updated.",
+  );
 }
 
 /** Admin-only: RLS lets an active admin SELECT every profile row, not just their own. */

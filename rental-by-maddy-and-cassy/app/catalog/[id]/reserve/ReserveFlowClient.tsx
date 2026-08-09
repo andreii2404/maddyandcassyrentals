@@ -22,8 +22,8 @@ import {
   createBookingReservation,
   submitBookingDocuments,
 } from "@/src/services/bookingSubmissionService";
-import { createPaymentCheckout, reconcilePayment } from "@/src/services/paymentService";
-import { getBookingById, getCustomerRewardProgress } from "@/src/services/bookingService";
+import { createPaymentCheckout, getReservationResumeState, reconcilePayment } from "@/src/services/paymentService";
+import { getCustomerRewardProgress } from "@/src/services/bookingService";
 import { startGuestCheckout } from "@/src/services/authService";
 import { useCart } from "@/hooks/useCart";
 import { calculateReservationPricing } from "@/src/lib/reservationPricing";
@@ -47,6 +47,7 @@ const STEP_LABELS = [
 interface ReserveFlowClientProps {
   product: Product;
   units: UnitCounts;
+  returnQuery?: string;
 }
 
 function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & { isGuest: boolean }) {
@@ -62,6 +63,7 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
   const [openingPayment, setOpeningPayment] = useState(false);
   const [checkingPayment, setCheckingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [receiptReady, setReceiptReady] = useState(false);
   const [submittingDocuments, setSubmittingDocuments] = useState(false);
   const [prefilled, setPrefilled] = useState(false);
   const [progressHydrated, setProgressHydrated] = useState(false);
@@ -211,10 +213,7 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
     const params = new URLSearchParams(window.location.search);
     const resumedBookingId = params.get("bookingId");
     if (!resumedBookingId) return;
-    const activeUser = user;
     const activeBookingId = resumedBookingId;
-    const supabase = createClient();
-
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const returnedFromPayment = params.get("payment") === "success";
@@ -222,6 +221,13 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
     let attempts = 0;
 
     async function refreshBooking() {
+      // A booking ID supplied by our PayMongo return URL is authoritative.
+      // Move to Payment Submission immediately instead of letting an empty or
+      // stale browser draft show Rental Details while verification runs.
+      setBookingId(activeBookingId);
+      setStep(3);
+      if (returnedFromPayment) setCheckingPayment(true);
+
       let providerFailed = false;
       if (returnedFromPayment) {
         try {
@@ -242,40 +248,31 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
         }
       }
 
-      const booking = await getBookingById(supabase, activeBookingId);
-      if (!booking || booking.customerId !== activeUser.id || booking.productId !== product.id || cancelled) {
-        setPaymentError("This reservation could not be resumed.");
+      let resumeState;
+      try {
+        resumeState = await getReservationResumeState(activeBookingId);
+      } catch (error) {
+        if (cancelled) return;
+        setCheckingPayment(false);
+        setPaymentError(
+          error instanceof Error ? error.message : "This reservation could not be resumed.",
+        );
+        return;
+      }
+      const booking = resumeState.booking;
+      if (booking.productId !== product.id || cancelled) {
+        setCheckingPayment(false);
+        setPaymentError("This reservation belongs to a different rental item.");
         return;
       }
 
-      const { data: payments } = await supabase
-        .from("booking_payment_submissions")
-        .select("declared_amount, status, provider_metadata")
-        .eq("booking_id", activeBookingId);
-
-      const verifiedAmount = (payments ?? [])
-        .filter((p) => p.status === "verified")
-        .reduce((sum, p) => sum + p.declared_amount, 0);
-      const hasPendingPayment = (payments ?? []).some((p) =>
-        ["submitted", "under_review"].includes(p.status),
-      );
-      const demo = (payments ?? []).some(
-        (p) => (p.provider_metadata as { demo?: boolean } | null)?.demo === true,
-      );
-
-      const nextState: BookingPaymentState =
-        verifiedAmount <= 0
-          ? hasPendingPayment
-            ? "pending"
-            : "unpaid"
-          : verifiedAmount >= booking.totalAmount - 0.01
-            ? "paid"
-            : "partially_paid";
+      const nextState: BookingPaymentState = resumeState.paymentState;
 
       setBookingId(booking.id);
       setBookingNumber(booking.bookingRef);
       setPaymentState(nextState);
-      setIsDemoPayment(demo);
+      setIsDemoPayment(resumeState.isDemoPayment);
+      setReceiptReady(resumeState.receiptReady);
       setDraft((current) => ({
         ...current,
         quantity: booking.quantity,
@@ -291,8 +288,6 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
           ...parseCustomerAddress(booking.customerSnapshot.address),
         },
       }));
-      setStep(3);
-
       if (nextState === "paid" || nextState === "partially_paid") {
         setCheckingPayment(false);
         setPaymentError(null);
@@ -512,7 +507,9 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
             rewardProgress={rewardProgress}
             paymentState={paymentState}
             isDemoPayment={isDemoPayment}
+            bookingId={bookingId ?? undefined}
             bookingNumber={bookingNumber ?? undefined}
+            receiptReady={receiptReady}
             opening={openingPayment}
             checking={checkingPayment}
             error={paymentError}
@@ -569,7 +566,31 @@ export default function ReserveFlowClient(props: ReserveFlowClientProps) {
   }
 
   if (!user) {
-    const reservePath = `/catalog/${props.product.id}/reserve`;
+    const reservePath = `/catalog/${props.product.id}/reserve${props.returnQuery ? `?${props.returnQuery}` : ""}`;
+    const isReturningBooking = new URLSearchParams(props.returnQuery ?? "").has("bookingId");
+
+    if (isReturningBooking) {
+      return (
+        <section className={styles.checkoutGate} aria-labelledby="resume-booking-heading">
+          <p className={styles.eyebrow}>RESERVATION RECOVERY</p>
+          <h1 id="resume-booking-heading">Sign in to resume your payment confirmation.</h1>
+          <p>
+            Your reservation link is safe. Your previous session expired while you were at
+            PayMongo, so sign in with the same customer email and we&apos;ll return you directly
+            to Payment Submission without asking you to enter the rental details again.
+          </p>
+          <div className={`${styles.gateOptions} ${styles.resumeGate}`}>
+            <div>
+              <strong>Continue the existing reservation</strong>
+              <span>Do not create another booking or pay a second time.</span>
+              <Link href={`/sign-in?redirect=${encodeURIComponent(reservePath)}`}>Sign In &amp; Resume</Link>
+            </div>
+          </div>
+          <Link href="/account/bookings" className={styles.backToCart}>Open My Bookings</Link>
+        </section>
+      );
+    }
+
     return (
       <section className={styles.checkoutGate} aria-labelledby="checkout-access-heading">
         <p className={styles.eyebrow}>CHECKOUT ACCESS</p>

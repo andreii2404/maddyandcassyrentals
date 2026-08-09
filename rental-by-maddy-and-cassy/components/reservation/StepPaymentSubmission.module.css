@@ -133,9 +133,28 @@
 }
 
 .success {
+  display: grid;
+  gap: 0.35rem;
   background: #edf8ef;
   color: #245d2d;
-  font-weight: 700;
+}
+
+.success strong {
+  font-weight: 800;
+}
+
+.success span {
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.success a {
+  width: fit-content;
+  color: #245d2d;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 @media (max-width: 640px) {

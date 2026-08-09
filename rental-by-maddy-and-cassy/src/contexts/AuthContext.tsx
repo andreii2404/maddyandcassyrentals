@@ -2,7 +2,7 @@
 
 import { createContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
-import { subscribeToAuthChanges } from "@/src/services/authService";
+import { getCurrentUser, subscribeToAuthChanges } from "@/src/services/authService";
 import { isActiveAdmin } from "@/src/services/adminService";
 import { getUserProfile } from "@/src/services/userService";
 import type { UserProfile } from "@/src/types/database";
@@ -46,7 +46,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const nextUserId = nextUser?.id ?? null;
       const identityChanged = activeUserIdRef.current !== nextUserId;
       activeUserIdRef.current = nextUserId;
-      setUser(nextUser);
 
       // Supabase can emit SIGNED_IN/TOKEN_REFRESHED again when a browser tab
       // regains focus. The account has not changed, so do not re-enter the
@@ -63,16 +62,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         pendingTimers.delete(timerId);
         void (async () => {
           try {
-            if (nextUser) {
+            // INITIAL_SESSION can contain a locally cached user whose refresh
+            // token has since been revoked. Validate it with Auth before the
+            // app treats the customer as signed in; otherwise PayMongo can
+            // return to a stale-looking session whose database calls are anon.
+            const verifiedUser = nextUser
+              ? await getCurrentUser().catch(() => null)
+              : null;
+
+            if (verifiedUser) {
               const [userProfile, adminAccess] = await Promise.all([
-                getUserProfile(nextUser.id).catch(() => null),
+                getUserProfile(verifiedUser.id).catch(() => null),
                 isActiveAdmin().catch(() => false),
               ]);
               if (loadId === accountLoadRef.current) {
+                activeUserIdRef.current = verifiedUser.id;
+                setUser(verifiedUser);
                 setProfile(userProfile);
                 setIsAdmin(adminAccess);
               }
             } else {
+              activeUserIdRef.current = null;
+              setUser(null);
               setProfile(null);
               setIsAdmin(false);
             }
