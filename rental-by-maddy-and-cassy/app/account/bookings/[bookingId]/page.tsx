@@ -61,7 +61,7 @@ function getAgreementGuidance(status: string): string {
     case "completed":
       return "The rental agreement has all required signatures and is ready to view.";
     case "awaiting_business_signature":
-      return "You have signed. The business will review and countersign the agreement.";
+      return "Your part is complete—no action is needed from you. An administrator will finish reviewing your documents, countersign the agreement, and notify you when the final PDF is ready.";
     case "awaiting_customer_signature":
       return "Review and sign the rental agreement to continue your booking.";
     case "rejected":

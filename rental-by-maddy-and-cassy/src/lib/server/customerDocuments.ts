@@ -108,6 +108,7 @@ export async function generateAndSaveFinalAgreement(
 ): Promise<void> {
   const { booking, agreement } = input;
   const customerSignature = agreement.signatures?.find((s) => s.signerRole === "customer");
+  const businessSignature = agreement.signatures?.find((s) => s.signerRole === "business");
 
   let signatureBytes: Uint8Array | undefined;
   let signatureContentType: string | undefined;
@@ -141,6 +142,8 @@ export async function generateAndSaveFinalAgreement(
     signatureContentType,
     paymentReference: input.paymentReference,
     confirmedAt: formatManilaDate(new Date(), true),
+    businessSignerName: businessSignature?.signerName,
+    businessSignedAt: businessSignature ? formatManilaDate(businessSignature.signedAt, true) : undefined,
   });
   await savePrivatePdf(admin, "agreements", input.storagePath, bytes);
 }
