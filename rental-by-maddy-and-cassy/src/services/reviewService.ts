@@ -1,6 +1,6 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { createPublicClient } from "@/src/lib/supabase/public";
-import type { Database, Tables } from "@/src/lib/supabase/database.types";
+import type { Tables } from "@/src/lib/supabase/database.types";
+import type { SubmitReviewResult } from "@/src/lib/reviewSubmission";
 import type { Review } from "@/src/types/database";
 
 // public.reviews no longer carries booking_id/product_id/user_id directly —
@@ -18,16 +18,6 @@ type ReviewRow = Pick<
       })
     | null;
 };
-
-export interface SubmitReviewResult {
-  reviewId: string | null;
-  alreadySubmitted: boolean;
-}
-
-export function isDuplicateReviewError(error: { code?: string; message?: string } | null): boolean {
-  if (!error) return false;
-  return error.code === "23505" || error.message?.includes("reviews_booking_item_id_key") === true;
-}
 
 function mapReview(row: ReviewRow): Review {
   return {
@@ -50,7 +40,6 @@ function mapReview(row: ReviewRow): Review {
  * status 'returned' — this is only a convenience wrapper.
  */
 export async function submitReview(
-  supabase: SupabaseClient<Database>,
   input: {
     bookingId: string;
     productId: string;
@@ -58,42 +47,28 @@ export async function submitReview(
     comment?: string;
   },
 ): Promise<SubmitReviewResult> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("You must be signed in to leave a review.");
+  const response = await fetch(`/api/bookings/${encodeURIComponent(input.bookingId)}/review`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      productId: input.productId,
+      rating: input.rating,
+      comment: input.comment,
+    }),
+  });
+  const payload = (await response.json().catch(() => null)) as {
+    error?: string;
+    reviewId?: string | null;
+    alreadySubmitted?: boolean;
+  } | null;
 
-  const { data: item, error: itemError } = await supabase
-    .from("booking_items")
-    .select("id")
-    .eq("booking_id", input.bookingId)
-    .eq("product_id", input.productId)
-    .maybeSingle();
-  if (itemError || !item) {
-    throw new Error("This booking does not include the selected product.");
+  if (!response.ok) {
+    throw new Error(payload?.error || "We couldn't send your review right now. Please try again.");
   }
-
-  const { data, error } = await supabase
-    .from("reviews")
-    .upsert(
-      {
-        booking_item_id: item.id,
-        rating: input.rating,
-        comment: input.comment ?? null,
-        status: "pending",
-      },
-      { onConflict: "booking_item_id", ignoreDuplicates: true },
-    )
-    .select("id")
-    .maybeSingle();
-
-  // A repeat submission is intentionally a no-op. This covers rapid double
-  // clicks, automatic request retries, and a stale page that still shows the form.
-  if (isDuplicateReviewError(error)) {
-    return { reviewId: null, alreadySubmitted: true };
-  }
-  if (error) throw new Error("We couldn't send your review right now. Please try again.");
-  return { reviewId: data?.id ?? null, alreadySubmitted: !data };
+  return {
+    reviewId: payload?.reviewId ?? null,
+    alreadySubmitted: payload?.alreadySubmitted === true,
+  };
 }
 
 export async function getApprovedReviewsForProduct(productId: string): Promise<Review[]> {
