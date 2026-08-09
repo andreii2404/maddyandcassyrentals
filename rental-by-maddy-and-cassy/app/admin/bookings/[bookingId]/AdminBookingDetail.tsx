@@ -21,9 +21,13 @@ import type { PaymentRecord, BookingReceipt } from "@/src/types/payment";
 import Spinner from "@/components/ui/Spinner";
 import StatusBadge from "@/components/status-badge/StatusBadge";
 import { useToast } from "@/components/ui/ToastProvider";
+import {
+  getBookingLiveStatusLabel,
+  useBookingRealtime,
+} from "@/hooks/useBookingRealtime";
 import styles from "./bookingDetail.module.css";
 import RequirementsReviewPanel from "@/components/admin/RequirementsReviewPanel";
-import { getFulfillmentProgressLabel } from "@/src/lib/bookingManagement";
+import { getBookingMilestones, getFulfillmentProgressLabel } from "@/src/lib/bookingManagement";
 
 const REQUIREMENTS_STATUS_LABELS: Record<string, string> = {
   not_submitted: "Not Submitted",
@@ -110,6 +114,8 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadDetails();
   }, [loadDetails]);
+
+  const liveStatus = useBookingRealtime({ bookingId, onChange: loadDetails });
 
   const actions = useMemo(
     () => (state ? ADMIN_BOOKING_ACTIONS[state.details.booking.status] : []),
@@ -287,6 +293,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
     },
   ];
   const remainingChecks = reviewChecks.filter((check) => !check.ready).length;
+  const bookingMilestones = getBookingMilestones(booking);
 
   return (
     <div className={styles.page}>
@@ -299,6 +306,10 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
           <p>{booking.productSnapshot.name} for {fullName}</p>
         </div>
         <div className={styles.headerActions}>
+          <span className={`${styles.liveStatus} ${styles[liveStatus]}`}>
+            <span aria-hidden="true" />
+            {getBookingLiveStatusLabel(liveStatus)}
+          </span>
           <StatusBadge status={booking.status} />
           <button
             type="button"
@@ -357,26 +368,67 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
 
       <section className={styles.actionPanel} aria-labelledby="booking-action-heading">
         <div className={styles.actionIntro}>
-          <span>Next step</span>
-          <h2 id="booking-action-heading">Update this booking</h2>
-          <p>Only valid next actions are shown. Updates are recorded and sent to the customer.</p>
+          <span>Booking operations</span>
+          <h2 id="booking-action-heading">Move the booking forward</h2>
+          <p>Select a clear action card below. Every change is recorded, sent to the customer, and reflected automatically on their account.</p>
         </div>
+        <ol className={styles.statusJourney} aria-label="Booking status journey">
+          {bookingMilestones.map((milestone, index) => (
+            <li
+              key={milestone.key}
+              className={milestone.current ? styles.journeyCurrent : milestone.completed ? styles.journeyComplete : styles.journeyUpcoming}
+            >
+              <span aria-hidden="true">{milestone.completed && !milestone.current ? "✓" : index + 1}</span>
+              <div><strong>{milestone.label}</strong><small>{milestone.current ? "Current status" : milestone.completed ? "Completed" : "Upcoming"}</small></div>
+            </li>
+          ))}
+        </ol>
         {actions.length ? (
           <div className={styles.actionControls}>
-            <label>
-              <span>Choose action</span>
-              <select value={selectedStatus} onChange={(event) => setSelectedStatus(event.target.value as "" | BookingStatus)} disabled={updating}>
-                <option value="">Select the next action</option>
-                {actions.map((action) => <option key={action.status} value={action.status}>{action.label}</option>)}
-              </select>
-            </label>
-            <label className={styles.noteField}>
-              <span>Admin note{selectedAction?.requiresNote ? " (required)" : " (optional)"}</span>
-              <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={2} maxLength={1000} placeholder="Short, clear note for the customer" disabled={updating} />
-            </label>
-            <button type="button" className={`${styles.applyButton} ${selectedAction?.tone === "danger" ? styles.dangerButton : ""}`} onClick={handleStatusAction} disabled={!selectedStatus || updating}>
-              {updating ? "Applying..." : "Apply Action"}
-            </button>
+            <div className={styles.actionChoiceGrid} aria-label="Available booking actions">
+              {actions.map((action) => {
+                const selected = action.status === selectedStatus;
+                return (
+                  <button
+                    key={action.status}
+                    type="button"
+                    className={`${styles.actionChoice} ${action.tone === "danger" ? styles.dangerChoice : ""} ${selected ? styles.actionChoiceSelected : ""}`}
+                    onClick={() => { setSelectedStatus(action.status); setNote(""); }}
+                    aria-pressed={selected}
+                    disabled={updating}
+                  >
+                    <span className={styles.actionChoiceIcon} aria-hidden="true">{action.tone === "danger" ? "!" : "→"}</span>
+                    <span className={styles.actionChoiceCopy}>
+                      <small>{action.tone === "danger" ? "Close booking" : "Recommended next step"}</small>
+                      <strong>{action.label}</strong>
+                      <span>{action.description}</span>
+                    </span>
+                    <span className={styles.actionChoiceState}>{selected ? "Selected" : "Choose"}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {selectedAction ? (
+              <div className={`${styles.actionConfirmation} ${selectedAction.tone === "danger" ? styles.dangerConfirmation : ""}`}>
+                <div>
+                  <small>Selected action</small>
+                  <h3>{selectedAction.label}</h3>
+                  <p>{selectedAction.description}</p>
+                </div>
+                <label className={styles.noteField}>
+                  <span>Message to customer{selectedAction.requiresNote ? " (required)" : " (optional)"}</span>
+                  <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={3} maxLength={1000} placeholder={selectedAction.requiresNote ? "Explain the reason clearly before continuing" : "Add a helpful update or handover instruction"} disabled={updating} />
+                </label>
+                <div className={styles.confirmationActions}>
+                  <button type="button" className={styles.cancelSelectionButton} onClick={() => { setSelectedStatus(""); setNote(""); }} disabled={updating}>Choose another action</button>
+                  <button type="button" className={`${styles.applyButton} ${selectedAction.tone === "danger" ? styles.dangerButton : ""}`} onClick={handleStatusAction} disabled={updating || (selectedAction.requiresNote && !note.trim())}>
+                    {updating ? "Updating customer..." : `Confirm ${selectedAction.label}`}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className={styles.choosePrompt}>Choose an action card to review its customer message before confirming.</p>
+            )}
           </div>
         ) : <p className={styles.terminalNotice}>This booking is complete or closed. No further actions are available.</p>}
       </section>

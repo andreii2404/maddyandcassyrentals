@@ -19,9 +19,8 @@ function mapNotification(row: Tables<"notifications">): UserNotification {
 }
 
 /**
- * Loads existing notifications, then keeps them live via Supabase Realtime
- * (notifications is enabled on the supabase_realtime publication — see the
- * PayMongo/audit migration). Replaces the old Firestore onSnapshot listener.
+ * Loads existing notifications, listens for Realtime events when available,
+ * and uses booking events plus a quiet polling/focus fallback to stay fresh.
  */
 export function subscribeToUserNotifications(
   supabase: SupabaseClient<Database>,
@@ -30,15 +29,19 @@ export function subscribeToUserNotifications(
 ): () => void {
   let current: UserNotification[] = [];
 
-  supabase
-    .from("notifications")
-    .select("*")
-    .eq("user_id", uid)
-    .order("created_at", { ascending: false })
-    .then(({ data }) => {
-      current = (data ?? []).map(mapNotification);
+  const loadNotifications = async () => {
+    const { data } = await supabase
+      .from("notifications")
+      .select("*")
+      .eq("user_id", uid)
+      .order("created_at", { ascending: false });
+    if (data) {
+      current = data.map(mapNotification);
       callback(current);
-    });
+    }
+  };
+
+  void loadNotifications();
 
   const channel = supabase
     .channel(`notifications-${uid}`)
@@ -60,7 +63,15 @@ export function subscribeToUserNotifications(
     )
     .subscribe();
 
+  const refreshNotifications = () => void loadNotifications();
+  const fallbackInterval = window.setInterval(refreshNotifications, 30_000);
+  window.addEventListener("booking-live-update", refreshNotifications);
+  window.addEventListener("focus", refreshNotifications);
+
   return () => {
+    window.clearInterval(fallbackInterval);
+    window.removeEventListener("booking-live-update", refreshNotifications);
+    window.removeEventListener("focus", refreshNotifications);
     supabase.removeChannel(channel);
   };
 }

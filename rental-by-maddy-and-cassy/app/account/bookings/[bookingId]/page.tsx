@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,6 +20,10 @@ import BookingPaymentPanel from "@/components/payment/BookingPaymentPanel";
 import { useToast } from "@/components/ui/ToastProvider";
 import CustomerReviewPanel from "@/components/reviews/CustomerReviewPanel";
 import CustomerBookingManagement from "@/components/booking-management/CustomerBookingManagement";
+import {
+  getBookingLiveStatusLabel,
+  useBookingRealtime,
+} from "@/hooks/useBookingRealtime";
 
 const REQUIREMENTS_STATUS_LABEL: Record<string, string> = {
   not_submitted: "Not Submitted",
@@ -92,14 +96,14 @@ function BookingDetailContent() {
   const [details, setDetails] = useState<BookingDetails | null | "error">(null);
   const { showToast } = useToast();
 
-  async function loadDetails() {
+  const loadDetails = useCallback(async () => {
     try {
       const result = await getBookingDetails(createClient(), params.bookingId);
       setDetails(result ?? "error");
     } catch {
       setDetails("error");
     }
-  }
+  }, [params.bookingId]);
 
   async function openBookingFile(
     bucket: Parameters<typeof getBookingFileUrl>[1],
@@ -115,9 +119,14 @@ function BookingDetailContent() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadDetails();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.bookingId]);
+    void loadDetails();
+  }, [loadDetails]);
+
+  const liveStatus = useBookingRealtime({
+    bookingId: params.bookingId,
+    enabled: Boolean(user),
+    onChange: loadDetails,
+  });
 
   if (!user || details === null) {
     return (
@@ -213,7 +222,12 @@ function BookingDetailContent() {
             <h1 className={styles.heading}>{booking.productSnapshot.name}</h1>
             <p>Created {new Date(booking.createdAt).toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" })}</p>
           </div>
-          <StatusBadge status={booking.status} />
+          <div className={styles.headerStatusGroup}>
+            <span className={`${styles.liveStatus} ${styles[liveStatus]}`}>
+              <span aria-hidden="true" />{getBookingLiveStatusLabel(liveStatus)}
+            </span>
+            <StatusBadge status={booking.status} />
+          </div>
         </div>
 
         <nav className={styles.sectionNav} aria-label="Booking detail sections">

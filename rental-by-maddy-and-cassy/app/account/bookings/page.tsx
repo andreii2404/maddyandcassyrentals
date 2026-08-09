@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { createClient } from "@/src/lib/supabase/client";
@@ -16,6 +16,10 @@ import {
 import BookingSummaryCard from "@/components/booking-summary/BookingSummaryCard";
 import StatusBadge from "@/components/status-badge/StatusBadge";
 import Spinner from "@/components/ui/Spinner";
+import {
+  getBookingLiveStatusLabel,
+  useBookingRealtime,
+} from "@/hooks/useBookingRealtime";
 import {
   COMPLETED_RENTALS_BEFORE_REWARD,
   LOYALTY_REWARD_RENTAL_NUMBER,
@@ -36,22 +40,28 @@ export default function BookingsListPage() {
   const [search, setSearch] = useState("");
   const [loadError, setLoadError] = useState(false);
 
-  useEffect(() => {
+  const loadBookings = useCallback(async () => {
     if (!user) return;
-    let active = true;
-    getBookingsForUser(createClient(), user.id)
-      .then((records) => {
-        if (!active) return;
-        setBookings(records);
-        setLoadError(false);
-      })
-      .catch(() => {
-        if (!active) return;
-        setBookings([]);
-        setLoadError(true);
-      });
-    return () => { active = false; };
+    try {
+      const records = await getBookingsForUser(createClient(), user.id);
+      setBookings(records);
+      setLoadError(false);
+    } catch {
+      setBookings([]);
+      setLoadError(true);
+    }
   }, [user]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadBookings();
+  }, [loadBookings]);
+
+  const liveStatus = useBookingRealtime({
+    customerId: user?.id,
+    enabled: Boolean(user),
+    onChange: loadBookings,
+  });
 
   const counts = useMemo(() => {
     const records = bookings ?? [];
@@ -90,7 +100,12 @@ export default function BookingsListPage() {
           <h1>My Bookings</h1>
           <p>Track every request, payment milestone, handover update, and completed rental.</p>
         </div>
-        <Link href="/catalog" className={styles.newBookingLink}>Book another rental <span>→</span></Link>
+        <div className={styles.heroActions}>
+          <span className={`${styles.liveStatus} ${styles[liveStatus]}`}>
+            <span aria-hidden="true" />{getBookingLiveStatusLabel(liveStatus)}
+          </span>
+          <Link href="/catalog" className={styles.newBookingLink}>Book another rental <span>→</span></Link>
+        </div>
       </header>
 
       <section className={styles.summaryGrid} aria-label="Booking summary">
