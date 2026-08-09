@@ -78,6 +78,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
       if (message.includes("AGREEMENT_NOT_COMPLETED")) {
         return errorResponse("The rental agreement must be fully signed before confirming this booking.", 409);
       }
+      if (message.includes("unit_reservation_status")) {
+        return errorResponse("The device return could not be recorded. Refresh the page and try once more.", 500);
+      }
       console.error("Admin booking status update failed", error);
       return errorResponse("The booking status could not be updated. Please try again.", 500);
     }
