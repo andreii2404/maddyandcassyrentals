@@ -179,12 +179,20 @@ export default function CustomerBookingManagement({
 
       <section className={styles.management} aria-labelledby="manage-booking-heading">
         <div className={styles.sectionHeading}>
-          <div><p>SELF-SERVICE</p><h2 id="manage-booking-heading">Manage this booking</h2></div>
+          <div>
+            <p>SELF-SERVICE</p>
+            <h2 id="manage-booking-heading">Manage this booking</h2>
+            <span className={styles.headingHelp}>Available actions change as your booking moves forward.</span>
+          </div>
+          <span className={styles.managementHint}>Safe account controls</span>
         </div>
 
         <div className={styles.managementGrid}>
           <article>
-            <span className={styles.actionNumber}>01</span>
+            <div className={styles.actionHeader}>
+              <span className={styles.actionIcon} aria-hidden="true">EDIT</span>
+              <span className={`${styles.actionAvailability} ${canEdit ? styles.available : styles.locked}`}>{canEdit ? "Available" : "Locked"}</span>
+            </div>
             <h3>Edit safe details</h3>
             <p>{canEdit ? "Update pickup/delivery information and notes before payment or verification begins." : "Editing is locked once payment or verification begins. Contact the business for changes."}</p>
             <button type="button" disabled={!canEdit} onClick={() => { setEditOpen((open) => !open); setCancelOpen(false); }}>
@@ -192,7 +200,10 @@ export default function CustomerBookingManagement({
             </button>
           </article>
           <article>
-            <span className={styles.actionNumber}>02</span>
+            <div className={styles.actionHeader}>
+              <span className={`${styles.actionIcon} ${styles.cancelIcon}`} aria-hidden="true">CANCEL</span>
+              <span className={`${styles.actionAvailability} ${canCancel ? styles.available : styles.locked}`}>{canCancel ? "Available" : "Locked"}</span>
+            </div>
             <h3>Cancel booking</h3>
             <p>{canCancel ? "Cancel the request and release its reserved calendar dates." : "Online cancellation is unavailable at this stage. Contact the business for assistance."}</p>
             <button type="button" className={styles.cancelButton} disabled={!canCancel} onClick={() => { setCancelOpen((open) => !open); setEditOpen(false); }}>

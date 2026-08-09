@@ -17,6 +17,8 @@
 .timelineSection,
 .management { padding: clamp(1.25rem, 4vw, 1.6rem); }
 .sectionHeading > span { padding: 0.35rem 0.6rem; border-radius: 999px; background: var(--color-background-soft); color: var(--color-primary); font-size: 0.64rem; font-weight: 700; white-space: nowrap; }
+.headingHelp { display: block; margin-top: 0.38rem; color: var(--color-charcoal); font-size: 0.67rem; font-weight: 400; line-height: 1.5; }
+.managementHint { border: 1px solid rgba(154,89,101,0.11); }
 .milestones { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 0; margin: 1.4rem 0 0; padding: 0; list-style: none; }
 .milestones li { position: relative; min-width: 0; padding: 0 0.55rem; text-align: center; }
 .milestones li::before { position: absolute; top: 13px; right: 50%; left: -50%; height: 2px; background: var(--color-light-gray); content: ""; }
@@ -38,15 +40,21 @@
 .activity p { margin: 0.25rem 0 0; color: var(--color-charcoal); font-size: 0.64rem; }
 
 .managementGrid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 0.75rem; margin-top: 1.15rem; }
-.managementGrid article { position: relative; padding: 1rem; border: 1px solid var(--color-light-gray); border-radius: 15px; background: var(--color-background); }
-.actionNumber { color: var(--color-primary); font-size: 0.6rem; font-weight: 800; }
+.managementGrid article { position: relative; display: flex; min-width: 0; flex-direction: column; padding: 1rem; border: 1px solid var(--color-light-gray); border-radius: 15px; background: linear-gradient(145deg, var(--color-background), white); }
+.actionHeader { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; }
+.actionIcon { display: grid; min-width: 42px; height: 30px; padding: 0 0.45rem; place-items: center; border-radius: 9px; background: var(--color-background-soft); color: var(--color-primary); font-size: 0.5rem; font-weight: 900; letter-spacing: 0.05em; }
+.cancelIcon { background: var(--color-status-red-bg); color: var(--color-status-red); }
+.actionAvailability { padding: 0.28rem 0.5rem; border-radius: 999px; font-size: 0.53rem; font-weight: 800; }
+.available { background: var(--color-status-green-bg); color: var(--color-status-green); }
+.locked { background: var(--color-light-gray); color: var(--color-charcoal); }
 .managementGrid h3 { margin: 0.35rem 0 0; font-size: 0.86rem; }
-.managementGrid p { min-height: 42px; margin: 0.4rem 0 0.8rem; color: var(--color-charcoal); font-size: 0.66rem; line-height: 1.55; }
+.managementGrid p { flex: 1; min-height: 42px; margin: 0.4rem 0 0.8rem; color: var(--color-charcoal); font-size: 0.66rem; line-height: 1.55; }
 .managementGrid button,
 .saveButton,
 .cancelPanel button { min-height: 38px; padding: 0.5rem 0.75rem; border: 1px solid var(--color-primary); border-radius: 10px; background: white; color: var(--color-primary); font: inherit; font-size: 0.68rem; font-weight: 700; cursor: pointer; }
 .managementGrid button:disabled { border-color: var(--color-light-gray); color: #9a9493; background: #f7f7f5; cursor: not-allowed; }
 .managementGrid .cancelButton:not(:disabled) { border-color: var(--color-status-red-border); color: var(--color-status-red); }
+.managementGrid button { width: 100%; }
 
 .editForm,
 .cancelPanel { display: grid; gap: 0.9rem; margin-top: 1rem; padding: 1rem; border: 1px solid rgba(154,89,101,0.18); border-radius: 15px; background: var(--color-background-soft); }

@@ -58,15 +58,18 @@ export default function BookingPaymentPanel({
   return (
     <section className={styles.panel}>
       <div className={styles.heading}>
-        <div>
-          <p>SECURE PAYMENT</p>
-          <h3>
-            {isDemoPayment
-              ? "Demo payment recorded"
-              : paymentStatus === "paid"
-                ? "Payment confirmed"
-                : "Rental payment"}
-          </h3>
+        <div className={styles.titleGroup}>
+          <span className={styles.secureIcon} aria-hidden="true">✓</span>
+          <div>
+            <p>SECURE PAYMENT</p>
+            <h3>
+              {isDemoPayment
+                ? "Demo payment recorded"
+                : paymentStatus === "paid"
+                  ? "Payment confirmed"
+                  : "Rental payment"}
+            </h3>
+          </div>
         </div>
         <span className={`${styles.status} ${styles[paymentStatus]}`}>{paymentStatus.replaceAll("_", " ")}</span>
       </div>
@@ -90,6 +93,12 @@ export default function BookingPaymentPanel({
         {booking.deliveryFee > 0 ? <div><dt>Delivery fee</dt><dd>{money(booking.deliveryFee)}</dd></div> : null}
         <div><dt>Online fees</dt><dd>Free</dd></div>
       </dl>
+
+      <div className={styles.trustRow} aria-label="Payment information">
+        <div><strong>PayMongo</strong><span>Hosted checkout</span></div>
+        <div><strong>{amountPaid > 0 ? "Recorded" : "Protected"}</strong><span>{amountPaid > 0 ? "Payment saved" : "Secure processing"}</span></div>
+        <div><strong>{paymentStatus === "paid" ? "Ready" : "Automatic"}</strong><span>{paymentStatus === "paid" ? "Receipt available" : "Status updates"}</span></div>
+      </div>
 
       {paymentStatus === "paid" ? (
         <p className={styles.message}>
