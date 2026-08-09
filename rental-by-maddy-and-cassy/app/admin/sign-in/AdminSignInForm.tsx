@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { loginWithEmail, logout } from "@/src/services/authService";
+import { useAuth } from "@/hooks/useAuth";
 import formStyles from "@/components/ui/Form.module.css";
 import PasswordInput from "@/components/ui/PasswordInput";
 import styles from "../../(auth)/auth.module.css";
@@ -27,6 +28,7 @@ function getAdminRedirect(value: string | null): string {
 export default function AdminSignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user, isAdmin, loading } = useAuth();
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -40,6 +42,12 @@ export default function AdminSignInForm() {
   const resetNotice = searchParams.get("reset") === "success"
     ? "Your password was updated. Sign in with your new password."
     : null;
+
+  useEffect(() => {
+    if (!loading && user && isAdmin) {
+      router.replace(redirectTo);
+    }
+  }, [isAdmin, loading, redirectTo, router, user]);
 
   async function onSubmit(values: FormValues) {
     setFormError(null);
@@ -63,8 +71,10 @@ export default function AdminSignInForm() {
         );
       }
 
-      router.replace(redirectTo);
-      router.refresh();
+      // Use a full navigation after the server validates the admin session.
+      // This starts the protected area from the persisted cookie and avoids
+      // racing the client-side role lookup against RequireAdmin.
+      window.location.assign(redirectTo);
     } catch (error) {
       setFormError(
         error instanceof Error
