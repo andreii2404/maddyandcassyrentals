@@ -57,6 +57,8 @@ test("generates invoice and receipt PDFs", async () => {
     typedFullName: "Test Customer",
     paymentReference: "pay_test",
     confirmedAt: "July 29, 2026",
+    businessSignerName: "Maddy & Cassy Rentals",
+    businessSignedAt: "July 29, 2026",
   });
   assert.equal(Buffer.from(invoice).subarray(0, 4).toString(), "%PDF");
   assert.equal(Buffer.from(receipt).subarray(0, 4).toString(), "%PDF");

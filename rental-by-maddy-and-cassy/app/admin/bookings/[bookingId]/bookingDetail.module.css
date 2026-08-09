@@ -681,6 +681,152 @@
   width: fit-content;
 }
 
+.emergencyGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.recordsLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  gap: 0.9rem;
+  align-items: start;
+}
+
+.recordCard {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--color-light-gray);
+  border-radius: 16px;
+  background: linear-gradient(145deg, #fff, var(--color-background));
+}
+
+.recordHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.recordHeader > div > span {
+  color: var(--color-primary);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.recordHeader h3 {
+  margin: 0.2rem 0 0;
+  font-size: 0.9rem;
+}
+
+.recordStatus {
+  padding: 0.32rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.53rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.recordComplete { background: var(--color-status-green-bg); color: var(--color-status-green); }
+.recordPending { background: var(--color-status-yellow-bg); color: var(--color-status-yellow); }
+
+.signatureSteps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.signatureSteps li {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 0.45rem;
+  padding-right: 0.6rem;
+}
+
+.signatureSteps li::before {
+  position: absolute;
+  top: 13px;
+  right: 0;
+  left: 13px;
+  height: 2px;
+  background: var(--color-light-gray);
+  content: "";
+}
+
+.signatureSteps li:last-child::before { display: none; }
+.signatureSteps li > span { z-index: 1; display: grid; width: 26px; height: 26px; place-items: center; border: 1px solid var(--color-light-gray); border-radius: 50%; background: #fff; color: var(--color-charcoal); font-size: 0.58rem; font-weight: 900; }
+.signatureSteps .stepComplete > span { border-color: var(--color-status-green); background: var(--color-status-green); color: #fff; }
+.signatureSteps .stepCurrent > span { border-color: var(--color-primary); color: var(--color-primary); box-shadow: 0 0 0 4px rgba(154,89,101,.1); }
+.signatureSteps div { position: relative; z-index: 1; min-width: 0; padding-right: 0.3rem; background: linear-gradient(90deg, transparent, #fff 15%); }
+.signatureSteps strong,.signatureSteps small { display: block; }
+.signatureSteps strong { font-size: 0.61rem; line-height: 1.35; }
+.signatureSteps small { margin-top: 0.16rem; color: var(--color-charcoal); font-size: 0.52rem; line-height: 1.4; }
+.stepUpcoming { opacity: 0.65; }
+
+.countersignPanel {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 1rem;
+  padding: 0.9rem;
+  border: 1px solid rgba(154,89,101,.2);
+  border-radius: 13px;
+  background: var(--color-background-soft);
+}
+
+.countersignIntro > span { color: var(--color-primary); font-size: 0.55rem; font-weight: 900; letter-spacing: 0.09em; }
+.countersignIntro h4 { margin: 0.2rem 0 0; font-size: 0.8rem; }
+.countersignIntro p { margin: 0.3rem 0 0; color: var(--color-charcoal); font-size: 0.62rem; line-height: 1.55; }
+.readinessChecks { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.readinessChecks span { padding: 0.34rem 0.5rem; border-radius: 999px; font-size: 0.55rem; font-weight: 800; }
+.ready { background: var(--color-status-green-bg); color: var(--color-status-green); }
+.notReady { background: var(--color-status-red-bg); color: var(--color-status-red); }
+.blockedMessage { margin: 0; padding: 0.6rem; border: 1px solid var(--color-status-yellow-border); border-radius: 9px; background: var(--color-status-yellow-bg); color: var(--color-status-yellow); font-size: 0.61rem; line-height: 1.5; }
+.signerField { display: grid; gap: 0.35rem; }
+.signerField > span { color: var(--color-charcoal); font-size: 0.6rem; font-weight: 800; }
+.signerField input { width: 100%; min-height: 40px; padding: 0.65rem 0.7rem; border: 1px solid var(--color-light-gray); border-radius: 9px; outline: 0; background: #fff; color: var(--color-text-primary); font: inherit; font-size: 0.68rem; }
+.signerField input:focus { border-color: var(--color-dusty-rose); box-shadow: 0 0 0 3px rgba(215,165,165,.16); }
+.signerField input:disabled { background: #f5f4f2; cursor: not-allowed; }
+.authorizationCheck { display: flex; align-items: flex-start; gap: 0.5rem; color: var(--color-charcoal); font-size: 0.6rem; line-height: 1.5; }
+.authorizationCheck input { width: 16px; height: 16px; margin: 0.08rem 0 0; accent-color: var(--color-primary); }
+.countersignButton { min-height: 41px; padding: 0.65rem 0.8rem; border: 1px solid var(--color-primary); border-radius: 10px; background: var(--color-primary); color: #fff; font: inherit; font-size: 0.68rem; font-weight: 800; cursor: pointer; }
+.countersignButton:disabled { border-color: var(--color-light-gray); background: var(--color-light-gray); color: var(--color-charcoal); cursor: not-allowed; }
+.legalNote { color: var(--color-charcoal); font-size: 0.52rem; line-height: 1.5; }
+
+.completedAgreement { display: grid; gap: 0.7rem; margin-top: 1rem; padding: 0.8rem; border: 1px solid var(--color-status-green-border); border-radius: 12px; background: var(--color-status-green-bg); }
+.completedAgreement > div:first-child { display: grid; grid-template-columns: 30px minmax(0,1fr); gap: 0.6rem; align-items: center; }
+.completedAgreement > div:first-child > span { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 50%; background: var(--color-status-green); color: #fff; font-size: 0.7rem; font-weight: 900; }
+.completedAgreement strong { font-size: 0.7rem; }
+.completedAgreement p { margin: 0.15rem 0 0; color: var(--color-charcoal); font-size: 0.6rem; line-height: 1.5; }
+.completedAgreement .nextAdminStep { margin: 0; padding: 0.65rem; border-radius: 9px; background: #fff; color: var(--color-text-primary); }
+.agreementButtons { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+.agreementButtons button { min-height: 35px; padding: 0.48rem 0.65rem; border: 1px solid var(--color-status-green); border-radius: 9px; background: var(--color-status-green); color: #fff; font: inherit; font-size: 0.6rem; font-weight: 800; cursor: pointer; }
+.agreementButtons .secondaryRecordButton { background: #fff; color: var(--color-status-green); }
+
+.paymentAmount { display: grid; margin-top: 1rem; padding: 0.9rem; border: 1px solid rgba(154,89,101,.1); border-radius: 12px; background: #fff; }
+.paymentAmount > span { color: var(--color-charcoal); font-size: 0.58rem; font-weight: 800; text-transform: uppercase; }
+.paymentAmount strong { margin-top: 0.18rem; font-size: 1.25rem; letter-spacing: -.03em; }
+.paymentAmount small { margin-top: 0.18rem; color: var(--color-charcoal); font-size: 0.56rem; }
+.paymentFacts { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 0.5rem; margin: 0.7rem 0 0; }
+.paymentFacts div { padding: 0.6rem; border-radius: 10px; background: var(--color-background); }
+.paymentFacts dt { color: var(--color-charcoal); font-size: 0.54rem; font-weight: 800; text-transform: uppercase; }
+.paymentFacts dd { margin: 0.18rem 0 0; overflow-wrap: anywhere; font-size: 0.68rem; font-weight: 800; }
+.receiptList { display: grid; gap: 0.45rem; margin-top: 0.75rem; }
+.receiptList button { display: grid; width: 100%; grid-template-columns: auto minmax(0,1fr) auto; gap: 0.55rem; align-items: center; padding: 0.62rem; border: 1px solid var(--color-light-gray); border-radius: 10px; background: #fff; color: var(--color-text-primary); text-align: left; cursor: pointer; }
+.receiptList button:hover { border-color: var(--color-dusty-rose); background: var(--color-background-soft); }
+.receiptIcon { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 8px; background: var(--color-background-soft); color: var(--color-primary); font-size: 0.5rem; font-weight: 900; }
+.receiptList button > span:nth-child(2) { min-width: 0; }
+.receiptList strong,.receiptList small { display: block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.receiptList strong { font-size: 0.62rem; }
+.receiptList small { margin-top: 0.12rem; color: var(--color-charcoal); font-size: 0.52rem; }
+.receiptList button > span:last-child { color: var(--color-primary); font-weight: 800; }
+.emptyRecord { margin: 1rem 0 0; padding: 0.8rem; border: 1px dashed var(--color-dusty-rose); border-radius: 10px; color: var(--color-charcoal); font-size: 0.64rem; line-height: 1.5; }
+
 .timeline {
   margin: 0;
   padding: 1.2rem;
@@ -787,6 +933,10 @@
   .documents {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .recordsLayout {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 700px) {
@@ -802,9 +952,14 @@
 
   .actionControls,
   .detailGrid,
-  .confirmationGrid {
+  .confirmationGrid,
+  .emergencyGrid {
     grid-template-columns: 1fr;
   }
+
+  .signatureSteps { grid-template-columns: 1fr; gap: 0.65rem; }
+  .signatureSteps li::before { top: -0.7rem; bottom: 50%; left: 13px; width: 2px; height: auto; }
+  .signatureSteps li:first-child::before { display: none; }
 
   .snapshotFacts {
     grid-template-columns: 1fr;

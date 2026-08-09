@@ -62,6 +62,25 @@ export async function updateAdminBookingStatus(
   }
 }
 
+export async function countersignBookingAgreement(
+  bookingId: string,
+  signerName: string,
+): Promise<void> {
+  const response = await fetch(
+    `/api/admin/bookings/${encodeURIComponent(bookingId)}/agreement`,
+    {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ signerName, acknowledged: true }),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "The agreement could not be countersigned."));
+  }
+}
+
 export async function downloadAdminBookingPdf(bookingId: string, bookingReference: string): Promise<void> {
   const response = await fetch(`/api/admin/bookings/${encodeURIComponent(bookingId)}/pdf`, {
     credentials: "same-origin",

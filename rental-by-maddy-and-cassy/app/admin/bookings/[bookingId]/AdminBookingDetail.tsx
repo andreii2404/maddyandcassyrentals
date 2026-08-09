@@ -10,6 +10,7 @@ import {
 } from "@/src/services/bookingDetailService";
 import {
   ADMIN_BOOKING_ACTIONS,
+  countersignBookingAgreement,
   downloadAdminBookingPdf,
   updateAdminBookingStatus,
 } from "@/src/services/adminBookingService";
@@ -81,6 +82,9 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   const [note, setNote] = useState("");
   const [updating, setUpdating] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [businessSignerName, setBusinessSignerName] = useState("");
+  const [countersignAcknowledged, setCountersignAcknowledged] = useState(false);
+  const [countersigning, setCountersigning] = useState(false);
 
   const loadDetails = useCallback(async () => {
     try {
@@ -180,6 +184,35 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
     }
   }
 
+  async function handleCountersignAgreement() {
+    if (!businessSignerName.trim()) {
+      showToast("Enter the authorized business signer's complete name.", "error");
+      return;
+    }
+    if (!countersignAcknowledged) {
+      showToast("Confirm that you are authorized to countersign for the business.", "error");
+      return;
+    }
+    if (!window.confirm(`Countersign and finalize the agreement as ${businessSignerName.trim()}?`)) return;
+
+    setCountersigning(true);
+    try {
+      await countersignBookingAgreement(bookingId, businessSignerName.trim());
+      await loadDetails();
+      setCountersignAcknowledged(false);
+      showToast("Agreement countersigned. The final PDF is ready for the customer.", "success");
+    } catch (countersignError) {
+      showToast(
+        countersignError instanceof Error
+          ? countersignError.message
+          : "The agreement could not be countersigned.",
+        "error",
+      );
+    } finally {
+      setCountersigning(false);
+    }
+  }
+
   if (error) {
     return (
       <div className={styles.page}>
@@ -208,12 +241,19 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   const instagram = safeExternalLink(customer?.instagramLink || profile?.instagramLink);
   const totalAmount = `PHP ${booking.totalAmount.toLocaleString("en-PH")}`;
   const customerSignature = agreement?.signatures?.find((s) => s.signerRole === "customer");
+  const businessSignature = agreement?.signatures?.find((s) => s.signerRole === "business");
 
   const amountPaid = payments
     .filter((p) => p.status === "verified")
     .reduce((sum, p) => sum + p.amount, 0);
   const paymentStatusLabel =
     amountPaid <= 0 ? "Unpaid" : amountPaid >= booking.totalAmount - 0.01 ? "Paid" : "Partially Paid";
+  const canCountersignAgreement = Boolean(
+    agreement?.status === "awaiting_business_signature" &&
+    customerSignature &&
+    amountPaid > 0 &&
+    booking.requirementsStatus === "approved",
+  );
   const reviewChecks = [
     {
       label: "Payment",
@@ -232,7 +272,11 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
     {
       label: "Agreement",
       value: AGREEMENT_STATUS_LABELS[booking.agreementStatus] ?? formatStatus(booking.agreementStatus),
-      detail: customerSignature ? `Signed by ${customerSignature.signerName}` : "Customer signature pending",
+      detail: businessSignature
+        ? `Countersigned by ${businessSignature.signerName}`
+        : customerSignature
+          ? "Customer signed; business countersignature required"
+          : "Customer signature pending",
       ready: booking.agreementStatus === "completed",
     },
     {
@@ -380,43 +424,145 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
           </summary>
           <div className={styles.detailBody}>
             {emergencyContact || documents.length ? <>
-              {emergencyContact ? <dl className={styles.detailGrid}>
+              {emergencyContact ? <dl className={`${styles.detailGrid} ${styles.emergencyGrid}`}>
                 <div><dt>Emergency contact</dt><dd>{emergencyContact.fullName}</dd></div>
                 <div><dt>Relationship</dt><dd>{emergencyContact.relationship}</dd></div>
                 <div><dt>Emergency phone</dt><dd>{emergencyContact.phoneNumber}</dd></div>
                 <div><dt>Address</dt><dd>{emergencyContact.address || "-"}</dd></div>
               </dl> : null}
-              <div className={styles.documents}>{documents.map((document) => <button key={document.id} type="button" onClick={() => openPrivateFile("booking-documents", document.storagePath)}><span>{formatStatus(document.documentType)}</span><strong>Open secure file</strong></button>)}</div>
-              <RequirementsReviewPanel bookingId={bookingId} documents={documents} onUpdated={loadDetails} />
+              <RequirementsReviewPanel
+                bookingId={bookingId}
+                documents={documents}
+                onOpenDocument={(document) => openPrivateFile(
+                  document.storageBucket as Parameters<typeof getBookingFileUrl>[1],
+                  document.storagePath,
+                )}
+                onUpdated={loadDetails}
+              />
             </> : <p className={styles.empty}>Requirements have not been submitted for this booking.</p>}
           </div>
         </details>
 
-        <details className={styles.detailSection}>
+        <details className={styles.detailSection} open={agreement?.status === "awaiting_business_signature"}>
           <summary>
             <span className={styles.sectionNumber}>03</span>
             <div><strong>Agreement &amp; Payment</strong><small>{paymentStatusLabel} · {AGREEMENT_STATUS_LABELS[booking.agreementStatus] ?? formatStatus(booking.agreementStatus)}</small></div>
-            <span className={styles.expandLabel}>View records</span>
+            <span className={styles.expandLabel}>{agreement?.status === "awaiting_business_signature" ? "Action required" : "View records"}</span>
           </summary>
           <div className={styles.detailBody}>
-            <div className={styles.subsectionHeading}><h3>Rental Agreement</h3></div>
-            {agreement ? <>
-              <dl className={styles.detailGrid}>
-                <div><dt>Signed name</dt><dd>{customerSignature?.signerName ?? "-"}</dd></div>
-                <div><dt>Signed at</dt><dd>{formatDate(customerSignature?.signedAt, true)}</dd></div>
-                <div><dt>Agreement version</dt><dd>{agreement.versionNumber ? `v${agreement.versionNumber}` : "-"}</dd></div>
-                <div><dt>Agreement status</dt><dd>{AGREEMENT_STATUS_LABELS[agreement.status] ?? formatStatus(agreement.status)}</dd></div>
-              </dl>
-              {customerSignature?.signaturePath ? <button type="button" className={styles.signatureButton} onClick={() => openPrivateFile("customer-documents", customerSignature.signaturePath!)}>View customer signature</button> : null}
-            </> : <p className={styles.empty}>The rental agreement has not been submitted.</p>}
-            <div className={styles.subsectionHeading}><h3>Payment Records</h3></div>
-            <dl className={styles.detailGrid}>
-              <div><dt>Payment status</dt><dd>{paymentStatusLabel}</dd></div>
-              <div><dt>Verified amount</dt><dd>PHP {amountPaid.toLocaleString("en-PH")}</dd></div>
-              <div><dt>Payment attempts</dt><dd>{payments.length}</dd></div>
-              <div><dt>Receipts</dt><dd>{receipts.length}</dd></div>
-            </dl>
-            {receipts.length ? <div className={styles.documents}>{receipts.filter((receipt) => receipt.documentPath).map((receipt) => <button key={receipt.id} type="button" onClick={() => openPrivateFile("receipts", receipt.documentPath!)}><span>Receipt {receipt.receiptNumber ?? receipt.id.slice(0, 8)}</span><strong>Open secure PDF</strong></button>)}</div> : <p className={styles.empty}>No customer-facing financial documents have been issued yet.</p>}
+            <div className={styles.recordsLayout}>
+              <article className={styles.recordCard}>
+                <div className={styles.recordHeader}>
+                  <div><span>RENTAL AGREEMENT</span><h3>Signature workflow</h3></div>
+                  <span className={`${styles.recordStatus} ${agreement?.status === "completed" ? styles.recordComplete : styles.recordPending}`}>
+                    {AGREEMENT_STATUS_LABELS[booking.agreementStatus] ?? formatStatus(booking.agreementStatus)}
+                  </span>
+                </div>
+
+                {agreement ? <>
+                  <ol className={styles.signatureSteps}>
+                    <li className={customerSignature ? styles.stepComplete : styles.stepCurrent}>
+                      <span>{customerSignature ? "✓" : "1"}</span>
+                      <div><strong>Customer signature</strong><small>{customerSignature ? `${customerSignature.signerName} · ${formatDate(customerSignature.signedAt, true)}` : "Waiting for customer"}</small></div>
+                    </li>
+                    <li className={businessSignature ? styles.stepComplete : customerSignature ? styles.stepCurrent : styles.stepUpcoming}>
+                      <span>{businessSignature ? "✓" : "2"}</span>
+                      <div><strong>Business countersignature</strong><small>{businessSignature ? `${businessSignature.signerName} · ${formatDate(businessSignature.signedAt, true)}` : customerSignature ? "Admin reviews and countersigns" : "Available after customer signs"}</small></div>
+                    </li>
+                    <li className={agreement.finalDocumentPath ? styles.stepComplete : styles.stepUpcoming}>
+                      <span>{agreement.finalDocumentPath ? "✓" : "3"}</span>
+                      <div><strong>Final agreement PDF</strong><small>{agreement.finalDocumentPath ? "Ready for admin and customer" : "Created after both signatures"}</small></div>
+                    </li>
+                  </ol>
+
+                  {agreement.status === "awaiting_business_signature" ? (
+                    <div className={styles.countersignPanel}>
+                      <div className={styles.countersignIntro}>
+                        <span>ADMIN ACTION REQUIRED</span>
+                        <h4>Review, countersign, and finalize</h4>
+                        <p>The customer has completed their part. Verify the payment and all required documents, then enter the authorized business signer&apos;s name.</p>
+                      </div>
+                      <div className={styles.readinessChecks}>
+                        <span className={amountPaid > 0 ? styles.ready : styles.notReady}>{amountPaid > 0 ? "✓" : "!"} Payment verified</span>
+                        <span className={booking.requirementsStatus === "approved" ? styles.ready : styles.notReady}>{booking.requirementsStatus === "approved" ? "✓" : "!"} Documents approved</span>
+                        <span className={customerSignature ? styles.ready : styles.notReady}>{customerSignature ? "✓" : "!"} Customer signed</span>
+                      </div>
+                      {!canCountersignAgreement ? (
+                        <p className={styles.blockedMessage}>Complete every check above before the business countersignature becomes available.</p>
+                      ) : null}
+                      <label className={styles.signerField}>
+                        <span>Authorized business signer&apos;s complete name</span>
+                        <input
+                          value={businessSignerName}
+                          onChange={(event) => setBusinessSignerName(event.target.value)}
+                          maxLength={120}
+                          placeholder="Enter the person signing for Maddy & Cassy"
+                          disabled={!canCountersignAgreement || countersigning}
+                        />
+                      </label>
+                      <label className={styles.authorizationCheck}>
+                        <input
+                          type="checkbox"
+                          checked={countersignAcknowledged}
+                          onChange={(event) => setCountersignAcknowledged(event.target.checked)}
+                          disabled={!canCountersignAgreement || countersigning}
+                        />
+                        <span>I confirm that I am authorized to countersign this rental agreement for Rental by Maddy &amp; Cassy.</span>
+                      </label>
+                      <button
+                        type="button"
+                        className={styles.countersignButton}
+                        onClick={handleCountersignAgreement}
+                        disabled={!canCountersignAgreement || !businessSignerName.trim() || !countersignAcknowledged || countersigning}
+                      >
+                        {countersigning ? "Finalizing agreement..." : "Countersign & Finalize Agreement"}
+                      </button>
+                      <small className={styles.legalNote}>This records the administrator, signer name, timestamp, IP address, and finalized PDF in the audit trail.</small>
+                    </div>
+                  ) : null}
+
+                  {agreement.status === "completed" ? (
+                    <div className={styles.completedAgreement}>
+                      <div><span aria-hidden="true">✓</span><div><strong>Agreement fully signed</strong><p>No further signature action is needed. The customer can access the final PDF from My Bookings.</p></div></div>
+                      {booking.status === "approved" ? <p className={styles.nextAdminStep}><strong>Next admin step:</strong> Use “Update this booking” above and choose “Confirm Booking.” The customer will then receive the final booking confirmation.</p> : null}
+                      {booking.status === "pending" ? <p className={styles.nextAdminStep}><strong>Next admin step:</strong> Approve the booking first, then confirm it after every checklist item is complete.</p> : null}
+                      <div className={styles.agreementButtons}>
+                        {agreement.finalDocumentPath ? <button type="button" onClick={() => openPrivateFile("agreements", agreement.finalDocumentPath!)}>Open final agreement</button> : null}
+                        {customerSignature?.signaturePath ? <button type="button" className={styles.secondaryRecordButton} onClick={() => openPrivateFile("customer-documents", customerSignature.signaturePath!)}>View customer signature</button> : null}
+                      </div>
+                    </div>
+                  ) : null}
+                </> : <p className={styles.emptyRecord}>The customer has not submitted a rental agreement yet.</p>}
+              </article>
+
+              <article className={styles.recordCard}>
+                <div className={styles.recordHeader}>
+                  <div><span>PAYMENT RECORDS</span><h3>Verified transactions</h3></div>
+                  <span className={`${styles.recordStatus} ${amountPaid > 0 ? styles.recordComplete : styles.recordPending}`}>{paymentStatusLabel}</span>
+                </div>
+                <div className={styles.paymentAmount}>
+                  <span>Verified amount</span>
+                  <strong>PHP {amountPaid.toLocaleString("en-PH")}</strong>
+                  <small>of PHP {booking.totalAmount.toLocaleString("en-PH")} booking total</small>
+                </div>
+                <dl className={styles.paymentFacts}>
+                  <div><dt>Attempts</dt><dd>{payments.length}</dd></div>
+                  <div><dt>Receipts</dt><dd>{receipts.length}</dd></div>
+                  <div><dt>Balance</dt><dd>PHP {Math.max(0, booking.totalAmount - amountPaid).toLocaleString("en-PH")}</dd></div>
+                </dl>
+                {receipts.some((receipt) => receipt.documentPath) ? (
+                  <div className={styles.receiptList}>
+                    {receipts.filter((receipt) => receipt.documentPath).map((receipt) => (
+                      <button key={receipt.id} type="button" onClick={() => openPrivateFile("receipts", receipt.documentPath!)}>
+                        <span className={styles.receiptIcon}>PDF</span>
+                        <span><strong>{receipt.receiptNumber ?? receipt.id.slice(0, 8)}</strong><small>Open official receipt</small></span>
+                        <span aria-hidden="true">↗</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : <p className={styles.emptyRecord}>No customer-facing receipt has been issued yet.</p>}
+              </article>
+            </div>
           </div>
         </details>
 

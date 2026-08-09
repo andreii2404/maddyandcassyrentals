@@ -54,6 +54,8 @@ export interface AgreementPdfInput extends CustomerDocumentBase {
   signatureContentType?: string;
   paymentReference: string;
   confirmedAt: string;
+  businessSignerName?: string;
+  businessSignedAt?: string;
 }
 
 function safeText(value: string): string {
@@ -521,6 +523,26 @@ export async function createFinalAgreementPdf(
   y -= 96;
   drawField(pageTwo, regular, bold, "Legally signed by", input.typedFullName, MARGIN, y, half);
   drawField(pageTwo, regular, bold, "Signed at", input.signedAt, MARGIN + half + 20, y, half);
+  if (input.businessSignerName) {
+    y -= 68;
+    pageTwo.drawLine({
+      start: { x: MARGIN, y },
+      end: { x: PAGE_WIDTH - MARGIN, y },
+      thickness: 0.7,
+      color: BORDER,
+    });
+    y -= 27;
+    pageTwo.drawText("BUSINESS COUNTERSIGNATURE", {
+      x: MARGIN,
+      y,
+      size: 9,
+      font: bold,
+      color: MUTED,
+    });
+    y -= 24;
+    drawField(pageTwo, regular, bold, "Authorized business signer", input.businessSignerName, MARGIN, y, half);
+    drawField(pageTwo, regular, bold, "Countersigned at", input.businessSignedAt || input.confirmedAt, MARGIN + half + 20, y, half);
+  }
   addFooter(
     pageTwo,
     regular,
