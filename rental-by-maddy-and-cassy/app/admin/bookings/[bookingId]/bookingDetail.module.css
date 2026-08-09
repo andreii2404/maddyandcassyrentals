@@ -1043,6 +1043,62 @@
   font-size: 0.84rem;
 }
 
+.confirmationOverlay {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  padding: 1.25rem;
+  background: rgba(36, 36, 36, 0.58);
+  backdrop-filter: blur(5px);
+  place-items: center;
+}
+
+.confirmationDialog {
+  position: relative;
+  display: grid;
+  width: min(100%, 480px);
+  overflow: hidden;
+  padding: 1.35rem;
+  border: 1px solid rgba(154, 89, 101, 0.24);
+  border-radius: 22px;
+  background: var(--color-white);
+  box-shadow: 0 28px 80px rgba(36, 36, 36, 0.24);
+  gap: 1rem;
+  outline: none;
+}
+
+.confirmationDialog::before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 5px;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-dusty-rose), var(--color-primary));
+  content: "";
+}
+
+.confirmationDialogDanger::before { background: var(--color-status-red); }
+.confirmationBrand { display: flex; align-items: center; gap: 0.7rem; }
+.confirmationBrand img { border: 1px solid var(--color-dusty-rose); border-radius: 50%; object-fit: cover; }
+.confirmationBrand div { display: grid; gap: 0.08rem; }
+.confirmationBrand span { color: var(--color-primary); font-size: 0.56rem; font-weight: 900; letter-spacing: 0.12em; }
+.confirmationBrand strong { font-size: 0.88rem; }
+.confirmationIcon { display: grid; width: 48px; height: 48px; border-radius: 15px; background: var(--color-blush); color: var(--color-primary); place-items: center; font-size: 1.15rem; font-weight: 900; }
+.confirmationDialogDanger .confirmationIcon { background: var(--color-status-red-bg); color: var(--color-status-red); }
+.confirmationCopy > span { color: var(--color-primary); font-size: 0.62rem; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
+.confirmationCopy h2 { margin: 0.25rem 0 0.35rem; font-size: 1.35rem; letter-spacing: -0.02em; }
+.confirmationCopy > p { margin: 0; color: var(--color-charcoal); font-size: 0.82rem; line-height: 1.55; }
+.confirmationSummary { display: grid; margin-top: 0.85rem; padding: 0.85rem; border: 1px solid var(--color-light-gray); border-radius: 13px; background: var(--color-background); gap: 0.2rem; }
+.confirmationSummary strong { font-size: 0.75rem; line-height: 1.45; }
+.confirmationSummary span { color: var(--color-charcoal); font-size: 0.68rem; line-height: 1.45; }
+.dialogActions { display: grid; grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr); gap: 0.65rem; }
+.dialogActions button { min-height: 44px; padding: 0.65rem 0.8rem; border-radius: 12px; font: inherit; font-size: 0.74rem; font-weight: 800; cursor: pointer; }
+.dialogActions button:disabled { opacity: 0.6; cursor: wait; }
+.dialogCancelButton { border: 1px solid var(--color-light-gray); background: var(--color-white); color: var(--color-charcoal); }
+.dialogConfirmButton { border: 1px solid var(--color-primary); background: var(--color-primary); color: var(--color-white); }
+.dialogDangerButton { border-color: var(--color-status-red); background: var(--color-status-red); }
+
 @media (max-width: 1050px) {
   .reviewOverview {
     grid-template-columns: 1fr;
@@ -1111,6 +1167,10 @@
 }
 
 @media (max-width: 480px) {
+  .confirmationOverlay { padding: 0.75rem; align-items: end; }
+  .confirmationDialog { padding: 1.1rem; border-radius: 20px 20px 14px 14px; }
+  .dialogActions { grid-template-columns: 1fr; }
+
   .statusGrid,
   .documents {
     grid-template-columns: 1fr;

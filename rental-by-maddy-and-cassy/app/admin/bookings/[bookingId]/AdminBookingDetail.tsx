@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/src/lib/supabase/client";
 import {
@@ -89,6 +90,8 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   const [businessSignerName, setBusinessSignerName] = useState("");
   const [countersignAcknowledged, setCountersignAcknowledged] = useState(false);
   const [countersigning, setCountersigning] = useState(false);
+  const [statusConfirmationOpen, setStatusConfirmationOpen] = useState(false);
+  const confirmationDialogRef = useRef<HTMLDivElement>(null);
 
   const loadDetails = useCallback(async () => {
     try {
@@ -124,6 +127,25 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
 
   const selectedAction = actions.find((action) => action.status === selectedStatus);
 
+  useEffect(() => {
+    if (!statusConfirmationOpen) return;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    confirmationDialogRef.current?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape" && !updating) setStatusConfirmationOpen(false);
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus();
+    };
+  }, [statusConfirmationOpen, updating]);
+
   async function openPrivateFile(bucket: Parameters<typeof getBookingFileUrl>[1], path: string) {
     const previewWindow = window.open("", "_blank");
     if (previewWindow) {
@@ -145,22 +167,22 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
     }
   }
 
-  async function handleStatusAction() {
+  function requestStatusAction() {
     if (!state || !selectedStatus || !selectedAction) return;
     if (selectedAction.requiresNote && !note.trim()) {
       showToast("Please add administrator notes for this action.", "error");
       return;
     }
+    setStatusConfirmationOpen(true);
+  }
 
-    const confirmed = window.confirm(
-      `Apply "${selectedAction.label}" to booking ${state.details.booking.bookingRef}?`,
-    );
-    if (!confirmed) return;
-
+  async function confirmStatusAction() {
+    if (!state || !selectedStatus || !selectedAction) return;
     setUpdating(true);
     try {
       await updateAdminBookingStatus(bookingId, selectedStatus, note);
       await loadDetails();
+      setStatusConfirmationOpen(false);
       setSelectedStatus("");
       setNote("");
       showToast(`Booking updated: ${selectedAction.label}.`, "success");
@@ -421,7 +443,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                 </label>
                 <div className={styles.confirmationActions}>
                   <button type="button" className={styles.cancelSelectionButton} onClick={() => { setSelectedStatus(""); setNote(""); }} disabled={updating}>Choose another action</button>
-                  <button type="button" className={`${styles.applyButton} ${selectedAction.tone === "danger" ? styles.dangerButton : ""}`} onClick={handleStatusAction} disabled={updating || (selectedAction.requiresNote && !note.trim())}>
+                  <button type="button" className={`${styles.applyButton} ${selectedAction.tone === "danger" ? styles.dangerButton : ""}`} onClick={requestStatusAction} disabled={updating || (selectedAction.requiresNote && !note.trim())}>
                     {updating ? "Updating customer..." : `Confirm ${selectedAction.label}`}
                   </button>
                 </div>
@@ -629,6 +651,46 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
           </div>
         </details>
       </div>
+
+      {statusConfirmationOpen && selectedAction ? (
+        <div
+          className={styles.confirmationOverlay}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !updating) setStatusConfirmationOpen(false);
+          }}
+        >
+          <div
+            ref={confirmationDialogRef}
+            className={`${styles.confirmationDialog} ${selectedAction.tone === "danger" ? styles.confirmationDialogDanger : ""}`}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="status-confirmation-title"
+            aria-describedby="status-confirmation-description"
+            tabIndex={-1}
+          >
+            <div className={styles.confirmationBrand}>
+              <Image src="/images/maddy-cassy-rentals-logo.png" alt="" width={48} height={48} />
+              <div><span>RENTAL BY</span><strong>Maddy &amp; Cassy</strong></div>
+            </div>
+            <div className={styles.confirmationIcon} aria-hidden="true">{selectedAction.tone === "danger" ? "!" : "✓"}</div>
+            <div className={styles.confirmationCopy}>
+              <span>Confirm booking update</span>
+              <h2 id="status-confirmation-title">{selectedAction.label}</h2>
+              <p id="status-confirmation-description">Apply this update to booking <strong>{booking.bookingRef}</strong>?</p>
+              <div className={styles.confirmationSummary}>
+                <strong>{selectedAction.description}</strong>
+                <span>The customer&apos;s account and booking timeline will update immediately.</span>
+              </div>
+            </div>
+            <div className={styles.dialogActions}>
+              <button type="button" className={styles.dialogCancelButton} onClick={() => setStatusConfirmationOpen(false)} disabled={updating}>Not yet</button>
+              <button type="button" className={`${styles.dialogConfirmButton} ${selectedAction.tone === "danger" ? styles.dialogDangerButton : ""}`} onClick={() => void confirmStatusAction()} disabled={updating}>
+                {updating ? "Updating booking..." : `Yes, ${selectedAction.label}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
