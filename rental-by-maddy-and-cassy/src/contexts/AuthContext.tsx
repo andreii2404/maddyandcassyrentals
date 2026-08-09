@@ -31,9 +31,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const activeUserIdRef = useRef<string | null | undefined>(undefined);
   const accountLoadRef = useRef(0);
 
-  async function loadAccount() {
+  async function loadAccountFor(currentUser: User) {
     const [userProfile, adminAccess] = await Promise.all([
-      getUserProfile(user?.id ?? "").catch(() => null),
+      getUserProfile(currentUser.id).catch(() => null),
       isActiveAdmin().catch(() => false),
     ]);
     setProfile(userProfile);
@@ -41,7 +41,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    const unsubscribe = subscribeToAuthChanges(async (nextUser) => {
+    const pendingTimers = new Set<number>();
+    const unsubscribe = subscribeToAuthChanges((nextUser) => {
       const nextUserId = nextUser?.id ?? null;
       const identityChanged = activeUserIdRef.current !== nextUserId;
       activeUserIdRef.current = nextUserId;
@@ -55,34 +56,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const loadId = ++accountLoadRef.current;
       setLoading(true);
 
-      try {
-        if (nextUser) {
-          const [userProfile, adminAccess] = await Promise.all([
-            getUserProfile(nextUser.id).catch(() => null),
-            isActiveAdmin().catch(() => false),
-          ]);
-          if (loadId === accountLoadRef.current) {
-            setProfile(userProfile);
-            setIsAdmin(adminAccess);
+      // Supabase warns against awaiting other Supabase calls directly inside
+      // onAuthStateChange because the shared client can deadlock. Defer the
+      // profile and role lookup until the auth callback has fully returned.
+      const timerId = window.setTimeout(() => {
+        pendingTimers.delete(timerId);
+        void (async () => {
+          try {
+            if (nextUser) {
+              const [userProfile, adminAccess] = await Promise.all([
+                getUserProfile(nextUser.id).catch(() => null),
+                isActiveAdmin().catch(() => false),
+              ]);
+              if (loadId === accountLoadRef.current) {
+                setProfile(userProfile);
+                setIsAdmin(adminAccess);
+              }
+            } else {
+              setProfile(null);
+              setIsAdmin(false);
+            }
+          } catch {
+            setProfile(null);
+            setIsAdmin(false);
+          } finally {
+            if (loadId === accountLoadRef.current) setLoading(false);
           }
-        } else {
-          setProfile(null);
-          setIsAdmin(false);
-        }
-      } catch {
-        setProfile(null);
-        setIsAdmin(false);
-      } finally {
-        if (loadId === accountLoadRef.current) setLoading(false);
-      }
+        })();
+      }, 0);
+      pendingTimers.add(timerId);
     });
 
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+      pendingTimers.forEach((timerId) => window.clearTimeout(timerId));
+      pendingTimers.clear();
+    };
   }, []);
 
   async function refreshProfile() {
     if (user) {
-      await loadAccount();
+      await loadAccountFor(user);
     }
   }
 
