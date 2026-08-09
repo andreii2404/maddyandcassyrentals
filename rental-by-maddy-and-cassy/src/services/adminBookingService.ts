@@ -3,34 +3,77 @@ import type { BookingStatus } from "@/src/types/booking";
 export interface AdminBookingAction {
   status: BookingStatus;
   label: string;
+  description: string;
   requiresNote?: boolean;
   tone?: "default" | "danger";
 }
 
-// Mirrors the exact transitions admin_set_booking_status() allows server-side
-// (pending->approved/cancelled, approved->confirmed/cancelled,
-// confirmed->released/cancelled, released->returned). 'draft', 'rejected',
-// and 'ready_for_release' are reachable in the booking_status enum but are
-// not produced or accepted by any current RPC, so they offer no actions.
+// Mirrors the exact transitions admin_set_booking_status() allows server-side:
+// review -> confirmation -> handover preparation -> release -> return. Closed
+// bookings intentionally expose no additional actions.
 export const ADMIN_BOOKING_ACTIONS: Record<BookingStatus, AdminBookingAction[]> = {
   draft: [],
   pending: [
-    { status: "approved", label: "Approve Booking" },
-    { status: "cancelled", label: "Reject Booking", requiresNote: true, tone: "danger" },
+    {
+      status: "approved",
+      label: "Approve Booking",
+      description: "Accept the rental request after checking its basic details and availability.",
+    },
+    {
+      status: "cancelled",
+      label: "Decline Booking",
+      description: "Close this request and explain the reason clearly to the customer.",
+      requiresNote: true,
+      tone: "danger",
+    },
   ],
   approved: [
-    { status: "confirmed", label: "Confirm Booking" },
-    { status: "cancelled", label: "Cancel Booking", requiresNote: true, tone: "danger" },
+    {
+      status: "confirmed",
+      label: "Confirm Booking",
+      description: "Finalize the booking once payment, documents, and the agreement are complete.",
+    },
+    {
+      status: "cancelled",
+      label: "Cancel Booking",
+      description: "Cancel the approved request and release its reserved dates.",
+      requiresNote: true,
+      tone: "danger",
+    },
   ],
   confirmed: [
-    { status: "ready_for_release", label: "Mark Ready for Handover" },
-    { status: "cancelled", label: "Cancel Booking", requiresNote: true, tone: "danger" },
+    {
+      status: "ready_for_release",
+      label: "Ready for Handover",
+      description: "Tell the customer that the rental is prepared for pickup or delivery.",
+    },
+    {
+      status: "cancelled",
+      label: "Cancel Booking",
+      description: "Stop this confirmed rental and record the reason for the customer.",
+      requiresNote: true,
+      tone: "danger",
+    },
   ],
   ready_for_release: [
-    { status: "released", label: "Mark Released to Customer" },
-    { status: "cancelled", label: "Cancel Booking", requiresNote: true, tone: "danger" },
+    {
+      status: "released",
+      label: "Released to Customer",
+      description: "Record that the customer received the item through pickup or delivery.",
+    },
+    {
+      status: "cancelled",
+      label: "Cancel Booking",
+      description: "Cancel before handover and explain why the rental did not proceed.",
+      requiresNote: true,
+      tone: "danger",
+    },
   ],
-  released: [{ status: "returned", label: "Mark Returned" }],
+  released: [{
+    status: "returned",
+    label: "Complete Return",
+    description: "Confirm that the item was returned and close the rental successfully.",
+  }],
   returned: [],
   cancelled: [],
   rejected: [],

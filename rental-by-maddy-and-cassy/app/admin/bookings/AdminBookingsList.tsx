@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/src/lib/supabase/client";
 import { getAllBookings } from "@/src/services/bookingService";
@@ -8,6 +8,10 @@ import { getAllUsers } from "@/src/services/userService";
 import type { Booking, BookingStatus, UserProfile } from "@/src/types/database";
 import Spinner from "@/components/ui/Spinner";
 import StatusBadge from "@/components/status-badge/StatusBadge";
+import {
+  getBookingLiveStatusLabel,
+  useBookingRealtime,
+} from "@/hooks/useBookingRealtime";
 import {
   bookingMatchesHistoryFilter,
   getBookingHistoryGroup,
@@ -48,23 +52,27 @@ export default function AdminBookingsList() {
   const [historyFilter, setHistoryFilter] = useState<BookingHistoryFilter>("all");
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let active = true;
-    const supabase = createClient();
-    Promise.all([getAllBookings(supabase), getAllUsers()])
-      .then(([bookingRecords, userRecords]) => {
-        if (!active) return;
-        setBookings(bookingRecords);
-        setUsers(userRecords);
-      })
-      .catch(() => {
-        if (active) setError("Bookings could not be loaded. Please refresh and try again.");
-      });
-
-    return () => {
-      active = false;
-    };
+  const loadBookings = useCallback(async () => {
+    try {
+      const supabase = createClient();
+      const [bookingRecords, userRecords] = await Promise.all([
+        getAllBookings(supabase),
+        getAllUsers(),
+      ]);
+      setBookings(bookingRecords);
+      setUsers(userRecords);
+      setError(null);
+    } catch {
+      setError("Bookings could not be loaded. Please refresh and try again.");
+    }
   }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadBookings();
+  }, [loadBookings]);
+
+  const liveStatus = useBookingRealtime({ onChange: loadBookings });
 
   const usersById = useMemo(() => new Map(users.map((user) => [user.id, user])), [users]);
 
@@ -104,7 +112,12 @@ export default function AdminBookingsList() {
           <h1>Customer Bookings</h1>
           <p>Review submitted details, verify requirements, and manage rental statuses.</p>
         </div>
-        <span className={styles.count}>{bookings?.length ?? 0} bookings</span>
+        <div className={styles.headerMeta}>
+          <span className={`${styles.liveStatus} ${styles[liveStatus]}`}>
+            <span aria-hidden="true" />{getBookingLiveStatusLabel(liveStatus)}
+          </span>
+          <span className={styles.count}>{bookings?.length ?? 0} bookings</span>
+        </div>
       </header>
 
       <section className={styles.summaryGrid} aria-label="Booking management summary">
