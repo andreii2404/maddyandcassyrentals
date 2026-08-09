@@ -14,6 +14,7 @@ import {
   restoreReservationProgress,
   serializeReservationProgress,
 } from "../src/lib/reservationProgress";
+import { isDuplicateReviewError } from "../src/services/reviewService";
 
 function booking(status: Booking["status"], method: Booking["fulfillmentMethod"] = "pickup"): Booking {
   return {
@@ -121,4 +122,10 @@ test("reservation progress restores form values without retaining private files"
     ),
     null,
   );
+});
+
+test("repeat review submissions are recognized without exposing a database constraint", () => {
+  assert.equal(isDuplicateReviewError({ code: "23505", message: "duplicate key value" }), true);
+  assert.equal(isDuplicateReviewError({ message: 'violates unique constraint "reviews_booking_item_id_key"' }), true);
+  assert.equal(isDuplicateReviewError({ code: "42501", message: "permission denied" }), false);
 });

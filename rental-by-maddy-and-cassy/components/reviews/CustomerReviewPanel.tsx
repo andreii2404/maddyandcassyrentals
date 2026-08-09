@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { createClient } from "@/src/lib/supabase/client";
 import { submitReview } from "@/src/services/reviewService";
 import { useToast } from "@/components/ui/ToastProvider";
@@ -32,10 +32,18 @@ export default function CustomerReviewPanel({
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const submitLock = useRef(false);
 
   if (existingReview) {
     return (
       <div className={styles.existing}>
+        <div className={styles.thankYouMessage}>
+          <span aria-hidden="true">&#10003;</span>
+          <div>
+            <strong>Thank you for your review!</strong>
+            <p>We&apos;ve received your feedback and appreciate you sharing your Maddy &amp; Cassy rental experience.</p>
+          </div>
+        </div>
         <div><strong>{"★".repeat(existingReview.rating)}{"☆".repeat(5 - existingReview.rating)}</strong><span>{existingReview.status.replace("_", " ")}</span></div>
         <p>{existingReview.comment || "Rating submitted without a written comment."}</p>
         {existingReview.status === "pending" ? <small>Your review will appear publicly after approval.</small> : null}
@@ -45,14 +53,22 @@ export default function CustomerReviewPanel({
   }
 
   async function handleSubmit() {
+    if (submitLock.current) return;
+    submitLock.current = true;
     setSubmitting(true);
     try {
-      await submitReview(createClient(), { bookingId, productId, rating, comment: comment.trim() || undefined });
-      showToast("Thank you. Your review was submitted for approval.", "success");
+      const result = await submitReview(createClient(), { bookingId, productId, rating, comment: comment.trim() || undefined });
+      showToast(
+        result.alreadySubmitted
+          ? "Your review was already received. Thank you for sharing your experience with Maddy & Cassy!"
+          : "Thank you! Your review was sent to Maddy & Cassy for approval.",
+        "success",
+      );
       await onSubmitted();
     } catch (error) {
       showToast(error instanceof Error ? error.message : "The review could not be submitted.", "error");
     } finally {
+      submitLock.current = false;
       setSubmitting(false);
     }
   }

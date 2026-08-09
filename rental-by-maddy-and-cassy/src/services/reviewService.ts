@@ -19,6 +19,16 @@ type ReviewRow = Pick<
     | null;
 };
 
+export interface SubmitReviewResult {
+  reviewId: string | null;
+  alreadySubmitted: boolean;
+}
+
+export function isDuplicateReviewError(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  return error.code === "23505" || error.message?.includes("reviews_booking_item_id_key") === true;
+}
+
 function mapReview(row: ReviewRow): Review {
   return {
     id: row.id,
@@ -47,7 +57,7 @@ export async function submitReview(
     rating: number;
     comment?: string;
   },
-): Promise<string> {
+): Promise<SubmitReviewResult> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -65,17 +75,25 @@ export async function submitReview(
 
   const { data, error } = await supabase
     .from("reviews")
-    .insert({
-      booking_item_id: item.id,
-      rating: input.rating,
-      comment: input.comment ?? null,
-      status: "pending",
-    })
+    .upsert(
+      {
+        booking_item_id: item.id,
+        rating: input.rating,
+        comment: input.comment ?? null,
+        status: "pending",
+      },
+      { onConflict: "booking_item_id", ignoreDuplicates: true },
+    )
     .select("id")
-    .single();
+    .maybeSingle();
 
-  if (error || !data) throw new Error(error?.message ?? "The review could not be submitted.");
-  return data.id;
+  // A repeat submission is intentionally a no-op. This covers rapid double
+  // clicks, automatic request retries, and a stale page that still shows the form.
+  if (isDuplicateReviewError(error)) {
+    return { reviewId: null, alreadySubmitted: true };
+  }
+  if (error) throw new Error("We couldn't send your review right now. Please try again.");
+  return { reviewId: data?.id ?? null, alreadySubmitted: !data };
 }
 
 export async function getApprovedReviewsForProduct(productId: string): Promise<Review[]> {
