@@ -128,7 +128,7 @@ export async function createCheckoutSession(
           cancel_url: input.cancelUrl,
           reference_number: input.referenceNumber,
           description: `Rental payment for ${input.bookingRef}`,
-          send_email_receipt: false,
+          send_email_receipt: true,
           show_description: true,
           show_line_items: true,
           metadata: input.metadata,

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { Product } from "@/types/product";
 import type { ReservationDraft } from "@/src/types/reservationDraft";
 import { calculateReservationPricing } from "@/src/lib/reservationPricing";
@@ -27,7 +28,9 @@ interface StepPaymentSubmissionProps {
   rewardProgress: RewardProgress;
   paymentState: BookingPaymentState;
   isDemoPayment?: boolean;
+  bookingId?: string;
   bookingNumber?: string;
+  receiptReady?: boolean;
   opening: boolean;
   checking: boolean;
   error: string | null;
@@ -43,7 +46,9 @@ export default function StepPaymentSubmission({
   rewardProgress,
   paymentState,
   isDemoPayment = false,
+  bookingId,
   bookingNumber,
+  receiptReady = false,
   opening,
   checking,
   error,
@@ -189,11 +194,21 @@ export default function StepPaymentSubmission({
       {checking ? (
         <p className={styles.notice}>Confirming the payment with PayMongo…</p>
       ) : paid ? (
-        <p className={styles.success}>
-          {isDemoPayment
-            ? "Demo payment recorded for flow testing. No money was processed. Continue with your verification documents."
-            : "Payment verified. Your reservation is secured. Continue with your verification documents."}
-        </p>
+        <div className={styles.success}>
+          <strong>
+            {isDemoPayment
+              ? "Demo payment recorded. No money was processed."
+              : "Payment verified. Your reservation is secured."}
+          </strong>
+          <span>
+            {receiptReady
+              ? "Your official receipt is ready in Payment History. PayMongo also sends an email receipt to the payer address when the selected payment method supports it."
+              : "Your receipt is being prepared and will appear in Payment History shortly."}
+          </span>
+          {bookingId && receiptReady ? (
+            <Link href={`/account/bookings/${bookingId}`}>View booking receipt</Link>
+          ) : null}
+        </div>
       ) : null}
 
       {error ? (
