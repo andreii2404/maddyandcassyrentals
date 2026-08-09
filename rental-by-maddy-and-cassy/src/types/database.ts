@@ -55,6 +55,8 @@ export interface UserProfile {
   lastName?: string;
   displayName: string;
   phoneNumber?: string;
+  birthDate?: string;
+  birthDateVerifiedAt?: string;
   fullAddress?: string;
   facebookLink?: string;
   instagramLink?: string;

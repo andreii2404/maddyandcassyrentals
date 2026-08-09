@@ -17,6 +17,19 @@
   color: var(--color-charcoal);
 }
 
+.optional {
+  color: var(--color-charcoal);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.fieldNote {
+  margin: 0.4rem 0 0;
+  color: var(--color-charcoal);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
 .sectionHeading {
   margin: 0.5rem 0 0;
   font-size: 1rem;

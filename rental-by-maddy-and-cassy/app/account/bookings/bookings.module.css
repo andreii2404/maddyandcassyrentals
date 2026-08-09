@@ -1,60 +1,109 @@
-.wrapper {
+.wrapper { display: flex; flex-direction: column; gap: 1.5rem; }
+
+.hero {
   display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 0.5rem 0 0.8rem;
 }
 
-.heading {
-  margin: 0;
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: var(--color-text-primary);
-}
+.eyebrow { margin: 0 0 0.35rem; color: var(--color-primary); font-size: 0.66rem; font-weight: 800; letter-spacing: 0.1em; }
+.hero h1 { margin: 0; font-size: clamp(1.9rem, 5vw, 2.7rem); letter-spacing: -0.045em; }
+.hero p:not(.eyebrow) { max-width: 620px; margin: 0.6rem 0 0; color: var(--color-charcoal); font-size: 0.84rem; line-height: 1.65; }
 
-.loading {
-  display: flex;
+.newBookingLink,
+.browseLink {
+  display: inline-flex;
+  min-height: 44px;
+  padding: 0.65rem 1rem;
+  align-items: center;
   justify-content: center;
-  padding: 3rem 0;
+  gap: 0.5rem;
+  border-radius: 13px;
+  background: var(--color-primary);
+  color: white;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: 0 10px 22px rgba(154, 89, 101, 0.16);
 }
 
-.empty {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.9rem;
-  padding: 2.5rem;
+.summaryGrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.75rem; }
+.summaryCard {
+  display: grid;
+  min-height: 120px;
+  padding: 1rem;
   border: 1px solid var(--color-border);
   border-radius: 16px;
   background: var(--color-white);
-  color: var(--color-charcoal);
+  color: var(--color-text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+.summaryCard:hover { transform: translateY(-2px); border-color: var(--color-dusty-rose); }
+.summaryCardActive { border-color: var(--color-primary); background: linear-gradient(145deg, white, var(--color-background-soft)); box-shadow: 0 10px 24px rgba(154, 89, 101, 0.08); }
+.summaryCard span { color: var(--color-charcoal); font-size: 0.69rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.summaryCard strong { margin-top: 0.2rem; font-size: 1.65rem; letter-spacing: -0.04em; }
+.summaryCard small { align-self: end; margin-top: 0.35rem; color: #837b7a; font-size: 0.61rem; line-height: 1.4; }
+
+.loyalty { display: grid; gap: 0.9rem; padding: 1.25rem; border: 1px solid rgba(154, 89, 101, 0.22); border-radius: 18px; background: radial-gradient(circle at 100% 0%, rgba(242, 210, 207, 0.72), transparent 42%), white; box-shadow: 0 12px 32px rgba(154, 89, 101, 0.06); }
+.loyaltyTopline { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.loyaltyTopline p { margin: 0 0 0.2rem; color: var(--color-primary); font-size: 0.62rem; font-weight: 800; letter-spacing: 0.1em; }
+.loyaltyTopline h2 { margin: 0; font-size: 0.96rem; }
+.loyaltyTopline > strong { padding: 0.32rem 0.62rem; border-radius: 999px; background: var(--color-blush); color: var(--color-primary-hover); font-size: 0.7rem; white-space: nowrap; }
+.progressTrack { height: 8px; overflow: hidden; border-radius: 999px; background: var(--color-light-gray); }
+.progressTrack span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--color-dusty-rose), var(--color-primary)); transition: width 240ms ease; }
+.loyaltyCopy { display: grid; gap: 0.25rem; color: var(--color-text-primary); font-size: 0.78rem; font-weight: 650; }
+.loyaltyCopy small { color: var(--color-charcoal); font-size: 0.65rem; font-weight: 500; }
+
+.historyPanel { overflow: hidden; border: 1px solid var(--color-border); border-radius: 20px; background: rgba(255,255,255,0.72); box-shadow: 0 12px 34px rgba(36,36,36,0.04); }
+.historyToolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1.2rem 1.25rem; border-bottom: 1px solid var(--color-border); background: white; }
+.historyToolbar h2 { margin: 0; font-size: 1.08rem; }
+.searchField { display: flex; align-items: center; gap: 0.5rem; min-width: min(280px, 40vw); padding: 0.55rem 0.7rem; border: 1px solid var(--color-light-gray); border-radius: 12px; background: var(--color-background); }
+.searchField:focus-within { border-color: var(--color-dusty-rose); box-shadow: 0 0 0 3px rgba(215,165,165,0.16); }
+.searchField svg { width: 17px; height: 17px; flex: 0 0 auto; fill: none; stroke: var(--color-charcoal); stroke-width: 1.7; }
+.searchField input { width: 100%; padding: 0; border: 0; outline: 0; background: transparent; color: var(--color-text-primary); font: inherit; font-size: 0.73rem; }
+
+.loading { display: flex; justify-content: center; padding: 4rem 0; }
+.empty { display: flex; min-height: 250px; padding: 2.5rem; align-items: center; justify-content: center; flex-direction: column; text-align: center; }
+.emptyIcon { display: grid; width: 50px; height: 50px; margin-bottom: 0.9rem; place-items: center; border-radius: 16px; background: var(--color-background-soft); color: var(--color-primary); font-size: 0.7rem; font-weight: 800; }
+.empty strong { font-size: 1rem; }
+.empty p { max-width: 450px; margin: 0.45rem 0 1rem; color: var(--color-charcoal); font-size: 0.77rem; line-height: 1.6; }
+.empty button { padding: 0; border: 0; background: none; color: var(--color-primary); font: inherit; font-size: 0.75rem; font-weight: 700; cursor: pointer; }
+
+.list { display: grid; gap: 1rem; margin: 0; padding: 1rem; list-style: none; }
+.bookingCard { overflow: hidden; border: 1px solid var(--color-light-gray); border-radius: 18px; background: white; transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease; }
+.bookingCard:hover { transform: translateY(-2px); border-color: rgba(154,89,101,0.28); box-shadow: 0 14px 30px rgba(66,44,48,0.08); }
+.cardLink { display: block; color: inherit; text-decoration: none; }
+.cardLink > div:first-child { border: 0; border-radius: 0; box-shadow: none; }
+.cardFooter { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.85rem 1.25rem; border-top: 1px solid var(--color-light-gray); background: var(--color-background-soft); }
+.cardFooter > div > span { color: var(--color-primary); font-size: 0.65rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.cardFooter p { margin: 0.18rem 0 0; color: var(--color-charcoal); font-size: 0.68rem; line-height: 1.5; }
+.cardFooter > strong { color: var(--color-primary); font-size: 0.7rem; white-space: nowrap; }
+
+.visuallyHidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+
+@media (max-width: 760px) {
+  .hero { align-items: flex-start; flex-direction: column; gap: 1rem; }
+  .summaryGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .historyToolbar { align-items: stretch; flex-direction: column; }
+  .searchField { width: 100%; min-width: 0; }
 }
 
-.browseLink {
-  padding: 0.7rem 1.5rem;
-  border-radius: 999px;
-  background: var(--color-primary);
-  color: var(--color-white);
-  text-decoration: none;
-  font-size: 0.88rem;
-  font-weight: 600;
+@media (max-width: 520px) {
+  .summaryGrid { gap: 0.55rem; }
+  .summaryCard { min-height: 106px; padding: 0.8rem; }
+  .summaryCard strong { font-size: 1.35rem; }
+  .loyaltyTopline { align-items: flex-start; flex-direction: column; }
+  .historyPanel { border-radius: 16px; }
+  .cardFooter { align-items: flex-start; flex-direction: column; }
 }
 
-.list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.cardLink {
-  text-decoration: none;
-  color: inherit;
-  display: block;
-  transition: transform 0.15s ease;
-}
-
-.cardLink:hover {
-  transform: translateY(-2px);
+@media (prefers-reduced-motion: reduce) {
+  .summaryCard,
+  .bookingCard,
+  .progressTrack span { transition: none; }
 }

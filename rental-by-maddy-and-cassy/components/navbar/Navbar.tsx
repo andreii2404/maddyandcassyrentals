@@ -13,18 +13,42 @@ import styles from "./Navbar.module.css";
 const primaryLinks = [
   { href: "/", label: "Home" },
   { href: "/catalog", label: "Browse" },
-  { href: "/favorites", label: "Favorites" },
-  { href: "/cart", label: "Cart" },
   { href: "/#about", label: "About" },
   { href: "/contact", label: "Contact" },
 ];
 
 const guideLinks = [
-  { href: "/how-to-book", label: "How to Book" },
-  { href: "/rental-requirements", label: "Rental Requirements" },
-  { href: "/terms", label: "Terms & Conditions" },
-  { href: "/faq", label: "FAQs" },
+  { href: "/how-to-book", label: "How to Book", description: "Booking steps" },
+  { href: "/rental-requirements", label: "Requirements", description: "What to prepare" },
+  { href: "/terms", label: "Terms & Conditions", description: "Rental policies" },
+  { href: "/faq", label: "FAQs", description: "Quick answers" },
 ];
+
+function HeartIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M20.8 4.7a5.5 5.5 0 0 0-7.8 0L12 5.8l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.4 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z" />
+    </svg>
+  );
+}
+
+function CartIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M3 4h2l2.2 10.1a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 1.9-1.4L21 7H6" />
+      <circle cx="9.5" cy="19" r="1.25" />
+      <circle cx="17.5" cy="19" r="1.25" />
+    </svg>
+  );
+}
+
+function ChevronIcon() {
+  return (
+    <svg viewBox="0 0 12 12" aria-hidden="true">
+      <path d="m2.5 4 3.5 3.5L9.5 4" />
+    </svg>
+  );
+}
 
 function subscribeToHash(callback: () => void) {
   window.addEventListener("hashchange", callback);
@@ -56,6 +80,7 @@ export default function Navbar() {
 
   const displayName = profile?.displayName || user?.user_metadata?.display_name || "Account";
   const firstName = displayName.split(" ")[0];
+  const initial = firstName.charAt(0).toUpperCase() || "A";
   const accountHomeHref = isAdmin ? "/admin" : "/account/bookings";
   const accountHomeLabel = isAdmin ? "Admin Dashboard" : "My Bookings";
   const profileHref = isAdmin ? "/admin/profile" : "/account/profile";
@@ -66,9 +91,11 @@ export default function Navbar() {
     if (href === "/") return pathname === "/" && hash !== "#about";
     if (href === "/#about") return pathname === "/" && hash === "#about";
     if (href === "/catalog") return pathname.startsWith("/catalog");
-    if (href === "/favorites") return pathname === "/favorites";
-    if (href === "/cart") return pathname === "/cart";
     return pathname === href;
+  }
+
+  function closeMenu() {
+    setMenuOpen(false);
   }
 
   return (
@@ -79,17 +106,20 @@ export default function Navbar() {
             <Image
               src="/images/maddy-cassy-rentals-logo.png"
               alt=""
-              width={44}
-              height={44}
+              width={46}
+              height={46}
               className={styles.logoImage}
               priority
             />
           </span>
-          <span className={styles.brandName}>Rental by Maddy &amp; Cassy</span>
+          <span className={styles.brandCopy}>
+            <strong>Rental by</strong>
+            <span>Maddy &amp; Cassy</span>
+          </span>
         </Link>
 
         <nav className={styles.links} aria-label="Primary navigation">
-          {primaryLinks.slice(0, 4).map((item) => {
+          {primaryLinks.map((item) => {
             const active = isPrimaryLinkActive(item.href);
             return (
               <Link
@@ -99,206 +129,202 @@ export default function Navbar() {
                 aria-current={active ? "page" : undefined}
               >
                 {item.label}
-                {item.href === "/favorites" && favorites.length > 0 ? (
-                  <span className={styles.favoriteCount}>{favorites.length}</span>
-                ) : null}
-                {item.href === "/cart" && totalQuantity > 0 ? (
-                  <span className={styles.favoriteCount}>{totalQuantity}</span>
-                ) : null}
               </Link>
             );
           })}
 
           <details className={styles.guideMenu}>
-            <summary
-              className={`${styles.guideTrigger} ${guideActive ? styles.linkActive : ""}`}
-            >
+            <summary className={`${styles.guideTrigger} ${guideActive ? styles.linkActive : ""}`}>
               Rental Guide
+              <ChevronIcon />
             </summary>
             <div className={styles.guideDropdown}>
+              <p>Plan your rental</p>
               {guideLinks.map((item) => {
                 const active = pathname === item.href;
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`${styles.guideMenuLink} ${
-                      active ? styles.guideMenuLinkActive : ""
-                    }`}
+                    className={`${styles.guideMenuLink} ${active ? styles.guideMenuLinkActive : ""}`}
                     aria-current={active ? "page" : undefined}
                   >
-                    {item.label}
+                    <span>{item.label}</span>
+                    <small>{item.description}</small>
                   </Link>
                 );
               })}
             </div>
           </details>
-
-          {primaryLinks.slice(4).map((item) => {
-            const active = isPrimaryLinkActive(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`${styles.link} ${active ? styles.linkActive : ""}`}
-                aria-current={active ? "page" : undefined}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
         </nav>
 
         <div className={styles.actions}>
+          <div className={styles.quickActions} aria-label="Saved items and cart">
+            <Link
+              href="/favorites"
+              className={`${styles.iconAction} ${pathname === "/favorites" ? styles.iconActionActive : ""}`}
+              aria-label={`Favorites${favorites.length ? `, ${favorites.length} saved` : ""}`}
+              title="Favorites"
+            >
+              <HeartIcon />
+              {favorites.length > 0 ? <span className={styles.actionCount}>{favorites.length}</span> : null}
+            </Link>
+            <Link
+              href="/cart"
+              className={`${styles.iconAction} ${pathname === "/cart" ? styles.iconActionActive : ""}`}
+              aria-label={`Rental cart${totalQuantity ? `, ${totalQuantity} items` : ""}`}
+              title="Rental cart"
+            >
+              <CartIcon />
+              {totalQuantity > 0 ? <span className={styles.actionCount}>{totalQuantity}</span> : null}
+            </Link>
+          </div>
+
+          <span className={styles.actionDivider} aria-hidden="true" />
+
           {user ? (
-            <>
-              <Link href={accountHomeHref} className={styles.accountLink}>
-                {accountHomeLabel}
-              </Link>
-              <details className={styles.profileMenu}>
-                <summary className={styles.profileTrigger}>Hi, {firstName}</summary>
-                <div className={styles.profileDropdown}>
-                  <Link href={profileHref} className={styles.profileMenuLink}>
-                    {profileLabel}
-                  </Link>
-                  {!isAdmin ? (
-                    <Link href="/account/payments" className={styles.profileMenuLink}>
-                      Payment History
-                    </Link>
-                  ) : null}
-                  <button
-                    type="button"
-                    className={styles.profileMenuButton}
-                    onClick={handleSignOut}
-                  >
-                    Sign Out
-                  </button>
+            <details className={styles.profileMenu}>
+              <summary className={styles.profileTrigger}>
+                <span className={styles.profileAvatar}>{initial}</span>
+                <span className={styles.profileCopy}>
+                  <small>{isAdmin ? "Administrator" : "Welcome back"}</small>
+                  <strong>{firstName}</strong>
+                </span>
+                <ChevronIcon />
+              </summary>
+              <div className={styles.profileDropdown}>
+                <div className={styles.profileDropdownHeader}>
+                  <span className={styles.profileAvatar}>{initial}</span>
+                  <div>
+                    <strong>{displayName}</strong>
+                    <small>{isAdmin ? "Admin account" : "Customer account"}</small>
+                  </div>
                 </div>
-              </details>
-            </>
+                <Link href={accountHomeHref} className={styles.profileMenuLink}>{accountHomeLabel}</Link>
+                <Link href={profileHref} className={styles.profileMenuLink}>{profileLabel}</Link>
+                {!isAdmin ? (
+                  <Link href="/account/payments" className={styles.profileMenuLink}>Payment History</Link>
+                ) : null}
+                <button type="button" className={styles.profileMenuButton} onClick={handleSignOut}>Sign Out</button>
+              </div>
+            </details>
           ) : (
-            <>
-              <Link href="/sign-in" className={styles.accountLink}>
-                Customer Login
-              </Link>
-              <Link href="/admin/sign-in" className={styles.adminLink}>
-                Admin Login
-              </Link>
-            </>
+            <div className={styles.loginActions}>
+              <Link href="/sign-in" className={styles.customerLink}>Customer Login</Link>
+              <Link href="/admin/sign-in" className={styles.adminLink}>Admin</Link>
+            </div>
           )}
         </div>
 
-        <button
-          type="button"
-          className={styles.menuButton}
-          aria-expanded={menuOpen}
-          aria-controls="mobile-navigation"
-          aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
-          onClick={() => setMenuOpen((open) => !open)}
-        >
-          <span />
-          <span />
-          <span />
-        </button>
+        <div className={styles.compactActions}>
+          <Link
+            href="/favorites"
+            className={styles.compactIcon}
+            aria-label={`Favorites${favorites.length ? `, ${favorites.length} saved` : ""}`}
+          >
+            <HeartIcon />
+            {favorites.length > 0 ? <span className={styles.actionCount}>{favorites.length}</span> : null}
+          </Link>
+          <Link
+            href="/cart"
+            className={styles.compactIcon}
+            aria-label={`Rental cart${totalQuantity ? `, ${totalQuantity} items` : ""}`}
+          >
+            <CartIcon />
+            {totalQuantity > 0 ? <span className={styles.actionCount}>{totalQuantity}</span> : null}
+          </Link>
+          <button
+            type="button"
+            className={`${styles.menuButton} ${menuOpen ? styles.menuButtonOpen : ""}`}
+            aria-expanded={menuOpen}
+            aria-controls="mobile-navigation"
+            aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+        </div>
       </div>
 
       {menuOpen ? (
         <div id="mobile-navigation" className={styles.mobileMenu}>
-          <nav className={styles.mobileLinks} aria-label="Mobile navigation">
-            {primaryLinks.map((item) => {
-              const active = isPrimaryLinkActive(item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`${styles.mobileLink} ${
-                    active ? styles.mobileLinkActive : ""
-                  }`}
-                  aria-current={active ? "page" : undefined}
-                  onClick={() => setMenuOpen(false)}
-                >
-                  {item.label}
-                  {item.href === "/favorites" && favorites.length > 0 ? (
-                    <span className={styles.favoriteCount}>{favorites.length}</span>
-                  ) : null}
-                  {item.href === "/cart" && totalQuantity > 0 ? (
-                    <span className={styles.favoriteCount}>{totalQuantity}</span>
-                  ) : null}
-                </Link>
-              );
-            })}
-          </nav>
+          <div className={styles.mobileMenuInner}>
+            <div className={styles.mobileQuickLinks}>
+              <Link href="/favorites" onClick={closeMenu}>
+                <span className={styles.mobileQuickIcon}><HeartIcon /></span>
+                <span><strong>Favorites</strong><small>{favorites.length} saved</small></span>
+                <span className={styles.mobileQuickArrow} aria-hidden="true">→</span>
+              </Link>
+              <Link href="/cart" onClick={closeMenu}>
+                <span className={styles.mobileQuickIcon}><CartIcon /></span>
+                <span><strong>Rental Cart</strong><small>{totalQuantity} {totalQuantity === 1 ? "item" : "items"}</small></span>
+                <span className={styles.mobileQuickArrow} aria-hidden="true">→</span>
+              </Link>
+            </div>
 
-          <nav className={styles.mobileGuide} aria-label="Rental guide navigation">
-            <p>Rental Guide</p>
-            <div>
-              {guideLinks.map((item) => {
-                const active = pathname === item.href;
+            <nav className={styles.mobileLinks} aria-label="Mobile navigation">
+              <p className={styles.mobileLabel}>Explore</p>
+              {primaryLinks.map((item) => {
+                const active = isPrimaryLinkActive(item.href);
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`${styles.mobileGuideLink} ${
-                      active ? styles.mobileGuideLinkActive : ""
-                    }`}
+                    className={`${styles.mobileLink} ${active ? styles.mobileLinkActive : ""}`}
                     aria-current={active ? "page" : undefined}
-                    onClick={() => setMenuOpen(false)}
+                    onClick={closeMenu}
                   >
-                    {item.label}
+                    {item.label}<span aria-hidden="true">→</span>
                   </Link>
                 );
               })}
-            </div>
-          </nav>
+            </nav>
 
-          <div className={styles.mobileActions}>
-            {user ? (
-              <>
-                <Link
-                  href={accountHomeHref}
-                  className={styles.mobileAccountLink}
-                  onClick={() => setMenuOpen(false)}
-                >
-                  {accountHomeLabel}
-                </Link>
-                <Link
-                  href={profileHref}
-                  className={styles.mobileAccountLink}
-                  onClick={() => setMenuOpen(false)}
-                >
-                  {profileLabel}
-                </Link>
-                {!isAdmin ? (
-                  <Link
-                    href="/account/payments"
-                    className={styles.mobileAccountLink}
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    Payment History
-                  </Link>
-                ) : null}
-                <button type="button" className={styles.mobileTextButton} onClick={handleSignOut}>
-                  Sign Out
-                </button>
-              </>
-            ) : (
-              <>
-                <Link
-                  href="/sign-in"
-                  className={styles.mobileAccountLink}
-                  onClick={() => setMenuOpen(false)}
-                >
-                  Customer Login
-                </Link>
-                <Link
-                  href="/admin/sign-in"
-                  className={styles.mobileAdminLink}
-                  onClick={() => setMenuOpen(false)}
-                >
-                  Admin Login
-                </Link>
-              </>
-            )}
+            <nav className={styles.mobileGuide} aria-label="Rental guide navigation">
+              <p className={styles.mobileLabel}>Rental Guide</p>
+              <div>
+                {guideLinks.map((item) => {
+                  const active = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`${styles.mobileGuideLink} ${active ? styles.mobileGuideLinkActive : ""}`}
+                      aria-current={active ? "page" : undefined}
+                      onClick={closeMenu}
+                    >
+                      <strong>{item.label}</strong>
+                      <small>{item.description}</small>
+                    </Link>
+                  );
+                })}
+              </div>
+            </nav>
+
+            <div className={styles.mobileAccount}>
+              <p className={styles.mobileLabel}>{user ? "Your Account" : "Account"}</p>
+              {user ? (
+                <>
+                  <div className={styles.mobileProfileSummary}>
+                    <span className={styles.profileAvatar}>{initial}</span>
+                    <div><strong>{displayName}</strong><small>{isAdmin ? "Administrator" : "Customer"}</small></div>
+                  </div>
+                  <div className={styles.mobileAccountLinks}>
+                    <Link href={accountHomeHref} onClick={closeMenu}>{accountHomeLabel}</Link>
+                    <Link href={profileHref} onClick={closeMenu}>{profileLabel}</Link>
+                    {!isAdmin ? <Link href="/account/payments" onClick={closeMenu}>Payment History</Link> : null}
+                    <button type="button" onClick={handleSignOut}>Sign Out</button>
+                  </div>
+                </>
+              ) : (
+                <div className={styles.mobileLoginActions}>
+                  <Link href="/sign-in" onClick={closeMenu}>Customer Login</Link>
+                  <Link href="/admin/sign-in" onClick={closeMenu}>Admin Login</Link>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       ) : null}

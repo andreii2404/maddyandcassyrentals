@@ -23,10 +23,13 @@ export const ADMIN_BOOKING_ACTIONS: Record<BookingStatus, AdminBookingAction[]> 
     { status: "cancelled", label: "Cancel Booking", requiresNote: true, tone: "danger" },
   ],
   confirmed: [
-    { status: "released", label: "Mark Released" },
+    { status: "ready_for_release", label: "Mark Ready for Handover" },
     { status: "cancelled", label: "Cancel Booking", requiresNote: true, tone: "danger" },
   ],
-  ready_for_release: [],
+  ready_for_release: [
+    { status: "released", label: "Mark Released to Customer" },
+    { status: "cancelled", label: "Cancel Booking", requiresNote: true, tone: "danger" },
+  ],
   released: [{ status: "returned", label: "Mark Returned" }],
   returned: [],
   cancelled: [],

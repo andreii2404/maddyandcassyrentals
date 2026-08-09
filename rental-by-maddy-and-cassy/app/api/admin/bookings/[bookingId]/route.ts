@@ -5,7 +5,7 @@ import type { BookingStatus } from "@/src/types/booking";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const VALID_STATUSES: BookingStatus[] = ["pending", "approved", "confirmed", "released", "returned", "cancelled"];
+const VALID_STATUSES: BookingStatus[] = ["pending", "approved", "confirmed", "ready_for_release", "released", "returned", "cancelled"];
 const NOTE_REQUIRED = new Set<BookingStatus>(["cancelled"]);
 
 function errorResponse(message: string, status: number) {
@@ -31,6 +31,24 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
     if (note.length > 1000) return errorResponse("Administrator notes must be 1,000 characters or fewer.", 400);
     if (NOTE_REQUIRED.has(targetStatus) && !note) {
       return errorResponse("Administrator notes are required for this action.", 400);
+    }
+
+    if (targetStatus === "confirmed") {
+      const { data: discountCheck } = await supabase
+        .from("bookings")
+        .select("birthday_discount_amount, birthday_discount_status")
+        .eq("id", bookingId)
+        .maybeSingle();
+      if (
+        discountCheck &&
+        discountCheck.birthday_discount_amount > 0 &&
+        discountCheck.birthday_discount_status !== "verified"
+      ) {
+        return errorResponse(
+          "Verify the renter's birth date against an approved ID before confirming this birthday-discount booking.",
+          409,
+        );
+      }
     }
 
     const { data, error } =

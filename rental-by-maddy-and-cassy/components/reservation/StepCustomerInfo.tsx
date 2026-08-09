@@ -4,6 +4,7 @@ import { useState } from "react";
 import { formatCustomerAddress, type CustomerInfoDraft } from "@/src/types/reservationDraft";
 import { PHILIPPINE_PROVINCES } from "@/src/data/philippineLocations";
 import { updateUserProfile } from "@/src/services/userService";
+import { isValidPhoneNumber, normalizePhoneInput, PHONE_DIGIT_COUNT } from "@/src/lib/authValidation";
 import formStyles from "@/components/ui/Form.module.css";
 import styles from "./StepShared.module.css";
 
@@ -14,6 +15,8 @@ interface StepCustomerInfoProps {
   onBack?: () => void;
   onContinue: () => void;
   isGuest?: boolean;
+  birthDateLocked?: boolean;
+  birthDateVerified?: boolean;
 }
 
 export default function StepCustomerInfo({
@@ -23,6 +26,8 @@ export default function StepCustomerInfo({
   onBack,
   onContinue,
   isGuest = false,
+  birthDateLocked = false,
+  birthDateVerified = false,
 }: StepCustomerInfoProps) {
   const [errors, setErrors] = useState<Partial<Record<keyof CustomerInfoDraft, string>>>({});
   const [saving, setSaving] = useState(false);
@@ -33,7 +38,12 @@ export default function StepCustomerInfo({
     if (!customerInfo.email.trim() || !/\S+@\S+\.\S+/.test(customerInfo.email)) {
       nextErrors.email = "A valid email address is required.";
     }
-    if (!customerInfo.phone.trim()) nextErrors.phone = "An active phone number is required.";
+    if (!isValidPhoneNumber(customerInfo.phone)) {
+      nextErrors.phone = `Phone number must contain exactly ${PHONE_DIGIT_COUNT} digits.`;
+    }
+    if (customerInfo.birthDate && new Date(`${customerInfo.birthDate}T00:00:00`) > new Date()) {
+      nextErrors.birthDate = "Birth date cannot be in the future.";
+    }
     if (!customerInfo.streetBarangay.trim()) nextErrors.streetBarangay = "Street and barangay are required.";
     if (!customerInfo.cityMunicipality.trim()) nextErrors.cityMunicipality = "City or municipality is required.";
     if (!customerInfo.province.trim()) nextErrors.province = "Province is required.";
@@ -51,7 +61,8 @@ export default function StepCustomerInfo({
       await updateUserProfile(uid, {
         email: customerInfo.email.trim(),
         displayName: customerInfo.fullName,
-        phoneNumber: customerInfo.phone,
+        phoneNumber: customerInfo.phone.trim(),
+        birthDate: customerInfo.birthDate,
         fullAddress: formatCustomerAddress(customerInfo),
         facebookLink: customerInfo.facebookLink,
         instagramLink: customerInfo.instagramLink,
@@ -104,19 +115,47 @@ export default function StepCustomerInfo({
         </div>
       </div>
 
-      <div className={formStyles.field}>
-        <label className={formStyles.label} htmlFor="phone">
-          Active phone number<span className={formStyles.required}>*</span>
-        </label>
-        <input
-          id="phone"
-          type="tel"
-          autoComplete="tel"
-          className={`${formStyles.input} ${errors.phone ? formStyles.inputError : ""}`}
-          value={customerInfo.phone}
-          onChange={(event) => onUpdate({ phone: event.target.value })}
-        />
-        {errors.phone ? <p className={formStyles.errorText}>{errors.phone}</p> : null}
+      <div className={formStyles.row}>
+        <div className={formStyles.field}>
+          <label className={formStyles.label} htmlFor="phone">
+            Active phone number<span className={formStyles.required}>*</span>
+          </label>
+          <input
+            id="phone"
+            type="tel"
+            inputMode="numeric"
+            autoComplete="tel"
+            maxLength={PHONE_DIGIT_COUNT}
+            placeholder="09XXXXXXXXX"
+            className={`${formStyles.input} ${errors.phone ? formStyles.inputError : ""}`}
+            value={customerInfo.phone}
+            onChange={(event) => onUpdate({ phone: normalizePhoneInput(event.target.value) })}
+          />
+          <p className={formStyles.helpText}>Use exactly 11 digits.</p>
+          {errors.phone ? <p className={formStyles.errorText}>{errors.phone}</p> : null}
+        </div>
+
+        <div className={formStyles.field}>
+          <label className={formStyles.label} htmlFor="birthDate">
+            Birth date <span className={styles.optional}>(birthday perk)</span>
+          </label>
+          <input
+            id="birthDate"
+            type="date"
+            autoComplete="bday"
+            max={new Date().toISOString().slice(0, 10)}
+            disabled={birthDateLocked}
+            className={`${formStyles.input} ${errors.birthDate ? formStyles.inputError : ""}`}
+            value={customerInfo.birthDate}
+            onChange={(event) => onUpdate({ birthDate: event.target.value })}
+          />
+          <p className={styles.fieldNote}>
+            {birthDateVerified
+              ? "Verified. Eligible birth-month rentals receive ₱100 off automatically."
+              : "Optional. The date must match the valid ID submitted during verification."}
+          </p>
+          {errors.birthDate ? <p className={formStyles.errorText}>{errors.birthDate}</p> : null}
+        </div>
       </div>
 
       <div className={formStyles.field}>

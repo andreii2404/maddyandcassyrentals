@@ -8,6 +8,12 @@ import { getAllUsers } from "@/src/services/userService";
 import type { Booking, BookingStatus, UserProfile } from "@/src/types/database";
 import Spinner from "@/components/ui/Spinner";
 import StatusBadge from "@/components/status-badge/StatusBadge";
+import {
+  bookingMatchesHistoryFilter,
+  getBookingHistoryGroup,
+  getFulfillmentProgressLabel,
+  type BookingHistoryFilter,
+} from "@/src/lib/bookingManagement";
 import styles from "./bookings.module.css";
 
 const STATUS_OPTIONS: Array<{ value: "" | BookingStatus; label: string }> = [
@@ -15,6 +21,7 @@ const STATUS_OPTIONS: Array<{ value: "" | BookingStatus; label: string }> = [
   { value: "pending", label: "Pending Review" },
   { value: "approved", label: "Approved" },
   { value: "confirmed", label: "Confirmed" },
+  { value: "ready_for_release", label: "Ready for Handover" },
   { value: "released", label: "Released" },
   { value: "returned", label: "Returned / Completed" },
   { value: "cancelled", label: "Cancelled" },
@@ -38,6 +45,7 @@ export default function AdminBookingsList() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<"" | BookingStatus>("");
+  const [historyFilter, setHistoryFilter] = useState<BookingHistoryFilter>("all");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -63,6 +71,7 @@ export default function AdminBookingsList() {
   const filteredBookings = useMemo(() => {
     const query = search.trim().toLowerCase();
     return (bookings ?? []).filter((booking) => {
+      if (!bookingMatchesHistoryFilter(booking, historyFilter)) return false;
       if (status && booking.status !== status) return false;
       if (!query) return true;
 
@@ -75,7 +84,17 @@ export default function AdminBookingsList() {
         user?.email,
       ].some((value) => value?.toLowerCase().includes(query));
     });
-  }, [bookings, search, status, usersById]);
+  }, [bookings, historyFilter, search, status, usersById]);
+
+  const summaryCounts = useMemo(() => {
+    const records = bookings ?? [];
+    return {
+      all: records.length,
+      ongoing: records.filter((booking) => getBookingHistoryGroup(booking.status) === "ongoing").length,
+      completed: records.filter((booking) => getBookingHistoryGroup(booking.status) === "completed").length,
+      cancelled: records.filter((booking) => getBookingHistoryGroup(booking.status) === "cancelled").length,
+    };
+  }, [bookings]);
 
   return (
     <div className={styles.page}>
@@ -87,6 +106,27 @@ export default function AdminBookingsList() {
         </div>
         <span className={styles.count}>{bookings?.length ?? 0} bookings</span>
       </header>
+
+      <section className={styles.summaryGrid} aria-label="Booking management summary">
+        {([
+          ["all", "All Bookings", "Complete booking history"],
+          ["ongoing", "Ongoing", "Requests and active rentals"],
+          ["completed", "Completed", "Returned rentals"],
+          ["cancelled", "Cancelled", "Cancelled or declined"],
+        ] as const).map(([value, label, description]) => (
+          <button
+            key={value}
+            type="button"
+            className={`${styles.summaryCard} ${historyFilter === value ? styles.summaryCardActive : ""}`}
+            onClick={() => setHistoryFilter(value)}
+            aria-pressed={historyFilter === value}
+          >
+            <span>{label}</span>
+            <strong>{summaryCounts[value]}</strong>
+            <small>{description}</small>
+          </button>
+        ))}
+      </section>
 
       <section className={styles.panel} aria-labelledby="booking-list-heading">
         <div className={styles.toolbar}>
@@ -136,6 +176,7 @@ export default function AdminBookingsList() {
                   <th>Rental Item</th>
                   <th>Dates</th>
                   <th>Status</th>
+                  <th>Fulfillment Update</th>
                   <th>Submitted</th>
                   <th aria-label="Open booking" />
                 </tr>
@@ -159,6 +200,10 @@ export default function AdminBookingsList() {
                         {formatDate(booking.startDate)} - {formatDate(booking.endDate)}
                       </td>
                       <td><StatusBadge status={booking.status} /></td>
+                      <td>
+                        <strong>{getFulfillmentProgressLabel(booking.status, booking.fulfillmentMethod)}</strong>
+                        <small>{booking.fulfillmentMethod === "delivery" ? "Delivery" : "Pickup"}</small>
+                      </td>
                       <td>{formatDate(booking.createdAt)}</td>
                       <td>
                         <Link href={`/admin/bookings/${booking.id}`} className={styles.openLink}>

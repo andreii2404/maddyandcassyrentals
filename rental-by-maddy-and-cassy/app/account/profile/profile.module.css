@@ -47,6 +47,19 @@
   font-size: 0.9rem;
 }
 
+.optional {
+  color: var(--color-charcoal);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.fieldNote {
+  margin: 0.4rem 0 0;
+  color: var(--color-charcoal);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
 .form {
   display: flex;
   flex-direction: column;

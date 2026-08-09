@@ -74,14 +74,40 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
 
     const documentType = submission.customer_documents?.document_type ?? "document";
     const ownerUserId = submission.customer_documents?.owner_user_id;
+    const verifiesIdentity = ["government_id", "secondary_id"].includes(documentType);
+    const birthdayVerified = Boolean(
+      status === "approved" &&
+      verifiesIdentity &&
+      booking &&
+      booking.birthdayDiscountAmount > 0 &&
+      booking.birthdayDiscountStatus === "pending_verification" &&
+      ownerUserId,
+    );
+
+    if (birthdayVerified && booking && ownerUserId) {
+      await Promise.all([
+        supabase
+          .from("bookings")
+          .update({ birthday_discount_status: "verified" })
+          .eq("id", bookingId)
+          .eq("birthday_discount_status", "pending_verification"),
+        supabase
+          .from("profiles")
+          .update({ birth_date_verified_at: now, birth_date_verified_by: user.id })
+          .eq("id", ownerUserId)
+          .eq("birth_date", booking.birthDateSnapshot ?? ""),
+      ]);
+    }
+
     if (ownerUserId) {
       await supabase.from("notifications").insert({
         user_id: ownerUserId,
         booking_id: bookingId,
         notification_type: "requirements_reviewed",
         title: status === "approved" ? "Verification document approved" : "Document replacement requested",
-        message:
-          status === "approved" ? `Your ${documentType.replace(/_/g, " ")} was approved.` : reason,
+        message: status === "approved"
+          ? `Your ${documentType.replace(/_/g, " ")} was approved.${birthdayVerified ? " Your birthday-month discount is now verified." : ""}`
+          : reason,
         action_url: `/account/bookings/${bookingId}`,
       });
     }
@@ -91,7 +117,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
       p_entity_type: "requirement_submission",
       p_entity_id: documentId,
       p_booking_id: bookingId,
-      p_new_values: { status, reason },
+      p_new_values: { status, reason, birthdayVerified },
     });
 
     return NextResponse.json({ success: true, requirementsStatus });

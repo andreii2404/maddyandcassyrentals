@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { RequirementsDraft } from "@/src/types/reservationDraft";
 import FileUploadField from "@/components/file-upload/FileUploadField";
+import { isValidPhoneNumber, normalizePhoneInput, PHONE_DIGIT_COUNT } from "@/src/lib/authValidation";
 import formStyles from "@/components/ui/Form.module.css";
 import styles from "./StepShared.module.css";
 
@@ -56,7 +57,9 @@ export default function StepRequirements({
     }
     if (!requirements.emergencyContact.fullName.trim()) nextErrors.push("Emergency contact full name is required.");
     if (!requirements.emergencyContact.relationship.trim()) nextErrors.push("Emergency contact relationship is required.");
-    if (!requirements.emergencyContact.phone.trim()) nextErrors.push("Emergency contact phone number is required.");
+    if (!isValidPhoneNumber(requirements.emergencyContact.phone)) {
+      nextErrors.push(`Emergency contact phone number must contain exactly ${PHONE_DIGIT_COUNT} digits.`);
+    }
     if (
       !isPlatformUrl(
         requirements.emergencyContact.facebookLink.trim(),
@@ -169,10 +172,15 @@ export default function StepRequirements({
           <input
             id="ec-phone"
             type="tel"
+            inputMode="numeric"
+            autoComplete="tel"
+            maxLength={PHONE_DIGIT_COUNT}
+            placeholder="09XXXXXXXXX"
             className={formStyles.input}
             value={requirements.emergencyContact.phone}
-            onChange={(event) => updateEmergencyContact({ phone: event.target.value })}
+            onChange={(event) => updateEmergencyContact({ phone: normalizePhoneInput(event.target.value) })}
           />
+          <p className={formStyles.helpText}>Use exactly 11 digits.</p>
         </div>
         <div className={formStyles.field}>
           <label className={formStyles.label} htmlFor="ec-facebook">

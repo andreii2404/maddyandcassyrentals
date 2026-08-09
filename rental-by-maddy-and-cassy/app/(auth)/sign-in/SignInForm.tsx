@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { sendEmailOtp } from "@/src/services/authService";
+import { normalizeEmail } from "@/src/lib/authValidation";
 import formStyles from "@/components/ui/Form.module.css";
 import styles from "../auth.module.css";
 
@@ -36,16 +37,24 @@ export default function SignInForm() {
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
   const redirectTo = getCustomerRedirect(searchParams.get("redirect"));
+  const accountNotice = searchParams.get("error") === "suspended"
+    ? "This customer account is suspended. Please contact support for assistance."
+    : searchParams.get("signedOut") === "true"
+      ? "You have been signed out securely."
+      : searchParams.get("reset") === "success"
+        ? "Your password was updated. Customer access still uses a secure email code."
+      : null;
 
   async function onSubmit(values: FormValues) {
     setFormError(null);
     setSubmitting(true);
     try {
-      await sendEmailOtp(values.email, {
+      const email = normalizeEmail(values.email);
+      await sendEmailOtp(email, {
         shouldCreateUser: false,
       });
       router.replace(
-        `/verify-email?email=${encodeURIComponent(values.email)}&redirect=${encodeURIComponent(redirectTo)}&flow=sign-in`,
+        `/verify-email?email=${encodeURIComponent(email)}&redirect=${encodeURIComponent(redirectTo)}&flow=sign-in`,
       );
     } catch (error) {
       setFormError(
@@ -66,7 +75,13 @@ export default function SignInForm() {
         sign in.
       </p>
 
+      <div className={styles.methodNote}>
+        <span aria-hidden="true">✉</span>
+        <p><strong>Passwordless customer login.</strong> Each code is single-use and sent only to your registered email.</p>
+      </div>
+
       <form className={styles.form} onSubmit={handleSubmit(onSubmit)} noValidate>
+        {accountNotice ? <p className={accountNotice.includes("suspended") ? styles.formError : styles.successNotice} role="status">{accountNotice}</p> : null}
         {formError ? <p className={styles.formError}>{formError}</p> : null}
 
         <div className={formStyles.field}>
@@ -80,6 +95,8 @@ export default function SignInForm() {
             className={`${formStyles.input} ${errors.email ? formStyles.inputError : ""}`}
             aria-invalid={!!errors.email}
             aria-describedby={errors.email ? "email-error" : undefined}
+            autoCapitalize="none"
+            spellCheck={false}
             {...register("email")}
           />
           {errors.email ? (

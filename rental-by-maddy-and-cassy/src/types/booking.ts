@@ -62,6 +62,13 @@ export interface Booking {
   dailyRate: number;
   refundableDeposit: number;
   rentalSubtotal: number;
+  specialDiscountAmount: number;
+  birthdayDiscountAmount: number;
+  birthdayDiscountStatus: "not_eligible" | "pending_verification" | "verified" | "rejected";
+  loyaltyCompletedRentalsSnapshot: number;
+  loyaltyDiscountAmount: number;
+  loyaltyDiscountStatus: "not_eligible" | "applied" | "voided";
+  birthDateSnapshot?: string;
   deliveryFee: number;
   totalAmount: number;
   location?: string;

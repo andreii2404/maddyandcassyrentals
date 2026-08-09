@@ -43,6 +43,9 @@
 .summary .total { margin-top: .25rem; padding-top: .9rem; border-top: 1px solid var(--color-light-gray); }
 .summary .total dt, .summary .total dd { color: var(--color-text-primary); font-size: .95rem; font-weight: 800; }
 .summaryNote, .bookingRule { color: var(--color-charcoal); font-size: .72rem; line-height: 1.55; }
+.perkNote { display:grid; gap:.3rem; padding:.8rem; border-radius:12px; background:var(--color-blush); }
+.perkNote strong { color:var(--color-primary-hover); font-size:.78rem; }
+.perkNote span { color:var(--color-charcoal); font-size:.7rem; line-height:1.45; }
 .summary .primaryLink { width: 100%; margin-top: .3rem; }
 .empty { display: grid; max-width: 620px; margin: 4rem auto; place-items: center; padding: 3rem; border: 1px dashed var(--color-dusty-rose); border-radius: 24px; text-align: center; }
 .empty > span { display: grid; width: 64px; height: 64px; place-items: center; border-radius: 50%; background: var(--color-blush); color: var(--color-primary); font-size: .68rem; font-weight: 800; }

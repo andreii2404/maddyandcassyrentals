@@ -74,6 +74,47 @@
   font-weight: 800;
 }
 
+.perks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.perks > div {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.9rem;
+  border: 1px solid var(--color-light-gray);
+  border-radius: 14px;
+  background: var(--color-background-soft);
+}
+
+.perkIcon {
+  display: grid;
+  min-width: 46px;
+  height: 46px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-blush);
+  color: var(--color-primary-hover);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.perks p {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+}
+
+.perks small {
+  color: var(--color-charcoal);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
 .summary .savings {
   color: var(--color-status-green);
 }
@@ -98,6 +139,10 @@
 }
 
 @media (max-width: 640px) {
+  .perks {
+    grid-template-columns: 1fr;
+  }
+
   .summary {
     grid-template-columns: 1fr;
   }

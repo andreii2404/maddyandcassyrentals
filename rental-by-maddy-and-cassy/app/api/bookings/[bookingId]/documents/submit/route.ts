@@ -21,7 +21,7 @@ const metadataSchema = z.object({
   emergencyContact: z.object({
     fullName: z.string().trim().min(2).max(160),
     relationship: z.string().trim().min(2).max(100),
-    phone: z.string().trim().min(7).max(40),
+    phone: z.string().trim().regex(/^\d{11}$/, "Phone number must contain exactly 11 digits."),
     facebookLink: z.string().url().max(1000),
   }),
   acknowledgements: z.object({

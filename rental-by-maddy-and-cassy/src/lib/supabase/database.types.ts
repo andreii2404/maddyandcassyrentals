@@ -806,6 +806,9 @@ export type Database = {
         Row: {
           admin_notes: string | null
           approved_at: string | null
+          birth_date_snapshot: string | null
+          birthday_discount_amount: number
+          birthday_discount_status: string
           booking_reference: string
           cancelled_at: string | null
           confirmed_at: string | null
@@ -814,6 +817,9 @@ export type Database = {
           customer_id: string
           customer_notes: string | null
           id: string
+          loyalty_completed_rentals_snapshot: number
+          loyalty_discount_amount: number
+          loyalty_discount_status: string
           ready_for_release_at: string | null
           rejected_at: string | null
           released_at: string | null
@@ -825,6 +831,9 @@ export type Database = {
         Insert: {
           admin_notes?: string | null
           approved_at?: string | null
+          birth_date_snapshot?: string | null
+          birthday_discount_amount?: number
+          birthday_discount_status?: string
           booking_reference?: string
           cancelled_at?: string | null
           confirmed_at?: string | null
@@ -833,6 +842,9 @@ export type Database = {
           customer_id: string
           customer_notes?: string | null
           id?: string
+          loyalty_completed_rentals_snapshot?: number
+          loyalty_discount_amount?: number
+          loyalty_discount_status?: string
           ready_for_release_at?: string | null
           rejected_at?: string | null
           released_at?: string | null
@@ -844,6 +856,9 @@ export type Database = {
         Update: {
           admin_notes?: string | null
           approved_at?: string | null
+          birth_date_snapshot?: string | null
+          birthday_discount_amount?: number
+          birthday_discount_status?: string
           booking_reference?: string
           cancelled_at?: string | null
           confirmed_at?: string | null
@@ -852,6 +867,9 @@ export type Database = {
           customer_id?: string
           customer_notes?: string | null
           id?: string
+          loyalty_completed_rentals_snapshot?: number
+          loyalty_discount_amount?: number
+          loyalty_discount_status?: string
           ready_for_release_at?: string | null
           rejected_at?: string | null
           released_at?: string | null
@@ -1371,6 +1389,9 @@ export type Database = {
       profiles: {
         Row: {
           account_status: Database["public"]["Enums"]["account_status"]
+          birth_date: string | null
+          birth_date_verified_at: string | null
+          birth_date_verified_by: string | null
           contact_email: string | null
           created_at: string
           display_name: string
@@ -1386,6 +1407,9 @@ export type Database = {
         }
         Insert: {
           account_status?: Database["public"]["Enums"]["account_status"]
+          birth_date?: string | null
+          birth_date_verified_at?: string | null
+          birth_date_verified_by?: string | null
           contact_email?: string | null
           created_at?: string
           display_name: string
@@ -1401,6 +1425,9 @@ export type Database = {
         }
         Update: {
           account_status?: Database["public"]["Enums"]["account_status"]
+          birth_date?: string | null
+          birth_date_verified_at?: string | null
+          birth_date_verified_by?: string | null
           contact_email?: string | null
           created_at?: string
           display_name?: string
@@ -1613,6 +1640,7 @@ export type Database = {
           deposit_total: number | null
           rental_days: number | null
           rental_subtotal: number | null
+          special_discount_total: number | null
           total_amount: number | null
         }
         Relationships: []
@@ -1668,6 +1696,23 @@ export type Database = {
           status: Database["public"]["Enums"]["booking_status"]
           updated_at: string
         }
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_own_booking_details: {
+        Args: {
+          p_booking_id: string
+          p_city_municipality?: string
+          p_customer_notes?: string
+          p_fulfillment_method: string
+          p_location?: string
+          p_province?: string
+        }
+        Returns: Database["public"]["Tables"]["bookings"]["Row"]
         SetofOptions: {
           from: "*"
           to: "bookings"

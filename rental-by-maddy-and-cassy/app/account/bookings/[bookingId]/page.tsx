@@ -19,6 +19,7 @@ import styles from "./bookingDetail.module.css";
 import BookingPaymentPanel from "@/components/payment/BookingPaymentPanel";
 import { useToast } from "@/components/ui/ToastProvider";
 import CustomerReviewPanel from "@/components/reviews/CustomerReviewPanel";
+import CustomerBookingManagement from "@/components/booking-management/CustomerBookingManagement";
 
 const REQUIREMENTS_STATUS_LABEL: Record<string, string> = {
   not_submitted: "Not Submitted",
@@ -83,13 +84,15 @@ function BookingDetailContent() {
     return <p className={formStyles.errorText}>We couldn&apos;t find that booking.</p>;
   }
 
-  const { booking, agreement, documents, payments } = details;
+  const { booking, agreement, documents, payments, statusHistory } = details;
   const isDemoPayment = payments.some((p) => (p.providerMetadata as { demo?: boolean } | undefined)?.demo === true);
   const customerSignature = agreement?.signatures?.find((s) => s.signerRole === "customer");
   const rejectedDocuments = documents.filter((d) => d.reviewStatus === "rejected");
 
   return (
     <div className={styles.wrapper}>
+      <Link href="/account/bookings" className={styles.backLink}>← Back to booking history</Link>
+
       {justSubmitted ? (
         <div className={styles.confirmationBanner}>
           <h2>Your reservation is secured and submitted successfully.</h2>
@@ -107,9 +110,22 @@ function BookingDetailContent() {
       ) : null}
 
       <div className={styles.headerRow}>
-        <h1 className={styles.heading}>Booking {booking.bookingRef}</h1>
-        <StatusBadge status={booking.status} />
+        <div>
+          <p className={styles.eyebrow}>BOOKING DETAILS · {booking.bookingRef}</p>
+          <h1 className={styles.heading}>{booking.productSnapshot.name}</h1>
+          <p>Created {new Date(booking.createdAt).toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" })}</p>
+        </div>
+        <Link href="/catalog" className={styles.browseLink}>Browse more rentals</Link>
       </div>
+
+      <CustomerBookingManagement
+        booking={booking}
+        payments={payments}
+        documents={documents}
+        agreement={agreement}
+        statusHistory={statusHistory}
+        onUpdated={loadDetails}
+      />
 
       <BookingSummaryCard
         productName={booking.productSnapshot.name}
@@ -157,11 +173,11 @@ function BookingDetailContent() {
       ) : null}
 
       <section className={styles.section}>
-        <h3>Status Overview</h3>
+        <h3>Process Completion</h3>
         <dl className={styles.detailGrid}>
           <div>
-            <dt>Date Created</dt>
-            <dd>{new Date(booking.createdAt).toLocaleDateString()}</dd>
+            <dt>Booking Status</dt>
+            <dd><StatusBadge status={booking.status} /></dd>
           </div>
           <div>
             <dt>Requirements Status</dt>

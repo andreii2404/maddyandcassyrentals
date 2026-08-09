@@ -128,6 +128,10 @@ export default function CartView({ products }: { products: Product[] }) {
               <div><dt>Online fees</dt><dd>Free</dd></div>
               <div className={styles.total}><dt>Estimated amount</dt><dd>{money(oneDayEstimate)}</dd></div>
             </dl>
+            <div className={styles.perkNote}>
+              <strong>More savings at checkout</strong>
+              <span>Birthday-month rentals can receive ₱100 off, and the 11th rental under the same account receives ₱200 off.</span>
+            </div>
             <p className={styles.summaryNote}>Final amounts update after you choose dates. Delivery courier fees are arranged separately and are not charged online.</p>
             <Link href={`/catalog/${cartLines[0].product.id}/reserve?cartItem=${cartLines[0].product.id}`} className={styles.primaryLink}>Start checkout</Link>
             <p className={styles.bookingRule}>Each product becomes its own booking so availability, payment, documents, and the signed agreement stay accurate.</p>

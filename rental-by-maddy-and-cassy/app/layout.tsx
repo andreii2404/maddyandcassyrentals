@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import { AuthProvider } from "@/src/contexts/AuthContext";
 import { ToastProvider } from "@/components/ui/ToastProvider";
+import SiteFooter from "@/components/footer/SiteFooter";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -35,7 +36,10 @@ export default function RootLayout({
     >
       <body>
         <AuthProvider>
-          <ToastProvider>{children}</ToastProvider>
+          <ToastProvider>
+            {children}
+            <SiteFooter />
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>

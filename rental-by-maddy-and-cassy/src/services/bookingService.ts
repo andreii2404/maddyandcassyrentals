@@ -6,6 +6,7 @@ import type {
   FulfillmentMethod,
   RequirementsStatus,
 } from "@/src/types/booking";
+import type { RewardProgress } from "@/src/lib/promotions";
 
 // public.bookings no longer carries product_snapshot / customer_snapshot /
 // rental_start_date / rental_end_date / requirements_status directly — a
@@ -131,6 +132,13 @@ function assembleBooking(
     dailyRate: item?.daily_rate_snapshot ?? 0,
     refundableDeposit: (item?.deposit_per_unit_snapshot ?? 0) * quantity,
     rentalSubtotal: totals?.rental_subtotal ?? 0,
+    specialDiscountAmount: totals?.special_discount_total ?? 0,
+    birthdayDiscountAmount: row.birthday_discount_amount,
+    birthdayDiscountStatus: row.birthday_discount_status as Booking["birthdayDiscountStatus"],
+    loyaltyCompletedRentalsSnapshot: row.loyalty_completed_rentals_snapshot,
+    loyaltyDiscountAmount: row.loyalty_discount_amount,
+    loyaltyDiscountStatus: row.loyalty_discount_status as Booking["loyaltyDiscountStatus"],
+    birthDateSnapshot: row.birth_date_snapshot ?? undefined,
     deliveryFee: totals?.delivery_fee ?? fulfillment?.delivery_fee_snapshot ?? 0,
     totalAmount: totals?.total_amount ?? 0,
     location: fulfillment?.address_line_1 ?? undefined,
@@ -234,6 +242,28 @@ export async function getBookingsForUser(
   return assembleBookings(supabase, (data ?? []) as unknown as JoinedBookingRow[]);
 }
 
+export async function getCustomerRewardProgress(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+): Promise<RewardProgress> {
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("status, loyalty_discount_amount, booking_reference")
+    .eq("customer_id", userId);
+  if (error) throw new Error(error.message);
+
+  const rows = data ?? [];
+  const completedRentals = rows.filter((booking) => booking.status === "returned").length;
+  const rewardBooking = rows.find(
+    (booking) => booking.loyalty_discount_amount > 0 && booking.status !== "cancelled",
+  );
+  return {
+    completedRentals,
+    loyaltyRewardUsed: Boolean(rewardBooking),
+    activeRewardBookingRef: rewardBooking?.booking_reference,
+  };
+}
+
 /** Admin-only: RLS (bookings_admin_manage) reveals every booking to an active admin. */
 export async function getAllBookings(supabase: SupabaseClient<Database>): Promise<Booking[]> {
   const { data, error } = await supabase
@@ -255,9 +285,54 @@ export async function cancelBookingAsCustomer(
     p_booking_id: bookingId,
     p_note: note,
   });
-  if (error || !data) throw new Error(error?.message ?? "The booking could not be cancelled.");
+  if (error || !data) {
+    const message = error?.message ?? "";
+    if (message.includes("BOOKING_NOT_CANCELLABLE")) {
+      throw new Error("This booking can no longer be cancelled online. Please contact the business for assistance.");
+    }
+    throw new Error(message || "The booking could not be cancelled.");
+  }
 
   const refreshed = await getBookingById(supabase, (data as Tables<"bookings">).id);
   if (!refreshed) throw new Error("The booking could not be reloaded after cancellation.");
+  return refreshed;
+}
+
+export interface CustomerBookingDetailsUpdate {
+  fulfillmentMethod: FulfillmentMethod;
+  location?: string;
+  cityMunicipality?: string;
+  province?: string;
+  customerNotes?: string;
+}
+
+/** Updates only safe fulfillment details on an unpaid, pending booking owned by the current user. */
+export async function updateBookingDetailsAsCustomer(
+  supabase: SupabaseClient<Database>,
+  bookingId: string,
+  input: CustomerBookingDetailsUpdate,
+): Promise<Booking> {
+  const { data, error } = await supabase.rpc("update_own_booking_details", {
+    p_booking_id: bookingId,
+    p_fulfillment_method: input.fulfillmentMethod,
+    p_location: input.location,
+    p_city_municipality: input.cityMunicipality,
+    p_province: input.province,
+    p_customer_notes: input.customerNotes,
+  });
+
+  if (error || !data) {
+    const message = error?.message ?? "";
+    if (message.includes("BOOKING_EDIT_LOCKED") || message.includes("BOOKING_NOT_EDITABLE")) {
+      throw new Error("This booking can no longer be edited because payment or verification has already started.");
+    }
+    if (message.includes("INCOMPLETE_DELIVERY_ADDRESS")) {
+      throw new Error("Enter the complete street/barangay, city or municipality, and province for delivery.");
+    }
+    throw new Error(message || "The booking details could not be updated.");
+  }
+
+  const refreshed = await getBookingById(supabase, data.id);
+  if (!refreshed) throw new Error("The booking could not be reloaded after the update.");
   return refreshed;
 }

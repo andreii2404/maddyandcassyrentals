@@ -85,6 +85,46 @@
   font-size: 1.35rem;
 }
 
+.progressSaved {
+  display: flex;
+  margin: -0.55rem 0 1rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--color-status-green-border);
+  border-radius: 14px;
+  background: var(--color-status-green-bg);
+  color: var(--color-status-green);
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.progressSaved > span {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--color-white);
+  place-items: center;
+  font-weight: 800;
+}
+
+.progressSaved div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.progressSaved strong {
+  font-size: 0.78rem;
+}
+
+.progressSaved small {
+  color: var(--color-charcoal);
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+
 .flowLayout {
   display: grid;
   grid-template-columns: minmax(220px, 285px) minmax(0, 1fr);

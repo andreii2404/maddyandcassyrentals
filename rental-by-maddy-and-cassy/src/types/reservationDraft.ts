@@ -22,6 +22,8 @@ export interface CustomerInfoDraft {
   fullName: string;
   email: string;
   phone: string;
+  /** ISO date (YYYY-MM-DD), used for the optional birthday-month perk. */
+  birthDate: string;
   streetBarangay: string;
   cityMunicipality: string;
   province: string;
@@ -78,6 +80,7 @@ export function createEmptyDraft(): ReservationDraft {
       fullName: "",
       email: "",
       phone: "",
+      birthDate: "",
       streetBarangay: "",
       cityMunicipality: "",
       province: "",

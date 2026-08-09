@@ -81,6 +81,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ book
           { label: "Location", value: booking.location || "-" },
           { label: "Quantity", value: `${booking.quantity} unit(s)` },
           { label: "Rental subtotal", value: `PHP ${booking.rentalSubtotal.toLocaleString("en-PH")}` },
+          ...(booking.birthdayDiscountAmount > 0
+            ? [{ label: "Birthday month perk", value: `-PHP ${booking.birthdayDiscountAmount.toLocaleString("en-PH")}` }]
+            : []),
+          ...(booking.loyaltyDiscountAmount > 0
+            ? [{ label: "11th-rental loyalty reward", value: `-PHP ${booking.loyaltyDiscountAmount.toLocaleString("en-PH")}` }]
+            : []),
           { label: "Non-refundable deposit", value: `PHP ${booking.refundableDeposit.toLocaleString("en-PH")}` },
           { label: "Total amount", value: `PHP ${booking.totalAmount.toLocaleString("en-PH")}` },
           { label: "Assigned physical unit", value: booking.inventoryUnitId || "Not assigned" },

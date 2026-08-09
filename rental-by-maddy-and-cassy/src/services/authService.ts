@@ -2,12 +2,18 @@
 
 import type { Subscription, User } from "@supabase/supabase-js";
 import { createClient } from "@/src/lib/supabase/client";
+import { normalizeEmail } from "@/src/lib/authValidation";
 
 export interface SendEmailOtpOptions {
   /** Creates a new account for this email if one does not already exist. */
   shouldCreateUser?: boolean;
   /** Optional redirect target for confirmation links / OTP emails. */
   emailRedirectTo?: string;
+  /** Initial customer profile values used only when a new account is created. */
+  profileData?: {
+    displayName: string;
+    phoneNumber: string;
+  };
 }
 
 async function syncServerSession(accessToken: string, refreshToken: string): Promise<void> {
@@ -37,10 +43,16 @@ export async function sendEmailOtp(
 ): Promise<void> {
   const supabase = createClient();
   const { error } = await supabase.auth.signInWithOtp({
-    email,
+    email: normalizeEmail(email),
     options: {
       shouldCreateUser: options.shouldCreateUser ?? false,
       emailRedirectTo: options.emailRedirectTo,
+      data: options.profileData
+        ? {
+            display_name: options.profileData.displayName.trim(),
+            phone_number: options.profileData.phoneNumber.trim(),
+          }
+        : undefined,
     },
   });
   if (error) {
@@ -56,7 +68,7 @@ export async function sendEmailOtp(
 
 export async function verifyEmailOtp(email: string, token: string): Promise<User> {
   const supabase = createClient();
-  const { data, error } = await supabase.auth.verifyOtp({ email, token, type: "email" });
+  const { data, error } = await supabase.auth.verifyOtp({ email: normalizeEmail(email), token, type: "email" });
   if (error || !data.user || !data.session) {
     throw new Error(error?.message ?? "The verification code could not be confirmed.");
   }
@@ -66,8 +78,15 @@ export async function verifyEmailOtp(email: string, token: string): Promise<User
 
 export async function loginWithEmail(email: string, password: string): Promise<User> {
   const supabase = createClient();
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email: normalizeEmail(email), password });
   if (error || !data.user || !data.session) {
+    const normalized = error?.message.toLowerCase() ?? "";
+    if (normalized.includes("invalid login credentials")) {
+      throw new Error("The email or password is incorrect.");
+    }
+    if (normalized.includes("email not confirmed")) {
+      throw new Error("Confirm this account's email before signing in.");
+    }
     throw new Error(error?.message ?? "Could not sign in.");
   }
   await syncServerSession(data.session.access_token, data.session.refresh_token);
@@ -96,17 +115,29 @@ export async function startGuestCheckout(): Promise<User> {
   return data.user;
 }
 
-export async function requestPasswordReset(email: string): Promise<void> {
+export async function requestPasswordReset(
+  email: string,
+  redirectPath = "/reset-password",
+): Promise<void> {
   const supabase = createClient();
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo:
-      typeof window !== "undefined" ? `${window.location.origin}/sign-in` : undefined,
+  const safePath = redirectPath.startsWith("/reset-password")
+    ? redirectPath
+    : "/reset-password";
+  let redirectTo: string | undefined;
+  if (typeof window !== "undefined") {
+    const callbackUrl = new URL("/auth/callback", window.location.origin);
+    callbackUrl.searchParams.set("next", safePath);
+    redirectTo = callbackUrl.toString();
+  }
+  const { error } = await supabase.auth.resetPasswordForEmail(normalizeEmail(email), {
+    redirectTo,
   });
   if (error) throw new Error(error.message);
 }
 
 export async function logout(): Promise<void> {
-  await createClient().auth.signOut();
+  const { error } = await createClient().auth.signOut();
+  if (error) throw new Error(error.message);
 }
 
 export function subscribeToAuthChanges(

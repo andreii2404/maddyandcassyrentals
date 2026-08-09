@@ -22,6 +22,18 @@ const sections: GuideSection[] = [
     ],
   },
   {
+    title: "How does the birthday month discount work?",
+    paragraphs: [
+      "Add your birth date to the booking details. When any selected rental date falls within your birth month, ₱100 is deducted from the rental fee. The birth date must match one of the valid IDs submitted for verification.",
+    ],
+  },
+  {
+    title: "How does the loyalty reward work?",
+    paragraphs: [
+      "Every returned booking under the same customer account counts as one completed rental. After ten completed rentals, ₱200 is automatically applied to the next booking—the 11th rental. No loyalty card is required, and progress is shown under My Bookings.",
+    ],
+  },
+  {
     title: "Can I extend my rental?",
     paragraphs: [
       "Extensions may be approved when the unit remains available for the requested dates. Contact the team before your scheduled return so availability and your rental agreement can be updated.",

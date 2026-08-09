@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireActiveAdmin } from "@/src/lib/server/requestSecurity";
 import { createAdminClient } from "@/src/lib/supabase/admin";
+import { isValidPhoneNumber } from "@/src/lib/authValidation";
 
 export const runtime = "nodejs";
 
@@ -102,12 +103,21 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ui
     const clean = (value: unknown, max: number, fallback: string) =>
       typeof value === "string" ? value.trim().slice(0, max) : fallback;
 
+    const displayName = clean(body.displayName, 150, target.display_name);
+    const phoneNumber = clean(body.phoneNumber, 11, target.phone_number ?? "");
+    const fullAddress = clean(body.fullAddress, 500, target.full_address ?? "");
+    if (displayName.length < 2) {
+      return errorResponse("Enter the account holder's full name.", 400);
+    }
+    if (!isValidPhoneNumber(phoneNumber)) {
+      return errorResponse("Phone number must contain exactly 11 digits.", 400);
+    }
     const { error: profileError } = await supabase
       .from("profiles")
       .update({
-        display_name: clean(body.displayName, 150, target.display_name),
-        phone_number: clean(body.phoneNumber, 50, target.phone_number ?? ""),
-        full_address: clean(body.fullAddress, 500, target.full_address ?? ""),
+        display_name: displayName,
+        phone_number: phoneNumber,
+        full_address: fullAddress,
         account_status: accountStatus,
       })
       .eq("id", targetUid);
