@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { createClient } from "@/src/lib/supabase/client";
 import { submitReview } from "@/src/services/reviewService";
 import { useToast } from "@/components/ui/ToastProvider";
 import styles from "./CustomerReviewPanel.module.css";
@@ -57,7 +56,7 @@ export default function CustomerReviewPanel({
     submitLock.current = true;
     setSubmitting(true);
     try {
-      const result = await submitReview(createClient(), { bookingId, productId, rating, comment: comment.trim() || undefined });
+      const result = await submitReview({ bookingId, productId, rating, comment: comment.trim() || undefined });
       showToast(
         result.alreadySubmitted
           ? "Your review was already received. Thank you for sharing your experience with Maddy & Cassy!"

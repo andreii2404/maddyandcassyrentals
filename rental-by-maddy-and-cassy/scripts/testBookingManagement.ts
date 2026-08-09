@@ -14,7 +14,7 @@ import {
   restoreReservationProgress,
   serializeReservationProgress,
 } from "../src/lib/reservationProgress";
-import { isDuplicateReviewError } from "../src/services/reviewService";
+import { isDuplicateReviewError } from "../src/lib/reviewSubmission";
 
 function booking(status: Booking["status"], method: Booking["fulfillmentMethod"] = "pickup"): Booking {
   return {
