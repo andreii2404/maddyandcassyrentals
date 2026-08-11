@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { enforceRateLimit, requireActiveAdmin, RequestSecurityError } from "@/src/lib/server/requestSecurity";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 
@@ -39,6 +40,7 @@ export async function PATCH(
       p_previous_values: { status: review.status },
       p_new_values: { status: body.status },
     });
+    revalidatePath("/");
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof RequestSecurityError) {

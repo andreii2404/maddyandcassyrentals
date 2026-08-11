@@ -314,6 +314,13 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 1.25rem;
+}
+
+.aboutCommunityGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(380px, 0.95fr);
+  gap: 1.25rem;
+  align-items: stretch;
   margin-bottom: 2.5rem;
 }
 
@@ -535,7 +542,7 @@
 }
 
 @media (max-width: 980px) {
-  .storyGrid { grid-template-columns: 1fr; }
+  .aboutCommunityGrid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 760px) {

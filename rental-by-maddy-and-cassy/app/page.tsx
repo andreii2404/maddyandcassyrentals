@@ -2,6 +2,7 @@ import Link from "next/link";
 import Navbar from "@/components/navbar/Navbar";
 import Hero from "@/components/hero/Hero";
 import FeaturedProducts from "@/components/storefront/FeaturedProducts";
+import ReviewCarousel, { type StorefrontReview } from "@/components/storefront/ReviewCarousel";
 import { getActiveProducts } from "@/src/services/productService";
 import styles from "./page.module.css";
 
@@ -64,6 +65,14 @@ export default async function Home() {
       candidates.findIndex((candidate) => candidate.id === product.id) === index,
     )
     .slice(0, 4);
+  const storefrontReviews: StorefrontReview[] = products
+    .flatMap((product) => product.reviews.map((review) => ({
+      ...review,
+      productName: product.name,
+      productHref: `/catalog/${product.slug || product.id}`,
+    })))
+    .sort((left, right) => Date.parse(right.date) - Date.parse(left.date))
+    .slice(0, 30);
 
   return (
     <div className={styles.page}>
@@ -189,8 +198,9 @@ export default async function Home() {
             </article>
           </div>
 
-          <div className={styles.storyGrid}>
-            <details className={styles.storyBlock} open>
+          <div className={styles.aboutCommunityGrid}>
+            <div className={styles.storyGrid}>
+              <details className={styles.storyBlock} open>
               <summary>
                 <span className={styles.storyNumber}>01</span>
                 <h3>The Story Behind Our Name</h3>
@@ -203,9 +213,9 @@ export default async function Home() {
                   Kyla&apos;s two favorite characters from <em>Euphoria</em>.
                 </p>
               </div>
-            </details>
+              </details>
 
-            <details className={styles.storyBlock}>
+              <details className={styles.storyBlock}>
               <summary>
                 <span className={styles.storyNumber}>02</span>
                 <h3>Why We Started</h3>
@@ -221,9 +231,9 @@ export default async function Home() {
                   and special occasions.
                 </p>
               </div>
-            </details>
+              </details>
 
-            <details className={styles.storyBlock}>
+              <details className={styles.storyBlock}>
               <summary>
                 <span className={styles.storyNumber}>03</span>
                 <h3>Our Mission</h3>
@@ -236,7 +246,10 @@ export default async function Home() {
                   high-quality devices so they can capture it without compromise.
                 </p>
               </div>
-            </details>
+              </details>
+            </div>
+
+            <ReviewCarousel reviews={storefrontReviews} />
           </div>
 
           <div className={styles.aboutCta}>
