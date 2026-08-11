@@ -78,6 +78,22 @@ export interface AdminProductReview {
   createdAt: string;
 }
 
+export interface AdminReviewRecord extends AdminProductReview {
+  bookingId: string;
+  bookingRef: string;
+  bookingStatus: BookingStatus;
+  customerId: string;
+  customerName: string;
+  customerEmail: string | null;
+  updatedAt: string;
+  moderatedAt: string | null;
+  moderatorName: string | null;
+}
+
+export interface AdminReviewsData {
+  reviews: AdminReviewRecord[];
+}
+
 export interface AdminPaymentsData {
   payments: PaymentRecord[];
   events: PayMongoWebhookEvent[];
@@ -108,4 +124,8 @@ export async function getAdminAuditLogs(): Promise<AdminAuditLog[]> {
 
 export function getAdminPayments(): Promise<AdminPaymentsData> {
   return getAdminData("/api/admin/payments");
+}
+
+export function getAdminReviews(): Promise<AdminReviewsData> {
+  return getAdminData("/api/admin/reviews");
 }
