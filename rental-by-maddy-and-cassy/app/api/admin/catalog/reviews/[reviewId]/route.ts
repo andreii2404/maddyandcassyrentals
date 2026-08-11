@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { enforceRateLimit, requireActiveAdmin, RequestSecurityError } from "@/src/lib/server/requestSecurity";
+import { createAdminClient } from "@/src/lib/supabase/admin";
 
 export const runtime = "nodejs";
 
@@ -9,14 +10,15 @@ export async function PATCH(
 ): Promise<NextResponse> {
   try {
     enforceRateLimit(request, "admin-review-moderation", 60, 60_000);
-    const { supabase, user } = await requireActiveAdmin();
+    const { user } = await requireActiveAdmin();
+    const admin = createAdminClient();
     const { reviewId } = await params;
     const body = (await request.json()) as { status?: unknown };
     if (body.status !== "approved" && body.status !== "rejected") {
       return NextResponse.json({ error: "Choose approve or reject." }, { status: 400 });
     }
 
-    const { data: review, error: reviewError } = await supabase
+    const { data: review, error: reviewError } = await admin
       .from("reviews")
       .select("id, status")
       .eq("id", reviewId)
@@ -24,13 +26,13 @@ export async function PATCH(
     if (reviewError) throw new Error(reviewError.message);
     if (!review) return NextResponse.json({ error: "The review no longer exists." }, { status: 404 });
 
-    const { error } = await supabase
+    const { error } = await admin
       .from("reviews")
       .update({ status: body.status, moderated_by: user.id, moderated_at: new Date().toISOString() })
       .eq("id", reviewId);
     if (error) throw new Error(error.message);
 
-    await supabase.rpc("log_audit_event", {
+    await admin.rpc("log_audit_event", {
       p_action: "catalog.review_moderated",
       p_entity_type: "review",
       p_entity_id: reviewId,

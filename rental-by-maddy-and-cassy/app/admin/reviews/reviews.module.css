@@ -1,0 +1,576 @@
+.page {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.35rem;
+}
+
+.header p,
+.workspaceHeader p {
+  margin: 0 0 0.28rem;
+  color: var(--color-primary);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+}
+
+.header h1,
+.workspaceHeader h2 {
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+.header span,
+.workspaceHeader > div:first-child > span {
+  display: block;
+  margin-top: 0.4rem;
+  color: var(--color-charcoal);
+  font-size: 0.8rem;
+}
+
+.header > button,
+.error > button {
+  padding: 0.7rem 1rem;
+  border: 1px solid rgba(154, 89, 101, 0.25);
+  border-radius: 999px;
+  background: var(--color-white);
+  color: var(--color-primary);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.header > button:hover,
+.error > button:hover {
+  background: var(--color-blush);
+}
+
+.header > button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.metrics {
+  display: grid;
+  margin-bottom: 1rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.metrics article {
+  display: flex;
+  min-height: 118px;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  background: var(--color-white);
+  box-shadow: 0 10px 28px rgba(36, 36, 36, 0.035);
+  flex-direction: column;
+}
+
+.metrics .priorityMetric {
+  border-color: rgba(154, 89, 101, 0.28);
+  background: linear-gradient(145deg, var(--color-white), var(--color-blush));
+}
+
+.metrics span {
+  color: var(--color-charcoal);
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.metrics strong {
+  margin-top: 0.35rem;
+  color: var(--color-text-primary);
+  font-size: 1.55rem;
+}
+
+.metrics small {
+  margin-top: auto;
+  color: var(--color-charcoal);
+  font-size: 0.65rem;
+}
+
+.workspace {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  background: var(--color-white);
+  box-shadow: 0 12px 34px rgba(36, 36, 36, 0.045);
+}
+
+.workspaceHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.15rem 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.workspaceHeader h2 {
+  font-size: 1.05rem;
+}
+
+.statusTabs {
+  display: flex;
+  padding: 0.22rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-background);
+  gap: 0.15rem;
+}
+
+.statusTabs button {
+  display: flex;
+  align-items: center;
+  padding: 0.45rem 0.65rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-charcoal);
+  font: inherit;
+  font-size: 0.67rem;
+  font-weight: 700;
+  cursor: pointer;
+  gap: 0.35rem;
+}
+
+.statusTabs button span {
+  display: grid;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: rgba(154, 89, 101, 0.1);
+  place-items: center;
+  font-size: 0.6rem;
+}
+
+.statusTabs .activeTab {
+  background: var(--color-primary);
+  color: var(--color-white);
+}
+
+.statusTabs .activeTab span {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.toolbar {
+  display: grid;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-background);
+  grid-template-columns: minmax(240px, 1fr) minmax(140px, 180px) minmax(150px, 190px);
+  gap: 0.75rem;
+}
+
+.toolbar label {
+  display: flex;
+  color: var(--color-charcoal);
+  font-size: 0.64rem;
+  font-weight: 700;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.toolbar input,
+.toolbar select {
+  width: 100%;
+  min-height: 42px;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-white);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 0.75rem;
+}
+
+.toolbar input:focus,
+.toolbar select:focus {
+  border-color: var(--color-primary);
+  outline: 3px solid rgba(154, 89, 101, 0.12);
+}
+
+.reviewList {
+  display: grid;
+  padding: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.reviewCard {
+  display: flex;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-top: 3px solid var(--color-dusty-rose);
+  border-radius: 16px;
+  background: var(--color-white);
+  flex-direction: column;
+}
+
+.reviewCard[data-status="approved"] {
+  border-top-color: var(--color-status-green);
+}
+
+.reviewCard[data-status="rejected"] {
+  border-top-color: var(--color-status-red-border);
+}
+
+.reviewIdentity {
+  display: grid;
+  align-items: center;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.65rem;
+}
+
+.avatar {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--color-blush);
+  color: var(--color-primary);
+  place-items: center;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.reviewIdentity > div {
+  min-width: 0;
+}
+
+.reviewIdentity strong,
+.reviewIdentity > div span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reviewIdentity strong {
+  color: var(--color-text-primary);
+  font-size: 0.78rem;
+}
+
+.reviewIdentity > div span {
+  margin-top: 0.12rem;
+  color: var(--color-charcoal);
+  font-size: 0.63rem;
+}
+
+.statusPill {
+  padding: 0.28rem 0.55rem;
+  border-radius: 999px;
+  background: var(--color-status-yellow-bg);
+  color: var(--color-status-yellow);
+  font-size: 0.59rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.statusPill[data-status="approved"] {
+  background: var(--color-status-green-bg);
+  color: var(--color-status-green);
+}
+
+.statusPill[data-status="rejected"] {
+  background: var(--color-status-red-bg);
+  color: var(--color-status-red);
+}
+
+.reviewBody {
+  padding: 0.95rem 1rem;
+}
+
+.ratingLine {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.stars {
+  color: #c8891c;
+  font-size: 0.95rem;
+  letter-spacing: 0.05em;
+}
+
+.stars i {
+  color: #ded8d5;
+  font-style: normal;
+}
+
+.ratingLine strong {
+  color: var(--color-text-primary);
+  font-size: 0.72rem;
+}
+
+.reviewBody blockquote {
+  min-height: 48px;
+  margin: 0.65rem 0 0.55rem;
+  color: var(--color-text-primary);
+  font-size: 0.76rem;
+  line-height: 1.55;
+}
+
+.reviewBody time {
+  color: var(--color-charcoal);
+  font-size: 0.61rem;
+}
+
+.reviewContext {
+  display: grid;
+  margin: 0;
+  padding: 0 1rem 0.9rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.reviewContext div {
+  min-width: 0;
+  padding: 0.6rem;
+  border-radius: 10px;
+  background: var(--color-background);
+}
+
+.reviewContext dt {
+  margin-bottom: 0.15rem;
+  color: var(--color-charcoal);
+  font-size: 0.54rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.reviewContext dd {
+  overflow: hidden;
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 0.65rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.cardActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-background);
+  gap: 0.75rem;
+}
+
+.cardActions > div {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.cardActions a {
+  color: var(--color-primary);
+  font-size: 0.65rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.cardActions button {
+  padding: 0.5rem 0.65rem;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 0.62rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.cardActions button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.hideButton {
+  border: 1px solid var(--color-status-red-border);
+  background: var(--color-white);
+  color: var(--color-status-red);
+}
+
+.publishButton {
+  border: 1px solid var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-white);
+}
+
+.loading,
+.empty {
+  display: grid;
+  min-height: 300px;
+  padding: 2rem;
+  place-items: center;
+}
+
+.empty {
+  align-content: center;
+  color: var(--color-charcoal);
+  text-align: center;
+}
+
+.empty strong {
+  color: var(--color-text-primary);
+}
+
+.empty p {
+  margin: 0.35rem 0 0;
+  font-size: 0.75rem;
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 1rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--color-status-red-border);
+  border-radius: 12px;
+  background: var(--color-status-red-bg);
+  color: var(--color-status-red);
+  gap: 1rem;
+}
+
+.error strong,
+.error span {
+  display: block;
+}
+
+.error strong {
+  font-size: 0.74rem;
+}
+
+.error span {
+  margin-top: 0.15rem;
+  font-size: 0.65rem;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1.1rem;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-background);
+  color: var(--color-charcoal);
+  font-size: 0.65rem;
+  gap: 1rem;
+}
+
+.pagination div {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.pagination button {
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: var(--color-white);
+  color: var(--color-charcoal);
+  font: inherit;
+  cursor: pointer;
+}
+
+.pagination button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+@media (max-width: 1100px) {
+  .metrics,
+  .reviewList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .workspaceHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 760px) {
+  .toolbar {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .searchField {
+    grid-column: 1 / -1;
+  }
+
+  .statusTabs {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .statusTabs button {
+    flex: 1 0 auto;
+  }
+
+  .reviewList {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .header,
+  .cardActions,
+  .pagination {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .header > button {
+    width: 100%;
+  }
+
+  .metrics,
+  .toolbar,
+  .reviewContext {
+    grid-template-columns: 1fr;
+  }
+
+  .searchField {
+    grid-column: auto;
+  }
+
+  .reviewIdentity {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .statusPill {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  .cardActions > div,
+  .cardActions button {
+    width: 100%;
+  }
+
+  .cardActions > div {
+    flex-direction: column-reverse;
+  }
+
+  .pagination div {
+    justify-content: space-between;
+  }
+}

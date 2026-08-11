@@ -13,6 +13,7 @@ const adminLinks = [
   { href: "/admin/bookings", label: "Bookings" },
   { href: "/admin/catalog", label: "Catalog & Pricing" },
   { href: "/admin/payments", label: "Payments" },
+  { href: "/admin/reviews", label: "Feedback & Reviews" },
   { href: "/admin/audit", label: "Audit Logs" },
   { href: "/admin/users", label: "User Accounts" },
   { href: "/admin/profile", label: "Admin Profile" },
