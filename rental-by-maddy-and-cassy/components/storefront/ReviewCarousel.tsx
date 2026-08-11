@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./ReviewCarousel.module.css";
 
 export interface StorefrontReview {
@@ -37,6 +37,25 @@ function ArrowIcon({ direction }: { direction: "left" | "right" }) {
 export default function ReviewCarousel({ reviews }: ReviewCarouselProps) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [canScrollPrevious, setCanScrollPrevious] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
+
+  const updateScrollState = useCallback(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    const maximumScroll = Math.max(0, track.scrollWidth - track.clientWidth);
+    setCanScrollPrevious(track.scrollLeft > 2);
+    setCanScrollNext(track.scrollLeft < maximumScroll - 2);
+  }, []);
+
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    const resizeObserver = new ResizeObserver(updateScrollState);
+    resizeObserver.observe(track);
+    updateScrollState();
+    return () => resizeObserver.disconnect();
+  }, [reviews.length, updateScrollState]);
 
   if (!reviews.length) return null;
 
@@ -45,13 +64,10 @@ export default function ReviewCarousel({ reviews }: ReviewCarouselProps) {
 
   function move(direction: -1 | 1) {
     const track = trackRef.current;
-    if (!track) return;
-    const nextIndex = Math.min(Math.max(activeIndex + direction, 0), reviews.length - 1);
-    const card = track.children.item(nextIndex) as HTMLElement | null;
-    if (card) {
-      track.scrollTo({ left: card.offsetLeft - track.offsetLeft, behavior: "smooth" });
-    }
-    setActiveIndex(nextIndex);
+    const firstCard = track?.children.item(0) as HTMLElement | null;
+    if (!track || !firstCard) return;
+    const gap = Number.parseFloat(window.getComputedStyle(track).columnGap) || 0;
+    track.scrollBy({ left: direction * (firstCard.offsetWidth + gap), behavior: "smooth" });
   }
 
   function syncActiveReview() {
@@ -65,6 +81,7 @@ export default function ReviewCarousel({ reviews }: ReviewCarouselProps) {
         : bestIndex;
     }, 0);
     setActiveIndex(closestIndex);
+    updateScrollState();
   }
 
   return (
@@ -72,7 +89,10 @@ export default function ReviewCarousel({ reviews }: ReviewCarouselProps) {
       <div className={styles.header}>
         <div>
           <p className={styles.eyebrow}>CUSTOMER STORIES</p>
-          <h3 id="customer-reviews-heading">Loved by verified renters</h3>
+          <h2 id="customer-reviews-heading">Real moments, shared by our renters.</h2>
+          <p className={styles.description}>
+            Read feedback from customers who completed a verified rental with Maddy &amp; Cassy.
+          </p>
         </div>
         <div className={styles.ratingSummary} aria-label={`${averageRating.toFixed(1)} out of 5 from ${reviews.length} approved ${reviews.length === 1 ? "review" : "reviews"}`}>
           <strong>{averageRating.toFixed(1)}</strong>
@@ -84,7 +104,7 @@ export default function ReviewCarousel({ reviews }: ReviewCarouselProps) {
       <div className={styles.carouselShell}>
         <div
           ref={trackRef}
-          className={styles.track}
+          className={`${styles.track} ${reviews.length === 1 ? styles.singleTrack : reviews.length === 2 ? styles.twoTrack : ""}`}
           onScroll={syncActiveReview}
           aria-label="Approved customer reviews"
           tabIndex={0}
@@ -111,14 +131,14 @@ export default function ReviewCarousel({ reviews }: ReviewCarouselProps) {
           ))}
         </div>
 
-        {reviews.length > 1 ? (
+        {canScrollPrevious || canScrollNext ? (
           <div className={styles.controls}>
             <span aria-live="polite">{activeIndex + 1} / {reviews.length}</span>
             <div>
               <button
                 type="button"
                 onClick={() => move(-1)}
-                disabled={activeIndex === 0}
+                disabled={!canScrollPrevious}
                 aria-label="Previous review"
               >
                 <ArrowIcon direction="left" />
@@ -126,7 +146,7 @@ export default function ReviewCarousel({ reviews }: ReviewCarouselProps) {
               <button
                 type="button"
                 onClick={() => move(1)}
-                disabled={activeIndex === reviews.length - 1}
+                disabled={!canScrollNext}
                 aria-label="Next review"
               >
                 <ArrowIcon direction="right" />
