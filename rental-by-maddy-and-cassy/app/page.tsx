@@ -71,8 +71,7 @@ export default async function Home() {
       productName: product.name,
       productHref: `/catalog/${product.slug || product.id}`,
     })))
-    .sort((left, right) => Date.parse(right.date) - Date.parse(left.date))
-    .slice(0, 30);
+    .sort((left, right) => Date.parse(right.date) - Date.parse(left.date));
 
   return (
     <div className={styles.page}>
@@ -198,9 +197,8 @@ export default async function Home() {
             </article>
           </div>
 
-          <div className={styles.aboutCommunityGrid}>
-            <div className={styles.storyGrid}>
-              <details className={styles.storyBlock} open>
+          <div className={styles.storyGrid}>
+            <details className={styles.storyBlock} open>
               <summary>
                 <span className={styles.storyNumber}>01</span>
                 <h3>The Story Behind Our Name</h3>
@@ -213,9 +211,9 @@ export default async function Home() {
                   Kyla&apos;s two favorite characters from <em>Euphoria</em>.
                 </p>
               </div>
-              </details>
+            </details>
 
-              <details className={styles.storyBlock}>
+            <details className={styles.storyBlock}>
               <summary>
                 <span className={styles.storyNumber}>02</span>
                 <h3>Why We Started</h3>
@@ -231,9 +229,9 @@ export default async function Home() {
                   and special occasions.
                 </p>
               </div>
-              </details>
+            </details>
 
-              <details className={styles.storyBlock}>
+            <details className={styles.storyBlock}>
               <summary>
                 <span className={styles.storyNumber}>03</span>
                 <h3>Our Mission</h3>
@@ -246,10 +244,7 @@ export default async function Home() {
                   high-quality devices so they can capture it without compromise.
                 </p>
               </div>
-              </details>
-            </div>
-
-            <ReviewCarousel reviews={storefrontReviews} />
+            </details>
           </div>
 
           <div className={styles.aboutCta}>
@@ -257,6 +252,8 @@ export default async function Home() {
             <Link href="/catalog" className={styles.ctaButton}>Browse the Catalog</Link>
           </div>
         </section>
+
+        <ReviewCarousel reviews={storefrontReviews} />
 
         <section id="how-it-works" className={styles.howItWorks} aria-labelledby="how-it-works-heading">
           <div className={styles.aboutIntro}>
