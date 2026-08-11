@@ -25,13 +25,19 @@ export async function updateSession(request: NextRequest) {
       getAll() {
         return request.cookies.getAll();
       },
-      setAll(cookiesToSet) {
+      setAll(cookiesToSet, headers) {
         for (const { name, value } of cookiesToSet) {
           request.cookies.set(name, value);
         }
         response = NextResponse.next({ request });
         for (const { name, value, options } of cookiesToSet) {
           response.cookies.set(name, value, options);
+        }
+        // @supabase/ssr supplies private/no-store headers whenever it rotates
+        // auth cookies. Preserve them on the rebuilt middleware response so a
+        // CDN cannot cache a stale signed-out or signed-in session response.
+        for (const [name, value] of Object.entries(headers)) {
+          response.headers.set(name, value);
         }
       },
     },

@@ -291,7 +291,7 @@ function BookingDetailContent() {
         </div>
 
         <aside className={styles.paymentColumn} id="secure-payment">
-          <BookingPaymentPanel booking={booking} payments={payments} />
+          <BookingPaymentPanel booking={booking} payments={payments} onPaymentUpdated={loadDetails} />
         </aside>
       </div>
 

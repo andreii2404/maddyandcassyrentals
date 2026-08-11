@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useToast } from "@/components/ui/ToastProvider";
-import { createPaymentCheckout } from "@/src/services/paymentService";
+import { createPaymentCheckout, reconcilePayment } from "@/src/services/paymentService";
 import type { Booking } from "@/src/types/booking";
 import type { PaymentRecord } from "@/src/types/payment";
 import styles from "./BookingPaymentPanel.module.css";
@@ -17,12 +17,89 @@ function money(value: number): string {
 export default function BookingPaymentPanel({
   booking,
   payments,
+  onPaymentUpdated,
 }: {
   booking: Booking;
   payments: PaymentRecord[];
+  onPaymentUpdated?: () => void | Promise<void>;
 }) {
   const { showToast } = useToast();
   const [opening, setOpening] = useState(false);
+  const [confirmingReturn, setConfirmingReturn] = useState(false);
+  const returnHandledRef = useRef(false);
+  const hasPendingPayment = payments.some((payment) => payment.status === "submitted");
+
+  useEffect(() => {
+    if (returnHandledRef.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const returnedFromPayment = params.get("payment") === "success";
+    // Also reconcile an existing submitted payment when the customer had to
+    // sign in again and the old redirect lost its payment marker. This safely
+    // recovers a paid PayMongo checkout before offering another checkout.
+    if (!returnedFromPayment && !hasPendingPayment) return;
+
+    returnHandledRef.current = true;
+    let cancelled = false;
+    let timer: number | undefined;
+
+    const clearReturnMarker = () => {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("payment");
+      window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+    };
+
+    async function confirmPayment(attempt = 0): Promise<void> {
+      try {
+        const status = await reconcilePayment(booking.id);
+        if (cancelled) return;
+        if (status === "verified") {
+          clearReturnMarker();
+          setConfirmingReturn(false);
+          showToast("Payment verified. Your receipt is being prepared.", "success");
+          await onPaymentUpdated?.();
+          return;
+        }
+        if (status === "failed") {
+          clearReturnMarker();
+          setConfirmingReturn(false);
+          showToast("PayMongo reported that this payment was not completed.", "error");
+          await onPaymentUpdated?.();
+          return;
+        }
+        if (returnedFromPayment && attempt < 14) {
+          timer = window.setTimeout(() => void confirmPayment(attempt + 1), 2000);
+          return;
+        }
+        setConfirmingReturn(false);
+        if (returnedFromPayment) {
+          showToast("PayMongo is still confirming this payment. Refresh this booking in a moment.", "info");
+        }
+      } catch (error) {
+        if (cancelled) return;
+        if (returnedFromPayment && attempt < 14) {
+          timer = window.setTimeout(() => void confirmPayment(attempt + 1), 2000);
+          return;
+        }
+        setConfirmingReturn(false);
+        if (returnedFromPayment) {
+          showToast(
+            error instanceof Error ? error.message : "The payment status could not be confirmed.",
+            "error",
+          );
+        }
+      }
+    }
+
+    timer = window.setTimeout(() => {
+      if (cancelled) return;
+      setConfirmingReturn(true);
+      void confirmPayment();
+    }, 0);
+    return () => {
+      cancelled = true;
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [booking.id, hasPendingPayment, onPaymentUpdated, showToast]);
 
   const latestPayment = [...payments].sort(
     (left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
@@ -100,7 +177,9 @@ export default function BookingPaymentPanel({
         <div><strong>{paymentStatus === "paid" ? "Ready" : "Automatic"}</strong><span>{paymentStatus === "paid" ? "Receipt available" : "Status updates"}</span></div>
       </div>
 
-      {paymentStatus === "paid" ? (
+      {confirmingReturn ? (
+        <p className={styles.message}>Confirming your successful PayMongo return and preparing your receipt…</p>
+      ) : paymentStatus === "paid" ? (
         <p className={styles.message}>
           {isDemoPayment
             ? "This is a development flow test. No money was processed, and all generated documents are marked as demo records."
@@ -112,7 +191,7 @@ export default function BookingPaymentPanel({
             Continue to PayMongo&apos;s hosted checkout. A verified payment secures your selected
             rental dates. Verification documents are completed afterward.
           </p>
-          <button type="button" onClick={handlePay} disabled={opening}>
+          <button type="button" onClick={handlePay} disabled={opening || confirmingReturn}>
             {opening
               ? "Opening secure checkout..."
               : paymentStatus === "pending"
