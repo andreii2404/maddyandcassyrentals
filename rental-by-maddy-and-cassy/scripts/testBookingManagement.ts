@@ -15,6 +15,7 @@ import {
   serializeReservationProgress,
 } from "../src/lib/reservationProgress";
 import { isDuplicateReviewError } from "../src/lib/reviewSubmission";
+import { buildBookingStatusEmail } from "../src/lib/bookingStatusEmailContent";
 
 function booking(status: Booking["status"], method: Booking["fulfillmentMethod"] = "pickup"): Booking {
   return {
@@ -128,4 +129,34 @@ test("repeat review submissions are recognized without exposing a database const
   assert.equal(isDuplicateReviewError({ code: "23505", message: "duplicate key value" }), true);
   assert.equal(isDuplicateReviewError({ message: 'violates unique constraint "reviews_booking_item_id_key"' }), true);
   assert.equal(isDuplicateReviewError({ code: "42501", message: "permission denied" }), false);
+});
+
+test("approval and completion emails contain the booking reference and safe customer action", () => {
+  const approved = buildBookingStatusEmail({
+    bookingId: "booking-id",
+    bookingReference: "BK-TEST-100",
+    customerName: "Andrei <Test>",
+    customerEmail: "andrei@example.com",
+    productName: "iPhone 17 Pro Max",
+    status: "approved",
+    statusChangedAt: "2026-08-11T00:00:00.000Z",
+    bookingUrl: "https://rentals.example.com/account/bookings/booking-id",
+  });
+  assert.match(approved.subject, /approved/i);
+  assert.match(approved.text, /BK-TEST-100/);
+  assert.match(approved.html, /Andrei/);
+  assert.doesNotMatch(approved.html, /Andrei <Test>/);
+
+  const completed = buildBookingStatusEmail({
+    bookingId: "booking-id",
+    bookingReference: "BK-TEST-100",
+    customerName: "Andrei Test",
+    customerEmail: "andrei@example.com",
+    productName: "iPhone 17 Pro Max",
+    status: "returned",
+    statusChangedAt: "2026-08-12T00:00:00.000Z",
+    bookingUrl: "https://rentals.example.com/account/bookings/booking-id",
+  });
+  assert.match(completed.subject, /completed/i);
+  assert.match(completed.text, /leave a review/i);
 });

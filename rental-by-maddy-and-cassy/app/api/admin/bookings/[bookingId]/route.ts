@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
+import { type EmailBookingStatus } from "@/src/lib/bookingStatusEmailContent";
+import { sendBookingStatusEmail } from "@/src/lib/server/bookingStatusEmail";
 import { enforceRateLimit, requireActiveAdmin, RequestSecurityError } from "@/src/lib/server/requestSecurity";
+import { createAdminClient } from "@/src/lib/supabase/admin";
 import type { BookingStatus } from "@/src/types/booking";
 
 export const runtime = "nodejs";
@@ -14,6 +17,10 @@ function errorResponse(message: string, status: number) {
 
 function isBookingStatus(value: unknown): value is BookingStatus {
   return typeof value === "string" && (VALID_STATUSES as string[]).includes(value);
+}
+
+function isEmailBookingStatus(status: BookingStatus): status is EmailBookingStatus {
+  return status === "approved" || status === "returned";
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ bookingId: string }> }) {
@@ -85,7 +92,55 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
       return errorResponse("The booking status could not be updated. Please try again.", 500);
     }
 
-    return NextResponse.json({ success: true, bookingId, status: data.status });
+    let customerEmailSent: boolean | null = null;
+    let customerEmailReason: string | null = null;
+
+    if (isEmailBookingStatus(targetStatus)) {
+      const admin = createAdminClient();
+      const [{ data: profile }, { data: item }] = await Promise.all([
+        admin
+          .from("profiles")
+          .select("display_name, contact_email")
+          .eq("id", data.customer_id)
+          .maybeSingle(),
+        admin
+          .from("booking_items")
+          .select("product_name_snapshot")
+          .eq("booking_id", bookingId)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle(),
+      ]);
+
+      let customerEmail = profile?.contact_email?.trim() ?? "";
+      if (!customerEmail) {
+        const { data: authUser } = await admin.auth.admin.getUserById(data.customer_id);
+        customerEmail = authUser.user?.email?.trim() ?? "";
+      }
+
+      const changedAt = targetStatus === "approved" ? data.approved_at : data.returned_at;
+      const emailResult = await sendBookingStatusEmail({
+        bookingId,
+        bookingReference: data.booking_reference,
+        customerName: profile?.display_name || "Customer",
+        customerEmail,
+        productName: item?.product_name_snapshot,
+        status: targetStatus,
+        statusChangedAt: changedAt || data.updated_at,
+        bookingUrl: `${new URL(request.url).origin}/account/bookings/${encodeURIComponent(bookingId)}`,
+      });
+      customerEmailSent = emailResult.sent;
+      customerEmailReason = emailResult.reason ?? null;
+    }
+
+    return NextResponse.json({
+      success: true,
+      bookingId,
+      status: data.status,
+      customerEmail: isEmailBookingStatus(targetStatus)
+        ? { required: true, sent: customerEmailSent, reason: customerEmailReason }
+        : { required: false, sent: null, reason: null },
+    });
   } catch (error) {
     if (error instanceof RequestSecurityError) return errorResponse(error.message, error.status);
     console.error("Admin booking status update failed", error);

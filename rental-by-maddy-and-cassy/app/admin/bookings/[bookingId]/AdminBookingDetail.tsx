@@ -180,12 +180,24 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
     if (!state || !selectedStatus || !selectedAction) return;
     setUpdating(true);
     try {
-      await updateAdminBookingStatus(bookingId, selectedStatus, note);
+      const updateResult = await updateAdminBookingStatus(bookingId, selectedStatus, note);
       await loadDetails();
       setStatusConfirmationOpen(false);
       setSelectedStatus("");
       setNote("");
-      showToast(`Booking updated: ${selectedAction.label}.`, "success");
+      if (updateResult.emailRequired && !updateResult.emailSent) {
+        showToast(
+          updateResult.emailReason === "not_configured"
+            ? `Booking updated: ${selectedAction.label}. Add the booking email settings in Vercel to send customer emails.`
+            : `Booking updated: ${selectedAction.label}. The customer email could not be delivered; please contact the customer directly.`,
+          "error",
+        );
+      } else {
+        showToast(
+          `${selectedAction.label} completed.${updateResult.emailSent ? " The customer was emailed automatically." : ""}`,
+          "success",
+        );
+      }
     } catch (actionError) {
       showToast(
         actionError instanceof Error ? actionError.message : "The booking status could not be updated.",
