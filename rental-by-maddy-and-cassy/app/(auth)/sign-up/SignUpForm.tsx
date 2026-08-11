@@ -8,10 +8,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { sendEmailOtp } from "@/src/services/authService";
 import {
+  EARLIEST_BIRTH_DATE,
+  isValidBirthDate,
   isValidPhoneNumber,
   normalizeEmail,
   normalizePhoneInput,
   PHONE_DIGIT_COUNT,
+  toDateInputValue,
 } from "@/src/lib/authValidation";
 import formStyles from "@/components/ui/Form.module.css";
 import styles from "../auth.module.css";
@@ -19,6 +22,10 @@ import styles from "../auth.module.css";
 const schema = z.object({
   fullName: z.string().trim().min(2, "Enter your complete name").max(150, "Name is too long"),
   phone: z.string().refine(isValidPhoneNumber, `Phone number must contain exactly ${PHONE_DIGIT_COUNT} digits`),
+  birthDate: z.string().min(1, "Birthdate is required").refine(
+    isValidBirthDate,
+    "Enter a real birthdate that is not in the future",
+  ),
   email: z.string().trim().min(1, "Email is required").email("Enter a valid email address"),
 });
 
@@ -44,7 +51,7 @@ export default function SignUpForm() {
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { fullName: "", phone: "", email: "" },
+    defaultValues: { fullName: "", phone: "", birthDate: "", email: "" },
   });
 
   const redirectTo = getCustomerRedirect(searchParams.get("redirect"));
@@ -59,6 +66,7 @@ export default function SignUpForm() {
         profileData: {
           displayName: values.fullName.trim(),
           phoneNumber: values.phone,
+          birthDate: values.birthDate,
         },
       });
       router.replace(
@@ -131,6 +139,31 @@ export default function SignUpForm() {
           />
           <p id="signup-phone-help" className={formStyles.helpText}>Use exactly 11 digits.</p>
           {errors.phone ? <p id="signup-phone-error" className={formStyles.errorText} role="alert">{errors.phone.message}</p> : null}
+        </div>
+
+        <div className={formStyles.field}>
+          <label className={formStyles.label} htmlFor="signup-birth-date">
+            Birthdate<span className={formStyles.required}>*</span>
+          </label>
+          <input
+            id="signup-birth-date"
+            type="date"
+            autoComplete="bday"
+            min={EARLIEST_BIRTH_DATE}
+            max={toDateInputValue(new Date())}
+            className={`${formStyles.input} ${errors.birthDate ? formStyles.inputError : ""}`}
+            aria-invalid={!!errors.birthDate}
+            aria-describedby={errors.birthDate ? "signup-birth-date-error" : "signup-birth-date-help"}
+            {...register("birthDate")}
+          />
+          <p id="signup-birth-date-help" className={formStyles.helpText}>
+            Use the date shown on your valid ID. It is saved once and used to apply the ₱100 birthday-month discount.
+          </p>
+          {errors.birthDate ? (
+            <p id="signup-birth-date-error" className={formStyles.errorText} role="alert">
+              {errors.birthDate.message}
+            </p>
+          ) : null}
         </div>
 
         <div className={formStyles.field}>

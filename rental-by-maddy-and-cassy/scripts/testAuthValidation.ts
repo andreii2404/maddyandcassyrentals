@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   getPasswordValidationErrors,
+  isValidBirthDate,
   isStrongPassword,
   isValidPhoneNumber,
   normalizeEmail,
@@ -18,6 +19,15 @@ test("phone fields retain only the required eleven digits", () => {
   assert.equal(isValidPhoneNumber("09171234567"), true);
   assert.equal(isValidPhoneNumber("0917123456"), false);
   assert.equal(isValidPhoneNumber("+639171234567"), false);
+});
+
+test("birthdates must be real, reasonable, and not in the future", () => {
+  const today = new Date("2026-08-11T12:00:00+08:00");
+  assert.equal(isValidBirthDate("2000-08-24", today), true);
+  assert.equal(isValidBirthDate("2026-08-12", today), false);
+  assert.equal(isValidBirthDate("2026-02-30", today), false);
+  assert.equal(isValidBirthDate("1899-12-31", today), false);
+  assert.equal(isValidBirthDate("", today), false);
 });
 
 test("new passwords require a balanced minimum strength", () => {
