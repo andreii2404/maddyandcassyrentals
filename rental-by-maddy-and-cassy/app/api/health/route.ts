@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isDemoPaymentEnabled } from "@/src/lib/paymongo/demo";
+import { isBookingEmailConfigured } from "@/src/lib/server/bookingStatusEmail";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -12,6 +13,7 @@ export async function GET() {
     paymongoConfigured: Boolean(process.env.PAYMONGO_SECRET_KEY),
     webhookConfigured: Boolean(process.env.PAYMONGO_WEBHOOK_SECRET),
     demoPaymentEnabled: isDemoPaymentEnabled(),
+    bookingEmailConfigured: isBookingEmailConfigured(),
   };
 
   try {

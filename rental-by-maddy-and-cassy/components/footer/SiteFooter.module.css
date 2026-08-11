@@ -1,7 +1,7 @@
 .footer {
   position: relative;
   margin-top: clamp(4rem, 8vw, 7rem);
-  padding-top: 1px;
+  padding-top: clamp(2rem, 4vw, 3.5rem);
   background:
     radial-gradient(circle at 88% 12%, rgba(215, 165, 165, 0.2), transparent 25rem),
     #2d2728;
@@ -10,7 +10,7 @@
 
 .ctaWrap {
   width: min(100% - 3rem, 1240px);
-  margin: clamp(-3.25rem, -5vw, -2.25rem) auto 0;
+  margin: 0 auto;
 }
 
 .cta {
@@ -25,7 +25,7 @@
     linear-gradient(120deg, rgba(255, 255, 255, 0.96), rgba(251, 245, 243, 0.96)),
     var(--color-white);
   color: var(--color-text-primary);
-  box-shadow: 0 24px 60px rgba(28, 20, 21, 0.22);
+  box-shadow: 0 18px 44px rgba(18, 13, 14, 0.2);
 }
 
 .cta > div { max-width: 720px; }
@@ -88,7 +88,7 @@
   gap: clamp(3rem, 8vw, 8rem);
   width: min(100% - 3rem, 1240px);
   margin: 0 auto;
-  padding: clamp(3.5rem, 7vw, 5.5rem) 0 3.5rem;
+  padding: clamp(3rem, 6vw, 4.75rem) 0 3.5rem;
 }
 
 .brandColumn { max-width: 380px; }

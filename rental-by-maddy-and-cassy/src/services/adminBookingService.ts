@@ -92,7 +92,7 @@ export async function updateAdminBookingStatus(
   bookingId: string,
   status: BookingStatus,
   note: string,
-): Promise<void> {
+): Promise<{ emailRequired: boolean; emailSent: boolean | null; emailReason: string | null }> {
   const response = await fetch(`/api/admin/bookings/${encodeURIComponent(bookingId)}`, {
     method: "PATCH",
     credentials: "same-origin",
@@ -103,6 +103,15 @@ export async function updateAdminBookingStatus(
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, "The booking status could not be updated."));
   }
+
+  const body = (await response.json()) as {
+    customerEmail?: { required?: boolean; sent?: boolean | null; reason?: string | null };
+  };
+  return {
+    emailRequired: body.customerEmail?.required === true,
+    emailSent: body.customerEmail?.sent ?? null,
+    emailReason: body.customerEmail?.reason ?? null,
+  };
 }
 
 export async function countersignBookingAgreement(
