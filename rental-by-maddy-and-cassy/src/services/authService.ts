@@ -13,6 +13,7 @@ export interface SendEmailOtpOptions {
   profileData?: {
     displayName: string;
     phoneNumber: string;
+    birthDate: string;
   };
 }
 
@@ -51,6 +52,7 @@ export async function sendEmailOtp(
         ? {
             display_name: options.profileData.displayName.trim(),
             phone_number: options.profileData.phoneNumber.trim(),
+            birth_date: options.profileData.birthDate,
           }
         : undefined,
     },
