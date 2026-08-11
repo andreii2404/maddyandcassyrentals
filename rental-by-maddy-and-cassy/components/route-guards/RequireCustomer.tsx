@@ -16,7 +16,8 @@ export default function RequireCustomer({ children }: { children: ReactNode }) {
     if (loading) return;
 
     if (!user) {
-      router.replace(`/sign-in?redirect=${encodeURIComponent(pathname)}`);
+      const currentPath = `${pathname}${window.location.search}`;
+      router.replace(`/sign-in?redirect=${encodeURIComponent(currentPath)}`);
       return;
     }
 

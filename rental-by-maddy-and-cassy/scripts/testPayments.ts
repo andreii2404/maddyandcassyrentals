@@ -3,6 +3,10 @@ import { createHmac } from "node:crypto";
 import test from "node:test";
 import { verifyPayMongoSignature } from "../src/lib/paymongo/webhook";
 import {
+  buildPaymentReturnUrl,
+  safePaymentReturnPath,
+} from "../src/lib/paymongo/returnUrl";
+import {
   createFinalAgreementPdf,
   createInvoicePdf,
   createReceiptPdf,
@@ -26,6 +30,27 @@ test("rejects a tampered PayMongo webhook", () => {
   assert.throws(() =>
     verifyPayMongoSignature('{"tampered":true}', `t=${timestamp},te=bad,li=`),
   );
+});
+
+test("returns PayMongo to the exact hostname that started checkout", () => {
+  assert.equal(
+    buildPaymentReturnUrl(
+      "https://maddyandcassyrentals-nine.vercel.app/api/payments/checkout",
+      "/catalog/product-1/reserve?bookingId=booking-1",
+      "success",
+    ),
+    "https://maddyandcassyrentals-nine.vercel.app/catalog/product-1/reserve?bookingId=booking-1&payment=success",
+  );
+  assert.equal(
+    buildPaymentReturnUrl(
+      "http://localhost:3000/api/payments/checkout",
+      "/account/bookings/booking-1",
+      "cancelled",
+    ),
+    "http://localhost:3000/account/bookings/booking-1?payment=cancelled",
+  );
+  assert.equal(safePaymentReturnPath("https://malicious.example", "/account/bookings"), "/account/bookings");
+  assert.equal(safePaymentReturnPath("//malicious.example", "/account/bookings"), "/account/bookings");
 });
 
 test("generates invoice and receipt PDFs", async () => {

@@ -5,6 +5,11 @@ import { enforceRateLimit, requireUser, RequestSecurityError } from "@/src/lib/s
 import { createAdminClient } from "@/src/lib/supabase/admin";
 import { getBookingById } from "@/src/services/bookingService";
 import { isUuid } from "@/src/lib/uuid";
+import {
+  buildPaymentReturnUrl,
+  paymentReturnOrigin,
+  safePaymentReturnPath,
+} from "@/src/lib/paymongo/returnUrl";
 import type { Database } from "@/src/lib/supabase/database.types";
 
 export const runtime = "nodejs";
@@ -28,19 +33,6 @@ function paymentOptionToStage(option: "deposit_50" | "full" | "balance"): Paymen
   if (option === "deposit_50") return "down_payment";
   if (option === "balance") return "balance";
   return "other";
-}
-
-function safeReturnPath(value: unknown, fallback: string): string {
-  if (
-    typeof value === "string" &&
-    value.startsWith("/") &&
-    !value.startsWith("//") &&
-    !value.includes("\r") &&
-    !value.includes("\n")
-  ) {
-    return value;
-  }
-  return fallback;
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
@@ -89,6 +81,12 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     const demoMode = isDemoPaymentEnabled();
+    // Always return to the exact origin that owns the customer's current
+    // cookies. A configured production hostname can differ from a Vercel
+    // alias or local test hostname and would make the customer appear signed
+    // out after leaving PayMongo.
+    const appOrigin = paymentReturnOrigin(request.url);
+    const returnPath = safePaymentReturnPath(body?.returnPath, `/account/bookings/${bookingId}`);
 
     const { data: reusable } = await admin
       .from("booking_payment_submissions")
@@ -105,7 +103,11 @@ export async function POST(request: Request): Promise<NextResponse> {
     const reusableAgeMs = reusable ? Date.now() - new Date(reusable.created_at).getTime() : Infinity;
     if (reusable?.external_reference && reusable.provider_metadata && reusableAgeMs < 15 * 60_000) {
       const meta = reusable.provider_metadata as Record<string, unknown>;
-      if (typeof meta.checkoutUrl === "string") {
+      if (
+        typeof meta.checkoutUrl === "string" &&
+        meta.returnOrigin === appOrigin &&
+        meta.returnPath === returnPath
+      ) {
         return NextResponse.json({
           success: true,
           checkoutUrl: meta.checkoutUrl,
@@ -117,17 +119,6 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const paymentSubmissionId = crypto.randomUUID();
     const referenceNumber = `${booking.bookingRef}-${paymentSubmissionId.slice(0, 8)}`;
-    const requestOrigin = new URL(request.url).origin;
-    const configuredOrigin = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
-    // During local testing, always return to the exact host the customer used
-    // (localhost, 127.0.0.1, or a LAN hostname) so browser sessions are not
-    // lost by crossing origins. Production uses the configured public URL.
-    const appOrigin = process.env.NODE_ENV === "production" && configuredOrigin
-      ? configuredOrigin
-      : requestOrigin;
-    const returnPath = safeReturnPath(body?.returnPath, `/account/bookings/${bookingId}`);
-    const returnUrl = `${appOrigin}${returnPath}`;
-    const returnSeparator = returnUrl.includes("?") ? "&" : "?";
     const paymentLabel =
       paymentOption === "deposit_50"
         ? "50% reservation payment"
@@ -162,8 +153,8 @@ export async function POST(request: Request): Promise<NextResponse> {
             phone: booking.customerSnapshot.phone || "",
           },
           paymentLabel,
-          successUrl: `${returnUrl}${returnSeparator}payment=success`,
-          cancelUrl: `${returnUrl}${returnSeparator}payment=cancelled`,
+          successUrl: buildPaymentReturnUrl(request.url, returnPath, "success"),
+          cancelUrl: buildPaymentReturnUrl(request.url, returnPath, "cancelled"),
           metadata: {
             booking_id: bookingId,
             payment_submission_id: paymentSubmissionId,
@@ -181,7 +172,13 @@ export async function POST(request: Request): Promise<NextResponse> {
       external_reference: referenceNumber,
       idempotency_key: `checkout-${bookingId}-${paymentSubmissionId}`,
       paymongo_checkout_session_id: checkout.id,
-      provider_metadata: { checkoutUrl: checkout.checkoutUrl, livemode: checkout.livemode, demo: demoMode },
+      provider_metadata: {
+        checkoutUrl: checkout.checkoutUrl,
+        livemode: checkout.livemode,
+        demo: demoMode,
+        returnOrigin: appOrigin,
+        returnPath,
+      },
     });
 
     await admin.from("notifications").insert({
