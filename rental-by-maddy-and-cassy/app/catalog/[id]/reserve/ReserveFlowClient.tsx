@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import type { Product } from "@/types/product";
 import type { UnitCounts } from "@/lib/availability";
@@ -33,6 +33,7 @@ import {
   serializeReservationProgress,
 } from "@/src/lib/reservationProgress";
 import type { RewardProgress } from "@/src/lib/promotions";
+import { manilaTimeInputValue } from "@/src/lib/rentalTiming";
 import styles from "./reserve.module.css";
 
 const STEP_LABELS = [
@@ -278,6 +279,8 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
         quantity: booking.quantity,
         startDate: new Date(booking.startDate),
         endDate: new Date(booking.endDate),
+        pickupTime: manilaTimeInputValue(booking.startDate),
+        pickupConvenienceFee: booking.pickupConvenienceFee ?? 0,
         fulfillmentMethod: booking.fulfillmentMethod,
         customerLocation: booking.location ?? current.customerLocation,
         cityMunicipality: booking.cityMunicipality ?? "",
@@ -317,9 +320,9 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
     };
   }, [user, product.id]);
 
-  function updateDraft(patch: Partial<ReservationDraft>) {
+  const updateDraft = useCallback((patch: Partial<ReservationDraft>) => {
     setDraft((current) => ({ ...current, ...patch }));
-  }
+  }, []);
 
   function goToStep(nextStep: number) {
     setStep(nextStep);

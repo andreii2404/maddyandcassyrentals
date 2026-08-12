@@ -58,6 +58,7 @@ export interface Booking {
   fulfillmentMethod: FulfillmentMethod;
   startDate: string;
   endDate: string;
+  nextAvailableAt?: string;
   dayCount: number;
   dailyRate: number;
   refundableDeposit: number;
@@ -70,6 +71,7 @@ export interface Booking {
   loyaltyDiscountStatus: "not_eligible" | "applied" | "voided";
   birthDateSnapshot?: string;
   deliveryFee: number;
+  pickupConvenienceFee?: number;
   totalAmount: number;
   location?: string;
   cityMunicipality?: string;

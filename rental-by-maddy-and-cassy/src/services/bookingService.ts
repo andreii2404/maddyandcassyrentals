@@ -105,7 +105,9 @@ function assembleBooking(
 ): Booking {
   const item = row.booking_items?.[0];
   const fulfillment = row.booking_fulfillments;
-  const { startDate, endDate } = parseRentalPeriod(row.rental_period);
+  const legacyPeriod = parseRentalPeriod(row.rental_period);
+  const startDate = row.pickup_at || legacyPeriod.startDate;
+  const endDate = row.return_at || legacyPeriod.endDate;
   const quantity = item?.quantity ?? 1;
 
   const specifications = (item?.products?.specifications as Record<string, string>) ?? {};
@@ -128,6 +130,7 @@ function assembleBooking(
     fulfillmentMethod: (fulfillment?.method ?? "pickup") as FulfillmentMethod,
     startDate,
     endDate,
+    nextAvailableAt: row.next_available_at,
     dayCount: totals?.rental_days ?? 0,
     dailyRate: item?.daily_rate_snapshot ?? 0,
     refundableDeposit: (item?.deposit_per_unit_snapshot ?? 0) * quantity,
@@ -140,6 +143,8 @@ function assembleBooking(
     loyaltyDiscountStatus: row.loyalty_discount_status as Booking["loyaltyDiscountStatus"],
     birthDateSnapshot: row.birth_date_snapshot ?? undefined,
     deliveryFee: totals?.delivery_fee ?? fulfillment?.delivery_fee_snapshot ?? 0,
+    pickupConvenienceFee:
+      totals?.pickup_convenience_fee ?? fulfillment?.pickup_convenience_fee_snapshot ?? 0,
     totalAmount: totals?.total_amount ?? 0,
     location: fulfillment?.address_line_1 ?? undefined,
     cityMunicipality: fulfillment?.city_municipality ?? undefined,

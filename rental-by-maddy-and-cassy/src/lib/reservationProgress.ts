@@ -5,7 +5,7 @@ import {
 } from "@/src/types/reservationDraft";
 import type { BookingPaymentState } from "@/components/reservation/StepPaymentSubmission";
 
-const STORAGE_VERSION = 1;
+const STORAGE_VERSION = 2;
 export const RESERVATION_PROGRESS_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 interface StoredReservationProgress {
@@ -20,6 +20,8 @@ interface StoredReservationProgress {
     quantity: number;
     startDate: string | null;
     endDate: string | null;
+    pickupTime: string;
+    pickupConvenienceFee: number;
     fulfillmentMethod: ReservationDraft["fulfillmentMethod"];
     customerLocation: string;
     cityMunicipality: string;
@@ -91,6 +93,8 @@ export function serializeReservationProgress(input: {
       quantity: input.draft.quantity,
       startDate: input.draft.startDate?.toISOString() ?? null,
       endDate: input.draft.endDate?.toISOString() ?? null,
+      pickupTime: input.draft.pickupTime,
+      pickupConvenienceFee: input.draft.pickupConvenienceFee,
       fulfillmentMethod: input.draft.fulfillmentMethod,
       customerLocation: input.draft.customerLocation,
       cityMunicipality: input.draft.cityMunicipality,
@@ -160,6 +164,8 @@ export function restoreReservationProgress(
         quantity: Math.min(10, Math.max(1, Math.floor(Number(draft.quantity) || 1))),
         startDate: date(draft.startDate),
         endDate: date(draft.endDate),
+        pickupTime: text(draft.pickupTime),
+        pickupConvenienceFee: Math.max(0, Number(draft.pickupConvenienceFee) || 0),
         fulfillmentMethod,
         customerLocation: text(draft.customerLocation),
         cityMunicipality: text(draft.cityMunicipality),

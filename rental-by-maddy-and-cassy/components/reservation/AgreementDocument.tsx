@@ -1,5 +1,5 @@
-import { format } from "date-fns";
 import type { FulfillmentMethod } from "@/src/types/booking";
+import { formatManilaDateTime } from "@/src/lib/rentalTiming";
 import styles from "./AgreementDocument.module.css";
 
 export interface AgreementDocumentData {
@@ -44,10 +44,10 @@ export default function AgreementDocument({ data }: { data: AgreementDocumentDat
           <dd>{data.quantity} {data.quantity === 1 ? "unit" : "units"}</dd>
         </div>
         <div>
-          <dt>Rental Period</dt>
+          <dt>Pickup &amp; Return</dt>
           <dd>
-            {format(data.startDate, "MMM d, yyyy")} – {format(data.endDate, "MMM d, yyyy")} (
-            {data.dayCount} {data.dayCount === 1 ? "day" : "days"})
+            {formatManilaDateTime(data.startDate)} – {formatManilaDateTime(data.endDate)} (
+            {data.dayCount === 1 ? "22 hours" : `${data.dayCount} days`})
           </dd>
         </div>
         <div>

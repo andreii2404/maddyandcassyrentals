@@ -26,6 +26,7 @@ function currency(value: number): number {
 export function calculateReservationPricing(
   product: Pick<Product, "listPricePerDay" | "pricePerDay" | "refundableDeposit">,
   draft: Pick<ReservationDraft, "quantity" | "startDate" | "endDate"> & {
+    pickupConvenienceFee?: number;
     customerInfo: Pick<ReservationDraft["customerInfo"], "birthDate">;
   },
   rewardProgress: RewardProgress = { completedRentals: 0, loyaltyRewardUsed: false },
@@ -49,7 +50,7 @@ export function calculateReservationPricing(
   const discountAmount = currency(catalogDiscountAmount + specialDiscountAmount);
   const rentalSubtotal = currency(Math.max(0, productSubtotal - specialDiscountAmount));
   const depositAmount = currency(product.refundableDeposit * quantity);
-  const fees = 0;
+  const fees = currency(Math.max(0, draft.pickupConvenienceFee || 0));
   const finalAmount = currency(rentalSubtotal + depositAmount + fees);
 
   return {

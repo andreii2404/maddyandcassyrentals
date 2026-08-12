@@ -3,6 +3,14 @@ import { createPublicClient } from "@/src/lib/supabase/public";
 
 export const MAX_RENTAL_DAYS = 30;
 
+export interface TimeAvailability {
+  totalUnits: number;
+  availableUnits: number;
+  unavailableUnits: number;
+  nextAvailableAt: string | null;
+  pickupConvenienceFee: number;
+}
+
 export function toDateKey(date: Date): string {
   return formatISO(date, { representation: "date" });
 }
@@ -56,4 +64,27 @@ export async function isRangeAvailable(
 
   if (error) throw new Error(error.message);
   return (data?.[0]?.available_units ?? 0) >= requestedUnits;
+}
+
+export async function getTimeAvailability(
+  productId: string,
+  pickupAt: Date,
+  requestedUnits = 1,
+): Promise<TimeAvailability> {
+  const supabase = createPublicClient();
+  const { data, error } = await supabase.rpc("get_product_time_availability", {
+    p_product_id: productId,
+    p_pickup_at: pickupAt.toISOString(),
+    p_quantity: requestedUnits,
+  });
+
+  if (error) throw new Error(error.message);
+  const row = data?.[0];
+  return {
+    totalUnits: Number(row?.total_units ?? 0),
+    availableUnits: Number(row?.available_units ?? 0),
+    unavailableUnits: Number(row?.unavailable_units ?? 0),
+    nextAvailableAt: row?.next_available_at ?? null,
+    pickupConvenienceFee: Number(row?.pickup_convenience_fee ?? 0),
+  };
 }

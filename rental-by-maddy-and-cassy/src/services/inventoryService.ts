@@ -8,6 +8,7 @@ import type {
   EmergencyContact,
   FulfillmentMethod,
 } from "@/src/types/booking";
+import { formatManilaDateTime, formatManilaPickupTime } from "@/src/lib/rentalTiming";
 
 export class InsufficientUnitsError extends Error {
   constructor(productId: string) {
@@ -17,8 +18,12 @@ export class InsufficientUnitsError extends Error {
 }
 
 export class DatesUnavailableError extends Error {
-  constructor() {
-    super("One or more selected dates are no longer available for this product.");
+  constructor(requestedPickup?: string, nextAvailableAt?: string) {
+    const requested = requestedPickup ? formatManilaPickupTime(requestedPickup) : "That";
+    const next = nextAvailableAt
+      ? ` and will be available starting ${formatManilaDateTime(nextAvailableAt)}`
+      : " at a later time";
+    super(`${requested} pickup is unavailable. This unit is still assigned to a previous rental${next}.`);
     this.name = "DatesUnavailableError";
   }
 }
@@ -40,8 +45,7 @@ export class DeliveryAddressRequiredError extends Error {
 export interface SubmitBookingInput {
   productId: string;
   quantity?: number;
-  rentalStartDate: string;
-  rentalEndDate: string;
+  pickupAt: string;
   fulfillmentMethod: FulfillmentMethod;
   /** Street/barangay/landmark line. Required only when fulfillmentMethod is "delivery". */
   location?: string;
@@ -75,11 +79,10 @@ export async function submitBookingWithDateGuard(
   supabase: SupabaseClient<Database>,
   input: SubmitBookingInput,
 ): Promise<SubmitBookingResult> {
-  const { data, error } = await supabase.rpc("create_booking", {
+  const { data, error } = await supabase.rpc("create_time_based_booking", {
     p_product_id: input.productId,
     p_quantity: input.quantity ?? 1,
-    p_rental_start_date: input.rentalStartDate,
-    p_rental_end_date: input.rentalEndDate,
+    p_pickup_at: input.pickupAt,
     p_fulfillment_method: input.fulfillmentMethod,
     p_location: input.location ?? "",
     p_city_municipality: input.cityMunicipality ?? "",
@@ -100,13 +103,21 @@ export async function submitBookingWithDateGuard(
   });
 
   if (error) {
-    if (error.message.includes("NO_AVAILABILITY")) throw new DatesUnavailableError();
+    if (error.message.includes("NO_TIME_AVAILABILITY")) {
+      const nextAvailableAt = error.message.match(/NO_TIME_AVAILABILITY:([^\n]+)/)?.[1]?.trim();
+      throw new DatesUnavailableError(input.pickupAt, nextAvailableAt);
+    }
+    if (error.message.includes("NO_AVAILABILITY")) {
+      throw new DatesUnavailableError(input.pickupAt);
+    }
     if (error.message.includes("PRODUCT_NOT_AVAILABLE")) {
       throw new InsufficientUnitsError(input.productId);
     }
     if (error.message.includes("ACCOUNT_SUSPENDED")) throw new AccountSuspendedError();
     if (error.message.includes("DELIVERY_ADDRESS_REQUIRED")) throw new DeliveryAddressRequiredError();
     if (error.message.includes("INVALID_QUANTITY")) throw new Error("Choose a valid rental quantity.");
+    if (error.message.includes("PICKUP_TIME_IN_PAST")) throw new Error("Choose a future pickup date and time.");
+    if (error.message.includes("PICKUP_TIME_REQUIRED")) throw new Error("Choose a pickup date and time.");
     throw new Error(error.message);
   }
 
