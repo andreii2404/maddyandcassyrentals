@@ -109,7 +109,7 @@
   background-color: var(--color-calendar-selected) !important;
   color: var(--color-white);
   font-weight: 800;
-  box-shadow: 0 0 0 2px var(--color-white), 0 0 0 4px var(--color-dusty-rose);
+  box-shadow: inset 0 0 0 2px var(--color-calendar-selected-hover);
 }
 
 .dayEdge:hover:not(:disabled),

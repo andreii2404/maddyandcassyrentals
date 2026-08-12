@@ -58,7 +58,12 @@ export default function DateRangePicker({
 
     if (singleDate) {
       setError(null);
-      onChange({ startDate: day, endDate: day });
+      const isSelectingCurrentDay = !!startDate && isSameDay(day, startDate);
+      onChange(
+        isSelectingCurrentDay
+          ? { startDate: null, endDate: null }
+          : { startDate: day, endDate: day },
+      );
       return;
     }
 
@@ -157,6 +162,7 @@ export default function DateRangePicker({
               role="gridcell"
               disabled={disabled}
               aria-current={selected ? "date" : undefined}
+              aria-selected={selected}
               data-selected={selected ? "true" : undefined}
               aria-label={`${format(day, "MMMM d, yyyy")}${statusLabel}`}
               className={[
