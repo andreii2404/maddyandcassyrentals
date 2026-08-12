@@ -170,11 +170,26 @@ export default function DateRangePicker({
                 .join(" ")}
               onClick={() => handleDayClick(day)}
             >
-              {format(day, "d")}
+              <span>{format(day, "d")}</span>
+              {selected ? (
+                <span className={styles.selectedMark} aria-hidden="true">✓</span>
+              ) : null}
             </button>
           );
         })}
       </div>
+
+      {startDate ? (
+        <p className={styles.selectionSummary} role="status">
+          <span className={styles.selectionIcon} aria-hidden="true">✓</span>
+          <span>
+            <small>{singleDate ? "Selected pickup date" : "Selected rental start"}</small>
+            <strong>{format(startDate, "EEEE, MMMM d, yyyy")}</strong>
+          </span>
+        </p>
+      ) : (
+        <p className={styles.selectionPrompt}>Select an available date from the calendar.</p>
+      )}
 
       {error ? (
         <p className={styles.errorMessage} role="alert">

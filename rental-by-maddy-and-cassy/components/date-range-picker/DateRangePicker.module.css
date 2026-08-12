@@ -1,16 +1,16 @@
 .wrapper {
   border: 1px solid var(--color-border);
   border-radius: 16px;
-  padding: 1.25rem;
+  padding: 0.85rem;
   background: var(--color-white);
-  max-width: 380px;
+  max-width: 360px;
 }
 
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 0.9rem;
+  margin-bottom: 0.6rem;
 }
 
 .monthLabel {
@@ -66,11 +66,13 @@
 }
 
 .day {
+  position: relative;
   aspect-ratio: 1;
   border: none;
   background: transparent;
-  border-radius: 8px;
-  font-size: 0.85rem;
+  min-width: 0;
+  border-radius: 9px;
+  font-size: 0.8rem;
   color: var(--color-text-primary);
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
@@ -105,7 +107,8 @@
 .dayEdge {
   background: var(--color-calendar-selected);
   color: var(--color-white);
-  font-weight: 600;
+  font-weight: 800;
+  box-shadow: 0 0 0 2px var(--color-white), 0 0 0 4px var(--color-dusty-rose);
 }
 
 .dayEdge:hover:not(:disabled) {
@@ -118,14 +121,91 @@
   color: var(--color-calendar-booked);
 }
 
+.selectedMark {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  display: grid;
+  width: 12px;
+  height: 12px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--color-white);
+  color: var(--color-primary);
+  font-size: 0.52rem;
+  font-weight: 900;
+}
+
+.selectionSummary {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0.7rem 0 0;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--color-dusty-rose);
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--color-blush) 55%, white);
+}
+
+.selectionSummary > span:last-child {
+  display: grid;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+.selectionSummary small {
+  color: var(--color-charcoal);
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.selectionSummary strong {
+  color: var(--color-text-primary);
+  font-size: 0.76rem;
+  line-height: 1.3;
+}
+
+.selectionIcon {
+  display: grid;
+  width: 23px;
+  height: 23px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: var(--color-white);
+  font-size: 0.7rem;
+  font-weight: 900;
+}
+
+.selectionPrompt {
+  margin: 0.65rem 0 0;
+  color: var(--color-charcoal);
+  font-size: 0.7rem;
+  text-align: center;
+}
+
 .legend {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  margin: 1rem 0 0;
-  font-size: 0.75rem;
+  margin: 0.65rem 0 0;
+  font-size: 0.68rem;
   color: var(--color-charcoal);
   flex-wrap: wrap;
+}
+
+@media (max-width: 420px) {
+  .wrapper {
+    max-width: none;
+    padding: 0.75rem;
+  }
+
+  .day {
+    min-height: 36px;
+  }
 }
 
 .legendSwatch {

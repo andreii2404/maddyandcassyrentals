@@ -1,7 +1,7 @@
 .wrapper {
-  max-width: 1180px;
+  max-width: 1240px;
   margin: 0 auto;
-  padding: 2rem 1.5rem 5rem;
+  padding: 1rem 1.25rem 3rem;
 }
 
 .gateLoading { display: grid; min-height: 55vh; place-items: center; }
@@ -22,14 +22,14 @@
 .reserveHeader {
   position: relative;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
-  gap: 2rem;
+  gap: 1.25rem;
   overflow: hidden;
-  margin-bottom: 1.5rem;
-  padding: clamp(1.6rem, 4vw, 2.6rem);
+  margin-bottom: 0.65rem;
+  padding: 0.9rem 1.15rem;
   border: 1px solid var(--color-dusty-rose);
-  border-radius: 26px;
+  border-radius: 18px;
   background:
     radial-gradient(circle at 92% 20%, rgba(255, 255, 255, 0.5), transparent 28%),
     linear-gradient(135deg, var(--color-blush), color-mix(in srgb, var(--color-blush) 45%, white));
@@ -51,25 +51,25 @@
 .reserveHeader h1 {
   margin: 0;
   color: var(--color-text-primary);
-  font-size: clamp(1.8rem, 4vw, 3rem);
-  line-height: 1.08;
+  font-size: clamp(1.45rem, 2.5vw, 2rem);
+  line-height: 1.12;
   letter-spacing: -0.035em;
 }
 
 .reserveHeader > div:first-child > p:last-child {
   max-width: 640px;
-  margin: 0.85rem 0 0;
+  margin: 0.35rem 0 0;
   color: var(--color-charcoal);
-  font-size: 0.92rem;
-  line-height: 1.65;
+  font-size: 0.78rem;
+  line-height: 1.4;
 }
 
 .headerRate {
   display: grid;
-  min-width: 165px;
-  padding: 0.9rem 1rem;
+  min-width: 145px;
+  padding: 0.6rem 0.8rem;
   border: 1px solid rgba(154, 89, 101, 0.18);
-  border-radius: 18px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.72);
   backdrop-filter: blur(8px);
 }
@@ -83,25 +83,25 @@
 .headerRate strong {
   margin: 0.15rem 0;
   color: var(--color-primary);
-  font-size: 1.35rem;
+  font-size: 1.12rem;
 }
 
 .progressSaved {
   display: flex;
-  margin: -0.55rem 0 1rem;
-  padding: 0.75rem 0.9rem;
+  margin: 0 0 0.55rem;
+  padding: 0.42rem 0.65rem;
   border: 1px solid var(--color-status-green-border);
-  border-radius: 14px;
+  border-radius: 11px;
   background: var(--color-status-green-bg);
   color: var(--color-status-green);
   align-items: center;
-  gap: 0.7rem;
+  gap: 0.5rem;
 }
 
 .progressSaved > span {
   display: grid;
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
   flex: 0 0 auto;
   border-radius: 999px;
   background: var(--color-white);
@@ -113,33 +113,33 @@
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: 0.12rem;
+  gap: 0.02rem;
 }
 
 .progressSaved strong {
-  font-size: 0.78rem;
+  font-size: 0.7rem;
 }
 
 .progressSaved small {
   color: var(--color-charcoal);
-  font-size: 0.68rem;
-  line-height: 1.4;
+  font-size: 0.62rem;
+  line-height: 1.25;
 }
 
 .flowLayout {
   display: grid;
-  grid-template-columns: minmax(220px, 285px) minmax(0, 1fr);
-  gap: 1.25rem;
+  grid-template-columns: minmax(210px, 255px) minmax(0, 1fr);
+  gap: 0.85rem;
   align-items: start;
-  margin-top: 1.25rem;
+  margin-top: 0.65rem;
 }
 
 .bookingSummary {
   position: sticky;
-  top: 96px;
-  padding: 1.25rem;
+  top: 84px;
+  padding: 0.9rem;
   border: 1px solid var(--color-light-gray);
-  border-radius: 20px;
+  border-radius: 16px;
   background: var(--color-white);
   box-shadow: 0 12px 34px rgba(36, 36, 36, 0.05);
 }
@@ -147,24 +147,24 @@
 .bookingSummary h2 {
   margin: 0;
   color: var(--color-text-primary);
-  font-size: 1.2rem;
+  font-size: 1rem;
   line-height: 1.25;
 }
 
 .summarySpecs {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.45rem;
-  margin: 0.85rem 0 0;
+  gap: 0.3rem;
+  margin: 0.55rem 0 0;
 }
 
 .summarySpecs > div {
   display: flex;
   gap: 0.3rem;
-  padding: 0.35rem 0.55rem;
+  padding: 0.28rem 0.45rem;
   border-radius: 999px;
   background: var(--color-blush);
-  font-size: 0.7rem;
+  font-size: 0.64rem;
 }
 
 .summarySpecs dt {
@@ -179,9 +179,9 @@
 
 .summaryFacts {
   display: grid;
-  gap: 0.75rem;
-  margin: 1rem 0;
-  padding: 1rem 0;
+  gap: 0.5rem;
+  margin: 0.7rem 0;
+  padding: 0.7rem 0;
   border-top: 1px solid var(--color-light-gray);
   border-bottom: 1px solid var(--color-light-gray);
 }
@@ -194,8 +194,8 @@
 
 .summaryFacts dt,
 .summaryFacts dd {
-  font-size: 0.74rem;
-  line-height: 1.4;
+  font-size: 0.68rem;
+  line-height: 1.3;
 }
 
 .summaryFacts dt {
@@ -223,28 +223,28 @@
 .secureNote {
   display: grid;
   gap: 0.25rem;
-  margin-top: 1rem;
-  padding: 0.8rem;
+  margin-top: 0.65rem;
+  padding: 0.6rem;
   border-radius: 12px;
   background: var(--color-background-soft);
 }
 
 .secureNote strong {
   color: var(--color-text-primary);
-  font-size: 0.74rem;
+  font-size: 0.68rem;
 }
 
 .secureNote span {
   color: var(--color-charcoal);
-  font-size: 0.68rem;
-  line-height: 1.45;
+  font-size: 0.62rem;
+  line-height: 1.35;
 }
 
 .card {
   min-width: 0;
-  padding: 1.5rem;
+  padding: 1rem;
   border: 1px solid var(--color-border);
-  border-radius: 20px;
+  border-radius: 16px;
   background: var(--color-white);
   box-shadow: 0 12px 40px rgba(36, 36, 36, 0.05);
 }
@@ -254,8 +254,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin: -0.25rem 0 1.25rem;
-  padding-bottom: 0.85rem;
+  margin: -0.1rem 0 0.75rem;
+  padding-bottom: 0.55rem;
   border-bottom: 1px solid var(--color-light-gray);
 }
 
@@ -284,31 +284,102 @@
 
   .bookingSummary {
     position: static;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.5rem 1rem;
+  }
+
+  .bookingSummary .summaryEyebrow,
+  .bookingSummary h2,
+  .bookingSummary .summarySpecs,
+  .bookingSummary .summaryFacts {
+    grid-column: 1;
+  }
+
+  .bookingSummary .detailsLink,
+  .bookingSummary .secureNote {
+    grid-column: 2;
+  }
+
+  .summaryFacts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-bottom: 0;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .summaryFacts > div:nth-child(n + 4) {
+    display: none;
   }
 }
 
 @media (max-width: 640px) {
   .wrapper {
-    padding: 1.25rem 1rem 3rem;
+    padding: 0.7rem 0.75rem 2rem;
   }
 
   .reserveHeader {
-    padding: 1.4rem;
-    border-radius: 20px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 0.75rem;
+    border-radius: 14px;
   }
 
   .headerRate {
-    width: 100%;
+    min-width: 112px;
+    width: auto;
+  }
+
+  .reserveHeader > div:first-child > p:last-child {
+    display: none;
+  }
+
+  .reserveHeader h1 {
+    font-size: 1.15rem;
+  }
+
+  .eyebrow,
+  .summaryEyebrow {
+    margin-bottom: 0.2rem;
+    font-size: 0.58rem;
+  }
+
+  .progressSaved small {
+    display: none;
   }
 
   .card {
-    padding: 1.1rem;
+    padding: 0.8rem;
   }
 
   .cardTopline {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.5rem;
+  }
+
+  .bookingSummary {
+    display: block;
+    padding: 0.75rem;
+  }
+
+  .bookingSummary .summaryFacts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .bookingSummary .summaryFacts > div {
+    display: grid;
+    gap: 0.1rem;
+  }
+
+  .bookingSummary .summaryFacts dd {
+    text-align: left;
+  }
+
+  .bookingSummary .summarySpecs,
+  .bookingSummary .detailsLink,
+  .bookingSummary .secureNote {
+    display: none;
   }
 
   .checkoutGate { margin: 1.5rem 1rem 3rem; }

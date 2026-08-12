@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import type { Product } from "@/types/product";
 import type { UnitCounts } from "@/lib/availability";
 import type { FulfillmentMethod } from "@/src/types/booking";
@@ -21,7 +20,6 @@ import {
   pickupDateKey,
 } from "@/src/lib/rentalTiming";
 import DateRangePicker from "@/components/date-range-picker/DateRangePicker";
-import AvailabilityBadge from "@/components/availability-badge/AvailabilityBadge";
 import formStyles from "@/components/ui/Form.module.css";
 import styles from "./StepRentalDetails.module.css";
 import { PHILIPPINE_PROVINCES } from "@/src/data/philippineLocations";
@@ -189,92 +187,72 @@ export default function StepRentalDetails({
           later, followed by a two-hour preparation period before the unit can be rented again.
         </p>
       </div>
-      <div className={styles.productSummary}>
-        <div className={styles.productImage}>
-          <Image src={product.image} alt={product.name} fill sizes="88px" />
-        </div>
-        <div>
-          <p className={styles.productMeta}>
-            {product.brand} · {product.category}
-          </p>
-          <h2 className={styles.productName}>{product.name}</h2>
-          <p className={styles.productRate}>
-            {product.currency}
-            {product.pricePerDay.toLocaleString()}
-            <span>/day</span>
-          </p>
-          <AvailabilityBadge
-            totalUnits={units.totalUnits}
-            availableUnits={timeAvailability?.availableUnits ?? units.totalUnits}
-            variant="compact"
-            mode="summary"
-          />
-        </div>
-      </div>
-
       <div className={styles.grid}>
         <div>
           <h3 className={styles.sectionHeading}>Pickup Date &amp; Time</h3>
-          <DateRangePicker
-            startDate={draft.startDate}
-            endDate={draft.startDate}
-            onChange={({ startDate }) => updatePickupSchedule(startDate)}
-            disabledDateKeys={disabledDateKeys}
-            singleDate
-          />
-
-          <div className={styles.pickupTimeField}>
-            <label htmlFor="pickupTime">Pickup time</label>
-            <input
-              id="pickupTime"
-              type="time"
-              step={900}
-              value={draft.pickupTime}
-              onChange={(event) => updatePickupSchedule(draft.startDate, event.target.value)}
+          <div className={styles.scheduleGrid}>
+            <DateRangePicker
+              startDate={draft.startDate}
+              endDate={draft.startDate}
+              onChange={({ startDate }) => updatePickupSchedule(startDate)}
+              disabledDateKeys={disabledDateKeys}
+              singleDate
             />
-            <span>Normal pickup window: 9:00 AM–7:00 PM</span>
-          </div>
+            <div className={styles.scheduleDetails}>
+              <div className={styles.pickupTimeField}>
+                <label htmlFor="pickupTime">Pickup time</label>
+                <input
+                  id="pickupTime"
+                  type="time"
+                  step={900}
+                  value={draft.pickupTime}
+                  onChange={(event) => updatePickupSchedule(draft.startDate, event.target.value)}
+                />
+                <span>Normal window: 9:00 AM–7:00 PM</span>
+              </div>
 
-          <p className={styles.availabilityStatus} role="status">
-            {pickupAt && !timeAvailability
-              ? "Checking this exact pickup time..."
-              : timeAvailability
-                ? `${timeAvailability.availableUnits} of ${timeAvailability.totalUnits} unit${timeAvailability.totalUnits === 1 ? "" : "s"} available at this pickup time.`
-                : "Select a pickup date and time to check this unit."}
-          </p>
+              <p className={styles.availabilityStatus} role="status">
+                {pickupAt && !timeAvailability
+                  ? "Checking this exact pickup time..."
+                  : timeAvailability
+                    ? `${timeAvailability.availableUnits} of ${timeAvailability.totalUnits} unit${timeAvailability.totalUnits === 1 ? "" : "s"} available.`
+                    : "Select a date and time to check this unit."}
+              </p>
 
-          {pickupAt && returnAt && nextAvailableAt ? (
-            <dl className={styles.timingSummary}>
-              <div><dt>Pickup</dt><dd>{formatManilaDateTime(pickupAt)}</dd></div>
-              <div><dt>Return (22 hours)</dt><dd>{formatManilaDateTime(returnAt)}</dd></div>
-              <div><dt>Unit ready again</dt><dd>{formatManilaDateTime(nextAvailableAt)}</dd></div>
-            </dl>
-          ) : null}
+              {pickupAt && returnAt && nextAvailableAt ? (
+                <dl className={styles.timingSummary}>
+                  <div><dt>Pickup</dt><dd>{formatManilaDateTime(pickupAt)}</dd></div>
+                  <div><dt>Return (+22h)</dt><dd>{formatManilaDateTime(returnAt)}</dd></div>
+                  <div><dt>Ready again</dt><dd>{formatManilaDateTime(nextAvailableAt)}</dd></div>
+                </dl>
+              ) : null}
 
-          {draft.fulfillmentMethod === "pickup" && pickupAt && isOutsideNormalPickupWindow(draft.pickupTime) && timeAvailability ? (
-            <p className={styles.convenienceNotice}>
-              {timeAvailability.pickupConvenienceFee > 0
-                ? "A ₱100 convenience fee applies because you chose a pickup outside 9:00 AM–7:00 PM."
-                : "No convenience fee applies because unit availability requires this later pickup time."}
-            </p>
-          ) : null}
+              {draft.fulfillmentMethod === "pickup" && pickupAt && isOutsideNormalPickupWindow(draft.pickupTime) && timeAvailability ? (
+                <p className={styles.convenienceNotice}>
+                  {timeAvailability.pickupConvenienceFee > 0
+                    ? "A ₱100 convenience fee applies because you chose a pickup outside 9:00 AM–7:00 PM."
+                    : "No convenience fee applies because availability requires this later pickup time."}
+                </p>
+              ) : null}
 
-          <div className={styles.quantityPanel}>
-            <div>
-              <label htmlFor="rentalQuantity">Rental quantity</label>
-              <span>Reserve multiple units of this exact product under one booking.</span>
-            </div>
-            <div className={styles.quantityControl}>
-              <button type="button" onClick={() => onUpdate({ quantity: draft.quantity - 1 })} disabled={draft.quantity <= 1} aria-label="Decrease rental quantity">−</button>
-              <input
-                id="rentalQuantity"
-                type="number"
-                min={1}
-                max={Math.max(1, timeAvailability?.availableUnits ?? units.totalUnits)}
-                value={draft.quantity}
-                onChange={(event) => onUpdate({ quantity: Math.max(1, Math.min(Math.max(1, units.totalUnits), Number(event.target.value) || 1)) })}
-              />
-              <button type="button" onClick={() => onUpdate({ quantity: draft.quantity + 1 })} disabled={draft.quantity >= units.totalUnits} aria-label="Increase rental quantity">+</button>
+              <div className={styles.quantityPanel}>
+                <div>
+                  <label htmlFor="rentalQuantity">Quantity</label>
+                  <span>{units.totalUnits} {units.totalUnits === 1 ? "unit" : "units"} in inventory</span>
+                </div>
+                <div className={styles.quantityControl}>
+                  <button type="button" onClick={() => onUpdate({ quantity: draft.quantity - 1 })} disabled={draft.quantity <= 1} aria-label="Decrease rental quantity">−</button>
+                  <input
+                    id="rentalQuantity"
+                    type="number"
+                    min={1}
+                    max={Math.max(1, timeAvailability?.availableUnits ?? units.totalUnits)}
+                    value={draft.quantity}
+                    onChange={(event) => onUpdate({ quantity: Math.max(1, Math.min(Math.max(1, units.totalUnits), Number(event.target.value) || 1)) })}
+                  />
+                  <button type="button" onClick={() => onUpdate({ quantity: draft.quantity + 1 })} disabled={draft.quantity >= units.totalUnits} aria-label="Increase rental quantity">+</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
