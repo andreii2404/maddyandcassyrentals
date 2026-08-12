@@ -53,6 +53,10 @@ export interface ReservationDraft {
   quantity: number;
   startDate: Date | null;
   endDate: Date | null;
+  /** Customer-selected pickup time in Asia/Manila, HH:mm. */
+  pickupTime: string;
+  /** Server-calculated pickup convenience fee for the selected timestamp. */
+  pickupConvenienceFee: number;
   fulfillmentMethod: FulfillmentMethod | null;
   /** Street/barangay/landmark line. Only required (and only sent) when fulfillmentMethod is "delivery". */
   customerLocation: string;
@@ -71,6 +75,8 @@ export function createEmptyDraft(): ReservationDraft {
     quantity: 1,
     startDate: null,
     endDate: null,
+    pickupTime: "",
+    pickupConvenienceFee: 0,
     fulfillmentMethod: null,
     customerLocation: "",
     cityMunicipality: "",
@@ -167,6 +173,8 @@ export function formatCustomerLocation(
 
 export function getDayCount(startDate: Date | null, endDate: Date | null): number {
   if (!startDate || !endDate) return 0;
+  const elapsedHours = (endDate.getTime() - startDate.getTime()) / (60 * 60 * 1000);
+  if (elapsedHours > 0 && elapsedHours <= 22) return 1;
   const msPerDay = 24 * 60 * 60 * 1000;
   const diff = Math.round(
     (new Date(endDate).setHours(0, 0, 0, 0) - new Date(startDate).setHours(0, 0, 0, 0)) / msPerDay

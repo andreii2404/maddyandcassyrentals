@@ -168,7 +168,7 @@ export default function StepPaymentSubmission({
           <dd>{money(pricing.depositAmount)}</dd>
         </div>
         <div>
-          <dt>Online fees</dt>
+          <dt>{pricing.fees > 0 ? "Outside-hours pickup fee" : "Online fees"}</dt>
           <dd>{pricing.fees > 0 ? money(pricing.fees) : "Free"}</dd>
         </div>
         <div className={styles.finalAmount}>

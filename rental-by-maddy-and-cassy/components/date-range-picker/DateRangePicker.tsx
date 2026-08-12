@@ -26,6 +26,7 @@ interface DateRangePickerProps {
   onChange: (range: { startDate: Date | null; endDate: Date | null }) => void;
   disabledDateKeys: Set<string>;
   maxRentalDays?: number;
+  singleDate?: boolean;
 }
 
 export default function DateRangePicker({
@@ -34,6 +35,7 @@ export default function DateRangePicker({
   onChange,
   disabledDateKeys,
   maxRentalDays = 30,
+  singleDate = false,
 }: DateRangePickerProps) {
   const [visibleMonth, setVisibleMonth] = useState(startOfMonth(startDate ?? new Date()));
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +55,12 @@ export default function DateRangePicker({
 
   function handleDayClick(day: Date) {
     if (isDisabled(day)) return;
+
+    if (singleDate) {
+      setError(null);
+      onChange({ startDate: day, endDate: day });
+      return;
+    }
 
     // A first click is already a valid one-day rental.
     if (!startDate || !endDate || !isSameDay(startDate, endDate)) {

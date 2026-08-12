@@ -1,6 +1,6 @@
 import Image from "next/image";
-import { format } from "date-fns";
 import type { FulfillmentMethod } from "@/src/types/booking";
+import { formatManilaDateTime } from "@/src/lib/rentalTiming";
 import styles from "./BookingSummaryCard.module.css";
 
 export interface BookingSummaryCardProps {
@@ -54,16 +54,16 @@ export default function BookingSummaryCard({
 
         <dl className={styles.detailGrid}>
           <div>
-            <dt>Rental Dates</dt>
-            <dd>
-              {format(startDate, "MMM d, yyyy")} – {format(endDate, "MMM d, yyyy")}
-            </dd>
+            <dt>Pickup</dt>
+            <dd>{formatManilaDateTime(startDate)}</dd>
+          </div>
+          <div>
+            <dt>Return</dt>
+            <dd>{formatManilaDateTime(endDate)}</dd>
           </div>
           <div>
             <dt>Duration</dt>
-            <dd>
-              {dayCount} {dayCount === 1 ? "day" : "days"}
-            </dd>
+            <dd>{dayCount === 1 ? "22 hours" : `${dayCount} days`}</dd>
           </div>
           <div>
             <dt>Quantity</dt>

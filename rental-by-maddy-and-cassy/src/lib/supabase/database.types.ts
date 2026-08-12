@@ -366,6 +366,7 @@ export type Database = {
           country_code: string
           created_at: string
           delivery_fee_snapshot: number
+          pickup_convenience_fee_snapshot: number
           delivery_notes: string | null
           method: Database["public"]["Enums"]["fulfillment_method"]
           postal_code: string | null
@@ -385,6 +386,7 @@ export type Database = {
           country_code?: string
           created_at?: string
           delivery_fee_snapshot?: number
+          pickup_convenience_fee_snapshot?: number
           delivery_notes?: string | null
           method: Database["public"]["Enums"]["fulfillment_method"]
           postal_code?: string | null
@@ -404,6 +406,7 @@ export type Database = {
           country_code?: string
           created_at?: string
           delivery_fee_snapshot?: number
+          pickup_convenience_fee_snapshot?: number
           delivery_notes?: string | null
           method?: Database["public"]["Enums"]["fulfillment_method"]
           postal_code?: string | null
@@ -820,10 +823,13 @@ export type Database = {
           loyalty_completed_rentals_snapshot: number
           loyalty_discount_amount: number
           loyalty_discount_status: string
+          next_available_at: string
+          pickup_at: string
           ready_for_release_at: string | null
           rejected_at: string | null
           released_at: string | null
           rental_period: unknown
+          return_at: string
           returned_at: string | null
           status: Database["public"]["Enums"]["booking_status"]
           updated_at: string
@@ -845,10 +851,13 @@ export type Database = {
           loyalty_completed_rentals_snapshot?: number
           loyalty_discount_amount?: number
           loyalty_discount_status?: string
+          next_available_at: string
+          pickup_at: string
           ready_for_release_at?: string | null
           rejected_at?: string | null
           released_at?: string | null
           rental_period: unknown
+          return_at: string
           returned_at?: string | null
           status?: Database["public"]["Enums"]["booking_status"]
           updated_at?: string
@@ -870,10 +879,13 @@ export type Database = {
           loyalty_completed_rentals_snapshot?: number
           loyalty_discount_amount?: number
           loyalty_discount_status?: string
+          next_available_at?: string
+          pickup_at?: string
           ready_for_release_at?: string | null
           rejected_at?: string | null
           released_at?: string | null
           rental_period?: unknown
+          return_at?: string
           returned_at?: string | null
           status?: Database["public"]["Enums"]["booking_status"]
           updated_at?: string
@@ -1566,6 +1578,7 @@ export type Database = {
           inventory_unit_id: string
           kind: Database["public"]["Enums"]["unit_reservation_kind"]
           reserved_period: unknown
+          reserved_window: unknown
           status: Database["public"]["Enums"]["unit_reservation_status"]
           updated_at: string
         }
@@ -1578,6 +1591,7 @@ export type Database = {
           inventory_unit_id: string
           kind: Database["public"]["Enums"]["unit_reservation_kind"]
           reserved_period: unknown
+          reserved_window: unknown
           status?: Database["public"]["Enums"]["unit_reservation_status"]
           updated_at?: string
         }
@@ -1590,6 +1604,7 @@ export type Database = {
           inventory_unit_id?: string
           kind?: Database["public"]["Enums"]["unit_reservation_kind"]
           reserved_period?: unknown
+          reserved_window?: unknown
           status?: Database["public"]["Enums"]["unit_reservation_status"]
           updated_at?: string
         }
@@ -1637,6 +1652,7 @@ export type Database = {
         Row: {
           booking_id: string | null
           delivery_fee: number | null
+          pickup_convenience_fee: number | null
           deposit_total: number | null
           rental_days: number | null
           rental_subtotal: number | null
@@ -1791,6 +1807,24 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_time_based_booking: {
+        Args: {
+          p_city_municipality?: string
+          p_customer_notes: string
+          p_customer_snapshot: Json
+          p_delivery_fee: number
+          p_discount_amount: number
+          p_emergency_contact?: Json
+          p_fulfillment_method: string
+          p_location: string
+          p_pickup_at: string
+          p_product_id: string
+          p_product_snapshot: Json
+          p_province?: string
+          p_quantity?: number
+        }
+        Returns: Database["public"]["Tables"]["bookings"]["Row"]
+      }
       get_product_availability: {
         Args: { p_end_date: string; p_product_id: string; p_start_date: string }
         Returns: {
@@ -1806,6 +1840,17 @@ export type Database = {
           available_units: number
           day: string
           total_units: number
+        }[]
+      }
+      get_product_time_availability: {
+        Args: { p_pickup_at: string; p_product_id: string; p_quantity?: number }
+        Returns: {
+          available_units: number
+          next_available_at: string | null
+          pickup_convenience_fee: number
+          product_id: string
+          total_units: number
+          unavailable_units: number
         }[]
       }
       get_product_reviews: {

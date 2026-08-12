@@ -15,6 +15,7 @@ export interface ReservationResumeState {
     quantity: number;
     startDate: string;
     endDate: string;
+    pickupConvenienceFee: number;
     fulfillmentMethod: "pickup" | "delivery";
     location: string | null;
     cityMunicipality: string | null;

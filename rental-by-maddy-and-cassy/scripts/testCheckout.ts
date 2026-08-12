@@ -62,3 +62,20 @@ test("birthday and 11th-rental perks stack and are capped by the rental subtotal
   assert.equal(pricing.specialDiscountAmount, 250);
   assert.equal(pricing.finalAmount, 0);
 });
+
+test("checkout includes only the server-calculated pickup convenience fee", () => {
+  const pricing = calculateReservationPricing(
+    { listPricePerDay: 1_000, pricePerDay: 1_000, refundableDeposit: 0 },
+    {
+      quantity: 1,
+      startDate: new Date("2026-08-11T11:00:00.000Z"),
+      endDate: new Date("2026-08-12T09:00:00.000Z"),
+      pickupConvenienceFee: 100,
+      customerInfo: { birthDate: "" },
+    },
+  );
+
+  assert.equal(pricing.rentalDays, 1);
+  assert.equal(pricing.fees, 100);
+  assert.equal(pricing.finalAmount, 1_100);
+});

@@ -3,7 +3,6 @@ import type { Database } from "@/src/lib/supabase/database.types";
 import type { Product } from "@/types/product";
 import type { ReservationDraft } from "@/src/types/reservationDraft";
 import { formatCustomerAddress, getDayCount } from "@/src/types/reservationDraft";
-import { toDateKey } from "@/src/services/availabilityService";
 import { submitBookingWithDateGuard } from "@/src/services/inventoryService";
 import { isValidPhoneNumber } from "@/src/lib/authValidation";
 
@@ -61,8 +60,7 @@ export async function createBookingReservation(
   const result = await submitBookingWithDateGuard(supabase, {
     productId: product.id,
     quantity: draft.quantity,
-    rentalStartDate: toDateKey(startDate),
-    rentalEndDate: toDateKey(endDate),
+    pickupAt: startDate.toISOString(),
     fulfillmentMethod,
     // Pickup never carries a delivery address (create_booking stores null for
     // pickup regardless), so only send it through for delivery bookings.
