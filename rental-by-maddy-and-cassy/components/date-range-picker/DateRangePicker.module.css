@@ -104,15 +104,19 @@
   cursor: not-allowed;
 }
 
-.dayEdge {
-  background: var(--color-calendar-selected);
+.dayEdge,
+.day[data-selected="true"] {
+  background-color: var(--color-calendar-selected) !important;
   color: var(--color-white);
   font-weight: 800;
   box-shadow: 0 0 0 2px var(--color-white), 0 0 0 4px var(--color-dusty-rose);
 }
 
-.dayEdge:hover:not(:disabled) {
-  background: var(--color-calendar-selected-hover);
+.dayEdge:hover:not(:disabled),
+.day[data-selected="true"]:hover:not(:disabled),
+.day[data-selected="true"]:focus-visible {
+  background-color: var(--color-calendar-selected-hover) !important;
+  color: var(--color-white);
 }
 
 .errorMessage {
