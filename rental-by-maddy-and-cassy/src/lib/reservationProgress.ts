@@ -20,6 +20,7 @@ interface StoredReservationProgress {
     quantity: number;
     startDate: string | null;
     endDate: string | null;
+    rentalEndDate?: string | null;
     pickupTime: string;
     pickupConvenienceFee: number;
     fulfillmentMethod: ReservationDraft["fulfillmentMethod"];
@@ -93,6 +94,7 @@ export function serializeReservationProgress(input: {
       quantity: input.draft.quantity,
       startDate: input.draft.startDate?.toISOString() ?? null,
       endDate: input.draft.endDate?.toISOString() ?? null,
+      rentalEndDate: input.draft.rentalEndDate?.toISOString() ?? null,
       pickupTime: input.draft.pickupTime,
       pickupConvenienceFee: input.draft.pickupConvenienceFee,
       fulfillmentMethod: input.draft.fulfillmentMethod,
@@ -152,6 +154,14 @@ export function restoreReservationProgress(
       : null;
     const option = draft.paymentOption === "full" ? "full" : "deposit_50";
 
+    const restoredStartDate = date(draft.startDate);
+    const restoredEndDate = date(draft.endDate);
+    const restoredRentalEndDate = date(draft.rentalEndDate) ?? (
+      restoredEndDate
+        ? new Date(restoredEndDate.getTime() - 22 * 60 * 60 * 1000)
+        : restoredStartDate
+    );
+
     return {
       savedAt: stored.savedAt,
       step: Math.min(6, Math.max(1, Math.floor(Number(stored.step) || 1))),
@@ -162,8 +172,9 @@ export function restoreReservationProgress(
       draft: {
         ...empty,
         quantity: Math.min(10, Math.max(1, Math.floor(Number(draft.quantity) || 1))),
-        startDate: date(draft.startDate),
-        endDate: date(draft.endDate),
+        startDate: restoredStartDate,
+        endDate: restoredEndDate,
+        rentalEndDate: restoredRentalEndDate,
         pickupTime: text(draft.pickupTime),
         pickupConvenienceFee: Math.max(0, Number(draft.pickupConvenienceFee) || 0),
         fulfillmentMethod,

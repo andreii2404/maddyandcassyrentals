@@ -76,7 +76,7 @@ export default function DateRangePicker({
 
     if (isSameDay(day, startDate)) {
       setError(null);
-      onChange({ startDate: day, endDate: day });
+      onChange({ startDate: null, endDate: null });
       return;
     }
 
@@ -186,12 +186,22 @@ export default function DateRangePicker({
         })}
       </div>
 
-      {startDate ? (
+      {startDate && selectionEnd ? (
         <p className={styles.selectionSummary} role="status">
           <span className={styles.selectionIcon} aria-hidden="true">✓</span>
           <span>
-            <small>{singleDate ? "Selected pickup date" : "Selected rental start"}</small>
-            <strong>{format(startDate, "EEEE, MMMM d, yyyy")}</strong>
+            <small>
+              {singleDate
+                ? "Selected pickup date"
+                : isSameDay(startDate, selectionEnd)
+                  ? "Selected rental date"
+                  : "Selected rental dates"}
+            </small>
+            <strong>
+              {singleDate || isSameDay(startDate, selectionEnd)
+                ? format(startDate, "EEEE, MMMM d, yyyy")
+                : `${format(startDate, "MMM d, yyyy")} – ${format(selectionEnd, "MMM d, yyyy")}`}
+            </strong>
           </span>
         </p>
       ) : (
