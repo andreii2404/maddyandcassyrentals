@@ -157,6 +157,7 @@ export default function DateRangePicker({
               role="gridcell"
               disabled={disabled}
               aria-current={selected ? "date" : undefined}
+              data-selected={selected ? "true" : undefined}
               aria-label={`${format(day, "MMMM d, yyyy")}${statusLabel}`}
               className={[
                 styles.day,
