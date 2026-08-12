@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { differenceInCalendarDays } from "date-fns";
 import type { Product } from "@/types/product";
 import type { UnitCounts } from "@/lib/availability";
 import type { FulfillmentMethod } from "@/src/types/booking";
@@ -52,14 +53,18 @@ export default function StepRentalDetails({
     return Number.isNaN(value.getTime()) ? null : value;
   }, [draft.pickupTime, draft.startDate]);
 
-  const returnAt = pickupAt ? calculateReturnDateTime(pickupAt) : null;
-  const nextAvailableAt = pickupAt ? calculateNextAvailableDateTime(pickupAt) : null;
+  const selectedRentalEndDate = draft.rentalEndDate ?? draft.startDate;
+  const rentalDays = draft.startDate && selectedRentalEndDate
+    ? Math.max(1, differenceInCalendarDays(selectedRentalEndDate, draft.startDate) + 1)
+    : 1;
+  const returnAt = pickupAt ? calculateReturnDateTime(pickupAt, rentalDays) : null;
+  const nextAvailableAt = pickupAt ? calculateNextAvailableDateTime(pickupAt, rentalDays) : null;
 
   useEffect(() => {
     if (!pickupAt || pickupAt.getTime() <= Date.now()) return;
     let cancelled = false;
     const timer = window.setTimeout(() => {
-      getTimeAvailability(product.id, pickupAt, draft.quantity)
+      getTimeAvailability(product.id, pickupAt, draft.quantity, rentalDays)
         .then((result) => {
           if (cancelled) return;
           setTimeAvailability(result);
@@ -76,7 +81,7 @@ export default function StepRentalDetails({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [draft.fulfillmentMethod, draft.pickupConvenienceFee, draft.quantity, onUpdate, pickupAt, product.id]);
+  }, [draft.fulfillmentMethod, draft.pickupConvenienceFee, draft.quantity, onUpdate, pickupAt, product.id, rentalDays]);
 
   const isDelivery = draft.fulfillmentMethod === "delivery";
   const hasValidLocation =
@@ -95,16 +100,28 @@ export default function StepRentalDetails({
     !!timeAvailability &&
     draft.quantity <= timeAvailability.availableUnits;
 
-  function updatePickupSchedule(date: Date | null, pickupTime = draft.pickupTime) {
-    if (!date || !isValidPickupTime(pickupTime)) {
-      onUpdate({ startDate: date, endDate: null, pickupTime, pickupConvenienceFee: 0 });
+  function updatePickupSchedule(
+    date: Date | null,
+    rentalEndDate: Date | null = date,
+    pickupTime = draft.pickupTime,
+  ) {
+    if (!date || !rentalEndDate || !isValidPickupTime(pickupTime)) {
+      onUpdate({
+        startDate: date,
+        endDate: null,
+        rentalEndDate,
+        pickupTime,
+        pickupConvenienceFee: 0,
+      });
       setTimeAvailability(null);
       return;
     }
     const nextPickupAt = combineManilaPickupDateTime(pickupDateKey(date), pickupTime);
+    const nextRentalDays = Math.max(1, differenceInCalendarDays(rentalEndDate, date) + 1);
     onUpdate({
       startDate: nextPickupAt,
-      endDate: calculateReturnDateTime(nextPickupAt),
+      endDate: calculateReturnDateTime(nextPickupAt, nextRentalDays),
+      rentalEndDate,
       pickupTime,
       pickupConvenienceFee: 0,
     });
@@ -151,7 +168,7 @@ export default function StepRentalDetails({
     setChecking(true);
     let latestAvailability: TimeAvailability;
     try {
-      latestAvailability = await getTimeAvailability(product.id, pickupAt, draft.quantity);
+      latestAvailability = await getTimeAvailability(product.id, pickupAt, draft.quantity, rentalDays);
     } catch {
       setChecking(false);
       setError("The exact pickup-time availability could not be checked. Please try again.");
@@ -183,8 +200,8 @@ export default function StepRentalDetails({
       <div>
         <h2 className={styles.flowHeading}>Reservation</h2>
         <p className={styles.flowSubheading}>
-          Select the exact pickup date and time. Your return is automatically scheduled 22 hours
-          later, followed by a two-hour preparation period before the unit can be rented again.
+          Select one date, or select a start and end date for a multi-day rental. Each rental day
+          follows the 22-hour use period, with a two-hour preparation period after the final return.
         </p>
       </div>
       <div className={styles.grid}>
@@ -193,10 +210,9 @@ export default function StepRentalDetails({
           <div className={styles.scheduleGrid}>
             <DateRangePicker
               startDate={draft.startDate}
-              endDate={draft.startDate}
-              onChange={({ startDate }) => updatePickupSchedule(startDate)}
+              endDate={selectedRentalEndDate}
+              onChange={({ startDate, endDate }) => updatePickupSchedule(startDate, endDate)}
               disabledDateKeys={disabledDateKeys}
-              singleDate
             />
             <div className={styles.scheduleDetails}>
               <div className={styles.pickupTimeField}>
@@ -206,7 +222,11 @@ export default function StepRentalDetails({
                   type="time"
                   step={900}
                   value={draft.pickupTime}
-                  onChange={(event) => updatePickupSchedule(draft.startDate, event.target.value)}
+                  onChange={(event) => updatePickupSchedule(
+                    draft.startDate,
+                    selectedRentalEndDate,
+                    event.target.value,
+                  )}
                 />
                 <span>Normal window: 9:00 AM–7:00 PM</span>
               </div>
@@ -222,7 +242,7 @@ export default function StepRentalDetails({
               {pickupAt && returnAt && nextAvailableAt ? (
                 <dl className={styles.timingSummary}>
                   <div><dt>Pickup</dt><dd>{formatManilaDateTime(pickupAt)}</dd></div>
-                  <div><dt>Return (+22h)</dt><dd>{formatManilaDateTime(returnAt)}</dd></div>
+                  <div><dt>Return ({rentalDays} {rentalDays === 1 ? "day" : "days"})</dt><dd>{formatManilaDateTime(returnAt)}</dd></div>
                   <div><dt>Ready again</dt><dd>{formatManilaDateTime(nextAvailableAt)}</dd></div>
                 </dl>
               ) : null}

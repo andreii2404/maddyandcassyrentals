@@ -279,6 +279,7 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
         quantity: booking.quantity,
         startDate: new Date(booking.startDate),
         endDate: new Date(booking.endDate),
+        rentalEndDate: new Date(new Date(booking.endDate).getTime() - 22 * 60 * 60 * 1000),
         pickupTime: manilaTimeInputValue(booking.startDate),
         pickupConvenienceFee: booking.pickupConvenienceFee ?? 0,
         fulfillmentMethod: booking.fulfillmentMethod,

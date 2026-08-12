@@ -70,12 +70,14 @@ export async function getTimeAvailability(
   productId: string,
   pickupAt: Date,
   requestedUnits = 1,
+  rentalDays = 1,
 ): Promise<TimeAvailability> {
   const supabase = createPublicClient();
-  const { data, error } = await supabase.rpc("get_product_time_availability", {
+  const { data, error } = await supabase.rpc("get_product_multi_day_time_availability", {
     p_product_id: productId,
     p_pickup_at: pickupAt.toISOString(),
     p_quantity: requestedUnits,
+    p_rental_days: rentalDays,
   });
 
   if (error) throw new Error(error.message);

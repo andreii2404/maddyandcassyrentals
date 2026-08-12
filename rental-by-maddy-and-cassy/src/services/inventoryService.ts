@@ -46,6 +46,7 @@ export interface SubmitBookingInput {
   productId: string;
   quantity?: number;
   pickupAt: string;
+  rentalDays?: number;
   fulfillmentMethod: FulfillmentMethod;
   /** Street/barangay/landmark line. Required only when fulfillmentMethod is "delivery". */
   location?: string;
@@ -79,10 +80,11 @@ export async function submitBookingWithDateGuard(
   supabase: SupabaseClient<Database>,
   input: SubmitBookingInput,
 ): Promise<SubmitBookingResult> {
-  const { data, error } = await supabase.rpc("create_time_based_booking", {
+  const { data, error } = await supabase.rpc("create_multi_day_time_based_booking", {
     p_product_id: input.productId,
     p_quantity: input.quantity ?? 1,
     p_pickup_at: input.pickupAt,
+    p_rental_days: input.rentalDays ?? 1,
     p_fulfillment_method: input.fulfillmentMethod,
     p_location: input.location ?? "",
     p_city_municipality: input.cityMunicipality ?? "",

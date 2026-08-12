@@ -34,13 +34,15 @@ export function combineManilaPickupDateTime(dateKey: string, pickupTime: string)
   return new Date(`${dateKey}T${pickupTime}:00${MANILA_OFFSET}`);
 }
 
-export function calculateReturnDateTime(pickupAt: Date): Date {
-  return new Date(pickupAt.getTime() + RENTAL_DURATION_HOURS * 60 * 60 * 1000);
+export function calculateReturnDateTime(pickupAt: Date, rentalDays = 1): Date {
+  const normalizedDays = Math.max(1, Math.trunc(rentalDays));
+  const rentalHours = RENTAL_DURATION_HOURS + (normalizedDays - 1) * 24;
+  return new Date(pickupAt.getTime() + rentalHours * 60 * 60 * 1000);
 }
 
-export function calculateNextAvailableDateTime(pickupAt: Date): Date {
+export function calculateNextAvailableDateTime(pickupAt: Date, rentalDays = 1): Date {
   return new Date(
-    pickupAt.getTime() + (RENTAL_DURATION_HOURS + TURNAROUND_HOURS) * 60 * 60 * 1000,
+    calculateReturnDateTime(pickupAt, rentalDays).getTime() + TURNAROUND_HOURS * 60 * 60 * 1000,
   );
 }
 

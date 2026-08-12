@@ -61,6 +61,7 @@ export async function createBookingReservation(
     productId: product.id,
     quantity: draft.quantity,
     pickupAt: startDate.toISOString(),
+    rentalDays,
     fulfillmentMethod,
     // Pickup never carries a delivery address (create_booking stores null for
     // pickup regardless), so only send it through for delivery bookings.

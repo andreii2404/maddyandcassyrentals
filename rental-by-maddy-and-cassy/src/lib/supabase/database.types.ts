@@ -1825,6 +1825,25 @@ export type Database = {
         }
         Returns: Database["public"]["Tables"]["bookings"]["Row"]
       }
+      create_multi_day_time_based_booking: {
+        Args: {
+          p_city_municipality?: string
+          p_customer_notes: string
+          p_customer_snapshot: Json
+          p_delivery_fee: number
+          p_discount_amount: number
+          p_emergency_contact?: Json
+          p_fulfillment_method: string
+          p_location: string
+          p_pickup_at: string
+          p_product_id: string
+          p_product_snapshot: Json
+          p_province?: string
+          p_quantity?: number
+          p_rental_days?: number
+        }
+        Returns: Database["public"]["Tables"]["bookings"]["Row"]
+      }
       get_product_availability: {
         Args: { p_end_date: string; p_product_id: string; p_start_date: string }
         Returns: {
@@ -1844,6 +1863,22 @@ export type Database = {
       }
       get_product_time_availability: {
         Args: { p_pickup_at: string; p_product_id: string; p_quantity?: number }
+        Returns: {
+          available_units: number
+          next_available_at: string | null
+          pickup_convenience_fee: number
+          product_id: string
+          total_units: number
+          unavailable_units: number
+        }[]
+      }
+      get_product_multi_day_time_availability: {
+        Args: {
+          p_pickup_at: string
+          p_product_id: string
+          p_quantity?: number
+          p_rental_days?: number
+        }
         Returns: {
           available_units: number
           next_available_at: string | null
