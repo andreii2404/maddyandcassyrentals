@@ -1,9 +1,9 @@
 .guarantee {
   display: grid;
-  gap: 0.4rem;
-  padding: 1.1rem;
+  gap: 0.2rem;
+  padding: 0.7rem;
   border: 1px solid var(--color-dusty-rose);
-  border-radius: 14px;
+  border-radius: 11px;
   background: var(--color-blush);
   color: var(--color-text-primary);
 }
@@ -11,29 +11,33 @@
 .guarantee span,
 .option small {
   color: var(--color-charcoal);
-  line-height: 1.5;
+  font-size: 0.7rem;
+  line-height: 1.35;
 }
 
 .options {
   display: grid;
-  gap: 0.8rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
   margin: 0;
   padding: 0;
   border: 0;
 }
 
 .options legend {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
+  grid-column: 1 / -1;
+  font-size: 0.8rem;
   font-weight: 700;
 }
 
 .option {
   display: flex;
-  gap: 0.85rem;
+  gap: 0.6rem;
   align-items: center;
-  padding: 1rem;
+  padding: 0.65rem;
   border: 1px solid var(--color-border);
-  border-radius: 14px;
+  border-radius: 11px;
   cursor: pointer;
 }
 
@@ -49,56 +53,65 @@
 
 .summary {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   margin: 0;
   overflow: hidden;
   border: 1px solid var(--color-border);
-  border-radius: 14px;
+  border-radius: 11px;
 }
 
 .summary div {
-  padding: 1rem;
+  padding: 0.65rem;
 }
 
 .summary div + div {
   border-left: 1px solid var(--color-border);
 }
 
+.summary div:nth-child(3n + 1) {
+  border-left: 0;
+}
+
+.summary div:nth-child(n + 4) {
+  border-top: 1px solid var(--color-border);
+}
+
 .summary dt {
   color: var(--color-charcoal);
-  font-size: 0.78rem;
+  font-size: 0.68rem;
 }
 
 .summary dd {
-  margin: 0.35rem 0 0;
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
   font-weight: 800;
 }
 
 .perks {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
+  gap: 0.55rem;
 }
 
 .perks > div {
   display: flex;
   align-items: flex-start;
-  gap: 0.75rem;
-  padding: 0.9rem;
+  gap: 0.55rem;
+  padding: 0.65rem;
   border: 1px solid var(--color-light-gray);
-  border-radius: 14px;
+  border-radius: 11px;
   background: var(--color-background-soft);
 }
 
 .perkIcon {
   display: grid;
-  min-width: 46px;
-  height: 46px;
+  min-width: 36px;
+  height: 36px;
   place-items: center;
   border-radius: 50%;
   background: var(--color-blush);
   color: var(--color-primary-hover);
-  font-size: 0.62rem;
+  font-size: 0.55rem;
   font-weight: 800;
   letter-spacing: 0.04em;
 }
@@ -111,8 +124,8 @@
 
 .perks small {
   color: var(--color-charcoal);
-  font-size: 0.72rem;
-  line-height: 1.45;
+  font-size: 0.66rem;
+  line-height: 1.35;
 }
 
 .summary .savings {
@@ -121,13 +134,13 @@
 
 .summary .finalAmount { background: var(--color-background-soft); }
 .summary .finalAmount dd { color: var(--color-primary); }
-.feeNote { margin: -.65rem 0 0; color: var(--color-charcoal); font-size: .72rem; line-height: 1.5; }
+.feeNote { margin: -.45rem 0 0; color: var(--color-charcoal); font-size: .66rem; line-height: 1.35; }
 
 .reference,
 .notice,
 .success {
   margin: 0;
-  padding: 0.85rem 1rem;
+  padding: 0.65rem 0.75rem;
   border-radius: 12px;
   background: var(--color-background);
 }
@@ -163,11 +176,26 @@
   }
 
   .summary {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .summary div + div {
-    border-top: 1px solid var(--color-border);
+    border-top: 0;
+  }
+
+  .summary div:nth-child(odd) {
     border-left: 0;
+  }
+
+  .summary div:nth-child(even) {
+    border-left: 1px solid var(--color-border);
+  }
+
+  .summary div:nth-child(n + 3) {
+    border-top: 1px solid var(--color-border);
+  }
+
+  .options {
+    grid-template-columns: 1fr;
   }
 }

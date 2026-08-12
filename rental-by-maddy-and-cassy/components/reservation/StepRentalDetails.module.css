@@ -1,88 +1,36 @@
 .wrapper {
   display: flex;
   flex-direction: column;
-  gap: 1.75rem;
-}
-
-.productSummary {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-  padding: 1rem;
-  border-radius: 16px;
-  background: var(--color-background);
-}
-
-.productImage {
-  position: relative;
-  width: 88px;
-  height: 88px;
-  border-radius: 12px;
-  overflow: hidden;
-  background: var(--color-white);
-  flex-shrink: 0;
-}
-
-.productMeta {
-  margin: 0;
-  font-size: 0.78rem;
-  color: var(--color-charcoal);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.productName {
-  margin: 0.15rem 0 0.35rem;
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--color-text-primary);
-}
-
-.productRate {
-  margin: 0 0 0.5rem;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--color-primary);
-}
-
-.productRate span {
-  font-weight: 400;
-  color: var(--color-charcoal);
-  font-size: 0.8rem;
+  gap: 0.85rem;
 }
 
 .grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 2rem;
+  grid-template-columns: minmax(0, 1.15fr) minmax(270px, 0.85fr);
+  gap: 1.15rem;
 }
 
 .sectionHeading {
-  margin: 0 0 0.85rem;
-  font-size: 1rem;
+  margin: 0 0 0.55rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: var(--color-text-primary);
 }
 
-.calendarLoading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 320px;
-  border: 1px solid var(--color-border);
-  border-radius: 16px;
+.scheduleGrid {
+  display: grid;
+  grid-template-columns: minmax(270px, 360px) minmax(165px, 1fr);
+  gap: 0.8rem;
+  align-items: start;
 }
 
-.dayCount {
-  margin: 0.75rem 0 0;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--color-primary);
+.scheduleDetails {
+  min-width: 0;
 }
 
-.quantityPanel { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: .9rem; padding: .9rem; border: 1px solid var(--color-light-gray); border-radius: 14px; background: var(--color-background-soft); }
+.quantityPanel { display: flex; align-items: center; justify-content: space-between; gap: .65rem; margin-top: .65rem; padding: .65rem; border: 1px solid var(--color-light-gray); border-radius: 12px; background: var(--color-background-soft); }
 .quantityPanel label { display: block; color: var(--color-text-primary); font-size: .82rem; font-weight: 700; }
-.quantityPanel span { display: block; margin-top: .2rem; color: var(--color-charcoal); font-size: .68rem; line-height: 1.4; }
+.quantityPanel span { display: block; margin-top: .1rem; color: var(--color-charcoal); font-size: .64rem; line-height: 1.3; }
 .quantityControl { display: grid; grid-template-columns: 32px 44px 32px; flex: 0 0 auto; overflow: hidden; border: 1px solid var(--color-dusty-rose); border-radius: 999px; background: var(--color-white); }
 .quantityControl button, .quantityControl input { height: 32px; border: 0; background: transparent; text-align: center; font: inherit; }
 .quantityControl button { color: var(--color-primary); font-weight: 800; cursor: pointer; }
@@ -92,7 +40,10 @@
 
 .availabilityStatus {
   margin: 0.5rem 0 0;
-  font-size: 0.85rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 10px;
+  background: var(--color-background-soft);
+  font-size: 0.72rem;
   font-weight: 600;
   color: var(--color-charcoal);
 }
@@ -100,8 +51,8 @@
 .pickupTimeField {
   display: grid;
   gap: 0.35rem;
-  margin-top: 1rem;
-  max-width: 380px;
+  margin-top: 0;
+  max-width: none;
 }
 
 .pickupTimeField label {
@@ -112,8 +63,8 @@
 
 .pickupTimeField input {
   width: 100%;
-  min-height: 46px;
-  padding: 0.7rem 0.85rem;
+  min-height: 40px;
+  padding: 0.55rem 0.7rem;
   border: 1px solid var(--color-border);
   border-radius: 12px;
   background: var(--color-white);
@@ -122,49 +73,48 @@
 }
 
 .pickupTimeField span {
-  font-size: 0.75rem;
+  font-size: 0.66rem;
   color: var(--color-charcoal);
 }
 
 .timingSummary {
   display: grid;
-  gap: 0.55rem;
-  margin: 0.85rem 0 0;
-  padding: 0.9rem;
-  border-radius: 14px;
+  gap: 0.4rem;
+  margin: 0.55rem 0 0;
+  padding: 0.65rem;
+  border-radius: 11px;
   background: var(--color-background-soft);
 }
 
 .timingSummary div {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
+  display: grid;
+  gap: 0.08rem;
 }
 
 .timingSummary dt,
 .timingSummary dd {
   margin: 0;
-  font-size: 0.78rem;
+  font-size: 0.68rem;
 }
 
 .timingSummary dt { color: var(--color-charcoal); }
-.timingSummary dd { color: var(--color-text-primary); font-weight: 700; text-align: right; }
+.timingSummary dd { color: var(--color-text-primary); font-weight: 700; text-align: left; }
 
 .convenienceNotice {
-  margin: 0.8rem 0 0;
-  padding: 0.75rem 0.85rem;
+  margin: 0.55rem 0 0;
+  padding: 0.55rem 0.65rem;
   border: 1px solid var(--color-dusty-rose);
   border-radius: 12px;
   background: var(--color-blush);
   color: var(--color-text-primary);
-  font-size: 0.78rem;
-  line-height: 1.45;
+  font-size: 0.68rem;
+  line-height: 1.35;
 }
 
 .fulfillmentColumn {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 0.75rem;
 }
 
 .fulfillmentFieldset {
@@ -173,14 +123,14 @@
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .fulfillmentOption {
   display: flex;
-  gap: 0.7rem;
+  gap: 0.55rem;
   align-items: flex-start;
-  padding: 0.9rem 1rem;
+  padding: 0.65rem 0.75rem;
   border: 1px solid var(--color-light-gray);
   border-radius: 14px;
   cursor: pointer;
@@ -203,38 +153,68 @@
 
 .fulfillmentOption strong {
   display: block;
-  font-size: 0.92rem;
+  font-size: 0.8rem;
   color: var(--color-text-primary);
   margin-bottom: 0.2rem;
 }
 
 .fulfillmentDetail {
   display: block;
-  font-size: 0.82rem;
+  font-size: 0.7rem;
   color: var(--color-charcoal);
   line-height: 1.5;
 }
 
 .footer {
+  position: sticky;
+  z-index: 5;
+  bottom: 0.6rem;
   display: flex;
-  justify-content: flex-end;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--color-border);
+  justify-content: space-between;
+  padding: 0.55rem;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 8px 24px rgba(36, 36, 36, 0.08);
+  backdrop-filter: blur(10px);
 }
 
-@media (max-width: 800px) {
+@media (max-width: 1100px) {
   .grid {
     grid-template-columns: 1fr;
+  }
+
+  .scheduleGrid {
+    grid-template-columns: minmax(280px, 360px) minmax(190px, 1fr);
+  }
+}
+
+@media (max-width: 680px) {
+  .scheduleGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .scheduleGrid > :first-child {
+    width: 100%;
+    max-width: none;
+  }
+
+  .timingSummary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .timingSummary dd {
+    font-size: 0.64rem;
   }
 }
 .flowHeading {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: 1.05rem;
 }
 
 .flowSubheading {
-  margin: 0.4rem 0 0;
+  margin: 0.2rem 0 0;
   color: var(--color-charcoal);
-  font-size: 0.88rem;
-  line-height: 1.55;
+  font-size: 0.76rem;
+  line-height: 1.4;
 }

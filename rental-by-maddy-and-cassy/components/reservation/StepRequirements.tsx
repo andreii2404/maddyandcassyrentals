@@ -87,7 +87,7 @@ export default function StepRequirements({
         current address and signature.
       </p>
 
-      <div className={formStyles.row}>
+      <div className={styles.documentGrid}>
         <FileUploadField
           label="First valid ID"
           required
@@ -101,14 +101,13 @@ export default function StepRequirements({
           value={requirements.idTwoFile}
           onChange={(file) => onUpdate({ idTwoFile: file })}
         />
+        <FileUploadField
+          label="Selfie holding a valid ID"
+          required
+          value={requirements.selfieFile}
+          onChange={(file) => onUpdate({ selfieFile: file })}
+        />
       </div>
-
-      <FileUploadField
-        label="Selfie holding a valid ID"
-        required
-        value={requirements.selfieFile}
-        onChange={(file) => onUpdate({ selfieFile: file })}
-      />
 
       <div className={formStyles.row}>
         <div className={formStyles.field}>

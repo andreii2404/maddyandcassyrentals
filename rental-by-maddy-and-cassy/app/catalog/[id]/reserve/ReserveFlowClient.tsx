@@ -403,8 +403,7 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
           <p className={styles.eyebrow}>GUIDED RESERVATION</p>
           <h1>Reserve {product.name}</h1>
           <p>
-            Complete one focused step at a time. Your progress, payment,
-            documents, and agreement stay connected to this booking.
+            Choose your schedule, pay securely, submit verification, and sign the agreement.
           </p>
         </div>
         <div className={styles.headerRate}>

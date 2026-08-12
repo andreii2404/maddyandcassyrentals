@@ -83,46 +83,52 @@ export default function StepAgreement({
 
       <AgreementDocument data={agreementData} />
 
-      <div className={styles.confirmationsList}>
-        {CONFIRMATIONS.map((item) => (
-          <label key={item.key} className={formStyles.checkboxField}>
+      <div className={styles.agreementActionGrid}>
+        <section>
+          <h3 className={styles.sectionHeading}>Your Confirmations</h3>
+          <div className={styles.confirmationsList}>
+            {CONFIRMATIONS.map((item) => (
+              <label key={item.key} className={formStyles.checkboxField}>
+                <input
+                  type="checkbox"
+                  checked={Boolean(agreement[item.key])}
+                  onChange={(event) => onUpdate({ [item.key]: event.target.checked } as Partial<AgreementDraft>)}
+                />
+                {item.label}
+              </label>
+            ))}
+          </div>
+        </section>
+
+        <section className={styles.signatureSection}>
+          <h3 className={styles.sectionHeading}>Electronic Signature</h3>
+          <SignaturePad
+            method={agreement.signatureMethod}
+            signatureDataUrl={agreement.signatureDataUrl}
+            onMethodChange={(signatureMethod) => onUpdate({ signatureMethod })}
+            onSignatureChange={(signatureDataUrl) => onUpdate({ signatureDataUrl })}
+          />
+
+          <div className={formStyles.field}>
+            <label className={formStyles.label} htmlFor="typedFullName">
+              Type your full name to sign<span className={formStyles.required}>*</span>
+            </label>
             <input
-              type="checkbox"
-              checked={Boolean(agreement[item.key])}
-              onChange={(event) => onUpdate({ [item.key]: event.target.checked } as Partial<AgreementDraft>)}
+              id="typedFullName"
+              name="agreementSignerName"
+              type="text"
+              autoComplete="name"
+              autoCapitalize="words"
+              className={formStyles.input}
+              value={agreement.typedFullName}
+              onChange={(event) => onUpdate({ typedFullName: event.target.value })}
+              placeholder="Your full legal name"
             />
-            {item.label}
-          </label>
-        ))}
-      </div>
-
-      <h3 className={styles.sectionHeading}>Electronic Signature</h3>
-
-      <SignaturePad
-        method={agreement.signatureMethod}
-        signatureDataUrl={agreement.signatureDataUrl}
-        onMethodChange={(signatureMethod) => onUpdate({ signatureMethod })}
-        onSignatureChange={(signatureDataUrl) => onUpdate({ signatureDataUrl })}
-      />
-
-      <div className={formStyles.field}>
-        <label className={formStyles.label} htmlFor="typedFullName">
-          Type your full name to sign<span className={formStyles.required}>*</span>
-        </label>
-        <input
-          id="typedFullName"
-          name="agreementSignerName"
-          type="text"
-          autoComplete="name"
-          autoCapitalize="words"
-          className={formStyles.input}
-          value={agreement.typedFullName}
-          onChange={(event) => onUpdate({ typedFullName: event.target.value })}
-          placeholder="Your full legal name"
-        />
-        <p className={formStyles.helpText}>
-          Signed on {new Date().toLocaleString()} — this timestamp is recorded at submission.
-        </p>
+            <p className={formStyles.helpText}>
+              Signed on {new Date().toLocaleString()} — recorded at submission.
+            </p>
+          </div>
+        </section>
       </div>
 
       <div className={styles.footer}>

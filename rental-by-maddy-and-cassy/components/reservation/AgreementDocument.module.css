@@ -1,19 +1,19 @@
 .document {
   border: 1px solid var(--color-border);
-  border-radius: 16px;
-  padding: 1.5rem;
+  border-radius: 12px;
+  padding: 0.9rem;
   background: var(--color-background);
-  max-height: 420px;
+  max-height: 300px;
   overflow-y: auto;
 }
 
 .header {
-  margin-bottom: 1rem;
+  margin-bottom: 0.65rem;
 }
 
 .title {
   margin: 0 0 0.25rem;
-  font-size: 1.05rem;
+  font-size: 0.92rem;
   font-weight: 700;
   color: var(--color-text-primary);
 }
@@ -27,13 +27,13 @@
 
 .detailGrid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.9rem;
-  margin: 0 0 1.25rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+  margin: 0 0 0.75rem;
 }
 
 .detailGrid dt {
-  font-size: 0.72rem;
+  font-size: 0.64rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--color-charcoal);
@@ -42,7 +42,7 @@
 
 .detailGrid dd {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.78rem;
   font-weight: 600;
   color: var(--color-text-primary);
 }
@@ -53,15 +53,15 @@
 
 .termsSection {
   border-top: 1px solid var(--color-border);
-  padding-top: 1.1rem;
-  font-size: 0.85rem;
+  padding-top: 0.7rem;
+  font-size: 0.75rem;
   color: var(--color-text-primary);
-  line-height: 1.6;
+  line-height: 1.45;
 }
 
 .termsSection h4 {
-  margin: 1rem 0 0.5rem;
-  font-size: 0.9rem;
+  margin: 0.7rem 0 0.35rem;
+  font-size: 0.82rem;
   color: var(--color-text-primary);
 }
 
@@ -75,7 +75,7 @@
 }
 
 .termsSection li {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.3rem;
 }
 
 .termsSection p {
@@ -85,5 +85,11 @@
 @media (max-width: 560px) {
   .detailGrid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 561px) and (max-width: 900px) {
+  .detailGrid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
