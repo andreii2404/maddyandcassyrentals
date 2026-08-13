@@ -136,7 +136,7 @@
 
 .loading {
   display: flex;
-  min-height: 400px;
+  min-height: 260px;
   align-items: center;
   justify-content: center;
 }

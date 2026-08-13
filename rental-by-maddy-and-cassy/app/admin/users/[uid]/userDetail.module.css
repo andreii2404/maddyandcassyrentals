@@ -192,7 +192,7 @@
 .empty,
 .error {
   margin: 0;
-  padding: 2rem 1.35rem;
+  padding: 1.25rem 1rem;
   color: var(--color-charcoal);
 }
 
@@ -205,7 +205,7 @@
 
 .loading {
   display: flex;
-  min-height: 400px;
+  min-height: 260px;
   align-items: center;
   justify-content: center;
 }

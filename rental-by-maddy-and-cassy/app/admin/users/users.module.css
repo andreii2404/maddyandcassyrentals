@@ -176,7 +176,7 @@
 
 .loading {
   display: flex;
-  min-height: 300px;
+  min-height: 210px;
   align-items: center;
   justify-content: center;
 }
@@ -184,7 +184,7 @@
 .empty,
 .error {
   margin: 0;
-  padding: 2rem 1.3rem;
+  padding: 1.25rem 1rem;
   color: var(--color-charcoal);
 }
 

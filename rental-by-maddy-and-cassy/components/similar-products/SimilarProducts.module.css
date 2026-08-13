@@ -1,10 +1,10 @@
 .section {
-  margin-top: 3rem;
+  margin-top: 1.75rem;
 }
 
 .heading {
-  margin: 0 0 1.2rem;
-  font-size: 1.4rem;
+  margin: 0 0 0.8rem;
+  font-size: 1.2rem;
   font-weight: 700;
   color: var(--color-text-primary);
 }
@@ -12,7 +12,7 @@
 .grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 @media (max-width: 960px) {
@@ -23,6 +23,14 @@
 
 @media (max-width: 640px) {
   .grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: none;
+    grid-auto-columns: min(84vw, 300px);
+    grid-auto-flow: column;
+    overflow-x: auto;
+    padding-bottom: 0.65rem;
+    scroll-snap-type: inline mandatory;
+    scrollbar-width: thin;
   }
+
+  .grid > * { scroll-snap-align: start; }
 }

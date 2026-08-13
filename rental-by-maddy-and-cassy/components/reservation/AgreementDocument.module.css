@@ -1,9 +1,9 @@
 .document {
   border: 1px solid var(--color-border);
   border-radius: 12px;
-  padding: 0.9rem;
+  padding: 0.7rem;
   background: var(--color-background);
-  max-height: 300px;
+  max-height: 240px;
   overflow-y: auto;
 }
 

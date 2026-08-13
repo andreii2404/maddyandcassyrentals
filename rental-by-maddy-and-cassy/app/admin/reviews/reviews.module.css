@@ -415,8 +415,8 @@
 .loading,
 .empty {
   display: grid;
-  min-height: 300px;
-  padding: 2rem;
+  min-height: 210px;
+  padding: 1.25rem;
   place-items: center;
 }
 

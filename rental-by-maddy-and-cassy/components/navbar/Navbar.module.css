@@ -14,8 +14,8 @@
 
 .navbarSpacer {
   width: 100%;
-  height: 76px;
-  flex: 0 0 76px;
+  height: 68px;
+  flex: 0 0 68px;
 }
 
 .inner {
@@ -24,7 +24,7 @@
   align-items: center;
   gap: clamp(1.25rem, 2.5vw, 3rem);
   width: min(100% - 2.5rem, 1380px);
-  min-height: 76px;
+  min-height: 68px;
   margin: 0 auto;
 }
 
@@ -39,8 +39,8 @@
 
 .brandIcon {
   display: grid;
-  width: 46px;
-  height: 46px;
+  width: 42px;
+  height: 42px;
   overflow: hidden;
   flex: 0 0 auto;
   place-items: center;
@@ -472,13 +472,13 @@
 
 @media (max-width: 1050px) {
   .navbarSpacer {
-    height: 70px;
-    flex-basis: 70px;
+    height: 64px;
+    flex-basis: 64px;
   }
 
   .inner {
     grid-template-columns: 1fr auto;
-    min-height: 70px;
+    min-height: 64px;
   }
 
   .brandCopy { display: flex; }
@@ -688,12 +688,12 @@
 
 @media (max-width: 700px) {
   .navbarSpacer {
-    height: 66px;
-    flex-basis: 66px;
+    height: 60px;
+    flex-basis: 60px;
   }
 
-  .inner { width: min(100% - 1.5rem, 1380px); min-height: 66px; }
-  .brandIcon { width: 42px; height: 42px; border-radius: 13px; }
+  .inner { width: min(100% - 1.5rem, 1380px); min-height: 60px; }
+  .brandIcon { width: 38px; height: 38px; border-radius: 12px; }
   .brandCopy strong { font-size: 0.57rem; }
   .brandCopy span { font-size: 0.82rem; }
   .compactActions { gap: 0.3rem; }
@@ -705,7 +705,7 @@
     grid-template-columns: 1fr;
     gap: 1.15rem;
     width: min(100% - 2rem, 640px);
-    max-height: calc(100vh - 66px);
+    max-height: calc(100vh - 60px);
     overflow-y: auto;
     padding: 1.15rem 0 1.4rem;
   }

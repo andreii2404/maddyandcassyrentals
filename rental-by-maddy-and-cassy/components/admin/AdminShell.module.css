@@ -11,12 +11,12 @@
   left: 0;
   display: flex;
   box-sizing: border-box;
-  width: 250px;
+  width: 228px;
   height: 100vh;
   height: 100dvh;
   min-height: 0;
   overflow: hidden;
-  padding: 1.35rem 1.1rem;
+  padding: 1rem 0.85rem;
   border-right: 1px solid var(--color-light-gray);
   background: var(--color-white);
   flex-direction: column;
@@ -26,7 +26,7 @@
   display: flex;
   align-items: center;
   gap: 0.7rem;
-  padding: 0 0.3rem 1.2rem;
+  padding: 0 0.2rem 0.8rem;
   border-bottom: 1px solid var(--color-light-gray);
   flex-shrink: 0;
 }
@@ -76,8 +76,8 @@
   display: flex;
   align-items: center;
   gap: 0.65rem;
-  margin: 1.1rem 0;
-  padding: 0.8rem;
+  margin: 0.75rem 0;
+  padding: 0.6rem;
   border: 1px solid var(--color-light-gray);
   border-radius: 14px;
   background: var(--color-background);
@@ -106,7 +106,7 @@
 }
 
 .navLink {
-  padding: 0.75rem 0.85rem;
+  padding: 0.58rem 0.7rem;
   border-radius: 11px;
   color: var(--color-charcoal);
   font-size: 0.88rem;
@@ -162,8 +162,8 @@
 
 .main {
   min-width: 0;
-  margin-left: 250px;
-  padding: 2.25rem;
+  margin-left: 228px;
+  padding: 1.4rem;
 }
 
 @media (max-width: 820px) {

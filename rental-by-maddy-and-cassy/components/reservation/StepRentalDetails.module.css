@@ -1,13 +1,13 @@
 .wrapper {
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 0.6rem;
 }
 
 .grid {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(270px, 0.85fr);
-  gap: 1.15rem;
+  gap: 0.8rem;
 }
 
 .grid > *,
@@ -25,7 +25,7 @@
 .scheduleGrid {
   display: grid;
   grid-template-columns: minmax(270px, 360px) minmax(165px, 1fr);
-  gap: 0.8rem;
+  gap: 0.6rem;
   align-items: start;
 }
 
@@ -119,7 +119,7 @@
 .fulfillmentColumn {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.55rem;
 }
 
 .fulfillmentFieldset {

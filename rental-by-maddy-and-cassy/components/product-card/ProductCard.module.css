@@ -1,6 +1,6 @@
 .card {
-  width: 280px;
-  border-radius: 20px;
+  width: 230px;
+  border-radius: 16px;
   background: var(--color-white);
   border: 1px solid var(--color-light-gray);
   box-shadow: 0 20px 45px rgba(36, 36, 36, 0.08);
@@ -33,7 +33,7 @@
 }
 
 .info {
-  padding: 1rem 1.1rem 1.2rem;
+  padding: 0.7rem 0.8rem 0.8rem;
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
@@ -72,6 +72,6 @@
 @media (max-width: 640px) {
   .card {
     width: 100%;
-    max-width: 320px;
+    max-width: 280px;
   }
 }

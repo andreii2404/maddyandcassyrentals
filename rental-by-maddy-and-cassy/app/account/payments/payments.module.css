@@ -1,6 +1,6 @@
 .page {
   display: flex;
-  gap: 1.4rem;
+  gap: 1rem;
   flex-direction: column;
 }
 
@@ -93,9 +93,9 @@
 .loading,
 .empty {
   display: grid;
-  min-height: 260px;
+  min-height: 190px;
   place-items: center;
-  padding: 2rem;
+  padding: 1.25rem;
   border: 1px dashed var(--color-border);
   border-radius: 16px;
   text-align: center;

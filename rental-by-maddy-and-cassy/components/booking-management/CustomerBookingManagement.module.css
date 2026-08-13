@@ -1,7 +1,7 @@
 .statusHero,
 .timelineSection,
 .management { border: 1px solid var(--color-border); border-radius: 20px; background: white; box-shadow: 0 12px 34px rgba(40,32,34,0.045); }
-.statusHero { padding: clamp(1.25rem, 4vw, 1.8rem); background: radial-gradient(circle at 100% 0%, rgba(242,210,207,0.7), transparent 42%), white; }
+.statusHero { padding: clamp(.9rem, 2.5vw, 1.25rem); background: radial-gradient(circle at 100% 0%, rgba(242,210,207,0.7), transparent 42%), white; }
 .statusTopline,
 .sectionHeading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
 .statusTopline p,
@@ -15,7 +15,7 @@
 .statusFacts dd { margin: 0.22rem 0 0; color: var(--color-text-primary); font-size: 0.74rem; font-weight: 700; overflow-wrap: anywhere; }
 
 .timelineSection,
-.management { padding: clamp(1.25rem, 4vw, 1.6rem); }
+.management { padding: clamp(.9rem, 2.5vw, 1.2rem); }
 .sectionHeading > span { padding: 0.35rem 0.6rem; border-radius: 999px; background: var(--color-background-soft); color: var(--color-primary); font-size: 0.64rem; font-weight: 700; white-space: nowrap; }
 .headingHelp { display: block; margin-top: 0.38rem; color: var(--color-charcoal); font-size: 0.67rem; font-weight: 400; line-height: 1.5; }
 .managementHint { border: 1px solid rgba(154,89,101,0.11); }

@@ -1,15 +1,15 @@
 .catalog {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 2.5rem 1.5rem 5rem;
+  padding: 1.5rem 1.25rem 3rem;
 }
 
 .header {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 2rem;
-  margin-bottom: 2rem;
+  gap: 1rem;
+  margin-bottom: 1.2rem;
 }
 
 .header > div {
@@ -45,7 +45,7 @@
 
 .heading {
   margin: 0 0 0.6rem;
-  font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+  font-size: clamp(1.55rem, 3vw, 2.2rem);
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--color-text-primary);
@@ -54,14 +54,14 @@
 .subheading {
   margin: 0;
   color: var(--color-charcoal);
-  font-size: 1rem;
+  font-size: 0.88rem;
   line-height: 1.6;
 }
 
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .emptyState {
@@ -69,7 +69,7 @@
   flex-direction: column;
   align-items: center;
   gap: 1rem;
-  padding: 4rem 1rem;
+  padding: 2.5rem 1rem;
   text-align: center;
   color: var(--color-charcoal);
   border: 1px dashed var(--color-light-gray);
@@ -97,5 +97,10 @@
     align-items: flex-start;
     flex-direction: column;
     gap: 1rem;
+  }
+
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
   }
 }

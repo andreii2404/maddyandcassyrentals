@@ -8,29 +8,6 @@ import styles from "./page.module.css";
 
 export const revalidate = 60;
 
-const rentalGuides = [
-  {
-    href: "/how-to-book",
-    label: "How to Book",
-    description: "Follow the booking process from choosing dates to receiving your rental.",
-  },
-  {
-    href: "/rental-requirements",
-    label: "Rental Requirements",
-    description: "Prepare the IDs, profiles, contact details, and agreement needed to rent.",
-  },
-  {
-    href: "/terms",
-    label: "Terms & Conditions",
-    description: "Review deposits, schedules, item care, cancellations, and rental policies.",
-  },
-  {
-    href: "/faq",
-    label: "FAQs",
-    description: "Find quick answers about reservations, payments, extensions, and returns.",
-  },
-] as const;
-
 const bookingSteps = [
   ["01", "Choose your gear", "Browse the catalog, compare daily rates, and open the item you want to rent."],
   ["02", "Set your reservation", "Select one or more rental days, then choose pickup or delivery."],
@@ -247,10 +224,6 @@ export default async function Home() {
             </details>
           </div>
 
-          <div className={styles.aboutCta}>
-            <p>Ready to capture your next memory?</p>
-            <Link href="/catalog" className={styles.ctaButton}>Browse the Catalog</Link>
-          </div>
         </section>
 
         <ReviewCarousel reviews={storefrontReviews} />
@@ -276,26 +249,6 @@ export default async function Home() {
           </div>
         </section>
 
-        <section className={styles.guideSection} aria-labelledby="rental-guide-heading">
-          <div className={styles.guideIntro}>
-            <p className={styles.eyebrow}>BEFORE YOU RENT</p>
-            <h2 id="rental-guide-heading" className={styles.heading}>Everything you need for a smooth rental.</h2>
-            <p className={styles.description}>
-              Read the booking steps, prepare your requirements, and review the
-              rental policies before sending your request.
-            </p>
-          </div>
-
-          <div className={styles.guideGrid}>
-            {rentalGuides.map((guide) => (
-              <Link key={guide.href} href={guide.href} className={styles.guideCard}>
-                <span>{guide.label}</span>
-                <p>{guide.description}</p>
-                <strong aria-hidden="true">Read guide →</strong>
-              </Link>
-            ))}
-          </div>
-        </section>
       </main>
     </div>
   );

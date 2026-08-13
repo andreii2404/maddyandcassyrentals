@@ -1,7 +1,7 @@
 .card {
   display: flex;
-  gap: 1rem;
-  padding: 1.25rem;
+  gap: 0.75rem;
+  padding: 0.9rem;
   border: 1px solid var(--color-border);
   border-radius: 16px;
   background: var(--color-white);
@@ -27,7 +27,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .ref {
@@ -56,7 +56,7 @@
 .detailGrid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 0.7rem;
+  gap: 0.5rem;
 }
 
 .detailGrid dt {

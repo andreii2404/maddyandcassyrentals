@@ -12,8 +12,8 @@
   align-items: center;
   justify-content: center;
   gap: 0.3rem;
-  min-height: 76px;
-  padding: 0.75rem;
+  min-height: 64px;
+  padding: 0.6rem;
   border: 1.5px dashed var(--color-light-gray);
   border-radius: 11px;
   cursor: pointer;
