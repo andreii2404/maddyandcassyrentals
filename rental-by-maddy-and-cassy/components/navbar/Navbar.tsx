@@ -99,6 +99,7 @@ export default function Navbar() {
   }
 
   return (
+    <>
     <header className={styles.navbar}>
       <div className={styles.inner}>
         <Link href="/" className={styles.brand} aria-label="Rental by Maddy & Cassy home">
@@ -329,5 +330,7 @@ export default function Navbar() {
         </div>
       ) : null}
     </header>
+    <div className={styles.navbarSpacer} aria-hidden="true" />
+    </>
   );
 }
