@@ -103,6 +103,11 @@ export default function DateRangePicker({
   }
 
   const selectionEnd = endDate ?? startDate;
+  // Reservation dates may carry the customer's pickup time (for example,
+  // Aug 13 at 7:00 PM), while calendar cells represent midnight. Compare
+  // whole calendar days so the selected start day is included in the range.
+  const selectionStartDay = startDate ? startOfDay(startDate) : null;
+  const selectionEndDay = selectionEnd ? startOfDay(selectionEnd) : null;
   const monthStart = startOfMonth(visibleMonth);
   const monthEnd = endOfMonth(visibleMonth);
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
@@ -145,8 +150,8 @@ export default function DateRangePicker({
           const booked = !past && isBooked(day);
           const disabled = past || booked;
           const selected =
-            !!startDate && !!selectionEnd
-              ? isWithinInterval(day, { start: startDate, end: selectionEnd })
+            !!selectionStartDay && !!selectionEndDay
+              ? isWithinInterval(day, { start: selectionStartDay, end: selectionEndDay })
               : false;
 
           let statusLabel = "";
