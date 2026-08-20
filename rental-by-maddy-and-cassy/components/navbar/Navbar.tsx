@@ -65,6 +65,10 @@ function getServerHashSnapshot() {
 
 export default function Navbar() {
   const { user, profile, isAdmin } = useAuth();
+  // Anonymous Supabase sessions back guest checkout. They carry a real `user`
+  // object but are not a customer account, so account-only nav must treat
+  // them the same as signed-out visitors.
+  const isAccountHolder = Boolean(user) && !user?.is_anonymous;
   const { favorites } = useFavorites();
   const { totalQuantity } = useCart();
   const router = useRouter();
@@ -183,7 +187,7 @@ export default function Navbar() {
 
           <span className={styles.actionDivider} aria-hidden="true" />
 
-          {user ? (
+          {isAccountHolder ? (
             <details className={styles.profileMenu}>
               <summary className={styles.profileTrigger}>
                 <span className={styles.profileAvatar}>{initial}</span>
@@ -305,8 +309,8 @@ export default function Navbar() {
             </nav>
 
             <div className={styles.mobileAccount}>
-              <p className={styles.mobileLabel}>{user ? "Your Account" : "Account"}</p>
-              {user ? (
+              <p className={styles.mobileLabel}>{isAccountHolder ? "Your Account" : "Account"}</p>
+              {isAccountHolder ? (
                 <>
                   <div className={styles.mobileProfileSummary}>
                     <span className={styles.profileAvatar}>{initial}</span>

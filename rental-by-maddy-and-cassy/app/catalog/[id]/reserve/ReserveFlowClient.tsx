@@ -128,7 +128,7 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
         fullName: current.customerInfo.fullName || (isGuest ? "" : profile?.displayName ?? (user.user_metadata?.display_name as string | undefined) ?? ""),
         email: current.customerInfo.email || (isGuest ? "" : profile?.email ?? user.email ?? ""),
         phone: current.customerInfo.phone || profile?.phoneNumber || "",
-        birthDate: current.customerInfo.birthDate || profile?.birthDate || "",
+        birthDate: current.customerInfo.birthDate || (isGuest ? "" : profile?.birthDate) || "",
         streetBarangay: current.customerInfo.streetBarangay || profileAddress.streetBarangay,
         cityMunicipality: current.customerInfo.cityMunicipality || profileAddress.cityMunicipality,
         province: current.customerInfo.province || profileAddress.province,
@@ -377,7 +377,7 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
     currency: product.currency,
     includedAccessories: product.included,
   } as const;
-  const pricing = calculateReservationPricing(product, draft, rewardProgress);
+  const pricing = calculateReservationPricing(product, draft, rewardProgress, isGuest);
 
   return (
     <div className={styles.wrapper}>
@@ -469,8 +469,8 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
             }
             onContinue={() => goToStep(2)}
             isGuest={isGuest}
-            birthDateLocked={Boolean(profile?.birthDate)}
-            birthDateVerified={Boolean(profile?.birthDateVerifiedAt)}
+            birthDateLocked={!isGuest && Boolean(profile?.birthDate)}
+            birthDateVerified={!isGuest && Boolean(profile?.birthDateVerifiedAt)}
           />
         ) : null}
 
@@ -490,6 +490,7 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
             product={product}
             draft={draft}
             rewardProgress={rewardProgress}
+            isGuest={isGuest}
             paymentState={paymentState}
             isDemoPayment={isDemoPayment}
             bookingId={bookingId ?? undefined}

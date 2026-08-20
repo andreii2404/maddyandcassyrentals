@@ -30,19 +30,22 @@ export function calculateReservationPricing(
     customerInfo: Pick<ReservationDraft["customerInfo"], "birthDate">;
   },
   rewardProgress: RewardProgress = { completedRentals: 0, loyaltyRewardUsed: false },
+  isGuest = false,
 ): ReservationPricing {
   const quantity = Math.max(1, Math.floor(draft.quantity || 1));
   const rentalDays = getDayCount(draft.startDate, draft.endDate);
   const listSubtotal = currency(product.listPricePerDay * rentalDays * quantity);
   const productSubtotal = currency(product.pricePerDay * rentalDays * quantity);
   const catalogDiscountAmount = currency(Math.max(0, listSubtotal - productSubtotal));
+  // Birthday Month Discount and loyalty rewards are account-based perks --
+  // guest checkout never qualifies, regardless of what the draft carries.
   const perks = calculatePerkDiscounts({
     rentalSubtotal: productSubtotal,
-    birthDate: draft.customerInfo.birthDate,
+    birthDate: isGuest ? undefined : draft.customerInfo.birthDate,
     startDate: draft.startDate,
     endDate: draft.endDate,
-    completedRentals: rewardProgress.completedRentals,
-    loyaltyRewardUsed: rewardProgress.loyaltyRewardUsed,
+    completedRentals: isGuest ? 0 : rewardProgress.completedRentals,
+    loyaltyRewardUsed: isGuest ? true : rewardProgress.loyaltyRewardUsed,
   });
   const birthdayDiscountAmount = currency(perks.birthdayDiscountAmount);
   const loyaltyDiscountAmount = currency(perks.loyaltyDiscountAmount);

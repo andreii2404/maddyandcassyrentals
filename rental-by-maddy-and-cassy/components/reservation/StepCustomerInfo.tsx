@@ -66,6 +66,14 @@ export default function StepCustomerInfo({
   async function handleContinue() {
     if (!validate()) return;
 
+    // Guest checkout is an anonymous Supabase session, not a customer
+    // account -- the details entered here belong on the booking snapshot
+    // only (see bookingSubmissionService), not on a persisted profile row.
+    if (isGuest) {
+      onContinue();
+      return;
+    }
+
     setSaving(true);
     setSaveError(null);
     try {
@@ -153,27 +161,29 @@ export default function StepCustomerInfo({
           {errors.phone ? <p className={formStyles.errorText}>{errors.phone}</p> : null}
         </div>
 
-        <div className={formStyles.field}>
-          <label className={formStyles.label} htmlFor="birthDate">
-            Birth date <span className={styles.optional}>(birthday perk)</span>
-          </label>
-          <input
-            id="birthDate"
-            type="date"
-            autoComplete="bday"
-            max={getMaxBirthDate()}
-            disabled={birthDateLocked}
-            className={`${formStyles.input} ${errors.birthDate ? formStyles.inputError : ""}`}
-            value={customerInfo.birthDate}
-            onChange={(event) => onUpdate({ birthDate: event.target.value })}
-          />
-          <p className={styles.fieldNote}>
-            {birthDateVerified
-              ? "Verified. Eligible birth-month rentals receive ₱100 off automatically."
-              : "Optional. The date must match the valid ID submitted during verification."}
-          </p>
-          {errors.birthDate ? <p className={formStyles.errorText}>{errors.birthDate}</p> : null}
-        </div>
+        {!isGuest ? (
+          <div className={formStyles.field}>
+            <label className={formStyles.label} htmlFor="birthDate">
+              Birth date <span className={styles.optional}>(birthday perk)</span>
+            </label>
+            <input
+              id="birthDate"
+              type="date"
+              autoComplete="bday"
+              max={getMaxBirthDate()}
+              disabled={birthDateLocked}
+              className={`${formStyles.input} ${errors.birthDate ? formStyles.inputError : ""}`}
+              value={customerInfo.birthDate}
+              onChange={(event) => onUpdate({ birthDate: event.target.value })}
+            />
+            <p className={styles.fieldNote}>
+              {birthDateVerified
+                ? "Verified. Eligible birth-month rentals receive ₱100 off automatically."
+                : "Optional. The date must match the valid ID submitted during verification."}
+            </p>
+            {errors.birthDate ? <p className={formStyles.errorText}>{errors.birthDate}</p> : null}
+          </div>
+        ) : null}
       </div>
 
       <div className={formStyles.field}>
