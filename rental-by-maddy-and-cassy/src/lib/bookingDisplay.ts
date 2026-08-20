@@ -3,13 +3,23 @@ import type { BookingItemsSummaryItem } from "@/components/booking-summary/Booki
 
 /**
  * Short human label for a booking's product(s) -- a single-item booking
- * reads exactly like before ("Canon EOS R5"), a multi-item booking gets a
- * "+N more" suffix instead of silently showing only the first product.
+ * reads exactly like before ("Canon EOS R5"), a multi-item booking reads as
+ * "3-Item Rental" instead of silently showing only the first product.
  */
 export function bookingHeadline(items: Pick<Booking["items"][number], "productName">[]): string {
   if (items.length === 0) return "Booking";
   if (items.length === 1) return items[0].productName;
-  return `${items[0].productName} + ${items.length - 1} more item${items.length - 1 === 1 ? "" : "s"}`;
+  return `${items.length}-Item Rental`;
+}
+
+/** Total unit count across every product on the booking, for list/card views that show one quantity figure. */
+export function bookingTotalQuantity(items: Pick<Booking["items"][number], "quantity">[]): number {
+  return items.reduce((sum, item) => sum + item.quantity, 0);
+}
+
+/** Total daily cost across every product on the booking (sum of each line's dailyRate * quantity). */
+export function bookingTotalDailyRate(items: Pick<Booking["items"][number], "dailyRate" | "quantity">[]): number {
+  return items.reduce((sum, item) => sum + item.dailyRate * item.quantity, 0);
 }
 
 /**

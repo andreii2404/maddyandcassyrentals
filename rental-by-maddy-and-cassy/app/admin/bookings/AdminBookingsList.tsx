@@ -18,6 +18,7 @@ import {
   getFulfillmentProgressLabel,
   type BookingHistoryFilter,
 } from "@/src/lib/bookingManagement";
+import { bookingHeadline } from "@/src/lib/bookingDisplay";
 import styles from "./bookings.module.css";
 
 const STATUS_OPTIONS: Array<{ value: "" | BookingStatus; label: string }> = [
@@ -86,7 +87,7 @@ export default function AdminBookingsList() {
       const user = usersById.get(booking.customerId);
       return [
         booking.bookingRef,
-        booking.productSnapshot.name,
+        ...booking.items.map((item) => item.productName),
         customerName(booking, user),
         booking.customerSnapshot?.email,
         user?.email,
@@ -208,7 +209,7 @@ export default function AdminBookingsList() {
                         <strong>{customerName(booking, user)}</strong>
                         <small>{booking.customerSnapshot?.email || user?.email || "-"}</small>
                       </td>
-                      <td>{booking.productSnapshot.name}</td>
+                      <td>{bookingHeadline(booking.items)}</td>
                       <td>
                         {formatDate(booking.startDate)} - {formatDate(booking.endDate)}
                       </td>

@@ -4,6 +4,7 @@ import { sendBookingStatusEmail } from "@/src/lib/server/bookingStatusEmail";
 import { enforceRateLimit, requireActiveAdmin, RequestSecurityError } from "@/src/lib/server/requestSecurity";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 import type { BookingStatus } from "@/src/types/booking";
+import { bookingHeadline } from "@/src/lib/bookingDisplay";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -97,7 +98,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
 
     if (isEmailBookingStatus(targetStatus)) {
       const admin = createAdminClient();
-      const [{ data: profile }, { data: item }] = await Promise.all([
+      const [{ data: profile }, { data: items }] = await Promise.all([
         admin
           .from("profiles")
           .select("display_name, contact_email")
@@ -107,9 +108,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
           .from("booking_items")
           .select("product_name_snapshot")
           .eq("booking_id", bookingId)
-          .order("created_at", { ascending: true })
-          .limit(1)
-          .maybeSingle(),
+          .order("created_at", { ascending: true }),
       ]);
 
       let customerEmail = profile?.contact_email?.trim() ?? "";
@@ -124,7 +123,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
         bookingReference: data.booking_reference,
         customerName: profile?.display_name || "Customer",
         customerEmail,
-        productName: item?.product_name_snapshot,
+        productName: bookingHeadline(
+          (items ?? []).map((row) => ({ productName: row.product_name_snapshot ?? "Rental item" })),
+        ),
         status: targetStatus,
         statusChangedAt: changedAt || data.updated_at,
         bookingUrl: `${new URL(request.url).origin}/account/bookings/${encodeURIComponent(bookingId)}`,
