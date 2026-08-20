@@ -1,4 +1,4 @@
-import type { Booking, BookingStatus, FulfillmentMethod } from "@/src/types/booking";
+import type { Booking, BookingStatus, FulfillmentMethod, StatusHistoryEntry } from "@/src/types/booking";
 
 export type BookingHistoryFilter = "all" | "ongoing" | "completed" | "cancelled";
 
@@ -53,11 +53,20 @@ export function getFulfillmentProgressLabel(
   fulfillmentMethod: FulfillmentMethod,
 ): string {
   if (status === "returned") return "Completed";
-  if (status === "cancelled" || status === "rejected") return "Closed";
+  if (status === "cancelled") return "Closed";
+  if (status === "rejected") return "Rejected";
   if (status === "released") return fulfillmentMethod === "delivery" ? "Out for delivery / received" : "Picked up";
   if (status === "ready_for_release") return fulfillmentMethod === "delivery" ? "Ready for delivery" : "Ready for pickup";
   if (status === "confirmed") return "Preparing item";
   return fulfillmentMethod === "delivery" ? "Delivery pending" : "Pickup pending";
+}
+
+/** The admin's note on the entry that moved this booking to 'rejected', if any. */
+export function getRejectionReason(statusHistory: StatusHistoryEntry[]): string | undefined {
+  const entry = [...statusHistory]
+    .reverse()
+    .find((item) => item.toStatus === "rejected");
+  return entry?.note;
 }
 
 export function canCustomerCancelBooking(status: BookingStatus): boolean {

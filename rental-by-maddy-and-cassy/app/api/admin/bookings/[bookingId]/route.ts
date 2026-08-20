@@ -8,8 +8,8 @@ import type { BookingStatus } from "@/src/types/booking";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const VALID_STATUSES: BookingStatus[] = ["pending", "approved", "confirmed", "ready_for_release", "released", "returned", "cancelled"];
-const NOTE_REQUIRED = new Set<BookingStatus>(["cancelled"]);
+const VALID_STATUSES: BookingStatus[] = ["pending", "approved", "confirmed", "ready_for_release", "released", "returned", "cancelled", "rejected"];
+const NOTE_REQUIRED = new Set<BookingStatus>(["cancelled", "rejected"]);
 
 function errorResponse(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
