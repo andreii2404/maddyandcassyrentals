@@ -27,6 +27,7 @@ interface DateRangePickerProps {
   disabledDateKeys: Set<string>;
   maxRentalDays?: number;
   singleDate?: boolean;
+  hideSelectionSummary?: boolean;
 }
 
 export default function DateRangePicker({
@@ -36,6 +37,7 @@ export default function DateRangePicker({
   disabledDateKeys,
   maxRentalDays = 30,
   singleDate = false,
+  hideSelectionSummary = false,
 }: DateRangePickerProps) {
   const [visibleMonth, setVisibleMonth] = useState(startOfMonth(startDate ?? new Date()));
   const [error, setError] = useState<string | null>(null);
@@ -191,7 +193,7 @@ export default function DateRangePicker({
         })}
       </div>
 
-      {startDate && selectionEnd ? (
+      {hideSelectionSummary ? null : startDate && selectionEnd ? (
         <p className={styles.selectionSummary} role="status">
           <span className={styles.selectionIcon} aria-hidden="true">✓</span>
           <span>

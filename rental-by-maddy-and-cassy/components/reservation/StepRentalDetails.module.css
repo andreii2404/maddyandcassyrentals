@@ -4,36 +4,44 @@
   gap: 0.6rem;
 }
 
-.grid {
+.layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(270px, 0.85fr);
-  gap: 0.8rem;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
+  gap: 1rem;
+  align-items: start;
 }
 
-.grid > *,
-.scheduleGrid > * {
+.mainColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
   min-width: 0;
 }
 
+.stepSection {
+  min-width: 0;
+}
+
+.stepSection:not(:last-child) {
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--color-light-gray);
+}
+
 .sectionHeading {
-  margin: 0 0 0.55rem;
+  margin: 0 0 0.15rem;
   font-size: 0.9rem;
   font-weight: 700;
   color: var(--color-text-primary);
 }
 
-.scheduleGrid {
-  display: grid;
-  grid-template-columns: minmax(270px, 360px) minmax(165px, 1fr);
-  gap: 0.6rem;
-  align-items: start;
+.sectionHint {
+  margin: 0 0 0.6rem;
+  color: var(--color-charcoal);
+  font-size: 0.72rem;
+  line-height: 1.4;
 }
 
-.scheduleDetails {
-  min-width: 0;
-}
-
-.quantityPanel { display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; gap: .5rem; min-width: 0; margin-top: .65rem; padding: .65rem; border: 1px solid var(--color-light-gray); border-radius: 12px; background: var(--color-background-soft); }
+.quantityPanel { display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; gap: .5rem; min-width: 0; padding: .65rem; border: 1px solid var(--color-light-gray); border-radius: 12px; background: var(--color-background-soft); }
 .quantityPanel label { display: block; color: var(--color-text-primary); font-size: .82rem; font-weight: 700; }
 .quantityPanel span { display: block; margin-top: .1rem; color: var(--color-charcoal); font-size: .64rem; line-height: 1.3; }
 .quantityControl { display: grid; grid-template-columns: 32px minmax(40px, 1fr) 32px; width: min(100%, 132px); min-width: 0; overflow: hidden; border: 1px solid var(--color-dusty-rose); border-radius: 999px; background: var(--color-white); }
@@ -68,6 +76,7 @@
 
 .pickupTimeField input {
   width: 100%;
+  max-width: 220px;
   min-height: 40px;
   padding: 0.55rem 0.7rem;
   border: 1px solid var(--color-border);
@@ -82,29 +91,6 @@
   color: var(--color-charcoal);
 }
 
-.timingSummary {
-  display: grid;
-  gap: 0.4rem;
-  margin: 0.55rem 0 0;
-  padding: 0.65rem;
-  border-radius: 11px;
-  background: var(--color-background-soft);
-}
-
-.timingSummary div {
-  display: grid;
-  gap: 0.08rem;
-}
-
-.timingSummary dt,
-.timingSummary dd {
-  margin: 0;
-  font-size: 0.68rem;
-}
-
-.timingSummary dt { color: var(--color-charcoal); }
-.timingSummary dd { color: var(--color-text-primary); font-weight: 700; text-align: left; overflow-wrap: anywhere; }
-
 .convenienceNotice {
   margin: 0.55rem 0 0;
   padding: 0.55rem 0.65rem;
@@ -114,12 +100,6 @@
   color: var(--color-text-primary);
   font-size: 0.68rem;
   line-height: 1.35;
-}
-
-.fulfillmentColumn {
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
 }
 
 .fulfillmentFieldset {
@@ -170,6 +150,114 @@
   line-height: 1.5;
 }
 
+.summaryColumn {
+  position: sticky;
+  top: 90px;
+  align-self: start;
+}
+
+.summaryCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.85rem;
+  border: 1px solid var(--color-light-gray);
+  border-radius: 16px;
+  background: var(--color-white);
+  box-shadow: 0 12px 34px rgba(36, 36, 36, 0.05);
+}
+
+.summaryEyebrow {
+  margin: 0;
+  color: var(--color-primary);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.summaryProduct {
+  margin: 0 0 0.55rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid var(--color-light-gray);
+  color: var(--color-text-primary);
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.summaryList {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.summaryList > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.summaryList dt {
+  color: var(--color-charcoal);
+  font-size: 0.7rem;
+}
+
+.summaryList dd {
+  margin: 0;
+  max-width: 62%;
+  color: var(--color-text-primary);
+  font-weight: 700;
+  font-size: 0.7rem;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.summaryTotal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.15rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--color-light-gray);
+}
+
+.summaryTotal span {
+  color: var(--color-charcoal);
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.summaryTotal strong {
+  color: var(--color-primary);
+  font-size: 1.08rem;
+  font-weight: 800;
+}
+
+.missingNotice {
+  margin: 0;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--color-dusty-rose);
+  border-radius: 12px;
+  background: var(--color-blush);
+  color: var(--color-text-primary);
+  font-size: 0.68rem;
+}
+
+.missingNotice strong {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.missingNotice ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.missingNotice li {
+  margin: 0.15rem 0;
+  line-height: 1.35;
+}
+
 .footer {
   position: sticky;
   z-index: 5;
@@ -184,34 +272,22 @@
   backdrop-filter: blur(10px);
 }
 
-@media (max-width: 1100px) {
-  .grid {
+@media (max-width: 960px) {
+  .layout {
     grid-template-columns: 1fr;
   }
 
-  .scheduleGrid {
-    grid-template-columns: minmax(280px, 360px) minmax(190px, 1fr);
+  .summaryColumn {
+    position: static;
   }
 }
 
 @media (max-width: 680px) {
-  .scheduleGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .scheduleGrid > :first-child {
-    width: 100%;
+  .pickupTimeField input {
     max-width: none;
   }
-
-  .timingSummary {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .timingSummary dd {
-    font-size: 0.64rem;
-  }
 }
+
 .flowHeading {
   margin: 0;
   font-size: 1.05rem;

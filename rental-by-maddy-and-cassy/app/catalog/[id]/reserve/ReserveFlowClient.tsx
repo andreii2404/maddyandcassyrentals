@@ -410,7 +410,8 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
 
       <ReservationStepper steps={STEP_LABELS} currentStep={step} />
 
-      <div className={styles.flowLayout}>
+      <div className={`${styles.flowLayout} ${step === 2 ? styles.flowLayoutNoSidebar : ""}`}>
+        {step === 2 ? null : (
         <aside className={styles.bookingSummary} aria-label="Selected rental summary">
           <p className={styles.summaryEyebrow}>YOUR SELECTED RENTAL</p>
           <h2>{product.name}</h2>
@@ -454,6 +455,7 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
             <span>Payment is completed manually via GCash before document submission.</span>
           </div>
         </aside>
+        )}
 
         <div className={styles.card}>
           <div className={styles.cardTopline}>
@@ -479,6 +481,7 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
             product={product}
             units={units}
             draft={draft}
+            pricing={pricing}
             onUpdate={updateDraft}
             onBack={() => goToStep(1)}
             onContinue={() => goToStep(3)}
