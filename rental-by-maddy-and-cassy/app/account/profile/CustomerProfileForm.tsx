@@ -10,7 +10,14 @@ import formStyles from "@/components/ui/Form.module.css";
 import Spinner from "@/components/ui/Spinner";
 import styles from "./profile.module.css";
 import PushNotificationButton from "@/components/push/PushNotificationButton";
-import { isValidPhoneNumber, normalizePhoneInput, PHONE_DIGIT_COUNT } from "@/src/lib/authValidation";
+import {
+  getMaxBirthDate,
+  isAtLeastMinimumAge,
+  isValidPhoneNumber,
+  normalizePhoneInput,
+  PHONE_DIGIT_COUNT,
+  UNDERAGE_ERROR_MESSAGE,
+} from "@/src/lib/authValidation";
 
 interface ProfileDraft {
   displayName: string;
@@ -101,6 +108,11 @@ function CustomerProfileEditor({
 
     if (draft.birthDate && new Date(`${draft.birthDate}T00:00:00`) > new Date()) {
       showToast("Birth date cannot be in the future.", "error");
+      return;
+    }
+
+    if (draft.birthDate && !isAtLeastMinimumAge(draft.birthDate)) {
+      showToast(UNDERAGE_ERROR_MESSAGE, "error");
       return;
     }
 
@@ -214,7 +226,7 @@ function CustomerProfileEditor({
               className={formStyles.input}
               value={draft.birthDate}
               onChange={(event) => updateDraft("birthDate", event.target.value)}
-              max={new Date().toISOString().slice(0, 10)}
+              max={getMaxBirthDate()}
               disabled={Boolean(profile.birthDate)}
             />
             <p className={styles.fieldNote}>

@@ -4,7 +4,14 @@ import { useState } from "react";
 import { formatCustomerAddress, type CustomerInfoDraft } from "@/src/types/reservationDraft";
 import { PHILIPPINE_PROVINCES } from "@/src/data/philippineLocations";
 import { updateUserProfile } from "@/src/services/userService";
-import { isValidPhoneNumber, normalizePhoneInput, PHONE_DIGIT_COUNT } from "@/src/lib/authValidation";
+import {
+  getMaxBirthDate,
+  isAtLeastMinimumAge,
+  isValidPhoneNumber,
+  normalizePhoneInput,
+  PHONE_DIGIT_COUNT,
+  UNDERAGE_ERROR_MESSAGE,
+} from "@/src/lib/authValidation";
 import formStyles from "@/components/ui/Form.module.css";
 import styles from "./StepShared.module.css";
 
@@ -44,6 +51,8 @@ export default function StepCustomerInfo({
     }
     if (customerInfo.birthDate && new Date(`${customerInfo.birthDate}T00:00:00`) > new Date()) {
       nextErrors.birthDate = "Birth date cannot be in the future.";
+    } else if (customerInfo.birthDate && !isAtLeastMinimumAge(customerInfo.birthDate)) {
+      nextErrors.birthDate = UNDERAGE_ERROR_MESSAGE;
     }
     if (!customerInfo.streetBarangay.trim()) nextErrors.streetBarangay = "Street and barangay are required.";
     if (!customerInfo.cityMunicipality.trim()) nextErrors.cityMunicipality = "City or municipality is required.";
@@ -152,7 +161,7 @@ export default function StepCustomerInfo({
             id="birthDate"
             type="date"
             autoComplete="bday"
-            max={new Date().toISOString().slice(0, 10)}
+            max={getMaxBirthDate()}
             disabled={birthDateLocked}
             className={`${formStyles.input} ${errors.birthDate ? formStyles.inputError : ""}`}
             value={customerInfo.birthDate}

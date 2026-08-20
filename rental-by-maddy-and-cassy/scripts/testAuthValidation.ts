@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   getPasswordValidationErrors,
+  isAtLeastMinimumAge,
   isValidBirthDate,
   isStrongPassword,
   isValidPhoneNumber,
@@ -28,6 +29,14 @@ test("birthdates must be real, reasonable, and not in the future", () => {
   assert.equal(isValidBirthDate("2026-02-30", today), false);
   assert.equal(isValidBirthDate("1899-12-31", today), false);
   assert.equal(isValidBirthDate("", today), false);
+});
+
+test("registrants must be at least 18 years old", () => {
+  const today = new Date("2026-08-11T12:00:00+08:00");
+  assert.equal(isAtLeastMinimumAge("2008-08-11", today), true);
+  assert.equal(isAtLeastMinimumAge("2000-08-24", today), true);
+  assert.equal(isAtLeastMinimumAge("2008-08-12", today), false);
+  assert.equal(isAtLeastMinimumAge("2010-01-01", today), false);
 });
 
 test("new passwords require a balanced minimum strength", () => {
