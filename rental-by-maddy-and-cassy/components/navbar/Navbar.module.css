@@ -124,7 +124,7 @@
 
 .link:hover,
 .guideTrigger:hover,
-.guideMenu[open] .guideTrigger {
+.guideTriggerOpen {
   background: rgba(242, 210, 207, 0.42);
   color: var(--color-primary-hover);
 }
@@ -137,7 +137,7 @@
 .linkActive::after,
 .link:hover::after,
 .guideTrigger:hover::after,
-.guideMenu[open] .guideTrigger::after {
+.guideTriggerOpen::after {
   opacity: 1;
   transform: scaleX(1);
 }
@@ -149,17 +149,17 @@
 
 .guideTrigger,
 .profileTrigger {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  border: 0;
+  font: inherit;
   cursor: pointer;
-  list-style: none;
-}
-
-.guideTrigger::-webkit-details-marker,
-.profileTrigger::-webkit-details-marker {
-  display: none;
 }
 
 .guideTrigger {
   gap: 0.4rem;
+  background: none;
 }
 
 .guideTrigger > svg,
@@ -172,8 +172,8 @@
   transition: transform 180ms ease;
 }
 
-.guideMenu[open] .guideTrigger > svg,
-.profileMenu[open] .profileTrigger > svg {
+.guideTriggerOpen > svg,
+.profileTriggerOpen > svg {
   transform: rotate(180deg);
 }
 
@@ -361,7 +361,7 @@
 }
 
 .profileTrigger:hover,
-.profileMenu[open] .profileTrigger {
+.profileTriggerOpen {
   border-color: rgba(154, 89, 101, 0.3);
   background: white;
 }
