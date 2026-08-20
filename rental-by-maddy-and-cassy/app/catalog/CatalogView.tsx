@@ -9,6 +9,7 @@ import CatalogFilters, {
   type SortOption,
 } from "@/components/catalog-filters/CatalogFilters";
 import CatalogProductCard from "@/components/catalog-product-card/CatalogProductCard";
+import HeartIcon from "@/components/icons/HeartIcon";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useInventoryMap } from "@/hooks/useInventory";
 import styles from "./catalog.module.css";
@@ -78,6 +79,8 @@ export default function CatalogView({
       sorted.sort((a, b) => a.pricePerDay - b.pricePerDay);
     } else if (sort === "price-desc") {
       sorted.sort((a, b) => b.pricePerDay - a.pricePerDay);
+    } else if (sort === "rating-desc") {
+      sorted.sort((a, b) => b.rating - a.rating || b.reviewCount - a.reviewCount);
     } else if (sort === "name-asc") {
       sorted.sort((a, b) => a.name.localeCompare(b.name));
     }
@@ -91,12 +94,11 @@ export default function CatalogView({
         <div>
           <p className={styles.eyebrow}>RENTAL ITEM CATALOG</p>
           <h1 className={styles.heading}>Browse Our Gear</h1>
-          <p className={styles.subheading}>
-            Explore all {products.length} active listings, compare daily rates,
-            and check current unit availability before reserving.
-          </p>
         </div>
-        <Link href="/favorites" className={styles.favoritesLink}>View favorites</Link>
+        <Link href="/favorites" className={styles.favoritesLink}>
+          <HeartIcon size={16} />
+          View Favorites
+        </Link>
       </div>
 
       <CatalogFilters
