@@ -357,6 +357,32 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
     }
   }
 
+  async function handleManualPaymentContinue() {
+    if (!user) return;
+    setOpeningPayment(true);
+    setPaymentError(null);
+
+    try {
+      let activeBookingId = bookingId;
+      let activeBookingNumber = bookingNumber;
+      if (!activeBookingId) {
+        const supabase = createClient();
+        const reservation = await createBookingReservation(supabase, product, draft);
+        activeBookingId = reservation.bookingId;
+        activeBookingNumber = reservation.bookingNumber ?? reservation.bookingId;
+        setBookingId(activeBookingId);
+        setBookingNumber(activeBookingNumber);
+      }
+      goToStep(4);
+    } catch (error) {
+      setPaymentError(
+        error instanceof Error ? error.message : "We couldn't save your reservation. Please try again.",
+      );
+    } finally {
+      setOpeningPayment(false);
+    }
+  }
+
   async function handleDocumentSubmission() {
     if (!user || !bookingId || !bookingNumber) return;
     setSubmittingDocuments(true);
@@ -469,7 +495,7 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
           </Link>
           <div className={styles.secureNote}>
             <strong>Secure booking flow</strong>
-            <span>Payment is completed through PayMongo before document submission.</span>
+            <span>Payment is completed manually via GCash before document submission.</span>
           </div>
         </aside>
 
@@ -517,9 +543,12 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
             checking={checkingPayment}
             error={paymentError}
             onPaymentOptionChange={(paymentOption) => updateDraft({ paymentOption })}
+            onManualPaymentUpdate={(patch) =>
+              updateDraft({ manualPayment: { ...draft.manualPayment, ...patch } })
+            }
             onBack={() => goToStep(2)}
             onPay={() => void handlePayment()}
-            onContinue={() => goToStep(4)}
+            onContinue={() => void handleManualPaymentContinue()}
           />
         ) : null}
 

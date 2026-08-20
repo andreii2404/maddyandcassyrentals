@@ -29,6 +29,11 @@ interface StoredReservationProgress {
     province: string;
     paymentOption: ReservationDraft["paymentOption"];
     customerInfo: CustomerInfoDraft;
+    manualPayment: {
+      referenceNumber: string;
+      accountName: string;
+      accountNumber: string;
+    };
     requirements: {
       facebookLink: string;
       instagramLink: string;
@@ -103,6 +108,11 @@ export function serializeReservationProgress(input: {
       province: input.draft.province,
       paymentOption: input.draft.paymentOption,
       customerInfo: input.draft.customerInfo,
+      manualPayment: {
+        referenceNumber: input.draft.manualPayment.referenceNumber,
+        accountName: input.draft.manualPayment.accountName,
+        accountNumber: input.draft.manualPayment.accountNumber,
+      },
       requirements: {
         facebookLink: input.draft.requirements.facebookLink,
         instagramLink: input.draft.requirements.instagramLink,
@@ -146,6 +156,7 @@ export function restoreReservationProgress(
     const empty = createEmptyDraft();
     const draft = stored.draft as Partial<StoredReservationProgress["draft"]>;
     const customer = (draft.customerInfo ?? {}) as Partial<CustomerInfoDraft>;
+    const manualPayment = (draft.manualPayment ?? {}) as Partial<StoredReservationProgress["draft"]["manualPayment"]>;
     const requirements = (draft.requirements ?? {}) as Partial<StoredReservationProgress["draft"]["requirements"]>;
     const emergency = (requirements.emergencyContact ?? {}) as Partial<StoredReservationProgress["draft"]["requirements"]["emergencyContact"]>;
     const agreement = (draft.agreement ?? {}) as Partial<StoredReservationProgress["draft"]["agreement"]>;
@@ -194,6 +205,12 @@ export function restoreReservationProgress(
           address: text(customer.address),
           facebookLink: text(customer.facebookLink),
           instagramLink: text(customer.instagramLink),
+        },
+        manualPayment: {
+          ...empty.manualPayment,
+          referenceNumber: text(manualPayment.referenceNumber),
+          accountName: text(manualPayment.accountName),
+          accountNumber: text(manualPayment.accountNumber),
         },
         requirements: {
           ...empty.requirements,
