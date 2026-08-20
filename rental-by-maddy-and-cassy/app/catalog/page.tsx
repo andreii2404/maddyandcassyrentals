@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Navbar from "@/components/navbar/Navbar";
 import { getActiveProducts } from "@/src/services/productService";
 import CatalogView from "./CatalogView";
 
@@ -21,7 +20,6 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
 
   return (
     <div>
-      <Navbar />
       <main>
         <CatalogView
           products={products}

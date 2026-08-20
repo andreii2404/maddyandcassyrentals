@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import Navbar from "@/components/navbar/Navbar";
 import { getProductById } from "@/src/services/productService";
 import ReserveFlowClient from "./ReserveFlowClient";
 
@@ -34,7 +33,6 @@ export default async function ReservePage({ params, searchParams }: ReservePageP
 
   return (
     <div>
-      <Navbar />
       <main>
         <ReserveFlowClient
           product={product}

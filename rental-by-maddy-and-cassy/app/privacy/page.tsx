@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Navbar from "@/components/navbar/Navbar";
 import GuidePage, { type GuideSection } from "@/components/rental-guide/GuidePage";
 
 const sections: GuideSection[] = [
@@ -70,7 +69,6 @@ export const metadata: Metadata = {
 export default function PrivacyPage() {
   return (
     <div>
-      <Navbar />
       <GuidePage
         eyebrow="CUSTOMER PRIVACY"
         title="Privacy Notice"

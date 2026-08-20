@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import Navbar from "@/components/navbar/Navbar";
 import { getActiveProducts, getProductById } from "@/src/services/productService";
 import ProductDetailsClient from "./ProductDetailsClient";
 import styles from "./details.module.css";
@@ -42,7 +41,6 @@ export default async function ProductDetailsPage({ params }: ProductDetailsPageP
 
   return (
     <div>
-      <Navbar />
       <main className={styles.main}>
         <ProductDetailsClient product={product} similarProducts={similarProducts} />
       </main>

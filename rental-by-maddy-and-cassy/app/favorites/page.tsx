@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Navbar from "@/components/navbar/Navbar";
 import { getActiveProducts } from "@/src/services/productService";
 import FavoritesView from "./FavoritesView";
 
@@ -15,7 +14,6 @@ export default async function FavoritesPage() {
 
   return (
     <div>
-      <Navbar />
       <main>
         <FavoritesView products={products} />
       </main>

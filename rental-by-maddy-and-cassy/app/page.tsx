@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Navbar from "@/components/navbar/Navbar";
 import Hero from "@/components/hero/Hero";
 import FeaturedProducts from "@/components/storefront/FeaturedProducts";
 import ReviewCarousel, { type StorefrontReview } from "@/components/storefront/ReviewCarousel";
@@ -52,7 +51,6 @@ export default async function Home() {
 
   return (
     <div className={styles.page}>
-      <Navbar />
       <main>
         <Hero products={products} />
 

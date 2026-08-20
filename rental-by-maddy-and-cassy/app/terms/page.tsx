@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Navbar from "@/components/navbar/Navbar";
 import GuidePage, { type GuideSection } from "@/components/rental-guide/GuidePage";
 
 const sections: GuideSection[] = [
@@ -94,7 +93,6 @@ export const metadata: Metadata = {
 export default function TermsPage() {
   return (
     <div>
-      <Navbar />
       <GuidePage
         eyebrow="RENTAL POLICY"
         title="Terms & Conditions"

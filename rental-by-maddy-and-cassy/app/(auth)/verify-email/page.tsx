@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
-import Navbar from "@/components/navbar/Navbar";
 import VerifyEmailForm from "./VerifyEmailForm";
 import styles from "../auth.module.css";
 
@@ -13,7 +12,6 @@ export const metadata: Metadata = {
 export default function VerifyEmailPage() {
   return (
     <div>
-      <Navbar />
       <main className={styles.main}>
         <div className={styles.authLayout}>
           <section className={styles.authIntro} aria-labelledby="verify-account-heading">

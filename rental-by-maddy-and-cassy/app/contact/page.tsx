@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Navbar from "@/components/navbar/Navbar";
 import styles from "./contact.module.css";
 
 const contactMethods = [
@@ -31,7 +30,6 @@ export const metadata: Metadata = {
 export default function ContactPage() {
   return (
     <div>
-      <Navbar />
       <main className={styles.main}>
         <section className={styles.header} aria-labelledby="contact-heading">
           <p className={styles.eyebrow}>CONTACT</p>

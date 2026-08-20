@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Navbar from "@/components/navbar/Navbar";
 import GuidePage, { type GuideSection } from "@/components/rental-guide/GuidePage";
 
 const sections: GuideSection[] = [
@@ -57,7 +56,6 @@ export const metadata: Metadata = {
 export default function RentalRequirementsPage() {
   return (
     <div>
-      <Navbar />
       <GuidePage
         eyebrow="BEFORE YOU BOOK"
         title="Rental Requirements"
