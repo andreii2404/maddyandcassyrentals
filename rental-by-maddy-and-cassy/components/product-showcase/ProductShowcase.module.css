@@ -33,20 +33,41 @@
   z-index: 0;
 }
 
-.cardTop {
+.slot {
   position: relative;
-  z-index: 2;
   flex-shrink: 0;
+  transition: margin 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s ease,
+    filter 0.35s ease;
+  border-radius: 16px;
 }
 
-.cardBottom {
-  position: relative;
+.front {
+  margin: 0;
+  transform: scale(1);
+  z-index: 2;
+}
+
+.back {
+  cursor: pointer;
   z-index: 1;
-  flex-shrink: 0;
   /* ~25% horizontal overlap of the 230px card, offset down far enough
      that the overlap only ever falls on the image, never the info block */
   margin-left: -57px;
   margin-top: 4.5rem;
+  transform: scale(0.92);
+  filter: brightness(0.97);
+}
+
+.back:hover,
+.back:focus-visible {
+  transform: scale(0.95);
+  filter: brightness(1);
+}
+
+.back:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 4px;
 }
 
 /* Column space for the showcase shrinks fast between the two-column and
@@ -59,7 +80,7 @@
     padding: 1.75rem 1.25rem;
   }
 
-  .cardBottom {
+  .back {
     margin-left: -44px;
     margin-top: 6rem;
   }
@@ -73,16 +94,34 @@
     padding: 1.5rem;
     flex-direction: column;
     align-items: center;
-    gap: 1rem;
+    gap: 0;
   }
 
   .glow {
     display: none;
   }
 
-  .cardTop,
-  .cardBottom {
+  /* Overlap gives way to a light in-place peek: the back card stays tucked
+     directly behind the front one (small scale/opacity dip) instead of
+     spreading the layout out, so it stays reachable by a tap or swipe. */
+  .front,
+  .back {
     margin: 0;
+  }
+
+  .front {
+    margin-bottom: 0.85rem;
+  }
+
+  .back {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+
+  .back:hover,
+  .back:focus-visible {
+    transform: scale(0.93);
+    opacity: 0.85;
   }
 }
 
