@@ -181,6 +181,28 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
     if (!state || !selectedStatus || !selectedAction) return;
     setUpdating(true);
     try {
+      const supabase = createClient();
+      const { data: freshBooking, error: freshError } = await supabase
+        .from("bookings")
+        .select("status")
+        .eq("id", bookingId)
+        .maybeSingle();
+      if (freshError) throw new Error("The booking status could not be verified. Please try again.");
+      if (!freshBooking) throw new Error("The selected booking no longer exists.");
+
+      const freshActions = ADMIN_BOOKING_ACTIONS[freshBooking.status as BookingStatus];
+      if (!freshActions.some((action) => action.status === selectedStatus)) {
+        showToast(
+          "This booking's status changed since the page loaded. Details have been refreshed — please review and try again.",
+          "error",
+        );
+        await loadDetails();
+        setStatusConfirmationOpen(false);
+        setSelectedStatus("");
+        setNote("");
+        return;
+      }
+
       const updateResult = await updateAdminBookingStatus(bookingId, selectedStatus, note);
       await loadDetails();
       setStatusConfirmationOpen(false);
