@@ -63,6 +63,11 @@ function getServerHashSnapshot() {
   return "";
 }
 
+function getHrefHash(href: string): string {
+  const index = href.indexOf("#");
+  return index === -1 ? "" : href.slice(index);
+}
+
 export default function Navbar() {
   const { user, profile, isAdmin } = useAuth();
   // Anonymous Supabase sessions back guest checkout. They carry a real `user`
@@ -78,7 +83,13 @@ export default function Navbar() {
   const [profileOpen, setProfileOpen] = useState(false);
   const guideRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
-  const hash = useSyncExternalStore(subscribeToHash, getHashSnapshot, getServerHashSnapshot);
+  const syncedHash = useSyncExternalStore(subscribeToHash, getHashSnapshot, getServerHashSnapshot);
+  // Next.js <Link> navigates same-page hash changes via history.pushState,
+  // which never fires a "hashchange" event, so syncedHash alone lags behind
+  // a click. clickedHash is an optimistic override applied the instant a nav
+  // link is clicked so the active state updates in the same frame.
+  const [clickedHash, setClickedHash] = useState<string | null>(null);
+  const hash = clickedHash ?? syncedHash;
 
   function closeDropdowns() {
     setGuideOpen(false);
@@ -90,6 +101,13 @@ export default function Navbar() {
   useEffect(() => {
     closeDropdowns();
   }, [pathname, hash]);
+
+  // Defer back to the real browser hash once it catches up (back/forward,
+  // full loads) or once a full route change happens, so the override never
+  // goes stale.
+  useEffect(() => {
+    setClickedHash(null);
+  }, [pathname, syncedHash]);
 
   useEffect(() => {
     if (!guideOpen && !profileOpen) return undefined;
@@ -173,7 +191,10 @@ export default function Navbar() {
                 href={item.href}
                 className={`${styles.link} ${active ? styles.linkActive : ""}`}
                 aria-current={active ? "page" : undefined}
-                onClick={closeDropdowns}
+                onClick={() => {
+                  closeDropdowns();
+                  setClickedHash(getHrefHash(item.href));
+                }}
               >
                 {item.label}
               </Link>
@@ -347,7 +368,10 @@ export default function Navbar() {
                     href={item.href}
                     className={`${styles.mobileLink} ${active ? styles.mobileLinkActive : ""}`}
                     aria-current={active ? "page" : undefined}
-                    onClick={closeMenu}
+                    onClick={() => {
+                      closeMenu();
+                      setClickedHash(getHrefHash(item.href));
+                    }}
                   >
                     {item.label}<span aria-hidden="true">→</span>
                   </Link>

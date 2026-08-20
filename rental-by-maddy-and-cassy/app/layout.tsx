@@ -32,7 +32,7 @@ export default function RootLayout({
     <html
       lang="en"
       className={poppins.variable}
-      data-scroll-behavior="smooth"
+      data-scroll-behavior="auto"
       suppressHydrationWarning
     >
       <body>
