@@ -91,6 +91,29 @@ export async function createBookingReservation(
   return { bookingId: result.bookingId, bookingNumber: result.bookingRef };
 }
 
+const UPLOAD_TIMEOUT_MS = 30_000;
+const REQUEST_TIMEOUT_MS = 20_000;
+
+async function fetchWithTimeout(
+  input: string,
+  init: RequestInit,
+  timeoutMs: number,
+  timeoutMessage: string,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error(timeoutMessage);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 function extensionFromContentType(contentType: string): string {
   if (contentType === "image/png") return "png";
   if (contentType === "image/webp") return "webp";
@@ -181,12 +204,15 @@ export async function submitBookingDocuments(bookingId: string, draft: Reservati
     formData.append("file", file);
     let response: Response;
     try {
-      response = await fetch(
+      response = await fetchWithTimeout(
         `/api/bookings/${encodeURIComponent(bookingId)}/documents/upload` +
           `?kind=${encodeURIComponent(kind)}&submissionId=${encodeURIComponent(submissionId)}`,
         { method: "POST", credentials: "same-origin", body: formData },
+        UPLOAD_TIMEOUT_MS,
+        `${label} took too long to upload. Check your connection and try again.`,
       );
-    } catch {
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("took too long")) throw error;
       throw new Error(`${label} could not reach the upload server. Check your connection and try again.`);
     }
     const body = (await response.json().catch(() => null)) as { path?: unknown; error?: unknown } | null;
@@ -196,53 +222,75 @@ export async function submitBookingDocuments(bookingId: string, draft: Reservati
     return body.path;
   }
 
-  const uploadedFiles = {
-    idOne: await uploadDocument("idOne", requirements.idOneFile, "First valid ID"),
-    idTwo: await uploadDocument("idTwo", requirements.idTwoFile, "Second valid ID"),
-    selfie: await uploadDocument("selfie", requirements.selfieFile, "Selfie with ID"),
-    emergencyId: await uploadDocument("emergencyId", requirements.emergencyContact.idFile, "Emergency contact ID"),
-    signature: await uploadDocument("signature", signatureFile, "Electronic signature"),
-  };
+  // These four ID/selfie uploads and the signature upload are independent of
+  // one another (distinct storage paths), so running them in parallel instead
+  // of one-by-one turns the wait into max(latency) instead of sum(latency) --
+  // this was the single biggest contributor to the "Submitting..." delay.
+  const [idOne, idTwo, selfie, emergencyId, signature] = await Promise.all([
+    uploadDocument("idOne", requirements.idOneFile, "First valid ID"),
+    uploadDocument("idTwo", requirements.idTwoFile, "Second valid ID"),
+    uploadDocument("selfie", requirements.selfieFile, "Selfie with ID"),
+    uploadDocument("emergencyId", requirements.emergencyContact.idFile, "Emergency contact ID"),
+    uploadDocument("signature", signatureFile, "Electronic signature"),
+  ]);
+  const uploadedFiles = { idOne, idTwo, selfie, emergencyId, signature };
 
-  const submitResponse = await fetch(`/api/bookings/${encodeURIComponent(bookingId)}/documents/submit`, {
-    method: "POST",
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      submissionId,
-      files: uploadedFiles,
-      facebookLink: requirements.facebookLink.trim(),
-      instagramLink: requirements.instagramLink.trim(),
-      emergencyContact: {
-        fullName: requirements.emergencyContact.fullName.trim(),
-        relationship: requirements.emergencyContact.relationship.trim(),
-        phone: requirements.emergencyContact.phone.trim(),
-        facebookLink: requirements.emergencyContact.facebookLink.trim(),
-      },
-      acknowledgements: {
-        infoAccurate: agreement.infoAccurate,
-        agreedToTerms: agreement.agreedToTerms,
-        understoodRentalRules: agreement.understoodRentalRules,
-        authorizedESignature: agreement.authorizedESignature,
-        readPrivacyNotice: agreement.readPrivacyNotice,
-        emergencyContactAuthorized: agreement.emergencyContactAuthorized,
-      },
-      signatureMethod: agreement.signatureMethod,
-      typedFullName: agreement.typedFullName.trim(),
-    }),
-  });
+  const submitResponse = await fetchWithTimeout(
+    `/api/bookings/${encodeURIComponent(bookingId)}/documents/submit`,
+    {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        submissionId,
+        files: uploadedFiles,
+        facebookLink: requirements.facebookLink.trim(),
+        instagramLink: requirements.instagramLink.trim(),
+        emergencyContact: {
+          fullName: requirements.emergencyContact.fullName.trim(),
+          relationship: requirements.emergencyContact.relationship.trim(),
+          phone: requirements.emergencyContact.phone.trim(),
+          facebookLink: requirements.emergencyContact.facebookLink.trim(),
+        },
+        acknowledgements: {
+          infoAccurate: agreement.infoAccurate,
+          agreedToTerms: agreement.agreedToTerms,
+          understoodRentalRules: agreement.understoodRentalRules,
+          authorizedESignature: agreement.authorizedESignature,
+          readPrivacyNotice: agreement.readPrivacyNotice,
+          emergencyContactAuthorized: agreement.emergencyContactAuthorized,
+        },
+        signatureMethod: agreement.signatureMethod,
+        typedFullName: agreement.typedFullName.trim(),
+      }),
+    },
+    REQUEST_TIMEOUT_MS,
+    "Submitting your documents took too long. Check your connection and try again.",
+  );
   if (!submitResponse.ok) {
     const body = (await submitResponse.json().catch(() => null)) as { error?: unknown } | null;
     throw new Error(typeof body?.error === "string" ? body.error : "The documents could not be securely submitted.");
   }
 
-  const response = await fetch(`/api/bookings/${encodeURIComponent(bookingId)}/documents/agreement`, {
-    method: "POST",
-    credentials: "same-origin",
-  });
-  if (!response.ok) {
-    console.warn("Documents were submitted, but the signed agreement PDF is still being prepared.");
-  }
+  // The signed-agreement PDF (server-side download + render + upload) is the
+  // slowest single step and, per the existing fallback message below, is
+  // already treated as non-fatal -- there's no reason to make the customer
+  // wait on it before moving to the next step. Fire it and let it finish in
+  // the background; documents/agreement is idempotent to retry/regenerate.
+  void fetchWithTimeout(
+    `/api/bookings/${encodeURIComponent(bookingId)}/documents/agreement`,
+    { method: "POST", credentials: "same-origin" },
+    REQUEST_TIMEOUT_MS,
+    "Signed agreement PDF generation timed out.",
+  )
+    .then((response) => {
+      if (!response.ok) {
+        console.warn("Documents were submitted, but the signed agreement PDF is still being prepared.");
+      }
+    })
+    .catch((error) => {
+      console.warn("Documents were submitted, but the signed agreement PDF is still being prepared.", error);
+    });
 }
 
 export async function submitBooking(

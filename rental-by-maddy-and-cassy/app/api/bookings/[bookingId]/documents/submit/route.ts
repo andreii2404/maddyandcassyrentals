@@ -117,47 +117,56 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
       },
     ];
 
-    for (const doc of documentRows) {
-      const { data: customerDocument, error: customerDocumentError } = await admin
-        .from("customer_documents")
-        .insert({
-          owner_user_id: user.id,
-          document_type: doc.type,
-          storage_bucket: "booking-documents",
-          storage_path: doc.path,
-          original_filename: doc.name,
-          status: "active",
-        })
-        .select("id")
-        .single();
-      if (customerDocumentError || !customerDocument) {
-        throw new Error(customerDocumentError?.message ?? "A verification document could not be recorded.");
-      }
-
-      const { data: requirement, error: requirementError } = await admin
-        .from("booking_requirements")
-        .insert({
-          booking_id: bookingId,
-          document_type_snapshot: doc.type,
-          requirement_key_snapshot: doc.type,
-          requirement_name_snapshot: doc.label,
-          is_required: true,
-          status: "pending_review",
-        })
-        .select("id")
-        .single();
-      if (requirementError || !requirement) {
-        throw new Error(requirementError?.message ?? "A booking requirement could not be recorded.");
-      }
-
-      const { error: submissionError } = await admin.from("booking_requirement_submissions").insert({
-        booking_requirement_id: requirement.id,
-        customer_document_id: customerDocument.id,
-        review_status: "pending",
-        submitted_at: now,
-      });
-      if (submissionError) throw new Error(submissionError.message);
+    // The four documents are independent of one another, so recording them as
+    // two bulk inserts (instead of a per-document loop doing three sequential
+    // round trips each) cuts 12 sequential DB calls down to 3. Postgres
+    // preserves input order in RETURNING for a single multi-row INSERT, so
+    // documentRows[i] <-> customerDocuments[i] <-> requirements[i] line up.
+    const [{ data: customerDocuments, error: customerDocumentsError }, { data: requirements, error: requirementsError }] =
+      await Promise.all([
+        admin
+          .from("customer_documents")
+          .insert(
+            documentRows.map((doc) => ({
+              owner_user_id: user.id,
+              document_type: doc.type,
+              storage_bucket: "booking-documents" as const,
+              storage_path: doc.path,
+              original_filename: doc.name,
+              status: "active" as const,
+            })),
+          )
+          .select("id"),
+        admin
+          .from("booking_requirements")
+          .insert(
+            documentRows.map((doc) => ({
+              booking_id: bookingId,
+              document_type_snapshot: doc.type,
+              requirement_key_snapshot: doc.type,
+              requirement_name_snapshot: doc.label,
+              is_required: true,
+              status: "pending_review" as const,
+            })),
+          )
+          .select("id"),
+      ]);
+    if (customerDocumentsError || !customerDocuments || customerDocuments.length !== documentRows.length) {
+      throw new Error(customerDocumentsError?.message ?? "A verification document could not be recorded.");
     }
+    if (requirementsError || !requirements || requirements.length !== documentRows.length) {
+      throw new Error(requirementsError?.message ?? "A booking requirement could not be recorded.");
+    }
+
+    const { error: submissionsError } = await admin.from("booking_requirement_submissions").insert(
+      documentRows.map((_doc, index) => ({
+        booking_requirement_id: requirements[index].id,
+        customer_document_id: customerDocuments[index].id,
+        review_status: "pending" as const,
+        submitted_at: now,
+      })),
+    );
+    if (submissionsError) throw new Error(submissionsError.message);
 
     const agreementSnapshot = {
       customerName: booking.customerSnapshot.fullName || input.typedFullName,
@@ -200,53 +209,64 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
       throw new Error(versionError?.message ?? "Agreement version could not be created.");
     }
 
-    await admin.from("agreement_acknowledgements").insert(
-      (Object.keys(input.acknowledgements) as Array<keyof typeof input.acknowledgements>).map((key) => ({
-        agreement_version_id: agreementVersion.id,
-        user_id: user.id,
-        acknowledgement_key: key,
-        acknowledged: true,
-        acknowledged_at: now,
-      })),
-    );
-
-    await admin.from("agreement_signatures").insert({
-      agreement_version_id: agreementVersion.id,
-      signer_user_id: user.id,
-      signer_role: "customer",
-      signer_name: input.typedFullName,
-      signature_path: input.files.signature,
-      signature_data: { method: input.signatureMethod },
-      signed_at: now,
-    });
-
-    await admin.from("booking_emergency_contacts").upsert(
-      {
-        booking_id: bookingId,
-        full_name: input.emergencyContact.fullName,
-        relationship: input.emergencyContact.relationship,
-        phone_number: input.emergencyContact.phone,
-        address: "",
-      },
-      { onConflict: "booking_id" },
-    );
-
     // requirements_status / agreement_status are derived, not stored columns
-    // on bookings anymore — nothing to update there.
-    await admin.from("booking_status_history").insert({
-      booking_id: bookingId,
-      from_status: booking.status,
-      to_status: booking.status,
-      note: "Customer submitted verification documents and signed the rental agreement.",
-      changed_by: user.id,
-    });
-
-    await admin.rpc("log_audit_event", {
-      p_action: "booking.documents_submitted",
-      p_entity_type: "booking",
-      p_entity_id: bookingId,
-      p_booking_id: bookingId,
-    });
+    // on bookings anymore — nothing to update there. None of these five writes
+    // read each other's results, so run them concurrently instead of as five
+    // sequential round trips.
+    const [
+      { error: acknowledgementsError },
+      { error: signatureError },
+      { error: emergencyContactError },
+      { error: statusHistoryError },
+      { error: auditLogError },
+    ] = await Promise.all([
+      admin.from("agreement_acknowledgements").insert(
+        (Object.keys(input.acknowledgements) as Array<keyof typeof input.acknowledgements>).map((key) => ({
+          agreement_version_id: agreementVersion.id,
+          user_id: user.id,
+          acknowledgement_key: key,
+          acknowledged: true,
+          acknowledged_at: now,
+        })),
+      ),
+      admin.from("agreement_signatures").insert({
+        agreement_version_id: agreementVersion.id,
+        signer_user_id: user.id,
+        signer_role: "customer",
+        signer_name: input.typedFullName,
+        signature_path: input.files.signature,
+        signature_data: { method: input.signatureMethod },
+        signed_at: now,
+      }),
+      admin.from("booking_emergency_contacts").upsert(
+        {
+          booking_id: bookingId,
+          full_name: input.emergencyContact.fullName,
+          relationship: input.emergencyContact.relationship,
+          phone_number: input.emergencyContact.phone,
+          address: "",
+        },
+        { onConflict: "booking_id" },
+      ),
+      admin.from("booking_status_history").insert({
+        booking_id: bookingId,
+        from_status: booking.status,
+        to_status: booking.status,
+        note: "Customer submitted verification documents and signed the rental agreement.",
+        changed_by: user.id,
+      }),
+      admin.rpc("log_audit_event", {
+        p_action: "booking.documents_submitted",
+        p_entity_type: "booking",
+        p_entity_id: bookingId,
+        p_booking_id: bookingId,
+      }),
+    ]);
+    if (acknowledgementsError) throw new Error(acknowledgementsError.message);
+    if (signatureError) throw new Error(signatureError.message);
+    if (emergencyContactError) throw new Error(emergencyContactError.message);
+    if (statusHistoryError) throw new Error(statusHistoryError.message);
+    if (auditLogError) throw new Error(auditLogError.message);
 
     return NextResponse.json({ success: true });
   } catch (error) {

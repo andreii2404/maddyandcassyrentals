@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Product } from "@/types/product";
 import type { UnitCounts } from "@/lib/availability";
@@ -66,6 +66,11 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [receiptReady, setReceiptReady] = useState(false);
   const [submittingDocuments, setSubmittingDocuments] = useState(false);
+  // React state updates (and therefore the disabled button) land a render
+  // after the click; a fast double-click can fire handleDocumentSubmission
+  // twice before that render happens. This ref is set synchronously so the
+  // second call is rejected immediately, regardless of render timing.
+  const documentSubmissionInFlightRef = useRef(false);
   const [prefilled, setPrefilled] = useState(false);
   const [progressHydrated, setProgressHydrated] = useState(false);
   const [progressRestored, setProgressRestored] = useState(false);
@@ -331,6 +336,8 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
 
   async function handleDocumentSubmission() {
     if (!user || !bookingId || !bookingNumber) return;
+    if (documentSubmissionInFlightRef.current) return;
+    documentSubmissionInFlightRef.current = true;
     setSubmittingDocuments(true);
     try {
       await submitBookingDocuments(bookingId, draft);
@@ -341,6 +348,8 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
       }
       removeCartItem(product.id);
       showToast("Verification documents and signed agreement submitted.", "success");
+      // Advance immediately on success -- submitBookingDocuments no longer
+      // waits on the (slow, non-fatal) signed-agreement PDF render.
       goToStep(6);
     } catch (error) {
       showToast(
@@ -348,6 +357,7 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
         "error",
       );
     } finally {
+      documentSubmissionInFlightRef.current = false;
       setSubmittingDocuments(false);
     }
   }
