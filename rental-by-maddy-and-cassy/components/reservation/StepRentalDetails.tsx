@@ -8,6 +8,7 @@ import type { FulfillmentMethod } from "@/src/types/booking";
 import type { ReservationDraft } from "@/src/types/reservationDraft";
 import type { ReservationPricing } from "@/src/lib/reservationPricing";
 import {
+  getFullyBookedDateKeys,
   getTimeAvailability,
   type TimeAvailability,
 } from "@/src/services/availabilityService";
@@ -51,7 +52,7 @@ export default function StepRentalDetails({
   onContinue,
   onBack,
 }: StepRentalDetailsProps) {
-  const disabledDateKeys = useMemo(() => new Set<string>(), []);
+  const [disabledDateKeys, setDisabledDateKeys] = useState<Set<string>>(new Set());
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [timeAvailability, setTimeAvailability] = useState<TimeAvailability | null>(null);
@@ -64,6 +65,26 @@ export default function StepRentalDetails({
     const timer = window.setInterval(() => setNowTick(Date.now()), 30000);
     return () => window.clearInterval(timer);
   }, []);
+
+  // Grey out calendar days that are fully booked for every active unit, from
+  // the same server-backed reserved_window data the pickup-time/quantity/
+  // checkout checks below use -- so the calendar can't show a date as pickable
+  // that the exact-time check would then reject. This is still a UX-only,
+  // day-granularity hint: the authoritative check is getTimeAvailability
+  // below, and the real guard is the create_*_booking RPC at submission.
+  useEffect(() => {
+    let cancelled = false;
+    getFullyBookedDateKeys(product.id)
+      .then((keys) => {
+        if (!cancelled) setDisabledDateKeys(keys);
+      })
+      .catch(() => {
+        if (!cancelled) setDisabledDateKeys(new Set());
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [product.id]);
 
   const pickupAt = useMemo(() => {
     if (!draft.startDate || !isValidPickupTime(draft.pickupTime)) return null;
@@ -308,6 +329,14 @@ export default function StepRentalDetails({
                   ? `${timeAvailability.availableUnits} of ${timeAvailability.totalUnits} unit${timeAvailability.totalUnits === 1 ? "" : "s"} available.`
                   : "Select a date and time to check this unit."}
             </p>
+
+            {timeAvailability && draft.quantity > timeAvailability.availableUnits ? (
+              <p className={formStyles.errorText} role="status">
+                {timeAvailability.nextAvailableAt
+                  ? `This unit is still assigned to a previous rental and will be available starting ${formatManilaDateTime(timeAvailability.nextAvailableAt)}.`
+                  : "This unit is still assigned to a previous rental at this time. Try a different date or pickup time."}
+              </p>
+            ) : null}
 
             {draft.fulfillmentMethod === "pickup" && pickupAt && isOutsideNormalPickupWindow(draft.pickupTime) && timeAvailability ? (
               <p className={styles.convenienceNotice}>

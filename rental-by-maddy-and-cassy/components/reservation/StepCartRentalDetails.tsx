@@ -6,7 +6,11 @@ import type { Product } from "@/types/product";
 import type { FulfillmentMethod } from "@/src/types/booking";
 import type { ReservationDraft } from "@/src/types/reservationDraft";
 import type { MultiItemReservationPricing } from "@/src/lib/reservationPricing";
-import { checkBatchTimeAvailability, type TimeAvailability } from "@/src/services/availabilityService";
+import {
+  checkBatchTimeAvailability,
+  getFullyBookedDateKeys,
+  type TimeAvailability,
+} from "@/src/services/availabilityService";
 import {
   calculateReturnDateTime,
   combineManilaPickupDateTime,
@@ -45,7 +49,7 @@ export default function StepCartRentalDetails({
   onContinue,
   onBack,
 }: StepCartRentalDetailsProps) {
-  const disabledDateKeys = useMemo(() => new Set<string>(), []);
+  const [disabledDateKeys, setDisabledDateKeys] = useState<Set<string>>(new Set());
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [availabilityByProductId, setAvailabilityByProductId] = useState<Map<string, TimeAvailability>>(
@@ -55,11 +59,37 @@ export default function StepCartRentalDetails({
     isPickupTimeInPast(draft.startDate, draft.pickupTime),
   );
   const [nowTick, setNowTick] = useState(() => Date.now());
+  // A plain string, not the `lines` array, so this doesn't refire the
+  // effect below just because the parent re-created the lines array with the
+  // same product ids on an unrelated render.
+  const lineProductIdsKey = lines.map((line) => line.product.id).join(",");
 
   useEffect(() => {
     const timer = window.setInterval(() => setNowTick(Date.now()), 30000);
     return () => window.clearInterval(timer);
   }, []);
+
+  // A day is disabled for the shared cart calendar if any line's product is
+  // fully booked that day -- every line shares the one pickup date/time, so
+  // any single unavailable line should block the date for all of them. Same
+  // server-backed data source as the pickup-time/quantity/checkout checks.
+  useEffect(() => {
+    let cancelled = false;
+    const productIds = lineProductIdsKey ? lineProductIdsKey.split(",") : [];
+    Promise.all(
+      productIds.map((productId) => getFullyBookedDateKeys(productId).catch(() => new Set<string>())),
+    ).then((sets) => {
+      if (cancelled) return;
+      const union = new Set<string>();
+      for (const set of sets) {
+        for (const key of set) union.add(key);
+      }
+      setDisabledDateKeys(union);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [lineProductIdsKey]);
 
   const pickupAt = useMemo(() => {
     if (!draft.startDate || !isValidPickupTime(draft.pickupTime)) return null;
@@ -153,8 +183,11 @@ export default function StepCartRentalDetails({
     } else {
       for (const line of unavailableLines) {
         const availability = availabilityByProductId.get(line.product.id);
+        const availableFrom = availability?.nextAvailableAt
+          ? ` It will be available starting ${formatManilaDateTime(availability.nextAvailableAt)}.`
+          : "";
         missingItems.push(
-          `${line.product.name} is unavailable for these dates — only ${availability?.availableUnits ?? 0} of ${line.quantity} requested unit(s) available.`,
+          `${line.product.name} is unavailable for these dates — only ${availability?.availableUnits ?? 0} of ${line.quantity} requested unit(s) available.${availableFrom}`,
         );
       }
     }
