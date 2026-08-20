@@ -120,7 +120,11 @@ export async function submitBookingWithDateGuard(
     if (error.message.includes("INVALID_QUANTITY")) throw new Error("Choose a valid rental quantity.");
     if (error.message.includes("PICKUP_TIME_IN_PAST")) throw new Error("Choose a future pickup date and time.");
     if (error.message.includes("PICKUP_TIME_REQUIRED")) throw new Error("Choose a pickup date and time.");
-    throw new Error(error.message);
+    // Anything else is an unexpected server-side failure, not something the
+    // customer caused or can fix by re-entering details -- never surface the
+    // raw database error text on the booking/payment screens.
+    console.error("submitBookingWithDateGuard: unexpected booking error", error);
+    throw new Error("We couldn't save your reservation due to a server error. Please try again in a moment.");
   }
 
   const booking = data as Tables<"bookings">;
