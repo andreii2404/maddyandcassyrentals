@@ -18,9 +18,14 @@ const PRODUCT_SELECT = `
 
 /**
  * Customers can't SELECT inventory_units/unit_reservations directly (admin-only
- * RLS), so live unit counts come from the get_product_availability() RPC — the
- * same SECURITY DEFINER function the booking flow uses — scoped to "today" as a
- * point-in-time snapshot for catalog display.
+ * RLS), so the active unit count comes from the get_product_availability() RPC —
+ * the same SECURITY DEFINER function the booking flow uses. total_units is
+ * date-independent (it's just the count of active inventory_units), so catalog
+ * display uses it for both totalUnits and availableUnits: catalog availability
+ * represents whether the product has rentable inventory at all, not whether a
+ * reservation happens to overlap today. Real per-date availability is checked
+ * separately (get_product_availability / get_product_multi_day_time_availability)
+ * once the customer picks rental dates.
  */
 async function fetchAvailabilitySnapshot(
   supabase: SupabaseClient<Database>,
@@ -33,8 +38,8 @@ async function fetchAvailabilitySnapshot(
     p_end_date: today,
   });
   if (error) throw new Error(error.message);
-  const row = data?.[0];
-  return { totalUnits: row?.total_units ?? 0, availableUnits: row?.available_units ?? 0 };
+  const totalUnits = data?.[0]?.total_units ?? 0;
+  return { totalUnits, availableUnits: totalUnits };
 }
 
 /** Reviews are keyed off booking_items now, not products directly, so they're

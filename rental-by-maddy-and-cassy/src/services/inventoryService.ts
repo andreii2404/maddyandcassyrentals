@@ -233,6 +233,14 @@ export async function submitMultiItemBookingWithDateGuard(
   };
 }
 
+/**
+ * total_units from get_product_availability() is date-independent (just the
+ * count of active inventory_units), so it's used for both totalUnits and
+ * availableUnits here: catalog-wide displays represent whether the product has
+ * rentable inventory at all, not whether a reservation happens to overlap
+ * today. Real per-date availability is checked separately once the customer
+ * picks rental dates (see useProductAvailability / availabilityService).
+ */
 async function fetchUnitCounts(
   supabase: SupabaseClient<Database>,
   productId: string,
@@ -244,13 +252,11 @@ async function fetchUnitCounts(
     p_end_date: today,
   });
   if (error) throw new Error(error.message);
-  const row = data?.[0];
-  const totalUnits = row?.total_units ?? 0;
-  const availableUnits = row?.available_units ?? 0;
+  const totalUnits = data?.[0]?.total_units ?? 0;
   return {
     totalUnits,
-    availableUnits,
-    reservedUnits: Math.max(totalUnits - availableUnits, 0),
+    availableUnits: totalUnits,
+    reservedUnits: 0,
     rentedUnits: 0,
   };
 }
