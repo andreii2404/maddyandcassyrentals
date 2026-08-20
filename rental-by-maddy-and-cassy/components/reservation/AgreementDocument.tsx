@@ -27,9 +27,16 @@ function money(currency: string, value: number): string {
   return `${currency}${value.toLocaleString()}`;
 }
 
-export default function AgreementDocument({ data }: { data: AgreementDocumentData }) {
+export default function AgreementDocument({
+  data,
+  variant = "compact",
+}: {
+  data: AgreementDocumentData;
+  /** "expanded" drops the internal scroll cap so the full-screen modal controls scrolling instead. */
+  variant?: "compact" | "expanded";
+}) {
   return (
-    <div className={styles.document}>
+    <div className={variant === "expanded" ? styles.documentExpanded : styles.document}>
       <header className={styles.header}>
         <h3 className={styles.title}>Rental Agreement</h3>
         <p className={styles.ref}>Booking Reference: {data.bookingRef}</p>

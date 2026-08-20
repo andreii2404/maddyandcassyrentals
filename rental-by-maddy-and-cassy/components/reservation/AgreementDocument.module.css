@@ -3,8 +3,12 @@
   border-radius: 12px;
   padding: 0.7rem;
   background: var(--color-background);
-  max-height: 240px;
+  max-height: 420px;
   overflow-y: auto;
+}
+
+.documentExpanded {
+  padding: 0;
 }
 
 .header {
