@@ -14,8 +14,6 @@ export default function Stats({ itemCount, categoryCount }: StatsProps) {
   const stats: Stat[] = [
     { value: String(itemCount), label: "Catalog Listings" },
     { value: String(categoryCount), label: "Gear Categories" },
-    { value: "50%", label: "Reservation Option" },
-    { value: "6", label: "Clear Booking Steps" },
   ];
 
   return (
