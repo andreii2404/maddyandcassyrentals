@@ -15,6 +15,14 @@ interface StepAgreementProps {
   onBack: () => void;
   onContinue: () => void;
   submitting?: boolean;
+  /**
+   * False while assigned-unit codes/serials are still being confirmed, or if
+   * that confirmation failed -- Sign stays disabled either way. Every
+   * booking-creation RPC only ever returns a booking after fully allocating
+   * units, so this is a loading/defensive gate, never expected to fail.
+   */
+  unitsReady?: boolean;
+  unitsCheckError?: string | null;
 }
 
 const CONFIRMATIONS: Array<{ key: keyof AgreementDraft; label: ReactNode }> = [
@@ -66,13 +74,16 @@ export default function StepAgreement({
   onBack,
   onContinue,
   submitting = false,
+  unitsReady = true,
+  unitsCheckError = null,
 }: StepAgreementProps) {
   const allChecked = CONFIRMATIONS.every((item) => Boolean(agreement[item.key]));
   const hasSignature =
     agreement.signatureMethod === "drawn"
       ? !!agreement.signatureDataUrl
       : !!agreement.signatureDataUrl;
-  const canContinue = allChecked && hasSignature && agreement.typedFullName.trim().length > 1;
+  const canContinue =
+    allChecked && hasSignature && agreement.typedFullName.trim().length > 1 && unitsReady && !unitsCheckError;
 
   return (
     <div className={styles.wrapper}>
@@ -131,6 +142,12 @@ export default function StepAgreement({
         </section>
       </div>
 
+      {unitsCheckError ? (
+        <p className={formStyles.errorText} role="alert">
+          {unitsCheckError}
+        </p>
+      ) : null}
+
       <div className={styles.footer}>
         <button
           type="button"
@@ -146,7 +163,11 @@ export default function StepAgreement({
           disabled={!canContinue || submitting}
           onClick={onContinue}
         >
-          {submitting ? "Submitting…" : "Sign & Submit Agreement"}
+          {submitting
+            ? "Submitting…"
+            : !unitsReady && !unitsCheckError
+              ? "Confirming assigned units…"
+              : "Sign & Submit Agreement"}
         </button>
       </div>
     </div>

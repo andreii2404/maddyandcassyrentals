@@ -3,6 +3,7 @@ import type { Database, Tables } from "@/src/lib/supabase/database.types";
 import type {
   AgreementStatus,
   Booking,
+  BookingItemLine,
   FulfillmentMethod,
   RequirementsStatus,
 } from "@/src/types/booking";
@@ -97,6 +98,34 @@ function primaryProductImageUrl(
   return supabase.storage.from("product-images").getPublicUrl(first.storage_path).data.publicUrl;
 }
 
+function includedFromSpecifications(specifications: unknown): string[] {
+  const record = (specifications as Record<string, string>) ?? {};
+  return record.included
+    ? record.included.split(",").map((value) => value.trim()).filter(Boolean)
+    : [];
+}
+
+function mapBookingItem(
+  supabase: SupabaseClient<Database>,
+  item: BookingItemRow,
+  dayCount: number,
+): BookingItemLine {
+  const dailyRate = item.daily_rate_snapshot ?? 0;
+  return {
+    bookingItemId: item.id,
+    productId: item.product_id,
+    productName: item.product_name_snapshot || item.products?.name || "Rental item",
+    brand: item.products?.brands?.name ?? "",
+    category: item.products?.categories?.name ?? "",
+    image: primaryProductImageUrl(supabase, item.products?.product_images),
+    quantity: item.quantity,
+    dailyRate,
+    refundableDeposit: item.deposit_per_unit_snapshot ?? 0,
+    included: includedFromSpecifications(item.products?.specifications),
+    lineRentalSubtotal: dailyRate * item.quantity * dayCount,
+  };
+}
+
 function assembleBooking(
   supabase: SupabaseClient<Database>,
   row: JoinedBookingRow,
@@ -109,11 +138,13 @@ function assembleBooking(
   const startDate = row.pickup_at || legacyPeriod.startDate;
   const endDate = row.return_at || legacyPeriod.endDate;
   const quantity = item?.quantity ?? 1;
+  const dayCount = totals?.rental_days ?? 0;
 
-  const specifications = (item?.products?.specifications as Record<string, string>) ?? {};
-  const included = specifications.included
-    ? specifications.included.split(",").map((value) => value.trim()).filter(Boolean)
-    : [];
+  const included = includedFromSpecifications(item?.products?.specifications);
+
+  const items = (row.booking_items ?? []).map((bookingItem) =>
+    mapBookingItem(supabase, bookingItem, dayCount),
+  );
 
   const inventoryUnitId =
     item?.unit_reservations?.find((reservation) => ACTIVE_RESERVATION_STATUSES.has(reservation.status))
@@ -123,6 +154,7 @@ function assembleBooking(
     id: row.id,
     bookingRef: row.booking_reference,
     customerId: row.customer_id,
+    items,
     productId: item?.product_id ?? "",
     inventoryUnitId,
     quantity,
@@ -131,7 +163,7 @@ function assembleBooking(
     startDate,
     endDate,
     nextAvailableAt: row.next_available_at,
-    dayCount: totals?.rental_days ?? 0,
+    dayCount,
     dailyRate: item?.daily_rate_snapshot ?? 0,
     refundableDeposit: (item?.deposit_per_unit_snapshot ?? 0) * quantity,
     rentalSubtotal: totals?.rental_subtotal ?? 0,

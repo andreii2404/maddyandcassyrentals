@@ -1844,6 +1844,33 @@ export type Database = {
         }
         Returns: Database["public"]["Tables"]["bookings"]["Row"]
       }
+      create_multi_item_booking: {
+        Args: {
+          p_city_municipality?: string
+          p_customer_notes: string
+          p_customer_snapshot: Json
+          p_delivery_fee: number
+          p_emergency_contact?: Json
+          p_fulfillment_method: string
+          p_items: Json
+          p_location: string
+          p_pickup_at: string
+          p_province?: string
+          p_rental_days: number
+        }
+        Returns: Database["public"]["Tables"]["bookings"]["Row"]
+      }
+      get_booking_unit_assignments: {
+        Args: { p_booking_id: string }
+        Returns: {
+          booking_item_id: string
+          inventory_unit_id: string
+          product_id: string
+          reservation_status: string
+          serial_number: string | null
+          unit_code: string
+        }[]
+      }
       get_product_availability: {
         Args: { p_end_date: string; p_product_id: string; p_start_date: string }
         Returns: {

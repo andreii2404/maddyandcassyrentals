@@ -13,6 +13,8 @@ export interface ReservationResumeState {
     bookingRef: string;
     productId: string;
     quantity: number;
+    /** Every product on this booking -- for a single-item booking, length 1. */
+    items: { productId: string; quantity: number }[];
     startDate: string;
     endDate: string;
     pickupConvenienceFee: number;

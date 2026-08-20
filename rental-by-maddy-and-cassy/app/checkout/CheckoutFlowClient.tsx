@@ -1,38 +1,37 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { Product } from "@/types/product";
-import type { UnitCounts } from "@/lib/availability";
 import { useAuth } from "@/hooks/useAuth";
 import { createClient } from "@/src/lib/supabase/client";
 import Spinner from "@/components/ui/Spinner";
 import ReservationStepper from "@/components/reservation/ReservationStepper";
-import StepRentalDetails from "@/components/reservation/StepRentalDetails";
+import StepCartRentalDetails from "@/components/reservation/StepCartRentalDetails";
 import StepCustomerInfo from "@/components/reservation/StepCustomerInfo";
 import StepRequirements from "@/components/reservation/StepRequirements";
 import StepAgreement from "@/components/reservation/StepAgreement";
-import StepPaymentSubmission, {
+import StepCartPaymentSubmission, {
   type BookingPaymentState,
-} from "@/components/reservation/StepPaymentSubmission";
+} from "@/components/reservation/StepCartPaymentSubmission";
 import StepBookingConfirmation from "@/components/reservation/StepBookingConfirmation";
 import { useToast } from "@/components/ui/ToastProvider";
 import { createEmptyDraft, formatCustomerLocation, getDayCount, parseCustomerAddress, type ReservationDraft } from "@/src/types/reservationDraft";
 import {
-  createBookingReservation,
+  createMultiItemBookingReservation,
   submitBookingDocuments,
 } from "@/src/services/bookingSubmissionService";
 import { getReservationResumeState, submitManualPayment } from "@/src/services/paymentService";
 import { getBookingById, getCustomerRewardProgress } from "@/src/services/bookingService";
 import { startGuestCheckout } from "@/src/services/authService";
 import { useCart } from "@/hooks/useCart";
-import { calculateReservationPricing } from "@/src/lib/reservationPricing";
+import { calculateMultiItemReservationPricing } from "@/src/lib/reservationPricing";
 import {
   activeUnitAssignments,
   assertUnitAssignmentsComplete,
   getBookingUnitAssignments,
 } from "@/src/services/unitAssignmentService";
-import type { AgreementUnitAssignment } from "@/src/types/booking";
+import type { AgreementLineItem } from "@/src/types/booking";
 import {
   reservationProgressKey,
   restoreReservationProgress,
@@ -40,27 +39,39 @@ import {
 } from "@/src/lib/reservationProgress";
 import type { RewardProgress } from "@/src/lib/promotions";
 import { manilaTimeInputValue } from "@/src/lib/rentalTiming";
-import styles from "./reserve.module.css";
+import styles from "../catalog/[id]/reserve/reserve.module.css";
 
 const STEP_LABELS = [
   "Rental Details",
-  "Reservation",
+  "Customer Info",
   "Payment Submission",
   "Verification Documents",
   "Rental Agreement",
   "Booking Confirmation",
 ];
 
-interface ReserveFlowClientProps {
-  product: Product;
-  units: UnitCounts;
+/** Marks the shared browser-progress key for the cart's combined checkout (distinct from any single-product key). */
+const CART_PROGRESS_SLUG = "cart-checkout";
+
+interface CheckoutFlowClientProps {
+  products: Product[];
   returnQuery?: string;
 }
 
-function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & { isGuest: boolean }) {
+function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { isGuest: boolean }) {
   const { user, profile } = useAuth();
   const { showToast } = useToast();
-  const { items: cartItems, removeItem: removeCartItem } = useCart();
+  const { items: cartItems, removeItem } = useCart();
+  const productsById = useMemo(() => new Map(products.map((product) => [product.id, product])), [products]);
+  const lines = useMemo(
+    () =>
+      cartItems.flatMap((item) => {
+        const product = productsById.get(item.productId);
+        return product ? [{ product, quantity: item.quantity }] : [];
+      }),
+    [cartItems, productsById],
+  );
+
   const [step, setStep] = useState(1);
   const [draft, setDraft] = useState<ReservationDraft>(createEmptyDraft());
   const [bookingId, setBookingId] = useState<string | null>(null);
@@ -70,12 +81,7 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
   const [openingPayment, setOpeningPayment] = useState(false);
   const [checkingPayment, setCheckingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
-  const [receiptReady, setReceiptReady] = useState(false);
   const [submittingDocuments, setSubmittingDocuments] = useState(false);
-  // React state updates (and therefore the disabled button) land a render
-  // after the click; a fast double-click can fire handleDocumentSubmission
-  // twice before that render happens. This ref is set synchronously so the
-  // second call is rejected immediately, regardless of render timing.
   const documentSubmissionInFlightRef = useRef(false);
   const [prefilled, setPrefilled] = useState(false);
   const [progressHydrated, setProgressHydrated] = useState(false);
@@ -87,9 +93,12 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
   });
   const [unitsReady, setUnitsReady] = useState(false);
   const [unitsCheckError, setUnitsCheckError] = useState<string | null>(null);
-  const [assignedUnits, setAssignedUnits] = useState<AgreementUnitAssignment[]>([]);
+  const [assignedUnitsByProductId, setAssignedUnitsByProductId] = useState<
+    Map<string, AgreementLineItem["units"]>
+  >(new Map());
+  const [resumeMismatch, setResumeMismatch] = useState<string | null>(null);
 
-  const progressKey = reservationProgressKey(user!.id, product.id);
+  const progressKey = reservationProgressKey(user!.id, CART_PROGRESS_SLUG);
 
   useEffect(() => {
     let rawProgress: string | null = null;
@@ -100,18 +109,12 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
     }
     const restored = restoreReservationProgress(rawProgress);
     if (restored) {
-      // Any non-"unpaid" state means the customer already submitted payment
-      // details/proof in Step 3 -- admin verification happens later and
-      // should not force them back through payment submission again.
       const hasSubmittedPayment = restored.paymentState !== "unpaid";
-      // Verification files and signature images are intentionally never saved
-      // to localStorage. Return to the document step when those files are needed.
       const safeStep = !restored.bookingId
         ? Math.min(restored.step, 3)
         : hasSubmittedPayment
           ? Math.min(restored.step, 4)
           : Math.min(restored.step, 3);
-      // One-time hydration from the browser-owned draft backup.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setDraft(restored.draft);
       setStep(safeStep);
@@ -128,7 +131,6 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
   useEffect(() => {
     if (!progressHydrated || prefilled || !user) return;
     const profileAddress = parseCustomerAddress(profile?.fullAddress);
-    // One-time hydration of the locally editable booking form from async auth/profile data.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setDraft((current) => ({
       ...current,
@@ -173,8 +175,7 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
         );
         setLastSavedAt(new Date(savedAt));
       } catch {
-        // Saving is a convenience; never interrupt an active booking if the
-        // browser refuses storage or its quota is full.
+        // Saving is a convenience; never interrupt an active booking.
       }
     };
     const saveWhenHidden = () => {
@@ -216,17 +217,6 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
   }, [user, isGuest]);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("cartItem") !== product.id) return;
-    const cartItem = cartItems.find((item) => item.productId === product.id);
-    if (!cartItem) return;
-    const quantity = Math.min(Math.max(1, cartItem.quantity), Math.max(1, units.totalUnits));
-    // Sync the persisted browser cart into the editable reservation draft.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setDraft((current) => current.quantity === quantity ? current : { ...current, quantity });
-  }, [cartItems, product.id, units.totalUnits]);
-
-  useEffect(() => {
     if (!user) return;
     const params = new URLSearchParams(window.location.search);
     const resumedBookingId = params.get("bookingId");
@@ -235,9 +225,6 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
     let cancelled = false;
 
     async function refreshBooking() {
-      // A booking ID supplied by a resume link is authoritative. Move to
-      // Payment Submission immediately instead of letting an empty or stale
-      // browser draft show Rental Details while the booking loads.
       setBookingId(activeBookingId);
       setStep(3);
       setCheckingPayment(true);
@@ -255,9 +242,16 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
       }
       if (cancelled) return;
       const booking = resumeState.booking;
-      if (booking.productId !== product.id) {
+      const bookingProductIds = new Set(booking.items.map((item) => item.productId));
+      const cartProductIds = new Set(lines.map((line) => line.product.id));
+      const sameItems =
+        bookingProductIds.size === cartProductIds.size &&
+        [...bookingProductIds].every((id) => cartProductIds.has(id));
+      if (!sameItems) {
         setCheckingPayment(false);
-        setPaymentError("This reservation belongs to a different rental item.");
+        setResumeMismatch(
+          "This reservation's items no longer match your current cart. Adjust your cart to match, or open the reservation from your account instead.",
+        );
         return;
       }
 
@@ -265,10 +259,8 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
       setBookingNumber(booking.bookingRef);
       setPaymentState(resumeState.paymentState);
       setIsDemoPayment(resumeState.isDemoPayment);
-      setReceiptReady(resumeState.receiptReady);
       setDraft((current) => ({
         ...current,
-        quantity: booking.quantity,
         startDate: new Date(booking.startDate),
         endDate: new Date(booking.endDate),
         rentalEndDate: new Date(new Date(booking.endDate).getTime() - 22 * 60 * 60 * 1000),
@@ -292,7 +284,8 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
     return () => {
       cancelled = true;
     };
-  }, [user, product.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   useEffect(() => {
     if (step !== 5 || !bookingId) return;
@@ -304,27 +297,31 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
       try {
         const supabase = createClient();
         const booking = await getBookingById(supabase, bookingId!);
-        const item = booking?.items[0];
-        if (!booking || !item) throw new Error("This booking could not be found.");
+        if (!booking || booking.items.length === 0) throw new Error("This booking could not be found.");
         const assignments = await getBookingUnitAssignments(supabase, bookingId!);
         assertUnitAssignmentsComplete(
-          [{ bookingItemId: item.bookingItemId, quantity: item.quantity }],
+          booking.items.map((item) => ({ bookingItemId: item.bookingItemId, quantity: item.quantity })),
           assignments,
         );
         if (cancelled) return;
-        setAssignedUnits(
-          activeUnitAssignments(assignments.get(item.bookingItemId)).map((assignment) => ({
-            unitCode: assignment.unitCode,
-            serialNumber: assignment.serialNumber,
-          })),
-        );
+        const byProductId = new Map<string, AgreementLineItem["units"]>();
+        for (const item of booking.items) {
+          byProductId.set(
+            item.productId,
+            activeUnitAssignments(assignments.get(item.bookingItemId)).map((assignment) => ({
+              unitCode: assignment.unitCode,
+              serialNumber: assignment.serialNumber,
+            })),
+          );
+        }
+        setAssignedUnitsByProductId(byProductId);
         setUnitsReady(true);
       } catch (error) {
         if (cancelled) return;
         setUnitsCheckError(
           error instanceof Error
             ? error.message
-            : "We couldn't confirm your assigned unit. Please try again.",
+            : "We couldn't confirm your assigned units. Please try again.",
         );
       }
     }
@@ -354,7 +351,7 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
       let activeBookingNumber = bookingNumber;
       if (!activeBookingId) {
         const supabase = createClient();
-        const reservation = await createBookingReservation(supabase, product, draft);
+        const reservation = await createMultiItemBookingReservation(supabase, lines, draft);
         activeBookingId = reservation.bookingId;
         activeBookingNumber = reservation.bookingNumber ?? reservation.bookingId;
         setBookingId(activeBookingId);
@@ -396,10 +393,8 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
       } catch {
         // A completed booking no longer depends on the local draft backup.
       }
-      removeCartItem(product.id);
+      for (const line of lines) removeItem(line.product.id);
       showToast("Verification documents and signed agreement submitted.", "success");
-      // Advance immediately on success -- submitBookingDocuments no longer
-      // waits on the (slow, non-fatal) signed-agreement PDF render.
       goToStep(6);
     } catch (error) {
       showToast(
@@ -412,28 +407,30 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
     }
   }
 
-  const pricing = calculateReservationPricing(product, draft, rewardProgress, isGuest);
+  const pricing = calculateMultiItemReservationPricing(lines, draft, rewardProgress, isGuest);
+  const currency = lines[0]?.product.currency ?? "PHP";
   const agreementData = {
     bookingRef: bookingNumber ?? "Created before payment",
     customerName: draft.customerInfo.fullName || "-",
-    items: [
-      {
-        productName: product.name,
-        brand: product.brand ?? "",
-        quantity: draft.quantity,
-        pricePerDay: product.pricePerDay,
-        rentalDays: pricing.rentalDays,
-        lineTotal: pricing.productSubtotal,
-        includedAccessories: product.included,
-        units: assignedUnits,
-      },
-    ],
+    items: pricing.lines.map((line) => {
+      const product = lines.find((cartLine) => cartLine.product.id === line.productId)?.product;
+      return {
+        productName: line.productName,
+        brand: product?.brand ?? "",
+        quantity: line.quantity,
+        pricePerDay: line.pricePerDay,
+        rentalDays: line.rentalDays,
+        lineTotal: line.lineTotal,
+        includedAccessories: product?.included ?? [],
+        units: assignedUnitsByProductId.get(line.productId) ?? [],
+      };
+    }),
     startDate: draft.startDate ?? new Date(),
     endDate: draft.endDate ?? new Date(),
     dayCount: getDayCount(draft.startDate, draft.endDate),
     fulfillmentMethod: draft.fulfillmentMethod ?? "pickup",
     customerLocation: draft.fulfillmentMethod ? formatCustomerLocation(draft) || "-" : "-",
-    currency: product.currency,
+    currency,
     subtotal: pricing.productSubtotal,
     discountAmount: pricing.discountAmount,
     depositAmount: pricing.depositAmount,
@@ -441,20 +438,41 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
     finalAmount: pricing.finalAmount,
   };
 
+  if (resumeMismatch) {
+    return (
+      <section className={styles.checkoutGate}>
+        <h1>Reservation and cart don&apos;t match.</h1>
+        <p>{resumeMismatch}</p>
+        <Link href="/cart" className={styles.backToCart}>← Back to rental cart</Link>
+      </section>
+    );
+  }
+
+  if (lines.length === 0 && !bookingId) {
+    return (
+      <section className={styles.checkoutGate}>
+        <h1>Your cart is empty.</h1>
+        <p>Add rentals to your cart, then return here to check out everything together.</p>
+        <Link href="/cart" className={styles.backToCart}>← Back to rental cart</Link>
+      </section>
+    );
+  }
+
   return (
     <div className={styles.wrapper}>
       <header className={styles.reserveHeader}>
         <div>
-          <p className={styles.eyebrow}>GUIDED RESERVATION</p>
-          <h1>Reserve {product.name}</h1>
+          <p className={styles.eyebrow}>COMBINED RENTAL CHECKOUT</p>
+          <h1>Checkout your cart</h1>
           <p>
-            Choose your schedule, pay securely, submit verification, and sign the agreement.
+            One rental period, one payment, one verification round, and one signed agreement for
+            every item in your cart.
           </p>
         </div>
         <div className={styles.headerRate}>
-          <span>Daily rate</span>
-          <strong>{product.currency}{product.pricePerDay.toLocaleString()}</strong>
-          <small>per rental day</small>
+          <span>Items</span>
+          <strong>{pricing.productCount} product{pricing.productCount === 1 ? "" : "s"}</strong>
+          <small>{pricing.totalUnits} unit{pricing.totalUnits === 1 ? "" : "s"} total</small>
         </div>
       </header>
 
@@ -472,45 +490,29 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
 
       <ReservationStepper steps={STEP_LABELS} currentStep={step} />
 
-      <div className={`${styles.flowLayout} ${step === 2 ? styles.flowLayoutNoSidebar : ""}`}>
-        {step === 2 ? null : (
+      <div className={`${styles.flowLayout} ${step === 1 ? styles.flowLayoutNoSidebar : ""}`}>
+        {step === 1 ? null : (
         <aside className={styles.bookingSummary} aria-label="Selected rental summary">
-          <p className={styles.summaryEyebrow}>YOUR SELECTED RENTAL</p>
-          <h2>{product.name}</h2>
-          {Object.keys(product.specs).length > 0 ? (
-            <dl className={styles.summarySpecs}>
-              {Object.entries(product.specs).map(([label, value]) => (
-                <div key={label}>
-                  <dt>{label}</dt>
-                  <dd>{value}</dd>
-                </div>
-              ))}
-            </dl>
-          ) : null}
+          <p className={styles.summaryEyebrow}>YOUR CART</p>
+          <h2>{pricing.productCount} product{pricing.productCount === 1 ? "" : "s"}</h2>
           <dl className={styles.summaryFacts}>
-            <div>
-              <dt>Rental inventory</dt>
-              <dd>{units.totalUnits} {units.totalUnits === 1 ? "unit" : "units"} total</dd>
-            </div>
-            <div>
-              <dt>Quantity</dt>
-              <dd>{draft.quantity} {draft.quantity === 1 ? "unit" : "units"}</dd>
-            </div>
+            {lines.map((line) => (
+              <div key={line.product.id}>
+                <dt>{line.product.name}</dt>
+                <dd>{line.quantity} {line.quantity === 1 ? "unit" : "units"}</dd>
+              </div>
+            ))}
             <div>
               <dt>Current total</dt>
-              <dd>{pricing.rentalDays > 0 ? `${product.currency}${pricing.finalAmount.toLocaleString()}` : "Choose dates"}</dd>
-            </div>
-            <div>
-              <dt>Included with rental</dt>
-              <dd>{product.included.length ? `${product.included.length} items` : "See item details"}</dd>
+              <dd>{pricing.rentalDays > 0 ? `${currency}${pricing.finalAmount.toLocaleString()}` : "Choose dates"}</dd>
             </div>
             <div>
               <dt>Current step</dt>
               <dd>{step} of {STEP_LABELS.length}</dd>
             </div>
           </dl>
-          <Link href={`/catalog/${product.id}`} className={styles.detailsLink}>
-            Review item details
+          <Link href="/cart" className={styles.detailsLink}>
+            Edit cart
           </Link>
           <div className={styles.secureNote}>
             <strong>Secure booking flow</strong>
@@ -525,50 +527,46 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
             <strong>{STEP_LABELS[step - 1]}</strong>
           </div>
         {step === 1 ? (
+          <StepCartRentalDetails
+            lines={lines}
+            draft={draft}
+            pricing={pricing}
+            onUpdate={updateDraft}
+            onContinue={() => goToStep(2)}
+          />
+        ) : null}
+
+        {step === 2 ? (
           <StepCustomerInfo
             uid={user!.id}
             customerInfo={draft.customerInfo}
             onUpdate={(patch) =>
               updateDraft({ customerInfo: { ...draft.customerInfo, ...patch } })
             }
-            onContinue={() => goToStep(2)}
+            onBack={() => goToStep(1)}
+            onContinue={() => goToStep(3)}
             isGuest={isGuest}
             birthDateLocked={!isGuest && Boolean(profile?.birthDate)}
             birthDateVerified={!isGuest && Boolean(profile?.birthDateVerifiedAt)}
           />
         ) : null}
 
-        {step === 2 ? (
-          <StepRentalDetails
-            product={product}
-            units={units}
-            draft={draft}
-            pricing={pricing}
-            onUpdate={updateDraft}
-            onBack={() => goToStep(1)}
-            onContinue={() => goToStep(3)}
-          />
-        ) : null}
-
         {step === 3 ? (
-          <StepPaymentSubmission
-            product={product}
+          <StepCartPaymentSubmission
+            pricing={pricing}
+            currency={currency}
             draft={draft}
             rewardProgress={rewardProgress}
             isGuest={isGuest}
             paymentState={paymentState}
-            isDemoPayment={isDemoPayment}
-            bookingId={bookingId ?? undefined}
             bookingNumber={bookingNumber ?? undefined}
-            receiptReady={receiptReady}
-            opening={openingPayment}
-            checking={checkingPayment}
+            opening={openingPayment || checkingPayment}
             error={paymentError}
             onPaymentOptionChange={(paymentOption) => updateDraft({ paymentOption })}
             onManualPaymentUpdate={(patch) =>
               updateDraft({ manualPayment: { ...draft.manualPayment, ...patch } })
             }
-            onBack={() => goToStep(2)}
+            onBack={() => goToStep(1)}
             onContinue={() => void handleManualPaymentContinue()}
           />
         ) : null}
@@ -611,7 +609,7 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
   );
 }
 
-export default function ReserveFlowClient(props: ReserveFlowClientProps) {
+export default function CheckoutFlowClient(props: CheckoutFlowClientProps) {
   const { user, loading } = useAuth();
   const [startingGuest, setStartingGuest] = useState(false);
   const [guestError, setGuestError] = useState<string | null>(null);
@@ -621,8 +619,8 @@ export default function ReserveFlowClient(props: ReserveFlowClientProps) {
   }
 
   if (!user) {
-    const reservePath = `/catalog/${props.product.id}/reserve${props.returnQuery ? `?${props.returnQuery}` : ""}`;
     const isReturningBooking = new URLSearchParams(props.returnQuery ?? "").has("bookingId");
+    const checkoutPath = `/checkout${props.returnQuery ? `?${props.returnQuery}` : ""}`;
 
     if (isReturningBooking) {
       return (
@@ -638,7 +636,7 @@ export default function ReserveFlowClient(props: ReserveFlowClientProps) {
             <div>
               <strong>Continue the existing reservation</strong>
               <span>Do not create another booking or pay a second time.</span>
-              <Link href={`/sign-in?redirect=${encodeURIComponent(reservePath)}`}>Sign In &amp; Resume</Link>
+              <Link href={`/sign-in?redirect=${encodeURIComponent(checkoutPath)}`}>Sign In &amp; Resume</Link>
             </div>
           </div>
           <Link href="/account/bookings" className={styles.backToCart}>Open My Bookings</Link>
@@ -649,7 +647,7 @@ export default function ReserveFlowClient(props: ReserveFlowClientProps) {
     return (
       <section className={styles.checkoutGate} aria-labelledby="checkout-access-heading">
         <p className={styles.eyebrow}>CHECKOUT ACCESS</p>
-        <h1 id="checkout-access-heading">Reserve with or without an account.</h1>
+        <h1 id="checkout-access-heading">Check out with or without an account.</h1>
         <p>
           Guest checkout keeps this booking on the current browser. Signing in is recommended
           if you want permanent access to payment history, receipts, and invoices on other devices.
@@ -678,8 +676,8 @@ export default function ReserveFlowClient(props: ReserveFlowClientProps) {
           <div>
             <strong>Use a customer account</strong>
             <span>Save booking history and open receipts or invoices from any signed-in device.</span>
-            <Link href={`/sign-in?redirect=${encodeURIComponent(reservePath)}`}>Sign In</Link>
-            <Link href={`/sign-up?redirect=${encodeURIComponent(reservePath)}`} className={styles.secondaryGateLink}>Create Account</Link>
+            <Link href={`/sign-in?redirect=${encodeURIComponent(checkoutPath)}`}>Sign In</Link>
+            <Link href={`/sign-up?redirect=${encodeURIComponent(checkoutPath)}`} className={styles.secondaryGateLink}>Create Account</Link>
           </div>
         </div>
         {guestError ? <p className={styles.gateError} role="alert">{guestError}</p> : null}
@@ -693,10 +691,10 @@ export default function ReserveFlowClient(props: ReserveFlowClientProps) {
       <section className={styles.checkoutGate}>
         <h1>Verify your email to continue.</h1>
         <p>Your customer account needs a verified email before a payment or document submission can begin.</p>
-        <Link href={`/verify-email?redirect=${encodeURIComponent(`/catalog/${props.product.id}/reserve`)}`}>Verify Email</Link>
+        <Link href={`/verify-email?redirect=${encodeURIComponent("/checkout")}`}>Verify Email</Link>
       </section>
     );
   }
 
-  return <ReserveFlowInner {...props} isGuest={user.is_anonymous === true} />;
+  return <CheckoutFlowInner {...props} isGuest={user.is_anonymous === true} />;
 }

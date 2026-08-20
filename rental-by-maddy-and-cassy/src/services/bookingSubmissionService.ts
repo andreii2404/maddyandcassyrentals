@@ -3,7 +3,7 @@ import type { Database } from "@/src/lib/supabase/database.types";
 import type { Product } from "@/types/product";
 import type { ReservationDraft } from "@/src/types/reservationDraft";
 import { formatCustomerAddress, getDayCount } from "@/src/types/reservationDraft";
-import { submitBookingWithDateGuard } from "@/src/services/inventoryService";
+import { submitBookingWithDateGuard, submitMultiItemBookingWithDateGuard } from "@/src/services/inventoryService";
 import { isValidPhoneNumber } from "@/src/lib/authValidation";
 
 export interface SubmitBookingResult {
@@ -78,6 +78,49 @@ export async function createBookingReservation(
       currency: product.currency,
       included: product.included,
     },
+    customerSnapshot: {
+      fullName: customerInfo.fullName.trim(),
+      email: customerInfo.email.trim(),
+      phone: customerInfo.phone.trim(),
+      address: formatCustomerAddress(customerInfo),
+      facebookLink: customerInfo.facebookLink.trim(),
+      instagramLink: customerInfo.instagramLink.trim(),
+    },
+  });
+
+  return { bookingId: result.bookingId, bookingNumber: result.bookingRef };
+}
+
+/**
+ * Cart checkout: one booking spanning every selected line, one shared rental
+ * period. `draft.quantity` is ignored -- each line carries its own quantity
+ * from the cart. Unlike createBookingReservation, no product name/price/
+ * discount/deposit is ever sent to the server -- create_multi_item_booking()
+ * derives all of that itself from `products`.
+ */
+export async function createMultiItemBookingReservation(
+  supabase: SupabaseClient<Database>,
+  lines: { product: Product; quantity: number }[],
+  draft: ReservationDraft,
+): Promise<SubmitBookingResult> {
+  if (lines.length === 0) {
+    throw new Error("Your cart is empty.");
+  }
+  validateReservationDetails(draft);
+  const { customerInfo } = draft;
+  const startDate = draft.startDate!;
+  const endDate = draft.endDate!;
+  const fulfillmentMethod = draft.fulfillmentMethod!;
+  const rentalDays = getDayCount(startDate, endDate);
+
+  const result = await submitMultiItemBookingWithDateGuard(supabase, {
+    items: lines.map((line) => ({ productId: line.product.id, quantity: line.quantity })),
+    pickupAt: startDate.toISOString(),
+    rentalDays,
+    fulfillmentMethod,
+    location: fulfillmentMethod === "delivery" ? draft.customerLocation.trim() : undefined,
+    cityMunicipality: fulfillmentMethod === "delivery" ? draft.cityMunicipality.trim() : undefined,
+    province: fulfillmentMethod === "delivery" ? draft.province.trim() : undefined,
     customerSnapshot: {
       fullName: customerInfo.fullName.trim(),
       email: customerInfo.email.trim(),

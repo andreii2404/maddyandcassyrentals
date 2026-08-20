@@ -90,3 +90,33 @@ export async function getTimeAvailability(
     pickupConvenienceFee: Number(row?.pickup_convenience_fee ?? 0),
   };
 }
+
+/**
+ * Pre-flight, per-product availability check for every cart line against one
+ * shared pickup time/rental-day window -- this is the "which item is
+ * unavailable" UX check the multi-item checkout's rental-details step shows
+ * before the customer can continue. Same technique as
+ * inventoryService.subscribeToAllInventory(): Promise.all over the existing
+ * single-product RPC, no new RPC needed. Not authoritative -- the
+ * create_multi_item_booking RPC re-checks (and locks) at submission time.
+ */
+export async function checkBatchTimeAvailability(
+  items: { productId: string; quantity: number }[],
+  pickupAt: Date,
+  rentalDays: number,
+): Promise<Map<string, TimeAvailability>> {
+  const entries = await Promise.all(
+    items.map(async ({ productId, quantity }) => {
+      try {
+        return [productId, await getTimeAvailability(productId, pickupAt, quantity, rentalDays)] as const;
+      } catch {
+        return [productId, null] as const;
+      }
+    }),
+  );
+  const result = new Map<string, TimeAvailability>();
+  for (const [productId, availability] of entries) {
+    if (availability) result.set(productId, availability);
+  }
+  return result;
+}

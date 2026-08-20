@@ -28,6 +28,18 @@ export class DatesUnavailableError extends Error {
   }
 }
 
+/** Same as DatesUnavailableError, but names which cart line/product it was raised for. */
+export class ItemDatesUnavailableError extends Error {
+  constructor(public readonly productId: string, requestedPickup?: string, nextAvailableAt?: string) {
+    const requested = requestedPickup ? formatManilaPickupTime(requestedPickup) : "That";
+    const next = nextAvailableAt
+      ? ` and will be available starting ${formatManilaDateTime(nextAvailableAt)}`
+      : " at a later time";
+    super(`${requested} pickup is unavailable for one of the selected items${next}.`);
+    this.name = "ItemDatesUnavailableError";
+  }
+}
+
 export class AccountSuspendedError extends Error {
   constructor() {
     super("Your account is suspended and cannot create new bookings.");
@@ -133,6 +145,90 @@ export async function submitBookingWithDateGuard(
     bookingRef: booking.booking_reference,
     // Which physical unit was claimed lives in unit_reservations now, which
     // customers can't read directly (admin-only RLS) — no longer exposed here.
+    assignedUnitId: null,
+  };
+}
+
+export interface SubmitMultiItemBookingInput {
+  items: { productId: string; quantity: number }[];
+  pickupAt: string;
+  rentalDays: number;
+  fulfillmentMethod: FulfillmentMethod;
+  /** Street/barangay/landmark line. Required only when fulfillmentMethod is "delivery". */
+  location?: string;
+  /** Required only when fulfillmentMethod is "delivery". */
+  cityMunicipality?: string;
+  /** Required only when fulfillmentMethod is "delivery". */
+  province?: string;
+  customerNotes?: string;
+  customerSnapshot: BookingCustomerSnapshot;
+  emergencyContact?: EmergencyContact;
+}
+
+/**
+ * Same shape as submitBookingWithDateGuard, but for the cart's combined
+ * checkout: one booking, one shared rental period, many products/quantities.
+ * Calls public.create_multi_item_booking() — a SECURITY DEFINER Postgres
+ * function that derives product name/price/discount/deposit from `products`
+ * itself (the client sends only {productId, quantity} per line) and locks
+ * each product's inventory_units individually, in one transaction.
+ */
+export async function submitMultiItemBookingWithDateGuard(
+  supabase: SupabaseClient<Database>,
+  input: SubmitMultiItemBookingInput,
+): Promise<SubmitBookingResult> {
+  const { data, error } = await supabase.rpc("create_multi_item_booking", {
+    p_items: toJson(input.items.map((item) => ({ productId: item.productId, quantity: item.quantity }))),
+    p_pickup_at: input.pickupAt,
+    p_rental_days: input.rentalDays,
+    p_fulfillment_method: input.fulfillmentMethod,
+    p_location: input.fulfillmentMethod === "delivery" ? (input.location ?? "") : "",
+    p_city_municipality: input.fulfillmentMethod === "delivery" ? (input.cityMunicipality ?? "") : "",
+    p_province: input.fulfillmentMethod === "delivery" ? (input.province ?? "") : "",
+    p_customer_notes: input.customerNotes ?? "",
+    p_delivery_fee: 0,
+    p_customer_snapshot: toJson(input.customerSnapshot),
+    p_emergency_contact: input.emergencyContact
+      ? {
+          fullName: input.emergencyContact.fullName,
+          relationship: input.emergencyContact.relationship,
+          phoneNumber: input.emergencyContact.phoneNumber,
+          address: input.emergencyContact.address ?? "",
+        }
+      : null,
+  });
+
+  if (error) {
+    const timeMatch = error.message.match(/NO_TIME_AVAILABILITY:([0-9a-fA-F-]{36}):([^\n]*)/);
+    if (timeMatch) {
+      const [, productId, nextAvailableAt] = timeMatch;
+      throw new ItemDatesUnavailableError(productId, input.pickupAt, nextAvailableAt.trim() || undefined);
+    }
+    if (error.message.includes("NO_TIME_AVAILABILITY")) {
+      throw new DatesUnavailableError(input.pickupAt);
+    }
+    if (error.message.includes("PRODUCT_NOT_AVAILABLE")) {
+      throw new Error("One of the selected items is no longer available.");
+    }
+    if (error.message.includes("DUPLICATE_PRODUCT_ITEMS")) {
+      throw new Error("Each item in your cart must be a distinct product.");
+    }
+    if (error.message.includes("ACCOUNT_SUSPENDED")) throw new AccountSuspendedError();
+    if (error.message.includes("DELIVERY_ADDRESS_REQUIRED")) throw new DeliveryAddressRequiredError();
+    if (error.message.includes("INVALID_QUANTITY")) throw new Error("Choose a valid rental quantity for every item.");
+    if (error.message.includes("ITEMS_REQUIRED") || error.message.includes("TOO_MANY_ITEMS")) {
+      throw new Error("Your cart has an invalid number of items.");
+    }
+    if (error.message.includes("PICKUP_TIME_IN_PAST")) throw new Error("Choose a future pickup date and time.");
+    if (error.message.includes("PICKUP_TIME_REQUIRED")) throw new Error("Choose a pickup date and time.");
+    console.error("submitMultiItemBookingWithDateGuard: unexpected booking error", error);
+    throw new Error("We couldn't save your reservation due to a server error. Please try again in a moment.");
+  }
+
+  const booking = data as Tables<"bookings">;
+  return {
+    bookingId: booking.id,
+    bookingRef: booking.booking_reference,
     assignedUnitId: null,
   };
 }

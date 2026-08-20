@@ -47,10 +47,28 @@ export type RequirementsStatus =
  */
 export type AgreementStatus = Database["public"]["Enums"]["agreement_status"] | "not_created";
 
+/** One line item of a booking -- a booking may have one or many, one per distinct product. */
+export interface BookingItemLine {
+  bookingItemId: string;
+  productId: string;
+  productName: string;
+  brand: string;
+  category: string;
+  image: string;
+  quantity: number;
+  dailyRate: number;
+  refundableDeposit: number;
+  included: string[];
+  /** dailyRate * quantity * the booking's dayCount. */
+  lineRentalSubtotal: number;
+}
+
 export interface Booking {
   id: string;
   bookingRef: string;
   customerId: string;
+  /** Every line item on this booking -- for a single-item booking, length 1. */
+  items: BookingItemLine[];
   productId: string;
   inventoryUnitId: string | null;
   quantity: number;
@@ -149,18 +167,47 @@ export interface RequirementDocumentReview {
   createdAt: string;
 }
 
+/** One physically-assigned unit, frozen at agreement-finalization time. */
+export interface AgreementUnitAssignment {
+  unitCode: string;
+  serialNumber: string | null;
+}
+
+/** One product line on the frozen agreement snapshot. */
+export interface AgreementLineItem {
+  productName: string;
+  brand: string;
+  quantity: number;
+  pricePerDay: number;
+  rentalDays: number;
+  lineTotal: number;
+  includedAccessories: string[];
+  units: AgreementUnitAssignment[];
+}
+
 export interface AgreementSnapshot {
   customerName: string;
-  productName: string;
-  quantity?: number;
+  /** Every product on this booking, with its assigned units frozen at signing time. */
+  items: AgreementLineItem[];
   startDate: string;
   endDate: string;
   dayCount: number;
   fulfillmentMethod: FulfillmentMethod;
   customerLocation: string;
-  pricePerDay: number;
   currency: string;
-  includedAccessories: string[];
+  subtotal: number;
+  discountAmount: number;
+  depositAmount: number;
+  fees: number;
+  finalAmount: number;
+  /** @deprecated kept only for reading legacy single-item snapshots written before the items array existed. */
+  productName?: string;
+  /** @deprecated see productName. */
+  quantity?: number;
+  /** @deprecated see productName. */
+  pricePerDay?: number;
+  /** @deprecated see productName. */
+  includedAccessories?: string[];
 }
 
 /** One row of public.agreement_acknowledgements. */
