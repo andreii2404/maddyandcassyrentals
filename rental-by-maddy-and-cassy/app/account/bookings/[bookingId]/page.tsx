@@ -10,7 +10,7 @@ import {
   getBookingFileUrl,
   type BookingDetails,
 } from "@/src/services/bookingDetailService";
-import BookingSummaryCard from "@/components/booking-summary/BookingSummaryCard";
+import BookingItemsSummary from "@/components/booking-summary/BookingItemsSummary";
 import StatusBadge from "@/components/status-badge/StatusBadge";
 import NotificationList from "@/components/notification-list/NotificationList";
 import Spinner from "@/components/ui/Spinner";
@@ -24,6 +24,8 @@ import {
   getBookingLiveStatusLabel,
   useBookingRealtime,
 } from "@/hooks/useBookingRealtime";
+import { bookingHeadline, bookingItemsSummaryData } from "@/src/lib/bookingDisplay";
+import { formatManilaDateTime } from "@/src/lib/rentalTiming";
 
 const REQUIREMENTS_STATUS_LABEL: Record<string, string> = {
   not_submitted: "Not Submitted",
@@ -141,6 +143,7 @@ function BookingDetailContent() {
   }
 
   const { booking, agreement, documents, payments, receipts, statusHistory } = details;
+  const itemsSummary = bookingItemsSummaryData(booking, agreement);
   const isDemoPayment = payments.some((p) => (p.providerMetadata as { demo?: boolean } | undefined)?.demo === true);
   const customerSignature = agreement?.signatures?.find((s) => s.signerRole === "customer");
   const rejectedDocuments = documents.filter((d) => d.reviewStatus === "rejected");
@@ -219,7 +222,7 @@ function BookingDetailContent() {
         <div className={styles.headerRow}>
           <div>
             <p className={styles.eyebrow}>BOOKING DETAILS <span>•</span> {booking.bookingRef}</p>
-            <h1 className={styles.heading}>{booking.productSnapshot.name}</h1>
+            <h1 className={styles.heading}>{bookingHeadline(booking.items)}</h1>
             <p>Created {new Date(booking.createdAt).toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" })}</p>
           </div>
           <div className={styles.headerStatusGroup}>
@@ -258,19 +261,40 @@ function BookingDetailContent() {
             <Link href="/catalog" className={styles.browseLink}>Browse more rentals</Link>
           </div>
 
-          <BookingSummaryCard
-            bookingRef={booking.bookingRef}
-            productName={booking.productSnapshot.name}
-            brand={booking.productSnapshot.brand}
-            productImage={booking.productSnapshot.image}
-            pricePerDay={booking.productSnapshot.pricePerDay}
-            currency={booking.productSnapshot.currency}
-            startDate={new Date(booking.startDate)}
-            endDate={new Date(booking.endDate)}
-            dayCount={booking.dayCount}
-            quantity={booking.quantity}
-            fulfillmentMethod={booking.fulfillmentMethod}
-            customerLocation={booking.location ?? (booking.fulfillmentMethod === "pickup" ? "Business pickup point" : "Address pending")}
+          <div className={styles.logisticsCard}>
+            <dl className={styles.logisticsGrid}>
+              <div>
+                <dt>Pickup</dt>
+                <dd>{formatManilaDateTime(new Date(booking.startDate))}</dd>
+              </div>
+              <div>
+                <dt>Return</dt>
+                <dd>{formatManilaDateTime(new Date(booking.endDate))}</dd>
+              </div>
+              <div>
+                <dt>Duration</dt>
+                <dd>{booking.dayCount === 1 ? "22 hours" : `${booking.dayCount} days`}</dd>
+              </div>
+              <div>
+                <dt>Fulfillment</dt>
+                <dd>{booking.fulfillmentMethod === "pickup" ? "Pickup" : "Delivery"}</dd>
+              </div>
+              <div>
+                <dt>Location</dt>
+                <dd>{booking.location ?? (booking.fulfillmentMethod === "pickup" ? "Business pickup point" : "Address pending")}</dd>
+              </div>
+            </dl>
+          </div>
+
+          <BookingItemsSummary
+            currency={booking.productSnapshot.currency || "PHP"}
+            items={itemsSummary.items}
+            unitsExpected={itemsSummary.unitsExpected}
+            subtotal={booking.rentalSubtotal}
+            discountAmount={booking.specialDiscountAmount}
+            depositAmount={booking.refundableDeposit}
+            fees={booking.deliveryFee + (booking.pickupConvenienceFee ?? 0)}
+            grandTotal={booking.totalAmount}
           />
 
           {booking.requirementsStatus === "not_submitted" ? (

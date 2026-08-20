@@ -61,6 +61,8 @@ export interface BookingItemLine {
   included: string[];
   /** dailyRate * quantity * the booking's dayCount. */
   lineRentalSubtotal: number;
+  /** Count of this item's unit_reservations currently in an active status (tentative/confirmed/in_use). */
+  assignedUnitCount: number;
 }
 
 export interface Booking {

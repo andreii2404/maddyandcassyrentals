@@ -11,7 +11,7 @@ test("generates invoice and receipt PDFs", async () => {
     bookingRef: "MC-20260729-TEST",
     customerName: "Test Customer",
     customerEmail: "customer@example.com",
-    productName: "Camera",
+    items: [{ productName: "Camera", pricePerDay: 1250, quantity: 1, rentalDays: 2, lineTotal: 2500 }],
     rentalDates: "July 29, 2026 - July 30, 2026",
     amount: 2500,
     issuedAt: "July 29, 2026",
@@ -25,11 +25,21 @@ test("generates invoice and receipt PDFs", async () => {
   });
   const agreement = await createFinalAgreementPdf({
     ...base,
+    items: [
+      {
+        productName: "Camera",
+        pricePerDay: 1250,
+        quantity: 1,
+        rentalDays: 2,
+        lineTotal: 2500,
+        includedAccessories: ["Protective case"],
+        units: [{ unitCode: "CAM-001", serialNumber: "SN12345" }],
+      },
+    ],
     address: "Sta. Cruz, Manila",
     phone: "+63 917 000 0000",
     fulfillmentMethod: "Pickup",
     customerLocation: "Sta. Cruz, Manila",
-    includedAccessories: ["Protective case"],
     termsVersion: "2026-01",
     signedAt: "July 29, 2026",
     typedFullName: "Test Customer",

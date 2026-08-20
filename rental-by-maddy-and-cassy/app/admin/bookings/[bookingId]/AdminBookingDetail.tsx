@@ -30,6 +30,8 @@ import styles from "./bookingDetail.module.css";
 import RequirementsReviewPanel from "@/components/admin/RequirementsReviewPanel";
 import PaymentsReviewPanel from "@/components/admin/PaymentsReviewPanel";
 import { getBookingMilestones, getFulfillmentProgressLabel } from "@/src/lib/bookingManagement";
+import BookingItemsSummary from "@/components/booking-summary/BookingItemsSummary";
+import { bookingHeadline, bookingItemsSummaryData } from "@/src/lib/bookingDisplay";
 
 const REQUIREMENTS_STATUS_LABELS: Record<string, string> = {
   not_submitted: "Not Submitted",
@@ -317,6 +319,10 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
     amountPaid > 0 &&
     booking.requirementsStatus === "approved",
   );
+  const totalUnits = booking.items.reduce((sum, item) => sum + item.quantity, 0);
+  const totalAssignedUnits = booking.items.reduce((sum, item) => sum + item.assignedUnitCount, 0);
+  const inventoryReady = booking.items.length > 0 && booking.items.every((item) => item.assignedUnitCount >= item.quantity);
+  const itemsSummary = bookingItemsSummaryData(booking, agreement);
   const reviewChecks = [
     {
       label: "Payment",
@@ -344,9 +350,9 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
     },
     {
       label: "Inventory",
-      value: booking.inventoryUnitId ? "Reserved" : "Needs Assignment",
-      detail: booking.inventoryUnitId || "No unit assigned",
-      ready: Boolean(booking.inventoryUnitId),
+      value: inventoryReady ? "Reserved" : "Needs Assignment",
+      detail: `${totalAssignedUnits}/${totalUnits} unit(s) reserved`,
+      ready: inventoryReady,
     },
   ];
   const remainingChecks = reviewChecks.filter((check) => !check.ready).length;
@@ -360,7 +366,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
         <div>
           <p className={styles.eyebrow}>BOOKING REVIEW</p>
           <h1>{booking.bookingRef}</h1>
-          <p>{booking.productSnapshot.name} for {fullName}</p>
+          <p>{bookingHeadline(booking.items)} for {fullName}</p>
         </div>
         <div className={styles.headerActions}>
           <span className={`${styles.liveStatus} ${styles[liveStatus]}`}>
@@ -385,10 +391,10 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
             <span>At a glance</span>
             <strong>{formatStatus(booking.status)}</strong>
           </div>
-          <h2>{booking.productSnapshot.name}</h2>
+          <h2>{bookingHeadline(booking.items)}</h2>
           <p className={styles.rentalWindow}>
             {formatDate(booking.startDate)} — {formatDate(booking.endDate)}
-            <span>{booking.dayCount} day{booking.dayCount === 1 ? "" : "s"} · {booking.quantity} unit{booking.quantity === 1 ? "" : "s"}</span>
+            <span>{booking.dayCount} day{booking.dayCount === 1 ? "" : "s"} · {totalUnits} unit{totalUnits === 1 ? "" : "s"}</span>
           </p>
           <dl className={styles.snapshotFacts}>
             <div><dt>Customer</dt><dd>{fullName}</dd></div>
@@ -509,19 +515,21 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
             </dl>
             <div className={styles.subsectionHeading}><h3>Rental &amp; Pricing</h3></div>
             <dl className={styles.detailGrid}>
-              <div><dt>Rental item</dt><dd>{booking.productSnapshot.name}</dd></div>
-              <div><dt>Brand / Category</dt><dd>{booking.productSnapshot.brand} / {booking.productSnapshot.category}</dd></div>
               <div><dt>Rental period</dt><dd>{formatDate(booking.startDate)} — {formatDate(booking.endDate)}</dd></div>
-              <div><dt>Duration / Quantity</dt><dd>{booking.dayCount} day(s) · {booking.quantity} unit(s)</dd></div>
-              <div><dt>Rental subtotal</dt><dd>PHP {booking.rentalSubtotal.toLocaleString("en-PH")}</dd></div>
-              <div><dt>Non-refundable deposit</dt><dd>PHP {booking.refundableDeposit.toLocaleString("en-PH")}</dd></div>
-              {booking.birthdayDiscountAmount > 0 ? <div><dt>Birthday perk</dt><dd>-PHP {booking.birthdayDiscountAmount.toLocaleString("en-PH")}</dd></div> : null}
-              {booking.loyaltyDiscountAmount > 0 ? <div><dt>11th-rental reward</dt><dd>-PHP {booking.loyaltyDiscountAmount.toLocaleString("en-PH")}</dd></div> : null}
-              <div className={styles.emphasizedDetail}><dt>Total amount</dt><dd>{totalAmount}</dd></div>
-              <div><dt>Assigned unit</dt><dd>{booking.inventoryUnitId || "Not assigned"}</dd></div>
+              <div><dt>Duration</dt><dd>{booking.dayCount} day(s)</dd></div>
+              <div><dt>Handover</dt><dd>{formatStatus(booking.fulfillmentMethod)}</dd></div>
               <div className={styles.wideDetail}><dt>{formatStatus(booking.fulfillmentMethod)} location</dt><dd>{booking.location || "-"}</dd></div>
-              <div className={styles.wideDetail}><dt>Included accessories</dt><dd>{booking.productSnapshot.included?.length ? booking.productSnapshot.included.join(", ") : "None listed"}</dd></div>
             </dl>
+            <BookingItemsSummary
+              currency="PHP"
+              items={itemsSummary.items}
+              unitsExpected={itemsSummary.unitsExpected}
+              subtotal={booking.rentalSubtotal}
+              discountAmount={booking.specialDiscountAmount}
+              depositAmount={booking.refundableDeposit}
+              fees={booking.deliveryFee + (booking.pickupConvenienceFee ?? 0)}
+              grandTotal={booking.totalAmount}
+            />
           </div>
         </details>
 

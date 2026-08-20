@@ -35,6 +35,7 @@ function booking(status: Booking["status"], method: Booking["fulfillmentMethod"]
         refundableDeposit: 500,
         included: [],
         lineRentalSubtotal: 2000,
+        assignedUnitCount: 1,
       },
     ],
     productId: "product-id",

@@ -46,6 +46,41 @@ export async function GET(request: Request, { params }: { params: Promise<{ book
     const { booking, emergencyContact, agreement, statusHistory, documents } = details;
     const customerSignature = agreement?.signatures?.find((s) => s.signerRole === "customer");
 
+    // Once the agreement snapshot exists it is the frozen, signed record of
+    // what was rented -- unit codes/serials must come from there, not live
+    // inventory. Before that, fall back to booking.items (no units yet).
+    const snapshotItems = agreement?.agreementSnapshot?.items;
+    const itemSections: BookingReportSection[] = snapshotItems?.length
+      ? snapshotItems.map((item, index) => ({
+          title: `Item ${index + 1}: ${item.productName}`,
+          fields: [
+            { label: "Brand", value: item.brand || "-" },
+            { label: "Price per day", value: `PHP ${item.pricePerDay.toLocaleString("en-PH")}` },
+            { label: "Quantity", value: `${item.quantity} unit(s)` },
+            { label: "Rental days", value: `${item.rentalDays}` },
+            { label: "Line total", value: `PHP ${item.lineTotal.toLocaleString("en-PH")}` },
+            { label: "Included accessories", value: item.includedAccessories?.length ? item.includedAccessories.join(", ") : "None listed" },
+            {
+              label: "Assigned unit(s)",
+              value: item.units.length
+                ? item.units.map((unit) => `${unit.unitCode}${unit.serialNumber ? ` (SN ${unit.serialNumber})` : ""}`).join(", ")
+                : "Not yet assigned",
+            },
+          ],
+        }))
+      : booking.items.map((item, index) => ({
+          title: `Item ${index + 1}: ${item.productName}`,
+          fields: [
+            { label: "Brand", value: item.brand || "-" },
+            { label: "Price per day", value: `PHP ${item.dailyRate.toLocaleString("en-PH")}` },
+            { label: "Quantity", value: `${item.quantity} unit(s)` },
+            { label: "Rental days", value: `${booking.dayCount}` },
+            { label: "Line total", value: `PHP ${item.lineRentalSubtotal.toLocaleString("en-PH")}` },
+            { label: "Included accessories", value: item.included.length ? item.included.join(", ") : "None listed" },
+            { label: "Assigned unit(s)", value: "Confirmed at signing" },
+          ],
+        }));
+
     const sections: BookingReportSection[] = [
       {
         title: "Booking Overview",
@@ -72,14 +107,17 @@ export async function GET(request: Request, { params }: { params: Promise<{ book
       {
         title: "Rental Details",
         fields: [
-          { label: "Product", value: booking.productSnapshot.name },
-          { label: "Brand and category", value: `${booking.productSnapshot.brand} / ${booking.productSnapshot.category}` },
-          { label: "Daily rate", value: `PHP ${booking.dailyRate.toLocaleString("en-PH")}` },
           { label: "Rental dates", value: `${formatDate(booking.startDate)} to ${formatDate(booking.endDate)}` },
           { label: "Duration", value: `${booking.dayCount} day(s)` },
           { label: "Handover method", value: formatStatus(booking.fulfillmentMethod) },
           { label: "Location", value: booking.location || "-" },
-          { label: "Quantity", value: `${booking.quantity} unit(s)` },
+          { label: "Item count", value: `${booking.items.length} item(s)` },
+        ],
+      },
+      ...itemSections,
+      {
+        title: "Booking Totals",
+        fields: [
           { label: "Rental subtotal", value: `PHP ${booking.rentalSubtotal.toLocaleString("en-PH")}` },
           ...(booking.birthdayDiscountAmount > 0
             ? [{ label: "Birthday month perk", value: `-PHP ${booking.birthdayDiscountAmount.toLocaleString("en-PH")}` }]
@@ -88,8 +126,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ book
             ? [{ label: "11th-rental loyalty reward", value: `-PHP ${booking.loyaltyDiscountAmount.toLocaleString("en-PH")}` }]
             : []),
           { label: "Non-refundable deposit", value: `PHP ${booking.refundableDeposit.toLocaleString("en-PH")}` },
+          { label: "Delivery / convenience fees", value: `PHP ${(booking.deliveryFee + (booking.pickupConvenienceFee ?? 0)).toLocaleString("en-PH")}` },
           { label: "Total amount", value: `PHP ${booking.totalAmount.toLocaleString("en-PH")}` },
-          { label: "Assigned physical unit", value: booking.inventoryUnitId || "Not assigned" },
         ],
       },
       {

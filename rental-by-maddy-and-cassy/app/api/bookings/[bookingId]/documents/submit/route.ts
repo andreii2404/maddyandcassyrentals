@@ -3,6 +3,14 @@ import { z } from "zod";
 import { enforceRateLimit, requireUser, RequestSecurityError } from "@/src/lib/server/requestSecurity";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 import { getBookingById } from "@/src/services/bookingService";
+import {
+  activeUnitAssignments,
+  assertUnitAssignmentsComplete,
+  getBookingUnitAssignments,
+  IncompleteUnitAssignmentError,
+} from "@/src/services/unitAssignmentService";
+import { toJson } from "@/src/lib/supabase/types";
+import type { AgreementSnapshot } from "@/src/types/booking";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -98,6 +106,25 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
       return errorResponse("Submit your reservation payment proof before submitting documents.", 409);
     }
 
+    // The agreement is about to be finalized for signing -- reconfirm every
+    // item's active unit allocation from the real reservation rows (never a
+    // placeholder) before freezing anything into the snapshot below.
+    const unitAssignments = await getBookingUnitAssignments(admin, bookingId);
+    try {
+      assertUnitAssignmentsComplete(
+        booking.items.map((item) => ({ bookingItemId: item.bookingItemId, quantity: item.quantity })),
+        unitAssignments,
+      );
+    } catch (error) {
+      if (error instanceof IncompleteUnitAssignmentError) {
+        return errorResponse(
+          "Your reserved units could not be fully confirmed. Please contact support before signing.",
+          409,
+        );
+      }
+      throw error;
+    }
+
     const now = new Date().toISOString();
 
     // There is no more booking_documents table: each uploaded file becomes a
@@ -168,18 +195,32 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
     );
     if (submissionsError) throw new Error(submissionsError.message);
 
-    const agreementSnapshot = {
+    const agreementSnapshot: AgreementSnapshot = {
       customerName: booking.customerSnapshot.fullName || input.typedFullName,
-      productName: booking.productSnapshot.name || "Rental item",
-      quantity: booking.quantity,
+      items: booking.items.map((item) => ({
+        productName: item.productName,
+        brand: item.brand,
+        quantity: item.quantity,
+        pricePerDay: item.dailyRate,
+        rentalDays: booking.dayCount || 1,
+        lineTotal: item.lineRentalSubtotal,
+        includedAccessories: item.included,
+        units: activeUnitAssignments(unitAssignments.get(item.bookingItemId)).map((assignment) => ({
+          unitCode: assignment.unitCode,
+          serialNumber: assignment.serialNumber,
+        })),
+      })),
       startDate: booking.startDate,
       endDate: booking.endDate,
       dayCount: booking.dayCount || 1,
       fulfillmentMethod: booking.fulfillmentMethod,
       customerLocation: booking.location || "",
-      pricePerDay: booking.dailyRate,
       currency: "PHP",
-      includedAccessories: booking.productSnapshot.included ?? [],
+      subtotal: booking.rentalSubtotal,
+      discountAmount: booking.specialDiscountAmount,
+      depositAmount: booking.refundableDeposit,
+      fees: booking.deliveryFee + (booking.pickupConvenienceFee ?? 0),
+      finalAmount: booking.totalAmount,
     };
 
     const { data: agreement, error: agreementError } = await admin
@@ -199,7 +240,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
         agreement_id: agreement.id,
         version_number: 1,
         status: "awaiting_business_signature",
-        agreement_snapshot: agreementSnapshot,
+        agreement_snapshot: toJson(agreementSnapshot),
         generated_at: now,
         created_by: user.id,
       })

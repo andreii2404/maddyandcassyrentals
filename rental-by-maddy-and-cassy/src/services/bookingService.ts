@@ -111,6 +111,9 @@ function mapBookingItem(
   dayCount: number,
 ): BookingItemLine {
   const dailyRate = item.daily_rate_snapshot ?? 0;
+  const assignedUnitCount = (item.unit_reservations ?? []).filter((reservation) =>
+    ACTIVE_RESERVATION_STATUSES.has(reservation.status),
+  ).length;
   return {
     bookingItemId: item.id,
     productId: item.product_id,
@@ -123,6 +126,7 @@ function mapBookingItem(
     refundableDeposit: item.deposit_per_unit_snapshot ?? 0,
     included: includedFromSpecifications(item.products?.specifications),
     lineRentalSubtotal: dailyRate * item.quantity * dayCount,
+    assignedUnitCount,
   };
 }
 
@@ -165,7 +169,7 @@ function assembleBooking(
     nextAvailableAt: row.next_available_at,
     dayCount,
     dailyRate: item?.daily_rate_snapshot ?? 0,
-    refundableDeposit: (item?.deposit_per_unit_snapshot ?? 0) * quantity,
+    refundableDeposit: totals?.deposit_total ?? 0,
     rentalSubtotal: totals?.rental_subtotal ?? 0,
     specialDiscountAmount: totals?.special_discount_total ?? 0,
     birthdayDiscountAmount: row.birthday_discount_amount,
