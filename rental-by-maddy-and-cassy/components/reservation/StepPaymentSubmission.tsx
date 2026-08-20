@@ -42,7 +42,6 @@ interface StepPaymentSubmissionProps {
   onPaymentOptionChange: (option: "deposit_50" | "full") => void;
   onManualPaymentUpdate: (patch: Partial<ManualPaymentDraft>) => void;
   onBack: () => void;
-  onPay: () => void;
   onContinue: () => void;
 }
 
@@ -50,6 +49,7 @@ export default function StepPaymentSubmission({
   product,
   draft,
   rewardProgress,
+  paymentState,
   bookingNumber,
   opening,
   error,
@@ -63,8 +63,16 @@ export default function StepPaymentSubmission({
   const dueNow = draft.paymentOption === "deposit_50"
     ? Math.round(pricing.finalAmount * 50) / 100
     : pricing.finalAmount;
+  // A resumed session (e.g. a different device/browser) already has its
+  // payment submission recorded server-side even though the local draft's
+  // manual-payment fields are empty -- don't re-require them in that case.
+  const alreadySubmitted = paymentState !== "unpaid";
 
   function validate(): boolean {
+    if (alreadySubmitted) {
+      setErrors([]);
+      return true;
+    }
     const nextErrors: string[] = [];
     if (!draft.manualPayment.referenceNumber.trim()) {
       nextErrors.push("Enter the GCash reference number for your payment.");
@@ -242,6 +250,16 @@ export default function StepPaymentSubmission({
       </p>
 
       <h3 className={sharedStyles.sectionHeading}>Proof of Payment</h3>
+      {alreadySubmitted ? (
+        <div className={styles.guarantee}>
+          <strong>
+            {paymentState === "pending"
+              ? "Your payment proof was already submitted and is awaiting verification."
+              : "Your payment has already been verified."}
+          </strong>
+          <span>You don&apos;t need to submit it again. Continue to the next step below.</span>
+        </div>
+      ) : null}
       <div className={formStyles.row}>
         <div className={formStyles.field}>
           <label className={formStyles.label} htmlFor="pay-reference">
@@ -320,7 +338,11 @@ export default function StepPaymentSubmission({
           onClick={handleContinue}
           disabled={opening}
         >
-          {opening ? "Saving your reservation…" : "Submit Payment & Continue"}
+          {opening
+            ? "Saving your reservation…"
+            : alreadySubmitted
+              ? "Continue"
+              : "Submit Payment & Continue"}
         </button>
       </div>
     </div>

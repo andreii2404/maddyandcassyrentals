@@ -1,11 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
+import Image from "next/image";
 import { useToast } from "@/components/ui/ToastProvider";
-import { createPaymentCheckout, reconcilePayment } from "@/src/services/paymentService";
+import { submitManualPayment } from "@/src/services/paymentService";
+import FileUploadField from "@/components/file-upload/FileUploadField";
+import formStyles from "@/components/ui/Form.module.css";
 import type { Booking } from "@/src/types/booking";
 import type { PaymentRecord } from "@/src/types/payment";
 import styles from "./BookingPaymentPanel.module.css";
+
+const GCASH_ACCOUNT_NAME = "FATIMA KLYE SIERRA";
 
 function money(value: number): string {
   return `PHP ${value.toLocaleString("en-PH", {
@@ -24,83 +29,14 @@ export default function BookingPaymentPanel({
   onPaymentUpdated?: () => void | Promise<void>;
 }) {
   const { showToast } = useToast();
-  const [opening, setOpening] = useState(false);
-  const [confirmingReturn, setConfirmingReturn] = useState(false);
-  const returnHandledRef = useRef(false);
-  const hasPendingPayment = payments.some((payment) => payment.status === "submitted");
+  const [submitting, setSubmitting] = useState(false);
+  const [referenceNumber, setReferenceNumber] = useState("");
+  const [accountName, setAccountName] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [errors, setErrors] = useState<string[]>([]);
 
-  useEffect(() => {
-    if (returnHandledRef.current) return;
-    const params = new URLSearchParams(window.location.search);
-    const returnedFromPayment = params.get("payment") === "success";
-    // Also reconcile an existing submitted payment when the customer had to
-    // sign in again and the old redirect lost its payment marker. This safely
-    // recovers a paid PayMongo checkout before offering another checkout.
-    if (!returnedFromPayment && !hasPendingPayment) return;
-
-    returnHandledRef.current = true;
-    let cancelled = false;
-    let timer: number | undefined;
-
-    const clearReturnMarker = () => {
-      const url = new URL(window.location.href);
-      url.searchParams.delete("payment");
-      window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
-    };
-
-    async function confirmPayment(attempt = 0): Promise<void> {
-      try {
-        const status = await reconcilePayment(booking.id);
-        if (cancelled) return;
-        if (status === "verified") {
-          clearReturnMarker();
-          setConfirmingReturn(false);
-          showToast("Payment verified. Your receipt is being prepared.", "success");
-          await onPaymentUpdated?.();
-          return;
-        }
-        if (status === "failed") {
-          clearReturnMarker();
-          setConfirmingReturn(false);
-          showToast("PayMongo reported that this payment was not completed.", "error");
-          await onPaymentUpdated?.();
-          return;
-        }
-        if (returnedFromPayment && attempt < 14) {
-          timer = window.setTimeout(() => void confirmPayment(attempt + 1), 2000);
-          return;
-        }
-        setConfirmingReturn(false);
-        if (returnedFromPayment) {
-          showToast("PayMongo is still confirming this payment. Refresh this booking in a moment.", "info");
-        }
-      } catch (error) {
-        if (cancelled) return;
-        if (returnedFromPayment && attempt < 14) {
-          timer = window.setTimeout(() => void confirmPayment(attempt + 1), 2000);
-          return;
-        }
-        setConfirmingReturn(false);
-        if (returnedFromPayment) {
-          showToast(
-            error instanceof Error ? error.message : "The payment status could not be confirmed.",
-            "error",
-          );
-        }
-      }
-    }
-
-    timer = window.setTimeout(() => {
-      if (cancelled) return;
-      setConfirmingReturn(true);
-      void confirmPayment();
-    }, 0);
-    return () => {
-      cancelled = true;
-      if (timer) window.clearTimeout(timer);
-    };
-  }, [booking.id, hasPendingPayment, onPaymentUpdated, showToast]);
-
+  const hasPendingPayment = payments.some((payment) => ["submitted", "under_review"].includes(payment.status));
   const latestPayment = [...payments].sort(
     (left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
   )[0];
@@ -112,7 +48,7 @@ export default function BookingPaymentPanel({
   const balanceDue = Math.max(0, totalAmount - amountPaid);
   const paymentStatus: "unpaid" | "pending" | "partially_paid" | "paid" =
     amountPaid <= 0
-      ? latestPayment && ["submitted", "under_review"].includes(latestPayment.status)
+      ? hasPendingPayment
         ? "pending"
         : "unpaid"
       : balanceDue <= 0.01
@@ -120,15 +56,40 @@ export default function BookingPaymentPanel({
         : "partially_paid";
 
   const paymentAvailable = ["pending", "approved", "confirmed"].includes(booking.status);
+  const dueNow = paymentStatus === "partially_paid" ? balanceDue : totalAmount;
 
-  async function handlePay() {
-    setOpening(true);
+  function validate(): boolean {
+    const nextErrors: string[] = [];
+    if (!referenceNumber.trim()) nextErrors.push("Enter the GCash reference number for your payment.");
+    if (!accountName.trim()) nextErrors.push("Enter the name of the account used to pay.");
+    if (!accountNumber.trim()) nextErrors.push("Enter the mobile number or account number used to pay.");
+    if (!proofFile) nextErrors.push("Upload a screenshot or proof of payment.");
+    setErrors(nextErrors);
+    return nextErrors.length === 0;
+  }
+
+  async function handleSubmit() {
+    if (!validate() || !proofFile) return;
+    setSubmitting(true);
     try {
-      const result = await createPaymentCheckout(booking.id, paymentStatus === "partially_paid" ? "balance" : "full");
-      window.location.assign(result.checkoutUrl);
+      await submitManualPayment(booking.id, {
+        referenceNumber: referenceNumber.trim(),
+        accountName: accountName.trim(),
+        accountNumber: accountNumber.trim(),
+        paymentOption: paymentStatus === "partially_paid" ? "balance" : "full",
+        proofFile,
+      });
+      setReferenceNumber("");
+      setAccountName("");
+      setAccountNumber("");
+      setProofFile(null);
+      setErrors([]);
+      showToast("Payment proof submitted. Our team will verify it shortly.", "success");
+      await onPaymentUpdated?.();
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "The payment page could not be opened.", "error");
-      setOpening(false);
+      showToast(error instanceof Error ? error.message : "The payment details could not be submitted.", "error");
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -138,7 +99,7 @@ export default function BookingPaymentPanel({
         <div className={styles.titleGroup}>
           <span className={styles.secureIcon} aria-hidden="true">✓</span>
           <div>
-            <p>SECURE PAYMENT</p>
+            <p>GCASH PAYMENT</p>
             <h3>
               {isDemoPayment
                 ? "Demo payment recorded"
@@ -172,33 +133,89 @@ export default function BookingPaymentPanel({
       </dl>
 
       <div className={styles.trustRow} aria-label="Payment information">
-        <div><strong>PayMongo</strong><span>Hosted checkout</span></div>
-        <div><strong>{amountPaid > 0 ? "Recorded" : "Protected"}</strong><span>{amountPaid > 0 ? "Payment saved" : "Secure processing"}</span></div>
-        <div><strong>{paymentStatus === "paid" ? "Ready" : "Automatic"}</strong><span>{paymentStatus === "paid" ? "Receipt available" : "Status updates"}</span></div>
+        <div><strong>GCash</strong><span>Manual transfer</span></div>
+        <div><strong>{amountPaid > 0 ? "Recorded" : "Reviewed"}</strong><span>{amountPaid > 0 ? "Payment saved" : "Verified by our team"}</span></div>
+        <div><strong>{paymentStatus === "paid" ? "Ready" : "Manual"}</strong><span>{paymentStatus === "paid" ? "Receipt available" : "Status updates"}</span></div>
       </div>
 
-      {confirmingReturn ? (
-        <p className={styles.message}>Confirming your successful PayMongo return and preparing your receipt…</p>
-      ) : paymentStatus === "paid" ? (
+      {paymentStatus === "paid" ? (
         <p className={styles.message}>
           {isDemoPayment
             ? "This is a development flow test. No money was processed, and all generated documents are marked as demo records."
-            : "PayMongo verified this transaction. Your official receipt and finalized agreement are available under Documents."}
+            : "Your payment has been verified. Your official receipt and finalized agreement are available under Documents."}
+        </p>
+      ) : hasPendingPayment ? (
+        <p className={styles.message}>
+          Your GCash payment proof was submitted and is awaiting verification by our team. You&apos;ll be notified once it&apos;s reviewed.
         </p>
       ) : paymentAvailable ? (
         <>
           <p className={styles.message}>
-            Continue to PayMongo&apos;s hosted checkout. A verified payment secures your selected
-            rental dates. Verification documents are completed afterward.
+            Send <strong>{money(dueNow)}</strong> via GCash to the account below, then submit your proof of payment.
           </p>
-          <button type="button" onClick={handlePay} disabled={opening || confirmingReturn}>
-            {opening
-              ? "Opening secure checkout..."
-              : paymentStatus === "pending"
-                ? "Continue Payment"
-                : paymentStatus === "partially_paid"
-                  ? "Pay Remaining Balance"
-                  : "Pay Securely"}
+          <div className={styles.gcash}>
+            <div className={styles.qrImageWrapper}>
+              <Image src="/images/gcash-payment-qr.png" alt="GCash payment QR code" fill sizes="140px" />
+            </div>
+            <div>
+              <span>Account name</span>
+              <strong>{GCASH_ACCOUNT_NAME}</strong>
+            </div>
+          </div>
+
+          <div className={formStyles.field}>
+            <label className={formStyles.label} htmlFor="panel-pay-reference">
+              Reference number<span className={formStyles.required}>*</span>
+            </label>
+            <input
+              id="panel-pay-reference"
+              className={formStyles.input}
+              value={referenceNumber}
+              onChange={(event) => setReferenceNumber(event.target.value)}
+              disabled={submitting}
+            />
+          </div>
+          <div className={formStyles.field}>
+            <label className={formStyles.label} htmlFor="panel-pay-account-name">
+              Name of account used<span className={formStyles.required}>*</span>
+            </label>
+            <input
+              id="panel-pay-account-name"
+              className={formStyles.input}
+              value={accountName}
+              onChange={(event) => setAccountName(event.target.value)}
+              disabled={submitting}
+            />
+          </div>
+          <div className={formStyles.field}>
+            <label className={formStyles.label} htmlFor="panel-pay-account-number">
+              Mobile number / account number used<span className={formStyles.required}>*</span>
+            </label>
+            <input
+              id="panel-pay-account-number"
+              className={formStyles.input}
+              value={accountNumber}
+              onChange={(event) => setAccountNumber(event.target.value)}
+              disabled={submitting}
+            />
+          </div>
+          <FileUploadField
+            label="Screenshot / proof of payment"
+            required
+            value={proofFile}
+            onChange={setProofFile}
+          />
+
+          {errors.length > 0 ? (
+            <ul className={formStyles.errorText} role="alert">
+              {errors.map((message) => (
+                <li key={message}>{message}</li>
+              ))}
+            </ul>
+          ) : null}
+
+          <button type="button" onClick={() => void handleSubmit()} disabled={submitting}>
+            {submitting ? "Submitting payment…" : "Submit Payment Proof"}
           </button>
         </>
       ) : (

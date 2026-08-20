@@ -84,7 +84,7 @@ export default function AdminDashboard() {
             <article className={styles.metricCard}>
               <span>Successful Payments</span>
               <strong>{data.metrics.successfulPayments}</strong>
-              <small>Verified through PayMongo or demo checkout</small>
+              <small>Verified GCash payments</small>
             </article>
             <article className={styles.metricCard}>
               <span>Failed Payments</span>

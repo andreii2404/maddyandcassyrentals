@@ -11,8 +11,6 @@ upload. On an Ubuntu GoDaddy VPS:
 4. Adapt `ops/nginx-godaddy.conf` to the real domain and enable it in Nginx.
 5. Issue a TLS certificate with Certbot and point the GoDaddy DNS A record to
    the VPS.
-6. Register `https://your-domain/api/paymongo/webhook` in the PayMongo
-   dashboard and subscribe to `checkout_session.payment.paid`.
 
 Use Cloudflare proxying in front of the VPS for managed WAF, bot protection,
 DDoS mitigation, and CDN caching. Never cache `/api/*`, `/account/*`, or
@@ -20,11 +18,9 @@ DDoS mitigation, and CDN caching. Never cache `/api/*`, `/account/*`, or
 
 ## Required secrets
 
-Start from `.env.example`. Keep the Supabase service-role key, PayMongo
-secret key, PayMongo webhook secret, and Web Push VAPID private key in the
-VPS secret environment only — never commit them or expose them to the
-browser. Switch `PAYMONGO_SECRET_KEY` from `sk_test_` to `sk_live_` only
-after test-mode webhook reconciliation passes.
+Start from `.env.example`. Keep the Supabase service-role key and Web Push
+VAPID private key in the VPS secret environment only — never commit them or
+expose them to the browser.
 
 ## Supabase production setup
 
@@ -57,9 +53,11 @@ etc.) should be included in the same backup schedule.
 ## Monitoring and alerts
 
 - Monitor `GET /api/health` every minute from an external HTTPS monitor.
-- Alert on HTTP 5xx rates, `paymongo_webhook_events.processing_status =
-  'failed'` rows, PayMongo delivery failures, and Supabase quota/permission
-  errors (Dashboard > Logs).
+- Alert on HTTP 5xx rates and Supabase quota/permission errors (Dashboard >
+  Logs).
+- Watch for `booking_payment_submissions` rows stuck in `submitted` or
+  `under_review` for longer than expected — that's a customer waiting on a
+  manual GCash review.
 - Forward structured logs without request bodies, ID images, tokens, or
   secrets.
 - Configure disk, memory, certificate-expiry, and PM2 restart alerts.

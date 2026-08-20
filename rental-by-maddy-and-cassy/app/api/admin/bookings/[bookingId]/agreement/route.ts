@@ -157,7 +157,7 @@ export async function POST(
       paymentReference:
         verifiedPayment.paymongo_payment_id ||
         verifiedPayment.external_reference ||
-        "Verified through PayMongo",
+        "Verified payment",
       storagePath: finalPath,
     });
 

@@ -22,7 +22,7 @@ import {
   createBookingReservation,
   submitBookingDocuments,
 } from "@/src/services/bookingSubmissionService";
-import { createPaymentCheckout, getReservationResumeState, reconcilePayment } from "@/src/services/paymentService";
+import { getReservationResumeState, submitManualPayment } from "@/src/services/paymentService";
 import { getCustomerRewardProgress } from "@/src/services/bookingService";
 import { startGuestCheckout } from "@/src/services/authService";
 import { useCart } from "@/hooks/useCart";
@@ -216,38 +216,14 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
     if (!resumedBookingId) return;
     const activeBookingId = resumedBookingId;
     let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const returnedFromPayment = params.get("payment") === "success";
-    const paymentCancelled = params.get("payment") === "cancelled";
-    let attempts = 0;
 
     async function refreshBooking() {
-      // A booking ID supplied by our PayMongo return URL is authoritative.
-      // Move to Payment Submission immediately instead of letting an empty or
-      // stale browser draft show Rental Details while verification runs.
+      // A booking ID supplied by a resume link is authoritative. Move to
+      // Payment Submission immediately instead of letting an empty or stale
+      // browser draft show Rental Details while the booking loads.
       setBookingId(activeBookingId);
       setStep(3);
-      if (returnedFromPayment) setCheckingPayment(true);
-
-      let providerFailed = false;
-      if (returnedFromPayment) {
-        try {
-          const providerStatus = await reconcilePayment(activeBookingId);
-          if (providerStatus === "failed") {
-            providerFailed = true;
-            setCheckingPayment(false);
-            setPaymentError(
-              "PayMongo reports that this payment attempt failed. Please start a new secure checkout.",
-            );
-          }
-        } catch (error) {
-          if (!cancelled && attempts >= 14) {
-            setPaymentError(
-              error instanceof Error ? error.message : "The payment status could not be confirmed.",
-            );
-          }
-        }
-      }
+      setCheckingPayment(true);
 
       let resumeState;
       try {
@@ -260,18 +236,17 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
         );
         return;
       }
+      if (cancelled) return;
       const booking = resumeState.booking;
-      if (booking.productId !== product.id || cancelled) {
+      if (booking.productId !== product.id) {
         setCheckingPayment(false);
         setPaymentError("This reservation belongs to a different rental item.");
         return;
       }
 
-      const nextState: BookingPaymentState = resumeState.paymentState;
-
       setBookingId(booking.id);
       setBookingNumber(booking.bookingRef);
-      setPaymentState(nextState);
+      setPaymentState(resumeState.paymentState);
       setIsDemoPayment(resumeState.isDemoPayment);
       setReceiptReady(resumeState.receiptReady);
       setDraft((current) => ({
@@ -292,32 +267,13 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
           ...parseCustomerAddress(booking.customerSnapshot.address),
         },
       }));
-      if (nextState === "paid" || nextState === "partially_paid") {
-        setCheckingPayment(false);
-        setPaymentError(null);
-        return;
-      }
-
-      if (returnedFromPayment && attempts < 15 && !providerFailed) {
-        attempts += 1;
-        setCheckingPayment(true);
-        timer = setTimeout(refreshBooking, 2000);
-      } else {
-        setCheckingPayment(false);
-        if (returnedFromPayment) {
-          setPaymentError(
-            "PayMongo is still confirming the transaction. Please wait a moment, then refresh this page.",
-          );
-        } else if (paymentCancelled) {
-          setPaymentError("Payment was cancelled. Your reservation can still be paid from here.");
-        }
-      }
+      setCheckingPayment(false);
+      setPaymentError(null);
     }
 
     void refreshBooking();
     return () => {
       cancelled = true;
-      if (timer) clearTimeout(timer);
     };
   }, [user, product.id]);
 
@@ -328,33 +284,6 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
   function goToStep(nextStep: number) {
     setStep(nextStep);
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  async function handlePayment() {
-    if (!user) return;
-    setOpeningPayment(true);
-    setPaymentError(null);
-
-    try {
-      let activeBookingId = bookingId;
-      let activeBookingNumber = bookingNumber;
-      if (!activeBookingId) {
-        const supabase = createClient();
-        const reservation = await createBookingReservation(supabase, product, draft);
-        activeBookingId = reservation.bookingId;
-        activeBookingNumber = reservation.bookingNumber ?? reservation.bookingId;
-        setBookingId(activeBookingId);
-        setBookingNumber(activeBookingNumber);
-      }
-
-      const returnPath = `/catalog/${encodeURIComponent(product.id)}/reserve?bookingId=${encodeURIComponent(activeBookingId)}`;
-      const checkout = await createPaymentCheckout(activeBookingId, draft.paymentOption, returnPath);
-      setIsDemoPayment(checkout.checkoutUrl.includes("/demo/paymongo"));
-      window.location.assign(checkout.checkoutUrl);
-    } catch (error) {
-      setOpeningPayment(false);
-      setPaymentError(error instanceof Error ? error.message : "The secure PayMongo checkout could not be opened.");
-    }
   }
 
   async function handleManualPaymentContinue() {
@@ -373,10 +302,24 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
         setBookingId(activeBookingId);
         setBookingNumber(activeBookingNumber);
       }
+
+      if (paymentState === "unpaid") {
+        if (!draft.manualPayment.proofFile) {
+          throw new Error("Upload a screenshot or proof of payment.");
+        }
+        await submitManualPayment(activeBookingId, {
+          referenceNumber: draft.manualPayment.referenceNumber.trim(),
+          accountName: draft.manualPayment.accountName.trim(),
+          accountNumber: draft.manualPayment.accountNumber.trim(),
+          paymentOption: draft.paymentOption,
+          proofFile: draft.manualPayment.proofFile,
+        });
+        setPaymentState("pending");
+      }
       goToStep(4);
     } catch (error) {
       setPaymentError(
-        error instanceof Error ? error.message : "We couldn't save your reservation. Please try again.",
+        error instanceof Error ? error.message : "We couldn't submit your payment details. Please try again.",
       );
     } finally {
       setOpeningPayment(false);
@@ -547,7 +490,6 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
               updateDraft({ manualPayment: { ...draft.manualPayment, ...patch } })
             }
             onBack={() => goToStep(2)}
-            onPay={() => void handlePayment()}
             onContinue={() => void handleManualPaymentContinue()}
           />
         ) : null}
@@ -607,9 +549,9 @@ export default function ReserveFlowClient(props: ReserveFlowClientProps) {
           <p className={styles.eyebrow}>RESERVATION RECOVERY</p>
           <h1 id="resume-booking-heading">Sign in to resume your payment confirmation.</h1>
           <p>
-            Your reservation link is safe. Your previous session expired while you were at
-            PayMongo, so sign in with the same customer email and we&apos;ll return you directly
-            to Payment Submission without asking you to enter the rental details again.
+            Your reservation link is safe. Your previous session expired, so sign in with the
+            same customer email and we&apos;ll return you directly to Payment Submission without
+            asking you to enter the rental details again.
           </p>
           <div className={`${styles.gateOptions} ${styles.resumeGate}`}>
             <div>
@@ -634,7 +576,7 @@ export default function ReserveFlowClient(props: ReserveFlowClientProps) {
         <div className={styles.gateOptions}>
           <div>
             <strong>Continue as guest</strong>
-            <span>No password required. You will still provide an email for PayMongo and booking updates.</span>
+            <span>No password required. You will still provide an email for booking updates.</span>
             <button
               type="button"
               disabled={startingGuest}

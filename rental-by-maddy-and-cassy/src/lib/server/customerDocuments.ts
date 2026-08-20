@@ -92,7 +92,7 @@ export async function generateAndSaveReceipt(
     amount: input.amount,
     issuedAt: formatManilaDate(new Date(), true),
     paymentReference: input.paymentReference,
-    paymentMethod: input.paymentMethod || "PayMongo",
+    paymentMethod: input.paymentMethod || "GCash",
   });
   await savePrivatePdf(admin, "receipts", input.storagePath, bytes);
 }

@@ -67,7 +67,7 @@ export default function AdminPaymentsPage() {
             <p>PAYMENT OPERATIONS</p>
             <h1>Payments &amp; Webhooks</h1>
             <span>
-              Reconcile demo checkouts and verified PayMongo transactions.
+              Review manually submitted GCash payments. Historic PayMongo transactions remain visible below.
             </span>
           </div>
         </header>
@@ -161,8 +161,8 @@ export default function AdminPaymentsPage() {
             <section className={styles.panel}>
               <div className={styles.panelHeader}>
                 <div>
-                  <h2>Webhook Submission Log</h2>
-                  <p>Signed PayMongo events and processing outcome.</p>
+                  <h2>Legacy Webhook Log</h2>
+                  <p>Historic signed PayMongo events from before the switch to manual GCash payments.</p>
                 </div>
               </div>
               {data.events.length ? (
@@ -210,7 +210,7 @@ export default function AdminPaymentsPage() {
                 </div>
               ) : (
                 <p className={styles.empty}>
-                  Demo payments do not create PayMongo webhook events.
+                  No webhook events on record.
                 </p>
               )}
             </section>

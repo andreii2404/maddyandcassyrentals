@@ -24,7 +24,7 @@ export default function StepBookingConfirmation({
       </div>
       <p className={sharedStyles.subheading}>
         Booking {bookingNumber} is now with the team for document verification. Once approved,
-        its status will change to Confirmed. Your {isDemo ? "demo-labeled" : "PayMongo"} receipt,
+        its status will change to Confirmed. Your {isDemo ? "demo-labeled" : "GCash payment"} receipt,
         proof of payment, and booking invoice are available in your account.
       </p>
       {isGuest ? (

@@ -13,7 +13,7 @@ export type PaymentStage = Database["public"]["Enums"]["payment_stage"];
 /**
  * Client-facing checkout choice offered on the reservation/payment flow.
  * Mapped to a payment_stage value server-side — see paymentOptionToStage()
- * in app/api/payments/checkout/route.ts.
+ * in app/api/bookings/[bookingId]/payment/submit/route.ts.
  */
 export type PaymentOption = "deposit_50" | "full" | "balance";
 
@@ -28,6 +28,9 @@ export interface PaymentRecord {
   paymentMethod?: string;
   externalReference?: string;
   proofDocumentId?: string;
+  proofStorageBucket?: string;
+  proofStoragePath?: string;
+  proofOriginalFilename?: string;
   paymongoCheckoutSessionId?: string;
   paymongoPaymentId?: string;
   idempotencyKey?: string;

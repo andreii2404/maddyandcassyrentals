@@ -23,8 +23,8 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 ## Supabase access
 
 Server-side operations such as deleting a customer account, generating
-private PDFs, and processing the PayMongo webhook use the Supabase
-service-role key. Set `SUPABASE_SECRET_KEY` in the local or hosting
+private PDFs, and reviewing manually submitted GCash payments use the
+Supabase service-role key. Set `SUPABASE_SECRET_KEY` in the local or hosting
 environment (see `.env.local.example`).
 
 Never commit this key or expose it to the browser — only
@@ -42,15 +42,13 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 
 ## Payments, documents, and notifications
 
-The application uses PayMongo Hosted Checkout v2. Customers can pay only after
-verification and approval. A signed, replay-protected
-`checkout_session.payment.paid` webhook is the source of truth. The system
-privately generates invoices, official receipts, verified payment proof, and a
-two-page final rental agreement.
-
-Configure `.env.example`, then register
-`https://your-domain/api/paymongo/webhook` in the PayMongo dashboard and
-subscribe to `checkout_session.payment.paid`.
+Customers pay manually via GCash: they submit a reference number, the paying
+account's name/number, and a screenshot of the transfer as proof of payment.
+An administrator reviews the submission in `/admin/bookings/[id]` and marks it
+verified or rejected — verification is the source of truth, not any
+automated provider callback. The system privately generates invoices,
+official receipts, verified payment proof, and a two-page final rental
+agreement once a payment is verified.
 
 Web Push notifications are available from the customer profile after
 `NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY` and `WEB_PUSH_VAPID_PRIVATE_KEY` are
@@ -66,8 +64,8 @@ the Supabase project's own email settings.
 
 ## Verification
 
-Run `npm run verify` to lint, type-check, test payment security and PDF
-generation, and build the production application.
+Run `npm run verify` to lint, type-check, test PDF generation, and build the
+production application.
 
 ## GoDaddy production deployment
 

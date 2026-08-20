@@ -205,7 +205,7 @@ function BookingDetailContent() {
           <p>
             {isDemoPayment
               ? "This booking completed the development payment flow. No real money was processed. The business can now test document review and confirmation."
-              : "PayMongo has verified your reservation payment. The business will now review your verification documents and signed agreement, then mark the booking Confirmed."}
+              : "Your GCash payment proof has been submitted. Once our team verifies it, we'll review your verification documents and signed agreement, then mark the booking Confirmed."}
           </p>
           <p className={styles.paymentNote}>
             Your invoice, official receipt, verified proof of payment, and signed rental agreement

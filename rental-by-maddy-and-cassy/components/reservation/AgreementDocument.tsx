@@ -97,7 +97,7 @@ export default function AgreementDocument({ data }: { data: AgreementDocumentDat
             non-refundable once payment is verified and the unit is reserved.
           </li>
           <li>
-            The reservation is secured after PayMongo verifies the initial payment. The booking
+            The reservation is secured after our team verifies the initial GCash payment. The booking
             becomes fully confirmed after the required verification documents and this signed
             agreement are approved by the business.
           </li>

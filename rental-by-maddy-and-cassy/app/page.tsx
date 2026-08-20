@@ -11,7 +11,7 @@ export const revalidate = 60;
 const bookingSteps = [
   ["01", "Choose your gear", "Browse the catalog, compare daily rates, and open the item you want to rent."],
   ["02", "Set your reservation", "Select one or more rental days, then choose pickup or delivery."],
-  ["03", "Secure your booking", "Pay either 50% or the full amount through the secure PayMongo checkout."],
+  ["03", "Secure your booking", "Pay either 50% or the full amount manually via GCash and submit your proof of payment."],
   ["04", "Submit verification", "Upload the required customer and emergency-contact documents."],
   ["05", "Sign the agreement", "Review the generated rental terms and add your electronic signature."],
   ["06", "Receive confirmation", "Follow the confirmed booking, receipt, payment history, and invoice in your account."],

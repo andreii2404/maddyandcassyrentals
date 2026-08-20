@@ -101,7 +101,7 @@ export default function TermsPage() {
         introduction="These policies apply to booking requests, verification, equipment handover, proper use, and return of every rental unit."
         sections={sections}
         layout="stack"
-        notice="Online reservation payments and applicable non-refundable deposits are processed through PayMongo. Courier delivery costs are arranged separately with the rental team."
+        notice="Reservation payments and applicable non-refundable deposits are paid manually via GCash and verified by our team. Courier delivery costs are arranged separately with the rental team."
       />
     </div>
   );

@@ -32,50 +32,42 @@ export interface ReservationResumeState {
   };
 }
 
-export async function createPaymentCheckout(
-  bookingId: string,
-  paymentOption: PaymentOption = "full",
-  returnPath?: string,
-): Promise<{ checkoutUrl: string }> {
-  const response = await fetch("/api/payments/checkout", {
-    method: "POST",
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ bookingId, paymentOption, returnPath }),
-  });
-
-  const body = (await response.json().catch(() => null)) as
-    | { checkoutUrl?: unknown; error?: unknown }
-    | null;
-  if (!response.ok || typeof body?.checkoutUrl !== "string") {
-    throw new Error(
-      typeof body?.error === "string" ? body.error : "The secure payment checkout could not be opened.",
-    );
-  }
-  return { checkoutUrl: body.checkoutUrl };
+export interface ManualPaymentSubmissionInput {
+  referenceNumber: string;
+  accountName: string;
+  accountNumber: string;
+  paymentOption: "deposit_50" | "full" | "balance";
+  proofFile: File;
 }
 
-export async function reconcilePayment(
+export async function submitManualPayment(
   bookingId: string,
-): Promise<"verified" | "pending" | "failed" | "unpaid"> {
-  const response = await fetch("/api/payments/reconcile", {
-    method: "POST",
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ bookingId }),
-  });
-  const body = (await response.json().catch(() => null)) as
-    | { status?: unknown; error?: unknown }
-    | null;
-  if (
-    !response.ok ||
-    !["verified", "pending", "failed", "unpaid"].includes(String(body?.status))
-  ) {
-    throw new Error(
-      typeof body?.error === "string" ? body.error : "The payment status could not be confirmed.",
-    );
+  input: ManualPaymentSubmissionInput,
+): Promise<{ paymentId: string }> {
+  const formData = new FormData();
+  formData.append("referenceNumber", input.referenceNumber);
+  formData.append("accountName", input.accountName);
+  formData.append("accountNumber", input.accountNumber);
+  formData.append("paymentOption", input.paymentOption);
+  formData.append("proof", input.proofFile);
+
+  let response: Response;
+  try {
+    response = await fetch(`/api/bookings/${encodeURIComponent(bookingId)}/payment/submit`, {
+      method: "POST",
+      credentials: "same-origin",
+      body: formData,
+    });
+  } catch {
+    throw new Error("The payment details could not reach the server. Check your connection and try again.");
   }
-  return body!.status as "verified" | "pending" | "failed" | "unpaid";
+  const body = (await response.json().catch(() => null)) as
+    | { paymentId?: unknown; error?: unknown }
+    | null;
+  if (!response.ok || typeof body?.paymentId !== "string") {
+    throw new Error(typeof body?.error === "string" ? body.error : "The payment details could not be submitted.");
+  }
+  return { paymentId: body.paymentId };
 }
 
 export async function getReservationResumeState(
@@ -98,27 +90,12 @@ export async function getReservationResumeState(
   return body as ReservationResumeState;
 }
 
-export async function completeDemoPayment(
-  sessionId: string,
-  paymentMethod: string,
-): Promise<{ bookingId: string }> {
-  const response = await fetch("/api/payments/demo/complete", {
-    method: "POST",
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ sessionId, paymentMethod }),
-  });
-  const body = (await response.json().catch(() => null)) as
-    | { bookingId?: unknown; error?: unknown }
-    | null;
-  if (!response.ok || typeof body?.bookingId !== "string") {
-    throw new Error(typeof body?.error === "string" ? body.error : "The demo payment could not be completed.");
-  }
-  return { bookingId: body.bookingId };
-}
+type PaymentSubmissionRow = Tables<"booking_payment_submissions"> & {
+  customer_documents?: { storage_bucket: string; storage_path: string; original_filename: string | null } | null;
+};
 
 /** Shared row -> view-model mapping for public.booking_payment_submissions, reused by bookingDetailService.ts and adminReadService.ts. */
-export function mapPaymentSubmission(row: Tables<"booking_payment_submissions">): PaymentRecord {
+export function mapPaymentSubmission(row: PaymentSubmissionRow): PaymentRecord {
   return {
     id: row.id,
     bookingId: row.booking_id,
@@ -129,6 +106,9 @@ export function mapPaymentSubmission(row: Tables<"booking_payment_submissions">)
     paymentMethod: row.payment_method ?? undefined,
     externalReference: row.external_reference ?? undefined,
     proofDocumentId: row.proof_document_id ?? undefined,
+    proofStorageBucket: row.customer_documents?.storage_bucket ?? undefined,
+    proofStoragePath: row.customer_documents?.storage_path ?? undefined,
+    proofOriginalFilename: row.customer_documents?.original_filename ?? undefined,
     paymongoCheckoutSessionId: row.paymongo_checkout_session_id ?? undefined,
     paymongoPaymentId: row.paymongo_payment_id ?? undefined,
     idempotencyKey: row.idempotency_key ?? undefined,
@@ -149,11 +129,30 @@ export async function getBookingPayments(
 ): Promise<PaymentRecord[]> {
   const { data, error } = await supabase
     .from("booking_payment_submissions")
-    .select("*")
+    .select("*, customer_documents(storage_bucket, storage_path, original_filename)")
     .eq("booking_id", bookingId)
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
-  return (data ?? []).map(mapPaymentSubmission);
+  return (data ?? []).map((row) => mapPaymentSubmission(row as PaymentSubmissionRow));
+}
+
+/** Admin decision on a manually submitted GCash proof of payment. */
+export async function reviewManualPayment(
+  bookingId: string,
+  paymentId: string,
+  status: "verified" | "rejected",
+  reason?: string,
+): Promise<void> {
+  const response = await fetch(`/api/admin/bookings/${encodeURIComponent(bookingId)}/payments`, {
+    method: "PATCH",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ paymentId, status, reason }),
+  });
+  const body = (await response.json().catch(() => null)) as { error?: unknown } | null;
+  if (!response.ok) {
+    throw new Error(typeof body?.error === "string" ? body.error : "The payment review could not be saved.");
+  }
 }
 
 export async function getBookingReceipts(

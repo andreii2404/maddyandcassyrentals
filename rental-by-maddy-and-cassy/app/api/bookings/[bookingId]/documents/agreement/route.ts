@@ -88,7 +88,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
     await generateAndSaveFinalAgreement(admin, {
       booking,
       agreement,
-      paymentReference: verifiedPayment.paymongo_payment_id || verifiedPayment.external_reference || "Verified through PayMongo",
+      paymentReference: verifiedPayment.paymongo_payment_id || verifiedPayment.external_reference || "Verified payment",
       storagePath,
     });
 

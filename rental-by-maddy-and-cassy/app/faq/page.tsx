@@ -18,7 +18,7 @@ const sections: GuideSection[] = [
   {
     title: "Is a security deposit required?",
     paragraphs: [
-      "A non-refundable security deposit may apply. Its exact amount is shown on the product page and included in the final checkout amount before you continue to PayMongo.",
+      "A non-refundable security deposit may apply. Its exact amount is shown on the product page and included in the final checkout amount before you pay via GCash.",
     ],
   },
   {

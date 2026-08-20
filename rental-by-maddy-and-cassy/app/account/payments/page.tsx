@@ -70,7 +70,7 @@ export default function PaymentHistoryPage() {
         <div>
           <p>PAYMENT RECORDS</p>
           <h1>Payment History</h1>
-          <span>Track secure checkout attempts and verified PayMongo payments.</span>
+          <span>Track your GCash payment submissions and verified payments.</span>
         </div>
         <Link href="/account/bookings">Back to bookings</Link>
       </header>

@@ -314,7 +314,7 @@ export async function createInvoicePdf(input: InvoicePdfInput): Promise<Uint8Arr
     regular,
     input.isDemo
       ? "DEMO ONLY - This invoice is for flow testing and is not a valid demand for payment."
-      : "This booking invoice is payable through the secure PayMongo checkout linked to the reservation.",
+      : "This booking invoice is payable manually via GCash and verified by our team against the reservation.",
   );
   pdf.setTitle(`Invoice ${safeText(input.invoiceNumber)}`);
   pdf.setAuthor("Rental by Maddy & Cassy");
@@ -339,7 +339,7 @@ export async function createReceiptPdf(input: ReceiptPdfInput): Promise<Uint8Arr
     page,
     regular,
     bold,
-    input.isDemo ? "Demo transaction reference" : "PayMongo transaction reference",
+    input.isDemo ? "Demo transaction reference" : "GCash transaction reference",
     input.paymentReference,
     MARGIN,
     y,
@@ -471,7 +471,7 @@ export async function createFinalAgreementPdf(
     "The customer is responsible for reasonable care of the item and will use it only for its intended purpose.",
     "Late returns may result in additional charges communicated by the business.",
     "Damage, loss, or missing accessories will be assessed by the business. The customer agrees to cooperate in resolving the resulting costs.",
-    "Payment is confirmed only through the verified PayMongo transaction shown in this agreement and its corresponding receipt.",
+    "Payment is confirmed only through the verified GCash transaction shown in this agreement and its corresponding receipt.",
     "The customer authorizes the electronic signature below and agrees that it is binding for this booking.",
     "Personal information and verification documents are used only for identity verification, booking fulfillment, legal compliance, and legitimate business records.",
   ];

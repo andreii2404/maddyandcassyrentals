@@ -124,11 +124,12 @@ function dataUrlToBlob(dataUrl: string): Blob {
 }
 
 export async function submitBookingDocuments(bookingId: string, draft: ReservationDraft): Promise<void> {
-  // The reservation was already validated and persisted before checkout.
-  // After PayMongo redirects back, the client rebuilds the draft from that
-  // authoritative booking. Do not revalidate rental/address fields here:
-  // legacy bookings may not have every newer structured address field, and
-  // document submission only owns the requirements and agreement data below.
+  // The reservation was already validated and persisted before payment
+  // submission. When a session resumes on a different device/browser, the
+  // client rebuilds the draft from that authoritative booking. Do not
+  // revalidate rental/address fields here: legacy bookings may not have every
+  // newer structured address field, and document submission only owns the
+  // requirements and agreement data below.
   const { requirements } = draft;
   if (
     !requirements.idOneFile ||

@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { isDemoPaymentEnabled } from "@/src/lib/paymongo/demo";
 import { isBookingEmailConfigured } from "@/src/lib/server/bookingStatusEmail";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 
@@ -10,9 +9,6 @@ export async function GET() {
   const checks = {
     database: false,
     storage: false,
-    paymongoConfigured: Boolean(process.env.PAYMONGO_SECRET_KEY),
-    webhookConfigured: Boolean(process.env.PAYMONGO_WEBHOOK_SECRET),
-    demoPaymentEnabled: isDemoPaymentEnabled(),
     bookingEmailConfigured: isBookingEmailConfigured(),
   };
 
@@ -35,10 +31,7 @@ export async function GET() {
     // Return a safe degraded response without exposing provider details.
   }
 
-  const healthy =
-    checks.database &&
-    checks.storage &&
-    (checks.demoPaymentEnabled || (checks.paymongoConfigured && checks.webhookConfigured));
+  const healthy = checks.database && checks.storage;
 
   return NextResponse.json(
     { status: healthy ? "ok" : "degraded", checks, timestamp: new Date().toISOString() },

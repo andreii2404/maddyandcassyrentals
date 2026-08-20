@@ -28,6 +28,7 @@ import {
 } from "@/hooks/useBookingRealtime";
 import styles from "./bookingDetail.module.css";
 import RequirementsReviewPanel from "@/components/admin/RequirementsReviewPanel";
+import PaymentsReviewPanel from "@/components/admin/PaymentsReviewPanel";
 import { getBookingMilestones, getFulfillmentProgressLabel } from "@/src/lib/bookingManagement";
 
 const REQUIREMENTS_STATUS_LABELS: Record<string, string> = {
@@ -647,6 +648,19 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                     ))}
                   </div>
                 ) : <p className={styles.emptyRecord}>No customer-facing receipt has been issued yet.</p>}
+                <PaymentsReviewPanel
+                  bookingId={bookingId}
+                  payments={payments}
+                  onOpenProof={(payment: PaymentRecord) => {
+                    if (payment.proofStorageBucket && payment.proofStoragePath) {
+                      openPrivateFile(
+                        payment.proofStorageBucket as Parameters<typeof getBookingFileUrl>[1],
+                        payment.proofStoragePath,
+                      );
+                    }
+                  }}
+                  onUpdated={loadDetails}
+                />
               </article>
             </div>
           </div>
