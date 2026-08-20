@@ -104,6 +104,13 @@
   cursor: not-allowed;
 }
 
+.dayConfirmed {
+  background: var(--color-calendar-confirmed-bg);
+  color: var(--color-calendar-confirmed);
+  text-decoration: line-through;
+  cursor: not-allowed;
+}
+
 .dayEdge,
 .day[data-selected="true"] {
   background-color: var(--color-calendar-selected) !important;
@@ -230,6 +237,10 @@
 
 .legendSwatch[data-variant="booked"] {
   background: var(--color-calendar-booked);
+}
+
+.legendSwatch[data-variant="confirmed"] {
+  background: var(--color-calendar-confirmed);
 }
 
 .legendSwatch[data-variant="disabled"] {

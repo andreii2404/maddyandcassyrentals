@@ -25,6 +25,8 @@ export interface AvailabilityCalendarEntry {
   day: string;
   totalUnits: number;
   availableUnits: number;
+  /** Of the blocked units, how many belong to an admin-approved/confirmed/released booking (vs. still pending review). */
+  confirmedUnavailableUnits: number;
 }
 
 /** public.get_product_availability()'s result shape for a date range. */

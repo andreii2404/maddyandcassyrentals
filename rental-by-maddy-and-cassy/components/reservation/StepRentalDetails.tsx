@@ -8,7 +8,7 @@ import type { FulfillmentMethod } from "@/src/types/booking";
 import type { ReservationDraft } from "@/src/types/reservationDraft";
 import type { ReservationPricing } from "@/src/lib/reservationPricing";
 import {
-  getFullyBookedDateKeys,
+  getCalendarDateStatuses,
   getTimeAvailability,
   type TimeAvailability,
 } from "@/src/services/availabilityService";
@@ -53,6 +53,7 @@ export default function StepRentalDetails({
   onBack,
 }: StepRentalDetailsProps) {
   const [disabledDateKeys, setDisabledDateKeys] = useState<Set<string>>(new Set());
+  const [confirmedDateKeys, setConfirmedDateKeys] = useState<Set<string>>(new Set());
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [timeAvailability, setTimeAvailability] = useState<TimeAvailability | null>(null);
@@ -66,20 +67,27 @@ export default function StepRentalDetails({
     return () => window.clearInterval(timer);
   }, []);
 
-  // Grey out calendar days that are fully booked for every active unit, from
-  // the same server-backed reserved_window data the pickup-time/quantity/
-  // checkout checks below use -- so the calendar can't show a date as pickable
-  // that the exact-time check would then reject. This is still a UX-only,
-  // day-granularity hint: the authoritative check is getTimeAvailability
-  // below, and the real guard is the create_*_booking RPC at submission.
+  // Mark calendar days that are fully booked for every active unit, from the
+  // same server-backed reserved_window data the pickup-time/quantity/checkout
+  // checks below use -- so the calendar can't show a date as pickable that
+  // the exact-time check would then reject. Days where every blocking
+  // booking is already admin-approved/confirmed/released render grey
+  // (confirmedDateKeys); days still blocked only by pending-review bookings
+  // render red. This is still a UX-only, day-granularity hint: the
+  // authoritative check is getTimeAvailability below, and the real guard is
+  // the create_*_booking RPC at submission.
   useEffect(() => {
     let cancelled = false;
-    getFullyBookedDateKeys(product.id)
-      .then((keys) => {
-        if (!cancelled) setDisabledDateKeys(keys);
+    getCalendarDateStatuses(product.id)
+      .then(({ disabledDateKeys, confirmedDateKeys }) => {
+        if (cancelled) return;
+        setDisabledDateKeys(disabledDateKeys);
+        setConfirmedDateKeys(confirmedDateKeys);
       })
       .catch(() => {
-        if (!cancelled) setDisabledDateKeys(new Set());
+        if (cancelled) return;
+        setDisabledDateKeys(new Set());
+        setConfirmedDateKeys(new Set());
       });
     return () => {
       cancelled = true;
@@ -294,6 +302,7 @@ export default function StepRentalDetails({
               endDate={selectedRentalEndDate}
               onChange={({ startDate, endDate }) => updatePickupSchedule(startDate, endDate)}
               disabledDateKeys={disabledDateKeys}
+              confirmedDateKeys={confirmedDateKeys}
               hideSelectionSummary
             />
           </section>

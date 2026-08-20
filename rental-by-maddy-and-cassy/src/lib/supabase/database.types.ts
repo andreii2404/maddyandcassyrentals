@@ -1884,6 +1884,7 @@ export type Database = {
         Args: { p_end_date: string; p_product_id: string; p_start_date: string }
         Returns: {
           available_units: number
+          confirmed_unavailable_units: number
           day: string
           total_units: number
         }[]

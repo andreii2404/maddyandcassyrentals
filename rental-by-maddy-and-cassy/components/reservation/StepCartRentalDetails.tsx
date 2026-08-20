@@ -8,7 +8,7 @@ import type { ReservationDraft } from "@/src/types/reservationDraft";
 import type { MultiItemReservationPricing } from "@/src/lib/reservationPricing";
 import {
   checkBatchTimeAvailability,
-  getFullyBookedDateKeys,
+  getCalendarDateStatuses,
   type TimeAvailability,
 } from "@/src/services/availabilityService";
 import {
@@ -50,6 +50,7 @@ export default function StepCartRentalDetails({
   onBack,
 }: StepCartRentalDetailsProps) {
   const [disabledDateKeys, setDisabledDateKeys] = useState<Set<string>>(new Set());
+  const [confirmedDateKeys, setConfirmedDateKeys] = useState<Set<string>>(new Set());
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [availabilityByProductId, setAvailabilityByProductId] = useState<Map<string, TimeAvailability>>(
@@ -73,18 +74,36 @@ export default function StepCartRentalDetails({
   // fully booked that day -- every line shares the one pickup date/time, so
   // any single unavailable line should block the date for all of them. Same
   // server-backed data source as the pickup-time/quantity/checkout checks.
+  // A disabled day only renders grey (confirmed) if every line that blocks it
+  // does so with bookings already approved/confirmed/released by admin; if
+  // even one blocking line is still pending review, the day stays red, since
+  // rejecting that one booking would still change the picture.
   useEffect(() => {
     let cancelled = false;
     const productIds = lineProductIdsKey ? lineProductIdsKey.split(",") : [];
     Promise.all(
-      productIds.map((productId) => getFullyBookedDateKeys(productId).catch(() => new Set<string>())),
-    ).then((sets) => {
+      productIds.map((productId) =>
+        getCalendarDateStatuses(productId).catch(() => ({
+          disabledDateKeys: new Set<string>(),
+          confirmedDateKeys: new Set<string>(),
+        })),
+      ),
+    ).then((results) => {
       if (cancelled) return;
       const union = new Set<string>();
-      for (const set of sets) {
-        for (const key of set) union.add(key);
+      for (const { disabledDateKeys } of results) {
+        for (const key of disabledDateKeys) union.add(key);
+      }
+      const confirmedUnion = new Set<string>();
+      for (const key of union) {
+        const allConfirmed = results.every(
+          ({ disabledDateKeys, confirmedDateKeys }) =>
+            !disabledDateKeys.has(key) || confirmedDateKeys.has(key),
+        );
+        if (allConfirmed) confirmedUnion.add(key);
       }
       setDisabledDateKeys(union);
+      setConfirmedDateKeys(confirmedUnion);
     });
     return () => {
       cancelled = true;
@@ -313,6 +332,7 @@ export default function StepCartRentalDetails({
               endDate={selectedRentalEndDate}
               onChange={({ startDate, endDate }) => updatePickupSchedule(startDate, endDate)}
               disabledDateKeys={disabledDateKeys}
+              confirmedDateKeys={confirmedDateKeys}
               hideSelectionSummary
             />
           </section>
