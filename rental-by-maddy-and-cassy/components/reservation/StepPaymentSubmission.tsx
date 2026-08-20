@@ -131,6 +131,34 @@ export default function StepPaymentSubmission({
         </div>
       </div>
 
+      <fieldset className={styles.options} disabled={opening}>
+        <legend>Choose a payment option</legend>
+        <label className={styles.option}>
+          <input
+            type="radio"
+            name="paymentOption"
+            checked={draft.paymentOption === "deposit_50"}
+            onChange={() => onPaymentOptionChange("deposit_50")}
+          />
+          <span>
+            <strong>Pay 50% to reserve</strong>
+            <small>{money(Math.round(pricing.finalAmount * 50) / 100)} due now</small>
+          </span>
+        </label>
+        <label className={styles.option}>
+          <input
+            type="radio"
+            name="paymentOption"
+            checked={draft.paymentOption === "full"}
+            onChange={() => onPaymentOptionChange("full")}
+          />
+          <span>
+            <strong>Pay in full</strong>
+            <small>{money(pricing.finalAmount)} due now</small>
+          </span>
+        </label>
+      </fieldset>
+
       <h3 className={sharedStyles.sectionHeading}>Pay via GCash</h3>
       <div className={styles.gcash}>
         <div className={styles.qrCard}>
