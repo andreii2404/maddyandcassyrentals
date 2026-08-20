@@ -38,15 +38,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
       return errorResponse("The rental agreement has not been submitted.", 409);
     }
 
-    const { data: verifiedPayment } = await admin
+    // This renders the customer-signed draft right after document submission,
+    // before an admin has reviewed the payment -- require a submitted payment
+    // (not an admin-verified one) so it isn't blocked by the same outdated
+    // gate as the document submission step.
+    const { data: submittedPayment } = await admin
       .from("booking_payment_submissions")
       .select("id, paymongo_payment_id, external_reference")
       .eq("booking_id", bookingId)
-      .eq("status", "verified")
+      .in("status", ["submitted", "under_review", "verified"])
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (!verifiedPayment) return errorResponse("A verified reservation payment is required first.", 409);
+    if (!submittedPayment) return errorResponse("A reservation payment submission is required first.", 409);
 
     const { data: versions } = await admin
       .from("agreement_versions")
@@ -88,7 +92,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
     await generateAndSaveFinalAgreement(admin, {
       booking,
       agreement,
-      paymentReference: verifiedPayment.paymongo_payment_id || verifiedPayment.external_reference || "Verified payment",
+      paymentReference: submittedPayment.paymongo_payment_id || submittedPayment.external_reference || "Reservation payment",
       storagePath,
     });
 

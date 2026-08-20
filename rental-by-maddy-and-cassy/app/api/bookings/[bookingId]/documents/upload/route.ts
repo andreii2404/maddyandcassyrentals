@@ -54,15 +54,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
       return errorResponse("Verification documents have already been submitted.", 409);
     }
 
-    const { data: verifiedPayment } = await supabase
+    // Manual GCash payments never reach "verified" until an admin reviews
+    // them (see docs/PRODUCTION.md payment flow). Gate on the customer having
+    // submitted payment proof at all, not on admin verification -- that
+    // happens later and must not block the rest of the booking flow.
+    const { data: submittedPayment } = await supabase
       .from("booking_payment_submissions")
       .select("id")
       .eq("booking_id", bookingId)
-      .eq("status", "verified")
+      .in("status", ["submitted", "under_review", "verified"])
       .limit(1)
       .maybeSingle();
-    if (!verifiedPayment) {
-      return errorResponse("Complete the reservation payment before submitting documents.", 409);
+    if (!submittedPayment) {
+      return errorResponse("Submit your reservation payment proof before uploading documents.", 409);
     }
 
     const formData = await request.formData();

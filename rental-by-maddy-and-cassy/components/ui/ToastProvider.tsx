@@ -29,11 +29,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const showToast = useCallback((message: string, variant: ToastVariant = "info") => {
-    const id = nextId++;
-    setToasts((current) => [...current, { id, message, variant }]);
-    setTimeout(() => {
-      setToasts((current) => current.filter((toast) => toast.id !== id));
-    }, 5000);
+    // Failed actions (e.g. a blocked submit) can fire the same toast more
+    // than once in quick succession -- collapse those into a single toast
+    // instead of stacking duplicates.
+    setToasts((current) => {
+      if (current.some((toast) => toast.message === message && toast.variant === variant)) {
+        return current;
+      }
+      const id = nextId++;
+      setTimeout(() => {
+        setToasts((later) => later.filter((toast) => toast.id !== id));
+      }, 5000);
+      return [...current, { id, message, variant }];
+    });
   }, []);
 
   return (

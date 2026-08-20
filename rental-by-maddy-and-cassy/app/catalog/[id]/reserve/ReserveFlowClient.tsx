@@ -86,12 +86,15 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
     }
     const restored = restoreReservationProgress(rawProgress);
     if (restored) {
-      const hasVerifiedPayment = restored.paymentState === "paid" || restored.paymentState === "partially_paid";
+      // Any non-"unpaid" state means the customer already submitted payment
+      // details/proof in Step 3 -- admin verification happens later and
+      // should not force them back through payment submission again.
+      const hasSubmittedPayment = restored.paymentState !== "unpaid";
       // Verification files and signature images are intentionally never saved
       // to localStorage. Return to the document step when those files are needed.
       const safeStep = !restored.bookingId
         ? Math.min(restored.step, 3)
-        : hasVerifiedPayment
+        : hasSubmittedPayment
           ? Math.min(restored.step, 4)
           : Math.min(restored.step, 3);
       // One-time hydration from the browser-owned draft backup.
