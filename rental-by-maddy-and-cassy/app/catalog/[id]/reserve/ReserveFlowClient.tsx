@@ -402,6 +402,9 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
       // waits on the (slow, non-fatal) signed-agreement PDF render.
       goToStep(6);
     } catch (error) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error("[handleDocumentSubmission] agreement submission failed", { bookingId, error });
+      }
       showToast(
         error instanceof Error ? error.message : "We couldn't submit your documents. Please try again.",
         "error",

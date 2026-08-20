@@ -136,15 +136,33 @@ export async function createMultiItemBookingReservation(
 
 const UPLOAD_TIMEOUT_MS = 30_000;
 const REQUEST_TIMEOUT_MS = 20_000;
+// Hard ceiling for the whole submit-documents call (uploads + finalize),
+// independent of each fetch's own per-request timeout below. A single
+// per-request AbortController driven by setTimeout is not a reliable
+// upper bound on its own: mobile browsers throttle/suspend timers for a
+// backgrounded tab (e.g. the customer switches apps to find their ID
+// photo mid-upload), which can delay that abort well past its nominal
+// timeout and leave Promise.all -- and therefore the "Submitting..."
+// button -- waiting indefinitely with no error ever surfaced. This
+// watchdog force-aborts every in-flight request (see parentSignal below)
+// so the button always unlocks and the user always sees an error within
+// a bounded time, no matter what the network or tab state is doing.
+const OVERALL_SUBMIT_TIMEOUT_MS = 60_000;
 
 async function fetchWithTimeout(
   input: string,
   init: RequestInit,
   timeoutMs: number,
   timeoutMessage: string,
+  parentSignal?: AbortSignal,
 ): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const onParentAbort = () => controller.abort();
+  if (parentSignal) {
+    if (parentSignal.aborted) controller.abort();
+    else parentSignal.addEventListener("abort", onParentAbort);
+  }
   try {
     return await fetch(input, { ...init, signal: controller.signal });
   } catch (error) {
@@ -154,6 +172,7 @@ async function fetchWithTimeout(
     throw error;
   } finally {
     clearTimeout(timeoutId);
+    parentSignal?.removeEventListener("abort", onParentAbort);
   }
 }
 
@@ -238,6 +257,9 @@ export async function submitBookingDocuments(bookingId: string, draft: Reservati
   );
   const submissionId = crypto.randomUUID();
 
+  const overallController = new AbortController();
+  const overallTimeoutId = setTimeout(() => overallController.abort(), OVERALL_SUBMIT_TIMEOUT_MS);
+
   async function uploadDocument(
     kind: "idOne" | "idTwo" | "selfie" | "emergencyId" | "signature",
     file: File,
@@ -253,66 +275,94 @@ export async function submitBookingDocuments(bookingId: string, draft: Reservati
         { method: "POST", credentials: "same-origin", body: formData },
         UPLOAD_TIMEOUT_MS,
         `${label} took too long to upload. Check your connection and try again.`,
+        overallController.signal,
       );
     } catch (error) {
       if (error instanceof Error && error.message.includes("took too long")) throw error;
+      if (process.env.NODE_ENV !== "production") {
+        console.error(`[submitBookingDocuments] upload failed for kind="${kind}" bookingId=${bookingId}`, error);
+      }
       throw new Error(`${label} could not reach the upload server. Check your connection and try again.`);
     }
     const body = (await response.json().catch(() => null)) as { path?: unknown; error?: unknown } | null;
     if (!response.ok || typeof body?.path !== "string") {
+      if (process.env.NODE_ENV !== "production") {
+        console.error(
+          `[submitBookingDocuments] upload rejected for kind="${kind}" bookingId=${bookingId} status=${response.status}`,
+          body,
+        );
+      }
       throw new Error(typeof body?.error === "string" ? body.error : `${label} could not be uploaded.`);
     }
     return body.path;
   }
 
-  // These four ID/selfie uploads and the signature upload are independent of
-  // one another (distinct storage paths), so running them in parallel instead
-  // of one-by-one turns the wait into max(latency) instead of sum(latency) --
-  // this was the single biggest contributor to the "Submitting..." delay.
-  const [idOne, idTwo, selfie, emergencyId, signature] = await Promise.all([
-    uploadDocument("idOne", requirements.idOneFile, "First valid ID"),
-    uploadDocument("idTwo", requirements.idTwoFile, "Second valid ID"),
-    uploadDocument("selfie", requirements.selfieFile, "Selfie with ID"),
-    uploadDocument("emergencyId", requirements.emergencyContact.idFile, "Emergency contact ID"),
-    uploadDocument("signature", signatureFile, "Electronic signature"),
-  ]);
-  const uploadedFiles = { idOne, idTwo, selfie, emergencyId, signature };
+  try {
+    // These four ID/selfie uploads and the signature upload are independent of
+    // one another (distinct storage paths), so running them in parallel instead
+    // of one-by-one turns the wait into max(latency) instead of sum(latency) --
+    // this was the single biggest contributor to the "Submitting..." delay.
+    // overallController bounds the whole batch (see OVERALL_SUBMIT_TIMEOUT_MS)
+    // so one stalled upload can never hang the submission indefinitely.
+    const [idOne, idTwo, selfie, emergencyId, signature] = await Promise.all([
+      uploadDocument("idOne", requirements.idOneFile, "First valid ID"),
+      uploadDocument("idTwo", requirements.idTwoFile, "Second valid ID"),
+      uploadDocument("selfie", requirements.selfieFile, "Selfie with ID"),
+      uploadDocument("emergencyId", requirements.emergencyContact.idFile, "Emergency contact ID"),
+      uploadDocument("signature", signatureFile, "Electronic signature"),
+    ]);
+    const uploadedFiles = { idOne, idTwo, selfie, emergencyId, signature };
 
-  const submitResponse = await fetchWithTimeout(
-    `/api/bookings/${encodeURIComponent(bookingId)}/documents/submit`,
-    {
-      method: "POST",
-      credentials: "same-origin",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        submissionId,
-        files: uploadedFiles,
-        facebookLink: requirements.facebookLink.trim(),
-        instagramLink: requirements.instagramLink.trim(),
-        emergencyContact: {
-          fullName: requirements.emergencyContact.fullName.trim(),
-          relationship: requirements.emergencyContact.relationship.trim(),
-          phone: requirements.emergencyContact.phone.trim(),
-          facebookLink: requirements.emergencyContact.facebookLink.trim(),
-        },
-        acknowledgements: {
-          infoAccurate: agreement.infoAccurate,
-          agreedToTerms: agreement.agreedToTerms,
-          understoodRentalRules: agreement.understoodRentalRules,
-          authorizedESignature: agreement.authorizedESignature,
-          readPrivacyNotice: agreement.readPrivacyNotice,
-          emergencyContactAuthorized: agreement.emergencyContactAuthorized,
-        },
-        signatureMethod: agreement.signatureMethod,
-        typedFullName: agreement.typedFullName.trim(),
-      }),
-    },
-    REQUEST_TIMEOUT_MS,
-    "Submitting your documents took too long. Check your connection and try again.",
-  );
-  if (!submitResponse.ok) {
-    const body = (await submitResponse.json().catch(() => null)) as { error?: unknown } | null;
-    throw new Error(typeof body?.error === "string" ? body.error : "The documents could not be securely submitted.");
+    const submitResponse = await fetchWithTimeout(
+      `/api/bookings/${encodeURIComponent(bookingId)}/documents/submit`,
+      {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          submissionId,
+          files: uploadedFiles,
+          facebookLink: requirements.facebookLink.trim(),
+          instagramLink: requirements.instagramLink.trim(),
+          emergencyContact: {
+            fullName: requirements.emergencyContact.fullName.trim(),
+            relationship: requirements.emergencyContact.relationship.trim(),
+            phone: requirements.emergencyContact.phone.trim(),
+            facebookLink: requirements.emergencyContact.facebookLink.trim(),
+          },
+          acknowledgements: {
+            infoAccurate: agreement.infoAccurate,
+            agreedToTerms: agreement.agreedToTerms,
+            understoodRentalRules: agreement.understoodRentalRules,
+            authorizedESignature: agreement.authorizedESignature,
+            readPrivacyNotice: agreement.readPrivacyNotice,
+            emergencyContactAuthorized: agreement.emergencyContactAuthorized,
+          },
+          signatureMethod: agreement.signatureMethod,
+          typedFullName: agreement.typedFullName.trim(),
+        }),
+      },
+      REQUEST_TIMEOUT_MS,
+      "Submitting your documents took too long. Check your connection and try again.",
+      overallController.signal,
+    );
+    if (!submitResponse.ok) {
+      const body = (await submitResponse.json().catch(() => null)) as { error?: unknown } | null;
+      if (process.env.NODE_ENV !== "production") {
+        console.error(
+          `[submitBookingDocuments] finalize rejected bookingId=${bookingId} status=${submitResponse.status}`,
+          body,
+        );
+      }
+      throw new Error(typeof body?.error === "string" ? body.error : "The documents could not be securely submitted.");
+    }
+  } catch (error) {
+    if (overallController.signal.aborted && error instanceof Error && !error.message.includes("took too long")) {
+      throw new Error("Submission is taking too long. Check your connection and try again.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(overallTimeoutId);
   }
 
   // The signed-agreement PDF (server-side download + render + upload) is the

@@ -95,7 +95,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
     return NextResponse.json({ success: true, path, bucket });
   } catch (error) {
     if (error instanceof RequestSecurityError) return errorResponse(error.message, error.status);
-    console.error("Private booking document upload failed", error);
+    const kind = new URL(request.url).searchParams.get("kind");
+    const { bookingId } = await params;
+    console.error(`Private booking document upload failed kind=${kind} bookingId=${bookingId}`, error);
     return errorResponse("This file could not be securely uploaded.", 500);
   }
 }

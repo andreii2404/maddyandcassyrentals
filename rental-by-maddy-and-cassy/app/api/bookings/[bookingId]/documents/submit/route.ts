@@ -315,7 +315,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
     if (error instanceof z.ZodError || error instanceof SyntaxError) {
       return errorResponse("Check the verification details and agreement, then try again.", 400);
     }
-    console.error("Booking document finalization failed", error);
+    const { bookingId } = await params;
+    console.error(`Booking document finalization failed bookingId=${bookingId}`, error);
     return errorResponse("The documents could not be finalized. Please try again.", 500);
   }
 }
