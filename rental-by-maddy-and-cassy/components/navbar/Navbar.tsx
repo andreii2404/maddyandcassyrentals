@@ -99,14 +99,16 @@ export default function Navbar() {
   // The navbar stays mounted across client-side route changes, so any open
   // dropdown must be closed explicitly when the route (or in-page hash) changes.
   useEffect(() => {
-    closeDropdowns();
+    const closeTimerId = window.setTimeout(closeDropdowns, 0);
+    return () => window.clearTimeout(closeTimerId);
   }, [pathname, hash]);
 
   // Defer back to the real browser hash once it catches up (back/forward,
   // full loads) or once a full route change happens, so the override never
   // goes stale.
   useEffect(() => {
-    setClickedHash(null);
+    const syncTimerId = window.setTimeout(() => setClickedHash(null), 0);
+    return () => window.clearTimeout(syncTimerId);
   }, [pathname, syncedHash]);
 
   useEffect(() => {

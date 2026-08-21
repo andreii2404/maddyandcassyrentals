@@ -297,8 +297,6 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
   useEffect(() => {
     if (step !== 5 || !bookingId) return;
     let cancelled = false;
-    setUnitsReady(false);
-    setUnitsCheckError(null);
 
     async function confirmUnits() {
       try {
@@ -329,9 +327,15 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
       }
     }
 
-    void confirmUnits();
+    const checkTimerId = window.setTimeout(() => {
+      if (cancelled) return;
+      setUnitsReady(false);
+      setUnitsCheckError(null);
+      void confirmUnits();
+    }, 0);
     return () => {
       cancelled = true;
+      window.clearTimeout(checkTimerId);
     };
   }, [step, bookingId]);
 

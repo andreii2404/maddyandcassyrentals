@@ -1,14 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { calculateReservationPricing } from "../src/lib/reservationPricing";
+import { calculateReturnDateTime } from "../src/lib/rentalTiming";
 
 test("checkout totals include quantity, discount, and non-refundable deposit", () => {
   const pricing = calculateReservationPricing(
     { id: "product-1", name: "Test Product", listPricePerDay: 1_000, pricePerDay: 900, refundableDeposit: 500 },
     {
       quantity: 2,
-      startDate: new Date("2026-08-10T00:00:00"),
-      endDate: new Date("2026-08-12T00:00:00"),
+      startDate: new Date("2026-08-10T01:00:00.000Z"),
+      endDate: calculateReturnDateTime(new Date("2026-08-10T01:00:00.000Z"), 3),
       customerInfo: { birthDate: "" },
     },
   );
