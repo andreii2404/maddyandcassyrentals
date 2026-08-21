@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { Product } from "@/types/product";
@@ -29,12 +29,21 @@ export default function CartView({ products }: { products: Product[] }) {
     const product = productsById.get(item.productId);
     return product ? [{ ...item, product }] : [];
   });
+  const [excludedProductIds, setExcludedProductIds] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
     removeStaleItems(products.map((product) => product.id));
   }, [products, removeStaleItems]);
 
-  const totals = cartLines.reduce((summary, line) => {
+  const selectedLines = cartLines.filter((line) => !excludedProductIds.has(line.product.id));
+  const checkoutParams = new URLSearchParams({
+    items: selectedLines.map((line) => `${line.product.id}:${line.quantity}`).join(","),
+  });
+  const selectedCheckoutHref = selectedLines.length
+    ? `/catalog/${selectedLines[0].product.id}/reserve?${checkoutParams.toString()}`
+    : "#";
+
+  const totals = selectedLines.reduce((summary, line) => {
     summary.listSubtotal += line.product.listPricePerDay * line.quantity;
     summary.rentalSubtotal += line.product.pricePerDay * line.quantity;
     summary.deposit += line.product.refundableDeposit * line.quantity;
@@ -68,7 +77,14 @@ export default function CartView({ products }: { products: Product[] }) {
           <div className={styles.items}>
             <div className={styles.itemsHeading}>
               <h2>{cartLines.length} {cartLines.length === 1 ? "rental item" : "rental items"}</h2>
-              <span>{totalQuantity} {totalQuantity === 1 ? "unit" : "units"}</span>
+              <label className={styles.selectAll}>
+                <input
+                  type="checkbox"
+                  checked={selectedLines.length === cartLines.length}
+                  onChange={(event) => setExcludedProductIds(event.target.checked ? new Set() : new Set(cartLines.map((line) => line.product.id)))}
+                />
+                Select all · {totalQuantity} {totalQuantity === 1 ? "unit" : "units"}
+              </label>
             </div>
             {cartLines.map(({ product, quantity }) => {
               const units = unitsByProductId.get(product.id) ?? defaultsById[product.id];
@@ -77,6 +93,17 @@ export default function CartView({ products }: { products: Product[] }) {
               const lineDiscount = Math.max(0, product.listPricePerDay - product.pricePerDay) * quantity;
               return (
                 <article key={product.id} className={styles.item}>
+                  <label className={styles.lineSelector} aria-label={`Select ${product.name} for checkout`}>
+                    <input
+                      type="checkbox"
+                      checked={!excludedProductIds.has(product.id)}
+                      onChange={(event) => setExcludedProductIds((current) => {
+                        const next = new Set(current);
+                        if (event.target.checked) next.delete(product.id); else next.add(product.id);
+                        return next;
+                      })}
+                    />
+                  </label>
                   <Link href={`/catalog/${product.id}`} className={styles.imageWrap}>
                     <Image
                       src={product.image || "/images/product-placeholder.png"}
@@ -108,7 +135,7 @@ export default function CartView({ products }: { products: Product[] }) {
                       <button type="button" onClick={() => updateQuantity(product.id, quantity + 1)} disabled={quantity >= maxQuantity} aria-label={`Increase ${product.name} quantity`}>+</button>
                     </div>
                     <strong>{money(lineRental)} / day</strong>
-                    <Link href={`/catalog/${product.id}/reserve?cartItem=${product.id}`} className={styles.checkoutLink}>Checkout this item</Link>
+                    <Link href={`/catalog/${product.id}/reserve?items=${encodeURIComponent(`${product.id}:${quantity}`)}`} className={styles.checkoutLink}>Checkout this item</Link>
                     <button type="button" className={styles.removeButton} onClick={() => removeItem(product.id)}>Remove</button>
                   </div>
                 </article>
@@ -133,8 +160,10 @@ export default function CartView({ products }: { products: Product[] }) {
               <span>Birthday-month rentals can receive ₱100 off, and the 11th rental under the same account receives ₱200 off.</span>
             </div>
             <p className={styles.summaryNote}>Final amounts update after you choose dates. Delivery courier fees are arranged separately and are not charged online.</p>
-            <Link href={`/catalog/${cartLines[0].product.id}/reserve?cartItem=${cartLines[0].product.id}`} className={styles.primaryLink}>Start checkout</Link>
-            <p className={styles.bookingRule}>Each product becomes its own booking so availability, payment, documents, and the signed agreement stay accurate.</p>
+            <Link href={selectedCheckoutHref} className={`${styles.primaryLink} ${selectedLines.length ? "" : styles.disabledLink}`} aria-disabled={!selectedLines.length}>
+              {selectedLines.length > 1 ? `Checkout ${selectedLines.length} items together` : "Start checkout"}
+            </Link>
+            <p className={styles.bookingRule}>Selected products share one schedule, one payment, one document set, and one itemized rental agreement. You can still checkout a single item separately.</p>
           </aside>
         </div>
       )}

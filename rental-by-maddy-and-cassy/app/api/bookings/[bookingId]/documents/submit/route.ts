@@ -83,15 +83,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
     if (booking.requirementsStatus !== "not_submitted") {
       return errorResponse("Verification documents have already been submitted.", 409);
     }
-    const { data: verifiedPayment } = await admin
+    const { data: submittedPayment } = await admin
       .from("booking_payment_submissions")
       .select("id")
       .eq("booking_id", bookingId)
-      .eq("status", "verified")
+      .in("status", ["submitted", "under_review", "verified"])
       .limit(1)
       .maybeSingle();
-    if (!verifiedPayment) {
-      return errorResponse("Complete the reservation payment before submitting documents.", 409);
+    if (!submittedPayment) {
+      return errorResponse("Submit your GCash payment proof before submitting documents.", 409);
     }
 
     const now = new Date().toISOString();
@@ -167,6 +167,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
       pricePerDay: booking.dailyRate,
       currency: "PHP",
       includedAccessories: booking.productSnapshot.included ?? [],
+      items: (booking.items ?? []).map((item) => ({
+        productName: item.productSnapshot.name,
+        brand: item.productSnapshot.brand,
+        quantity: item.quantity,
+        pricePerDay: item.dailyRate,
+        includedAccessories: item.productSnapshot.included,
+      })),
     };
 
     const { data: agreement, error: agreementError } = await admin

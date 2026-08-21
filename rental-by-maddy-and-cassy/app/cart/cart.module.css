@@ -10,7 +10,7 @@
 .itemsHeading { display: flex; align-items: center; justify-content: space-between; }
 .itemsHeading h2 { margin: 0; font-size: 1.1rem; }
 .itemsHeading span { color: var(--color-charcoal); font-size: .8rem; }
-.item { display: grid; grid-template-columns: 120px minmax(0,1fr) minmax(180px,220px); gap: 1.15rem; padding: 1.1rem; border: 1px solid var(--color-light-gray); border-radius: 20px; background: var(--color-white); box-shadow: 0 12px 30px rgba(36,36,36,.05); }
+.item { display: grid; grid-template-columns: 24px 120px minmax(0,1fr) minmax(180px,220px); gap: 1rem; padding: 1.1rem; border: 1px solid var(--color-light-gray); border-radius: 20px; background: var(--color-white); box-shadow: 0 12px 30px rgba(36,36,36,.05); }
 .imageWrap { position: relative; width: 120px; aspect-ratio: 1; overflow: hidden; border-radius: 15px; background: var(--color-background-soft); }
 .image { object-fit: cover; }
 .itemInfo { min-width: 0; }
@@ -52,4 +52,8 @@
 .empty h2 { margin: 1rem 0 .4rem; }
 .empty p { max-width: 460px; margin: 0 0 1.2rem; color: var(--color-charcoal); line-height: 1.6; }
 @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .summary { position: static; } }
-@media (max-width: 680px) { .page { padding: 1.25rem 1rem 3rem; } .header { align-items: flex-start; flex-direction: column; border-radius: 20px; } .item { grid-template-columns: 88px minmax(0,1fr); } .imageWrap { width: 88px; } .itemControls { grid-column: 1 / -1; align-items: stretch; } .quantityControl { align-self: flex-start; } .checkoutLink { width: 100%; } }
+@media (max-width: 680px) { .page { padding: 1.25rem 1rem 3rem; } .header { align-items: flex-start; flex-direction: column; border-radius: 20px; } .item { grid-template-columns: 22px 88px minmax(0,1fr); } .imageWrap { width: 88px; } .itemControls { grid-column: 1 / -1; align-items: stretch; } .quantityControl { align-self: flex-start; } .checkoutLink { width: 100%; } }
+.selectAll { display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.72rem; font-weight: 700; }
+.selectAll input, .lineSelector input { width: 18px; height: 18px; accent-color: #17653a; }
+.lineSelector { display: grid; place-items: center; align-self: start; padding-top: 0.25rem; }
+.disabledLink { pointer-events: none; opacity: 0.5; }

@@ -32,50 +32,41 @@ export interface ReservationResumeState {
   };
 }
 
-export async function createPaymentCheckout(
-  bookingId: string,
-  paymentOption: PaymentOption = "full",
-  returnPath?: string,
-): Promise<{ checkoutUrl: string }> {
-  const response = await fetch("/api/payments/checkout", {
+export async function submitManualGcashPayment(input: {
+  bookingId: string;
+  paymentOption: PaymentOption;
+  referenceNumber: string;
+  proofFile: File;
+}): Promise<{ paymentSubmissionId: string; status: "under_review" }> {
+  const formData = new FormData();
+  formData.append("bookingId", input.bookingId);
+  formData.append("paymentOption", input.paymentOption);
+  formData.append("referenceNumber", input.referenceNumber.trim());
+  formData.append("proof", input.proofFile);
+
+  const response = await fetch("/api/payments/manual", {
     method: "POST",
     credentials: "same-origin",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ bookingId, paymentOption, returnPath }),
-  });
-
-  const body = (await response.json().catch(() => null)) as
-    | { checkoutUrl?: unknown; error?: unknown }
-    | null;
-  if (!response.ok || typeof body?.checkoutUrl !== "string") {
-    throw new Error(
-      typeof body?.error === "string" ? body.error : "The secure payment checkout could not be opened.",
-    );
-  }
-  return { checkoutUrl: body.checkoutUrl };
-}
-
-export async function reconcilePayment(
-  bookingId: string,
-): Promise<"verified" | "pending" | "failed" | "unpaid"> {
-  const response = await fetch("/api/payments/reconcile", {
-    method: "POST",
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ bookingId }),
+    body: formData,
   });
   const body = (await response.json().catch(() => null)) as
-    | { status?: unknown; error?: unknown }
+    | { paymentSubmissionId?: unknown; status?: unknown; error?: unknown }
     | null;
   if (
     !response.ok ||
-    !["verified", "pending", "failed", "unpaid"].includes(String(body?.status))
+    typeof body?.paymentSubmissionId !== "string" ||
+    body.status !== "under_review"
   ) {
     throw new Error(
-      typeof body?.error === "string" ? body.error : "The payment status could not be confirmed.",
+      typeof body?.error === "string"
+        ? body.error
+        : "Your GCash payment proof could not be submitted.",
     );
   }
-  return body!.status as "verified" | "pending" | "failed" | "unpaid";
+  return {
+    paymentSubmissionId: body.paymentSubmissionId,
+    status: "under_review",
+  };
 }
 
 export async function getReservationResumeState(
@@ -96,25 +87,6 @@ export async function getReservationResumeState(
     );
   }
   return body as ReservationResumeState;
-}
-
-export async function completeDemoPayment(
-  sessionId: string,
-  paymentMethod: string,
-): Promise<{ bookingId: string }> {
-  const response = await fetch("/api/payments/demo/complete", {
-    method: "POST",
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ sessionId, paymentMethod }),
-  });
-  const body = (await response.json().catch(() => null)) as
-    | { bookingId?: unknown; error?: unknown }
-    | null;
-  if (!response.ok || typeof body?.bookingId !== "string") {
-    throw new Error(typeof body?.error === "string" ? body.error : "The demo payment could not be completed.");
-  }
-  return { bookingId: body.bookingId };
 }
 
 /** Shared row -> view-model mapping for public.booking_payment_submissions, reused by bookingDetailService.ts and adminReadService.ts. */

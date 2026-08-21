@@ -223,3 +223,9 @@
   font-size: 0.76rem;
   line-height: 1.4;
 }
+.multiItemPanel { display: grid; gap: 0.5rem; padding: 0.7rem; border: 1px solid #e3d4d1; border-radius: 12px; background: #fffafa; }
+.multiItemPanel > div { display: flex; justify-content: space-between; gap: 0.75rem; }
+.multiItemPanel > div strong { font-size: 0.78rem; }
+.multiItemPanel > div span { color: #746966; font-size: 0.65rem; }
+.multiItemPanel ul { display: grid; gap: 0.3rem; margin: 0; padding: 0; list-style: none; }
+.multiItemPanel li { display: flex; justify-content: space-between; gap: 0.65rem; padding-top: 0.3rem; border-top: 1px solid #eee1de; font-size: 0.72rem; }

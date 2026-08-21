@@ -91,7 +91,7 @@ export default function StepCustomerInfo({
       </p>
       {isGuest ? (
         <p className={styles.confirmCallout}>
-          Guest checkout is active. Use an email you can access because PayMongo and booking updates will use it.
+          Guest checkout is active. Use an email you can access because payment verification and booking updates will use it.
         </p>
       ) : null}
 

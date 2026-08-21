@@ -25,6 +25,11 @@ interface CustomerDocumentBase {
   amount: number;
   issuedAt: string;
   isDemo?: boolean;
+  items?: Array<{
+    productName: string;
+    quantity: number;
+    dailyRate: number;
+  }>;
 }
 
 export interface InvoicePdfInput extends CustomerDocumentBase {
@@ -215,7 +220,19 @@ function drawSummary(
     columnWidth,
   );
   y = Math.min(leftY, rightY);
-  const itemY = drawField(page, regular, bold, "Rental item", input.productName, MARGIN, y, columnWidth);
+  const itemSummary = input.items && input.items.length > 1
+    ? input.items.map((item, index) => `${index + 1}. ${item.quantity} x ${item.productName} - ${money(item.dailyRate)} / day`).join("\n")
+    : input.productName;
+  const itemY = drawField(
+    page,
+    regular,
+    bold,
+    input.items && input.items.length > 1 ? `Rental items (${input.items.length})` : "Rental item",
+    itemSummary,
+    MARGIN,
+    y,
+    columnWidth,
+  );
   const datesY = drawField(
     page,
     regular,
@@ -314,7 +331,7 @@ export async function createInvoicePdf(input: InvoicePdfInput): Promise<Uint8Arr
     regular,
     input.isDemo
       ? "DEMO ONLY - This invoice is for flow testing and is not a valid demand for payment."
-      : "This booking invoice is payable through the secure PayMongo checkout linked to the reservation.",
+      : "Pay the exact amount through the official GCash QR and submit the receipt for verification.",
   );
   pdf.setTitle(`Invoice ${safeText(input.invoiceNumber)}`);
   pdf.setAuthor("Rental by Maddy & Cassy");
@@ -339,7 +356,7 @@ export async function createReceiptPdf(input: ReceiptPdfInput): Promise<Uint8Arr
     page,
     regular,
     bold,
-    input.isDemo ? "Demo transaction reference" : "PayMongo transaction reference",
+    input.isDemo ? "Demo transaction reference" : "GCash reference number",
     input.paymentReference,
     MARGIN,
     y,
@@ -471,7 +488,7 @@ export async function createFinalAgreementPdf(
     "The customer is responsible for reasonable care of the item and will use it only for its intended purpose.",
     "Late returns may result in additional charges communicated by the business.",
     "Damage, loss, or missing accessories will be assessed by the business. The customer agrees to cooperate in resolving the resulting costs.",
-    "Payment is confirmed only through the verified PayMongo transaction shown in this agreement and its corresponding receipt.",
+    "Payment is confirmed only after the business verifies the submitted GCash reference and proof shown in the corresponding receipt.",
     "The customer authorizes the electronic signature below and agrees that it is binding for this booking.",
     "Personal information and verification documents are used only for identity verification, booking fulfillment, legal compliance, and legitimate business records.",
   ];

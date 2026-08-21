@@ -16,6 +16,13 @@ export interface AgreementDocumentData {
   pricePerDay: number;
   currency: string;
   includedAccessories: string[];
+  items?: Array<{
+    productName: string;
+    brand: string;
+    quantity: number;
+    pricePerDay: number;
+    includedAccessories: string[];
+  }>;
 }
 
 export { RENTAL_TERMS_VERSION as TERMS_VERSION } from "@/src/lib/rentalAgreement";
@@ -33,16 +40,24 @@ export default function AgreementDocument({ data }: { data: AgreementDocumentDat
           <dt>Customer</dt>
           <dd>{data.customerName}</dd>
         </div>
-        <div>
-          <dt>Item</dt>
-          <dd>
-            {data.brand} — {data.productName}
-          </dd>
-        </div>
-        <div>
-          <dt>Quantity</dt>
-          <dd>{data.quantity} {data.quantity === 1 ? "unit" : "units"}</dd>
-        </div>
+        {data.items && data.items.length > 1 ? (
+          <div className={styles.fullWidth}>
+            <dt>Rental items</dt>
+            <dd>
+              <ul className={styles.itemizedList}>
+                {data.items.map((item) => (
+                  <li key={`${item.productName}-${item.brand}`}>
+                    <span><strong>{item.brand} — {item.productName}</strong><small>{item.includedAccessories.join(", ") || "Standard inclusions"}</small></span>
+                    <span>{item.quantity} × {data.currency}{item.pricePerDay.toLocaleString()} / day</span>
+                  </li>
+                ))}
+              </ul>
+            </dd>
+          </div>
+        ) : <>
+          <div><dt>Item</dt><dd>{data.brand} — {data.productName}</dd></div>
+          <div><dt>Quantity</dt><dd>{data.quantity} {data.quantity === 1 ? "unit" : "units"}</dd></div>
+        </>}
         <div>
           <dt>Pickup &amp; Return</dt>
           <dd>
@@ -65,10 +80,10 @@ export default function AgreementDocument({ data }: { data: AgreementDocumentDat
             {data.pricePerDay.toLocaleString()} / unit / day
           </dd>
         </div>
-        <div className={styles.fullWidth}>
+        {!(data.items && data.items.length > 1) ? <div className={styles.fullWidth}>
           <dt>Included Accessories</dt>
           <dd>{data.includedAccessories.join(", ")}</dd>
-        </div>
+        </div> : null}
       </dl>
 
       <section className={styles.termsSection}>
@@ -97,9 +112,9 @@ export default function AgreementDocument({ data }: { data: AgreementDocumentDat
             non-refundable once payment is verified and the unit is reserved.
           </li>
           <li>
-            The reservation is secured after PayMongo verifies the initial payment. The booking
-            becomes fully confirmed after the required verification documents and this signed
-            agreement are approved by the business.
+            The reservation is secured after the business verifies the submitted GCash payment
+            proof. The booking becomes fully confirmed after the required verification documents
+            and this signed agreement are approved by the business.
           </li>
           <li>
             This agreement, once electronically signed, is considered binding for this specific

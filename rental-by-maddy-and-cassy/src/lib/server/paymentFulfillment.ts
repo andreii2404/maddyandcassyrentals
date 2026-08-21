@@ -16,11 +16,13 @@ function documentNumber(prefix: string, bookingRef: string, id: string): string 
 
 export interface FulfillPaymentInput {
   paymentSubmissionId: string;
-  providerPaymentId: string;
+  providerPaymentId?: string;
+  externalReference?: string;
   paymentMethod: string;
   providerStatus?: string;
   providerMetadata?: Record<string, unknown>;
   providerEventId?: string;
+  reviewedBy?: string;
 }
 
 export interface FulfillPaymentResult {
@@ -30,12 +32,12 @@ export interface FulfillPaymentResult {
 }
 
 /**
- * Runs every side effect of a verified PayMongo payment: marks the payment
+ * Runs every side effect of a verified payment: marks the payment
  * submission verified, issues a receipt (with PDF), logs the event, and — if
  * every other confirmation gate already cleared — flips the booking to
  * 'confirmed' via the service-role-only system_confirm_booking() RPC and
  * finalizes the signed agreement PDF. Called from both the production
- * PayMongo webhook and the sandbox demo-complete route, always with the
+ * manual GCash review and any retained legacy provider route, always with the
  * service-role (RLS-bypassing) admin client, and always after the caller has
  * independently verified the payment is real (signature check or dev-only
  * demo gate) — never from client-supplied status alone.
@@ -70,13 +72,17 @@ export async function fulfillVerifiedPayment(
     ...((payment.provider_metadata as Record<string, unknown>) ?? {}),
     ...(input.providerMetadata ?? {}),
   };
+  const providerReference =
+    input.externalReference || input.providerPaymentId || payment.external_reference || payment.id;
   await admin
     .from("booking_payment_submissions")
     .update({
       status: "verified",
-      paymongo_payment_id: input.providerPaymentId,
+      paymongo_payment_id: input.providerPaymentId || payment.paymongo_payment_id,
+      external_reference: input.externalReference || payment.external_reference,
       payment_method: input.paymentMethod,
       provider_metadata: toJson(mergedMetadata),
+      reviewed_by: input.reviewedBy || payment.reviewed_by,
       reviewed_at: now,
       completed_at: now,
     })
@@ -89,7 +95,7 @@ export async function fulfillVerifiedPayment(
   await generateAndSaveReceipt(admin, {
     booking,
     receiptNumber,
-    paymentReference: input.providerPaymentId,
+    paymentReference: providerReference,
     paymentMethod: input.paymentMethod,
     storagePath: receiptPath,
     amount: payment.declared_amount,
@@ -113,7 +119,7 @@ export async function fulfillVerifiedPayment(
     p_previous_values: { status: payment.status },
     p_new_values: {
       status: "verified",
-      providerPaymentId: input.providerPaymentId,
+      paymentReference: providerReference,
       paymentMethod: input.paymentMethod,
     },
   });
@@ -137,7 +143,7 @@ export async function fulfillVerifiedPayment(
   if (agreementRow?.status === "completed" && booking.status === "approved") {
     const { data: confirmedBooking, error: confirmError } = await admin.rpc(
       "system_confirm_booking",
-      { p_booking_id: booking.id, p_note: "Auto-confirmed after verified PayMongo payment." },
+      { p_booking_id: booking.id, p_note: "Auto-confirmed after verified payment." },
     );
 
     if (!confirmError && confirmedBooking) {
@@ -186,7 +192,7 @@ export async function fulfillVerifiedPayment(
               signedAt: s.signed_at,
             })),
           },
-          paymentReference: input.providerPaymentId,
+          paymentReference: providerReference,
           storagePath: agreementPath,
         });
 

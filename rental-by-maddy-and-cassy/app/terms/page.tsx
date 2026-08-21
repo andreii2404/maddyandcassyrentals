@@ -7,7 +7,7 @@ const sections: GuideSection[] = [
     number: "01",
     title: "Booking in Advance",
     paragraphs: [
-      "Reservations should be made ahead of time. Same-day bookings may be accepted only when a unit is available and all requirements are complete. A ₱100 convenience fee applies to an approved same-day rental.",
+      "Reservations should be made ahead of time. Same-day bookings may be accepted when a unit is available and all requirements are complete; the time-based service fee applies only when the customer voluntarily chooses a schedule outside normal hours.",
     ],
   },
   {
@@ -31,10 +31,10 @@ const sections: GuideSection[] = [
     number: "04",
     title: "Pickup & Return Schedule",
     bullets: [
-      "Pickup is by appointment between 9:00 AM and 7:00 PM.",
+      "Normal pickup and delivery appointments are scheduled between 9:00 AM and 7:00 PM.",
       "Rentals are valid for 22 hours from the scheduled pickup time, or 21 hours for rentals outside Manila.",
       "Late returns incur a ₱100 per hour penalty.",
-      "Pickup before 9:00 AM or after 7:00 PM may be allowed with a ₱100 convenience fee, subject to availability.",
+      "A voluntarily selected pickup or delivery time before 9:00 AM or after 7:00 PM carries a ₱100 service fee, subject to availability. The fee is not charged when unit availability forces a later time.",
     ],
   },
   {
@@ -101,7 +101,7 @@ export default function TermsPage() {
         introduction="These policies apply to booking requests, verification, equipment handover, proper use, and return of every rental unit."
         sections={sections}
         layout="stack"
-        notice="Online reservation payments and applicable non-refundable deposits are processed through PayMongo. Courier delivery costs are arranged separately with the rental team."
+        notice="Reservation payments and applicable non-refundable deposits are sent through GCash and manually verified by the rental team. Courier delivery costs are arranged separately."
       />
     </div>
   );

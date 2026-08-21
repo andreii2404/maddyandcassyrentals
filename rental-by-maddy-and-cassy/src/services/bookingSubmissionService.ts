@@ -3,12 +3,17 @@ import type { Database } from "@/src/lib/supabase/database.types";
 import type { Product } from "@/types/product";
 import type { ReservationDraft } from "@/src/types/reservationDraft";
 import { formatCustomerAddress, getDayCount } from "@/src/types/reservationDraft";
-import { submitBookingWithDateGuard } from "@/src/services/inventoryService";
+import { submitBookingWithDateGuard, submitMultiItemBookingWithDateGuard } from "@/src/services/inventoryService";
 import { isValidPhoneNumber } from "@/src/lib/authValidation";
 
 export interface SubmitBookingResult {
   bookingId: string;
   bookingNumber?: string;
+}
+
+export interface ReservationProductLine {
+  product: Product;
+  quantity: number;
 }
 
 function validateReservationDetails(draft: ReservationDraft): void {
@@ -46,6 +51,7 @@ export async function createBookingReservation(
   supabase: SupabaseClient<Database>,
   product: Product,
   draft: ReservationDraft,
+  selectedLines?: ReservationProductLine[],
 ): Promise<SubmitBookingResult> {
   validateReservationDetails(draft);
   const { customerInfo } = draft;
@@ -57,7 +63,41 @@ export async function createBookingReservation(
     product.dailyRate * rentalDays * draft.quantity * (product.discountPercent / 100) * 100,
   ) / 100;
 
-  const result = await submitBookingWithDateGuard(supabase, {
+  const lines = selectedLines?.length ? selectedLines : [{ product, quantity: draft.quantity }];
+  const customerSnapshot = {
+    fullName: customerInfo.fullName.trim(),
+    email: customerInfo.email.trim(),
+    phone: customerInfo.phone.trim(),
+    address: formatCustomerAddress(customerInfo),
+    facebookLink: customerInfo.facebookLink.trim(),
+    instagramLink: customerInfo.instagramLink.trim(),
+  };
+  const productSnapshot = (lineProduct: Product) => ({
+    name: lineProduct.name,
+    brand: lineProduct.brand ?? "",
+    category: lineProduct.category,
+    image: lineProduct.images[0]?.url || "/images/product-placeholder.png",
+    pricePerDay: lineProduct.pricePerDay,
+    currency: lineProduct.currency,
+    included: lineProduct.included,
+  });
+
+  const result = lines.length > 1
+    ? await submitMultiItemBookingWithDateGuard(supabase, {
+        items: lines.map((line) => ({
+          productId: line.product.id,
+          quantity: line.quantity,
+          productSnapshot: productSnapshot(line.product),
+        })),
+        pickupAt: startDate.toISOString(),
+        rentalDays,
+        fulfillmentMethod,
+        location: fulfillmentMethod === "delivery" ? draft.customerLocation.trim() : undefined,
+        cityMunicipality: fulfillmentMethod === "delivery" ? draft.cityMunicipality.trim() : undefined,
+        province: fulfillmentMethod === "delivery" ? draft.province.trim() : undefined,
+        customerSnapshot,
+      })
+    : await submitBookingWithDateGuard(supabase, {
     productId: product.id,
     quantity: draft.quantity,
     pickupAt: startDate.toISOString(),
@@ -69,23 +109,8 @@ export async function createBookingReservation(
     cityMunicipality: fulfillmentMethod === "delivery" ? draft.cityMunicipality.trim() : undefined,
     province: fulfillmentMethod === "delivery" ? draft.province.trim() : undefined,
     discountAmount,
-    productSnapshot: {
-      name: product.name,
-      brand: product.brand ?? "",
-      category: product.category,
-      image: product.images[0]?.url || "/images/product-placeholder.png",
-      pricePerDay: product.pricePerDay,
-      currency: product.currency,
-      included: product.included,
-    },
-    customerSnapshot: {
-      fullName: customerInfo.fullName.trim(),
-      email: customerInfo.email.trim(),
-      phone: customerInfo.phone.trim(),
-      address: formatCustomerAddress(customerInfo),
-      facebookLink: customerInfo.facebookLink.trim(),
-      instagramLink: customerInfo.instagramLink.trim(),
-    },
+    productSnapshot: productSnapshot(product),
+    customerSnapshot,
   });
 
   return { bookingId: result.bookingId, bookingNumber: result.bookingRef };
@@ -125,7 +150,7 @@ function dataUrlToBlob(dataUrl: string): Blob {
 
 export async function submitBookingDocuments(bookingId: string, draft: ReservationDraft): Promise<void> {
   // The reservation was already validated and persisted before checkout.
-  // After PayMongo redirects back, the client rebuilds the draft from that
+  // When a saved booking is resumed, the client rebuilds the draft from that
   // authoritative booking. Do not revalidate rental/address fields here:
   // legacy bookings may not have every newer structured address field, and
   // document submission only owns the requirements and agreement data below.

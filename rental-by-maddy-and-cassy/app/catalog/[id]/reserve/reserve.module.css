@@ -385,3 +385,5 @@
   .checkoutGate { margin: 1.5rem 1rem 3rem; }
   .gateOptions { grid-template-columns: 1fr; }
 }
+.summaryItems { display: grid; gap: 0.32rem; margin: 0.5rem 0; padding: 0; list-style: none; }
+.summaryItems li { display: flex; justify-content: space-between; gap: 0.65rem; padding: 0.38rem 0; border-bottom: 1px solid #eadedb; font-size: 0.72rem; }

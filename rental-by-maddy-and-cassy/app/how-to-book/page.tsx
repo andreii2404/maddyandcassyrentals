@@ -59,7 +59,7 @@ export default function HowToBookPage() {
         title="How to Book"
         introduction="Follow these steps to request your unit, complete verification, and arrange pickup or delivery."
         sections={sections}
-        notice="Reservation payments and applicable non-refundable deposits are processed securely through PayMongo. Delivery courier costs are arranged separately."
+        notice="Reservation payments and applicable non-refundable deposits are sent through GCash and verified by the rental team. Delivery courier costs are arranged separately."
       />
     </div>
   );

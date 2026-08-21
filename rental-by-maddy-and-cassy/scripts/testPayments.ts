@@ -1,56 +1,27 @@
 import assert from "node:assert/strict";
-import { createHmac } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { verifyPayMongoSignature } from "../src/lib/paymongo/webhook";
-import {
-  buildPaymentReturnUrl,
-  safePaymentReturnPath,
-} from "../src/lib/paymongo/returnUrl";
+import { isValidGcashReference, normalizeGcashReference } from "../src/lib/manualGcash";
 import {
   createFinalAgreementPdf,
   createInvoicePdf,
   createReceiptPdf,
 } from "../src/lib/pdf/customerDocuments";
 
-process.env.PAYMONGO_WEBHOOK_SECRET = "whsk_unit_test";
-
-test("accepts a valid PayMongo timestamped signature", () => {
-  const raw = JSON.stringify({ data: { id: "evt_test" } });
-  const timestamp = Math.floor(Date.now() / 1000).toString();
-  const signature = createHmac("sha256", process.env.PAYMONGO_WEBHOOK_SECRET!)
-    .update(`${timestamp}.${raw}`)
-    .digest("hex");
-  assert.doesNotThrow(() =>
-    verifyPayMongoSignature(raw, `t=${timestamp},te=${signature},li=`),
-  );
+test("validates and normalizes manual GCash references", () => {
+  assert.equal(normalizeGcashReference(" 1234 5678 / abc "), "12345678abc");
+  assert.equal(isValidGcashReference("12345678"), true);
+  assert.equal(isValidGcashReference("GCASH-ABC-12345"), true);
+  assert.equal(isValidGcashReference("short"), false);
+  assert.equal(isValidGcashReference("reference_with_invalid_symbols"), false);
 });
 
-test("rejects a tampered PayMongo webhook", () => {
-  const timestamp = Math.floor(Date.now() / 1000).toString();
-  assert.throws(() =>
-    verifyPayMongoSignature('{"tampered":true}', `t=${timestamp},te=bad,li=`),
-  );
-});
-
-test("returns PayMongo to the exact hostname that started checkout", () => {
-  assert.equal(
-    buildPaymentReturnUrl(
-      "https://maddyandcassyrentals-nine.vercel.app/api/payments/checkout",
-      "/catalog/product-1/reserve?bookingId=booking-1",
-      "success",
-    ),
-    "https://maddyandcassyrentals-nine.vercel.app/catalog/product-1/reserve?bookingId=booking-1&payment=success",
-  );
-  assert.equal(
-    buildPaymentReturnUrl(
-      "http://localhost:3000/api/payments/checkout",
-      "/account/bookings/booking-1",
-      "cancelled",
-    ),
-    "http://localhost:3000/account/bookings/booking-1?payment=cancelled",
-  );
-  assert.equal(safePaymentReturnPath("https://malicious.example", "/account/bookings"), "/account/bookings");
-  assert.equal(safePaymentReturnPath("//malicious.example", "/account/bookings"), "/account/bookings");
+test("ships the official GCash QR as a usable PNG asset", async () => {
+  const qr = await readFile("public/images/payment/gcash-qr.png");
+  assert.equal(qr.subarray(1, 4).toString(), "PNG");
+  assert.ok(qr.length > 10_000);
+  assert.ok(qr.readUInt32BE(16) >= 500);
+  assert.ok(qr.readUInt32BE(20) >= 500);
 });
 
 test("generates invoice and receipt PDFs", async () => {
@@ -59,6 +30,10 @@ test("generates invoice and receipt PDFs", async () => {
     customerName: "Test Customer",
     customerEmail: "customer@example.com",
     productName: "Camera",
+    items: [
+      { productName: "Camera", quantity: 1, dailyRate: 500 },
+      { productName: "iPhone", quantity: 2, dailyRate: 1200 },
+    ],
     rentalDates: "July 29, 2026 - July 30, 2026",
     amount: 2500,
     issuedAt: "July 29, 2026",
@@ -67,8 +42,8 @@ test("generates invoice and receipt PDFs", async () => {
   const receipt = await createReceiptPdf({
     ...base,
     receiptNumber: "OR-TEST",
-    paymentReference: "pay_test",
-    paymentMethod: "gcash",
+    paymentReference: "GCASH-TEST-12345",
+    paymentMethod: "GCash",
   });
   const agreement = await createFinalAgreementPdf({
     ...base,
@@ -80,7 +55,7 @@ test("generates invoice and receipt PDFs", async () => {
     termsVersion: "2026-01",
     signedAt: "July 29, 2026",
     typedFullName: "Test Customer",
-    paymentReference: "pay_test",
+    paymentReference: "GCASH-TEST-12345",
     confirmedAt: "July 29, 2026",
     businessSignerName: "Maddy & Cassy Rentals",
     businessSignedAt: "July 29, 2026",

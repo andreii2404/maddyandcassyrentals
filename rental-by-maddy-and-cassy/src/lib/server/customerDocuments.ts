@@ -58,7 +58,14 @@ export async function generateAndSaveInvoice(
     bookingRef: booking.bookingRef,
     customerName: booking.customerSnapshot.fullName || "Customer",
     customerEmail: booking.customerSnapshot.email || "",
-    productName: booking.productSnapshot.name || "Rental item",
+    productName: (booking.items?.length ?? 0) > 1
+      ? booking.items!.map((item) => `${item.quantity}× ${item.productSnapshot.name}`).join("; ")
+      : booking.productSnapshot.name || "Rental item",
+    items: booking.items?.map((item) => ({
+      productName: item.productSnapshot.name,
+      quantity: item.quantity,
+      dailyRate: item.dailyRate,
+    })),
     rentalDates: bookingRentalDates(booking),
     amount: input.amountDueNow,
     totalAmount: input.totalAmount,
@@ -87,12 +94,19 @@ export async function generateAndSaveReceipt(
     bookingRef: booking.bookingRef,
     customerName: booking.customerSnapshot.fullName || "Customer",
     customerEmail: booking.customerSnapshot.email || "",
-    productName: booking.productSnapshot.name || "Rental item",
+    productName: (booking.items?.length ?? 0) > 1
+      ? booking.items!.map((item) => `${item.quantity}× ${item.productSnapshot.name}`).join("; ")
+      : booking.productSnapshot.name || "Rental item",
+    items: booking.items?.map((item) => ({
+      productName: item.productSnapshot.name,
+      quantity: item.quantity,
+      dailyRate: item.dailyRate,
+    })),
     rentalDates: bookingRentalDates(booking),
     amount: input.amount,
     issuedAt: formatManilaDate(new Date(), true),
     paymentReference: input.paymentReference,
-    paymentMethod: input.paymentMethod || "PayMongo",
+    paymentMethod: input.paymentMethod || "GCash",
   });
   await savePrivatePdf(admin, "receipts", input.storagePath, bytes);
 }
@@ -128,13 +142,22 @@ export async function generateAndSaveFinalAgreement(
     customerEmail: booking.customerSnapshot.email || "",
     phone: booking.customerSnapshot.phone || "",
     address: booking.customerSnapshot.address || "",
-    productName: booking.productSnapshot.name || "Rental item",
+    productName: (booking.items?.length ?? 0) > 1
+      ? booking.items!.map((item) => `${item.quantity}× ${item.productSnapshot.name}`).join("; ")
+      : booking.productSnapshot.name || "Rental item",
+    items: booking.items?.map((item) => ({
+      productName: item.productSnapshot.name,
+      quantity: item.quantity,
+      dailyRate: item.dailyRate,
+    })),
     rentalDates: bookingRentalDates(booking),
     amount: booking.totalAmount,
     issuedAt: formatManilaDate(new Date(), true),
     fulfillmentMethod: booking.fulfillmentMethod,
     customerLocation: booking.location || "",
-    includedAccessories: booking.productSnapshot.included ?? [],
+    includedAccessories: (booking.items?.length ?? 0) > 1
+      ? booking.items!.flatMap((item) => item.productSnapshot.included.map((included) => `${item.productSnapshot.name}: ${included}`))
+      : booking.productSnapshot.included ?? [],
     termsVersion: agreement.versionNumber ? `v${agreement.versionNumber}` : "2026-01",
     signedAt: customerSignature ? formatManilaDate(customerSignature.signedAt, true) : "",
     typedFullName: customerSignature?.signerName || booking.customerSnapshot.fullName || "Customer",

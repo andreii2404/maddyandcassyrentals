@@ -68,6 +68,56 @@ export interface SubmitBookingResult {
   assignedUnitId: string | null;
 }
 
+export interface MultiItemBookingInput {
+  items: Array<{
+    productId: string;
+    quantity: number;
+    productSnapshot: BookingProductSnapshot;
+  }>;
+  pickupAt: string;
+  rentalDays: number;
+  fulfillmentMethod: FulfillmentMethod;
+  location?: string;
+  cityMunicipality?: string;
+  province?: string;
+  customerNotes?: string;
+  deliveryFee?: number;
+  customerSnapshot: BookingCustomerSnapshot;
+  emergencyContact?: EmergencyContact;
+}
+
+export async function submitMultiItemBookingWithDateGuard(
+  supabase: SupabaseClient<Database>,
+  input: MultiItemBookingInput,
+): Promise<SubmitBookingResult> {
+  const { data, error } = await supabase.rpc("create_multi_item_time_based_booking" as never, {
+    p_items: input.items,
+    p_pickup_at: input.pickupAt,
+    p_rental_days: input.rentalDays,
+    p_fulfillment_method: input.fulfillmentMethod,
+    p_location: input.location ?? "",
+    p_city_municipality: input.cityMunicipality ?? "",
+    p_province: input.province ?? "",
+    p_customer_notes: input.customerNotes ?? "",
+    p_delivery_fee: input.deliveryFee ?? 0,
+    p_customer_snapshot: input.customerSnapshot,
+    p_emergency_contact: input.emergencyContact ?? null,
+  } as never);
+  if (error) {
+    if (error.message.includes("NO_TIME_AVAILABILITY") || error.message.includes("NO_AVAILABILITY")) {
+      const nextAvailableAt = error.message.match(/NO_TIME_AVAILABILITY:([^\n]+)/)?.[1]?.trim();
+      throw new DatesUnavailableError(input.pickupAt, nextAvailableAt);
+    }
+    if (error.message.includes("PRODUCT_NOT_AVAILABLE")) throw new Error("One of the selected rental items is no longer available.");
+    if (error.message.includes("ACCOUNT_SUSPENDED")) throw new AccountSuspendedError();
+    if (error.message.includes("DELIVERY_ADDRESS_REQUIRED")) throw new DeliveryAddressRequiredError();
+    if (error.message.includes("PICKUP_TIME_IN_PAST")) throw new Error("Choose a future pickup date and time.");
+    throw new Error(error.message);
+  }
+  const booking = data as unknown as Tables<"bookings">;
+  return { bookingId: booking.id, bookingRef: booking.booking_reference, assignedUnitId: null };
+}
+
 /**
  * Atomically reserves one physical unit and creates the booking by calling
  * public.create_booking() — a SECURITY DEFINER Postgres function that row-locks

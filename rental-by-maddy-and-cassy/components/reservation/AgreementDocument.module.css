@@ -93,3 +93,8 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
+.itemizedList { display: grid; gap: 0.45rem; margin: 0; padding: 0; list-style: none; }
+.itemizedList li { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.45rem 0; border-bottom: 1px solid #eadedb; }
+.itemizedList li:last-child { border-bottom: 0; }
+.itemizedList li > span:first-child { display: grid; gap: 0.15rem; }
+.itemizedList small { color: #6f6561; font-weight: 400; }

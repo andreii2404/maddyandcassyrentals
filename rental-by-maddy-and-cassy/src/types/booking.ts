@@ -22,6 +22,15 @@ export interface BookingProductSnapshot {
   included: string[];
 }
 
+export interface BookingLineItem {
+  id: string;
+  productId: string;
+  quantity: number;
+  dailyRate: number;
+  depositPerUnit: number;
+  productSnapshot: BookingProductSnapshot;
+}
+
 export interface BookingCustomerSnapshot {
   fullName: string;
   email: string;
@@ -54,6 +63,7 @@ export interface Booking {
   productId: string;
   inventoryUnitId: string | null;
   quantity: number;
+  items?: BookingLineItem[];
   status: BookingStatus;
   fulfillmentMethod: FulfillmentMethod;
   startDate: string;
@@ -161,6 +171,13 @@ export interface AgreementSnapshot {
   pricePerDay: number;
   currency: string;
   includedAccessories: string[];
+  items?: Array<{
+    productName: string;
+    brand: string;
+    quantity: number;
+    pricePerDay: number;
+    includedAccessories: string[];
+  }>;
 }
 
 /** One row of public.agreement_acknowledgements. */

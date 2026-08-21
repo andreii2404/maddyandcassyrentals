@@ -13,7 +13,7 @@ export type PaymentStage = Database["public"]["Enums"]["payment_stage"];
 /**
  * Client-facing checkout choice offered on the reservation/payment flow.
  * Mapped to a payment_stage value server-side — see paymentOptionToStage()
- * in app/api/payments/checkout/route.ts.
+ * by the manual GCash proof submission flow.
  */
 export type PaymentOption = "deposit_50" | "full" | "balance";
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { differenceInCalendarDays } from "date-fns";
 import type { Product } from "@/types/product";
 import type { UnitCounts } from "@/lib/availability";
@@ -32,6 +32,7 @@ interface StepRentalDetailsProps {
   onUpdate: (patch: Partial<ReservationDraft>) => void;
   onContinue: () => void;
   onBack?: () => void;
+  lineItems?: Array<{ product: Product; units: UnitCounts; quantity: number }>;
 }
 
 export default function StepRentalDetails({
@@ -41,6 +42,7 @@ export default function StepRentalDetails({
   onUpdate,
   onContinue,
   onBack,
+  lineItems,
 }: StepRentalDetailsProps) {
   const disabledDateKeys = useMemo(() => new Set<string>(), []);
   const [checking, setChecking] = useState(false);
@@ -59,16 +61,40 @@ export default function StepRentalDetails({
     : 1;
   const returnAt = pickupAt ? calculateReturnDateTime(pickupAt, rentalDays) : null;
   const nextAvailableAt = pickupAt ? calculateNextAvailableDateTime(pickupAt, rentalDays) : null;
+  const selectedLines = useMemo(
+    () => lineItems?.length ? lineItems : [{ product, units, quantity: draft.quantity }],
+    [draft.quantity, lineItems, product, units],
+  );
+
+  const checkSelectedAvailability = useCallback(async (at: Date): Promise<TimeAvailability> => {
+    const results = await Promise.all(selectedLines.map(async (line) => ({
+      line,
+      availability: await getTimeAvailability(line.product.id, at, line.quantity, rentalDays),
+    })));
+    const allAvailable = results.every(({ line, availability }) => availability.availableUnits >= line.quantity);
+    const nextTimes = results.flatMap(({ availability }) => availability.nextAvailableAt ? [availability.nextAvailableAt] : []);
+    const outside = isOutsideNormalPickupWindow(draft.pickupTime);
+    const fee = outside
+      ? results.every(({ availability }) => availability.pickupConvenienceFee > 0) ? 100 : 0
+      : 0;
+    return {
+      totalUnits: selectedLines.length > 1 ? selectedLines.length : results[0]?.availability.totalUnits ?? 0,
+      availableUnits: selectedLines.length > 1 ? (allAvailable ? selectedLines.length : results.filter(({ line, availability }) => availability.availableUnits >= line.quantity).length) : results[0]?.availability.availableUnits ?? 0,
+      unavailableUnits: selectedLines.length > 1 ? results.filter(({ line, availability }) => availability.availableUnits < line.quantity).length : results[0]?.availability.unavailableUnits ?? 0,
+      nextAvailableAt: nextTimes.sort((a, b) => Date.parse(b) - Date.parse(a))[0] ?? null,
+      pickupConvenienceFee: fee,
+    };
+  }, [draft.pickupTime, rentalDays, selectedLines]);
 
   useEffect(() => {
     if (!pickupAt || pickupAt.getTime() <= Date.now()) return;
     let cancelled = false;
     const timer = window.setTimeout(() => {
-      getTimeAvailability(product.id, pickupAt, draft.quantity, rentalDays)
+      checkSelectedAvailability(pickupAt)
         .then((result) => {
           if (cancelled) return;
           setTimeAvailability(result);
-          const fee = draft.fulfillmentMethod === "pickup" ? result.pickupConvenienceFee : 0;
+          const fee = result.pickupConvenienceFee;
           if (draft.pickupConvenienceFee !== fee) {
             onUpdate({ pickupConvenienceFee: fee });
           }
@@ -81,7 +107,7 @@ export default function StepRentalDetails({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [draft.fulfillmentMethod, draft.pickupConvenienceFee, draft.quantity, onUpdate, pickupAt, product.id, rentalDays]);
+  }, [checkSelectedAvailability, draft.pickupConvenienceFee, onUpdate, pickupAt]);
 
   const isDelivery = draft.fulfillmentMethod === "delivery";
   const hasValidLocation =
@@ -98,7 +124,9 @@ export default function StepRentalDetails({
     hasValidLocation &&
     draft.quantity >= 1 &&
     !!timeAvailability &&
-    draft.quantity <= timeAvailability.availableUnits;
+    (selectedLines.length > 1
+      ? timeAvailability.availableUnits === selectedLines.length
+      : draft.quantity <= timeAvailability.availableUnits);
 
   function updatePickupSchedule(
     date: Date | null,
@@ -141,7 +169,7 @@ export default function StepRentalDetails({
         pickupConvenienceFee: timeAvailability?.pickupConvenienceFee ?? 0,
       });
     } else {
-      onUpdate({ fulfillmentMethod: method, pickupConvenienceFee: 0 });
+      onUpdate({ fulfillmentMethod: method, pickupConvenienceFee: timeAvailability?.pickupConvenienceFee ?? 0 });
     }
   }
 
@@ -168,7 +196,7 @@ export default function StepRentalDetails({
     setChecking(true);
     let latestAvailability: TimeAvailability;
     try {
-      latestAvailability = await getTimeAvailability(product.id, pickupAt, draft.quantity, rentalDays);
+      latestAvailability = await checkSelectedAvailability(pickupAt);
     } catch {
       setChecking(false);
       setError("The exact pickup-time availability could not be checked. Please try again.");
@@ -176,12 +204,12 @@ export default function StepRentalDetails({
     }
     setChecking(false);
     setTimeAvailability(latestAvailability);
-    const fee = draft.fulfillmentMethod === "pickup" ? latestAvailability.pickupConvenienceFee : 0;
+    const fee = latestAvailability.pickupConvenienceFee;
     if (draft.pickupConvenienceFee !== fee) {
       onUpdate({ pickupConvenienceFee: fee });
     }
 
-    if (latestAvailability.availableUnits < draft.quantity) {
+    if (selectedLines.length > 1 ? latestAvailability.availableUnits < selectedLines.length : latestAvailability.availableUnits < draft.quantity) {
       const requestedTime = formatManilaPickupTime(pickupAt);
       const availableMessage = latestAvailability.nextAvailableAt
         ? ` and will be available starting ${formatManilaDateTime(latestAvailability.nextAvailableAt)}`
@@ -235,7 +263,9 @@ export default function StepRentalDetails({
                 {pickupAt && !timeAvailability
                   ? "Checking this exact pickup time..."
                   : timeAvailability
-                    ? `${timeAvailability.availableUnits} of ${timeAvailability.totalUnits} unit${timeAvailability.totalUnits === 1 ? "" : "s"} available.`
+                    ? selectedLines.length > 1
+                      ? `${timeAvailability.availableUnits} of ${timeAvailability.totalUnits} selected products available for this exact schedule.`
+                      : `${timeAvailability.availableUnits} of ${timeAvailability.totalUnits} unit${timeAvailability.totalUnits === 1 ? "" : "s"} available.`
                     : "Select a date and time to check this unit."}
               </p>
 
@@ -247,15 +277,20 @@ export default function StepRentalDetails({
                 </dl>
               ) : null}
 
-              {draft.fulfillmentMethod === "pickup" && pickupAt && isOutsideNormalPickupWindow(draft.pickupTime) && timeAvailability ? (
+              {pickupAt && isOutsideNormalPickupWindow(draft.pickupTime) && timeAvailability ? (
                 <p className={styles.convenienceNotice}>
                   {timeAvailability.pickupConvenienceFee > 0
-                    ? "A ₱100 convenience fee applies because you chose a pickup outside 9:00 AM–7:00 PM."
-                    : "No convenience fee applies because availability requires this later pickup time."}
+                    ? `A ₱100 convenience fee applies because you voluntarily chose ${draft.fulfillmentMethod === "delivery" ? "delivery" : "pickup"} before 9:00 AM or after 7:00 PM.`
+                    : "No convenience fee applies because item availability requires this later time."}
                 </p>
               ) : null}
 
-              <div className={styles.quantityPanel}>
+              {selectedLines.length > 1 ? (
+                <div className={styles.multiItemPanel}>
+                  <div><strong>Items in this reservation</strong><span>Quantities come from your cart.</span></div>
+                  <ul>{selectedLines.map((line) => <li key={line.product.id}><span>{line.product.name}</span><strong>× {line.quantity}</strong></li>)}</ul>
+                </div>
+              ) : <div className={styles.quantityPanel}>
                 <div>
                   <label htmlFor="rentalQuantity">Quantity</label>
                   <span>{units.totalUnits} {units.totalUnits === 1 ? "unit" : "units"} in inventory</span>
@@ -272,7 +307,7 @@ export default function StepRentalDetails({
                   />
                   <button type="button" onClick={() => onUpdate({ quantity: draft.quantity + 1 })} disabled={draft.quantity >= units.totalUnits} aria-label="Increase rental quantity">+</button>
                 </div>
-              </div>
+              </div>}
             </div>
           </div>
         </div>
