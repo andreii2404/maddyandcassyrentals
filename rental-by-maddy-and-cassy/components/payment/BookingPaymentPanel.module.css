@@ -98,6 +98,95 @@
   letter-spacing: -0.03em;
 }
 
+.paymentPlan {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.paymentPlan > div {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+  padding: 0.65rem;
+  border: 1px solid var(--color-light-gray);
+  border-radius: 12px;
+}
+
+.paymentPlan > div > span {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.paymentPlan div div { display: grid; gap: 0.1rem; min-width: 0; }
+.paymentPlan small { font-size: 0.58rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.paymentPlan strong { font-size: 0.7rem; line-height: 1.35; }
+.planComplete { background: var(--color-status-green-bg); }
+.planComplete > span { background: var(--color-status-green); color: white; }
+.planCurrent { background: var(--color-background-soft); }
+.planCurrent > span { background: var(--color-primary); color: white; }
+
+.channelChoices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.panel .channelChoice,
+.panel .channelSelected {
+  display: grid;
+  align-content: start;
+  gap: 0.2rem;
+  min-height: 104px;
+  padding: 0.75rem;
+  border-radius: 13px;
+  background: var(--color-white);
+  color: var(--color-text-primary);
+  text-align: left;
+}
+
+.panel .channelChoice { border-color: var(--color-light-gray); }
+.panel .channelSelected {
+  border-color: var(--color-primary);
+  background: var(--color-blush);
+  box-shadow: inset 0 0 0 1px rgba(154, 89, 101, 0.14);
+}
+
+.channelChoices button > span { color: var(--color-primary); font-size: 0.55rem; font-weight: 900; letter-spacing: 0.07em; }
+.channelChoices button > strong { font-size: 0.78rem; }
+.channelChoices button > small { color: var(--color-charcoal); font-size: 0.63rem; font-weight: 500; line-height: 1.45; }
+
+.inPersonNotice {
+  display: flex;
+  gap: 0.65rem;
+  padding: 0.75rem;
+  border: 1px solid var(--color-status-green-border);
+  border-radius: 13px;
+  background: var(--color-status-green-bg);
+}
+
+.inPersonNotice > span {
+  display: grid;
+  width: 27px;
+  height: 27px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-status-green);
+  color: white;
+  font-weight: 900;
+}
+
+.inPersonNotice strong { font-size: 0.75rem; }
+.inPersonNotice p { margin: 0.18rem 0 0; color: var(--color-charcoal); font-size: 0.68rem; line-height: 1.5; }
+
 .message,
 .panel small {
   margin: 0;
@@ -202,4 +291,6 @@
   .trustRow { grid-template-columns: 1fr; }
   .trustRow div { border-right: 0; border-bottom: 1px solid rgba(154, 89, 101, 0.1); }
   .trustRow div:last-child { border-bottom: 0; }
+  .paymentPlan,
+  .channelChoices { grid-template-columns: 1fr; }
 }

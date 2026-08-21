@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import { useToast } from "@/components/ui/ToastProvider";
-import { reviewManualPayment } from "@/src/services/paymentService";
+import {
+  recordInPersonBalance,
+  reviewManualPayment,
+  setBookingPayLaterOverride,
+} from "@/src/services/paymentService";
+import type { Booking } from "@/src/types/booking";
 import type { PaymentRecord } from "@/src/types/payment";
 import styles from "./PaymentsReviewPanel.module.css";
 
@@ -21,11 +26,13 @@ function formatStage(value: string): string {
 
 export default function PaymentsReviewPanel({
   bookingId,
+  booking,
   payments,
   onOpenProof,
   onUpdated,
 }: {
   bookingId: string;
+  booking: Booking;
   payments: PaymentRecord[];
   onOpenProof(payment: PaymentRecord): void;
   onUpdated(): Promise<void>;
@@ -34,9 +41,48 @@ export default function PaymentsReviewPanel({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [reason, setReason] = useState("");
+  const [recording, setRecording] = useState(false);
+  const [recordMethod, setRecordMethod] = useState<"cash" | "gcash_in_person">("cash");
+  const [recordReference, setRecordReference] = useState("");
+  const [recordNotes, setRecordNotes] = useState("");
+  const [exceptionNote, setExceptionNote] = useState(booking.payLaterNote ?? "");
 
   const needsReview = payments.filter((p) => p.status === "submitted" || p.status === "under_review");
   const reviewed = payments.filter((p) => p.status !== "submitted" && p.status !== "under_review");
+  const amountPaid = payments.filter((payment) => payment.status === "verified").reduce((sum, payment) => sum + payment.amount, 0);
+  const balanceDue = Math.max(0, booking.totalAmount - amountPaid);
+
+  async function saveInPersonPayment() {
+    setRecording(true);
+    try {
+      await recordInPersonBalance(bookingId, recordMethod, recordReference.trim() || undefined, recordNotes.trim() || undefined);
+      setRecordReference("");
+      setRecordNotes("");
+      await onUpdated();
+      showToast("In-person balance recorded. The receipt is now available to the customer.", "success");
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "The in-person payment could not be recorded.", "error");
+    } finally {
+      setRecording(false);
+    }
+  }
+
+  async function savePayLater(allowed: boolean) {
+    if (allowed && !exceptionNote.trim()) {
+      showToast("Add the approved pay-later arrangement before enabling the exception.", "error");
+      return;
+    }
+    setRecording(true);
+    try {
+      await setBookingPayLaterOverride(bookingId, allowed, allowed ? exceptionNote.trim() : undefined);
+      await onUpdated();
+      showToast(allowed ? "Pay-later exception enabled." : "Pay-later exception removed.", "success");
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "The pay-later exception could not be saved.", "error");
+    } finally {
+      setRecording(false);
+    }
+  }
 
   async function saveReview(payment: PaymentRecord, status: "verified" | "rejected") {
     const rejectionReason = status === "rejected" ? reason.trim() : "";
@@ -58,10 +104,6 @@ export default function PaymentsReviewPanel({
     }
   }
 
-  if (payments.length === 0) {
-    return <p className={styles.empty}>No payment submissions yet.</p>;
-  }
-
   return (
     <section className={styles.panel} aria-labelledby="payment-review-heading">
       <div className={styles.panelHeader}>
@@ -78,7 +120,61 @@ export default function PaymentsReviewPanel({
         ) : null}
       </div>
 
+      {balanceDue > 0.01 ? (
+        <div className={styles.balanceWorkspace}>
+          <div className={styles.balanceHeader}>
+            <div>
+              <span>REMAINING BALANCE</span>
+              <strong>{money(balanceDue)}</strong>
+              <small>
+                Customer preference: {booking.balancePaymentPreference === "in_person" ? "Pay in person" : "Online GCash"}
+              </small>
+            </div>
+            <span className={styles.balanceDue}>Due before handover</span>
+          </div>
+
+          <details className={styles.collectionPanel} open={booking.balancePaymentPreference === "in_person"}>
+            <summary>Record payment received in person</summary>
+            <div className={styles.collectionForm}>
+              <label>
+                <span>Payment received through</span>
+                <select value={recordMethod} onChange={(event) => setRecordMethod(event.target.value as "cash" | "gcash_in_person")} disabled={recording}>
+                  <option value="cash">Cash</option>
+                  <option value="gcash_in_person">GCash shown/paid in person</option>
+                </select>
+              </label>
+              <label>
+                <span>Reference number (optional)</span>
+                <input value={recordReference} onChange={(event) => setRecordReference(event.target.value)} maxLength={120} disabled={recording} />
+              </label>
+              <label className={styles.fullField}>
+                <span>Collection note (optional)</span>
+                <textarea value={recordNotes} onChange={(event) => setRecordNotes(event.target.value)} rows={2} maxLength={1000} disabled={recording} placeholder="Who received it, where, or any useful handover note" />
+              </label>
+              <button type="button" className={styles.recordButton} onClick={() => void saveInPersonPayment()} disabled={recording || needsReview.length > 0}>
+                {recording ? "Recording…" : `Record ${money(balanceDue)} as paid`}
+              </button>
+              {needsReview.length > 0 ? <small className={styles.collectionWarning}>Review the pending online proof before recording another payment.</small> : null}
+            </div>
+          </details>
+
+          <details className={styles.exceptionPanel} open={booking.payLaterAllowed}>
+            <summary>Exceptional pay-later arrangement</summary>
+            <div className={styles.exceptionBody}>
+              <p>Handover is blocked until the balance is fully paid. Only enable this when the business explicitly approves collection after handover.</p>
+              <textarea value={exceptionNote} onChange={(event) => setExceptionNote(event.target.value)} rows={2} maxLength={1000} placeholder="Required: explain the approved arrangement" disabled={recording} />
+              <button type="button" onClick={() => void savePayLater(!booking.payLaterAllowed)} disabled={recording || (!booking.payLaterAllowed && !exceptionNote.trim())}>
+                {booking.payLaterAllowed ? "Remove pay-later exception" : "Allow handover with balance"}
+              </button>
+            </div>
+          </details>
+        </div>
+      ) : (
+        <p className={styles.fullyPaid}>✓ Fully paid — handover payment requirement complete.</p>
+      )}
+
       <div className={styles.list}>
+        {payments.length === 0 ? <p className={styles.empty}>No payment submissions yet.</p> : null}
         {[...needsReview, ...reviewed].map((payment) => {
           const isSaving = activeId === payment.id;
           const isRejecting = rejectingId === payment.id;

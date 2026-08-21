@@ -86,6 +86,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
       if (message.includes("AGREEMENT_NOT_COMPLETED")) {
         return errorResponse("The rental agreement must be fully signed before confirming this booking.", 409);
       }
+      if (message.includes("BALANCE_PAYMENT_REQUIRED")) {
+        return errorResponse(
+          "The remaining balance must be recorded as paid before handover. If the business approved a pay-later arrangement, enable that exception in Agreement & Payment first.",
+          409,
+        );
+      }
       if (message.includes("unit_reservation_status")) {
         return errorResponse("The device return could not be recorded. Refresh the page and try once more.", 500);
       }

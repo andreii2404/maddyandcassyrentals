@@ -182,6 +182,13 @@ function assembleBooking(
     pickupConvenienceFee:
       totals?.pickup_convenience_fee ?? fulfillment?.pickup_convenience_fee_snapshot ?? 0,
     totalAmount: totals?.total_amount ?? 0,
+    balancePaymentPreference:
+      row.balance_payment_preference === "in_person" ? "in_person" : "online_gcash",
+    balancePreferenceUpdatedAt: row.balance_preference_updated_at ?? undefined,
+    payLaterAllowed: row.pay_later_allowed,
+    payLaterAllowedAt: row.pay_later_allowed_at ?? undefined,
+    payLaterAllowedBy: row.pay_later_allowed_by ?? undefined,
+    payLaterNote: row.pay_later_note ?? undefined,
     location: fulfillment?.address_line_1 ?? undefined,
     cityMunicipality: fulfillment?.city_municipality ?? undefined,
     province: fulfillment?.province ?? undefined,

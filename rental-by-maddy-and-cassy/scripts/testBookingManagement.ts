@@ -57,6 +57,8 @@ function booking(status: Booking["status"], method: Booking["fulfillmentMethod"]
     loyaltyDiscountStatus: "not_eligible",
     deliveryFee: 0,
     totalAmount: 2500,
+    balancePaymentPreference: "online_gcash",
+    payLaterAllowed: false,
     productSnapshot: { name: "Test Phone", brand: "Apple", category: "iPhones", image: "/test.png", pricePerDay: 1000, currency: "PHP", included: [] },
     customerSnapshot: { fullName: "Test Customer", email: "test@example.com", phone: "", address: "", facebookLink: "", instagramLink: "" },
     requirementsStatus: "not_submitted",

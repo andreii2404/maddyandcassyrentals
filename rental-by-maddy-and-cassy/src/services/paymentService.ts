@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Tables } from "@/src/lib/supabase/database.types";
 import type { BookingReceipt, PaymentOption, PaymentRecord } from "@/src/types/payment";
+import type { BalancePaymentPreference } from "@/src/types/booking";
 
 export type { PaymentOption };
 
@@ -154,6 +155,57 @@ export async function reviewManualPayment(
   const body = (await response.json().catch(() => null)) as { error?: unknown } | null;
   if (!response.ok) {
     throw new Error(typeof body?.error === "string" ? body.error : "The payment review could not be saved.");
+  }
+}
+
+export async function updateBalancePaymentPreference(
+  bookingId: string,
+  preference: BalancePaymentPreference,
+): Promise<void> {
+  const response = await fetch(`/api/bookings/${encodeURIComponent(bookingId)}/balance-preference`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ preference }),
+  });
+  const body = (await response.json().catch(() => null)) as { error?: unknown } | null;
+  if (!response.ok) {
+    throw new Error(typeof body?.error === "string" ? body.error : "The balance payment option could not be saved.");
+  }
+}
+
+export async function recordInPersonBalance(
+  bookingId: string,
+  method: "cash" | "gcash_in_person",
+  reference?: string,
+  notes?: string,
+): Promise<void> {
+  const response = await fetch(`/api/admin/bookings/${encodeURIComponent(bookingId)}/payments`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "record_in_person", method, reference, notes }),
+  });
+  const body = (await response.json().catch(() => null)) as { error?: unknown } | null;
+  if (!response.ok) {
+    throw new Error(typeof body?.error === "string" ? body.error : "The in-person payment could not be recorded.");
+  }
+}
+
+export async function setBookingPayLaterOverride(
+  bookingId: string,
+  allowed: boolean,
+  note?: string,
+): Promise<void> {
+  const response = await fetch(`/api/admin/bookings/${encodeURIComponent(bookingId)}/payments`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "set_pay_later", allowed, note }),
+  });
+  const body = (await response.json().catch(() => null)) as { error?: unknown } | null;
+  if (!response.ok) {
+    throw new Error(typeof body?.error === "string" ? body.error : "The pay-later exception could not be saved.");
   }
 }
 

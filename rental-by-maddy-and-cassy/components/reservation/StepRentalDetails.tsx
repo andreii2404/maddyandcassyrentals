@@ -292,7 +292,7 @@ export default function StepRentalDetails({
 
       <div className={styles.layout}>
         <div className={styles.mainColumn}>
-          <section className={styles.stepSection}>
+          <section className={`${styles.stepSection} ${styles.dateSection}`}>
             <h3 className={styles.sectionHeading}>1. Choose your dates</h3>
             <p className={styles.sectionHint}>
               Select one date, or select a start and end date for a multi-day rental.
@@ -304,10 +304,11 @@ export default function StepRentalDetails({
               disabledDateKeys={disabledDateKeys}
               confirmedDateKeys={confirmedDateKeys}
               hideSelectionSummary
+              compact
             />
           </section>
 
-          <section className={styles.stepSection}>
+          <section className={`${styles.stepSection} ${styles.timeSection}`}>
             <h3 className={styles.sectionHeading}>2. Choose a pickup time</h3>
             <div className={styles.pickupTimeField}>
               <label htmlFor="pickupTime">Pickup time</label>
@@ -356,7 +357,7 @@ export default function StepRentalDetails({
             ) : null}
           </section>
 
-          <section className={styles.stepSection}>
+          <section className={`${styles.stepSection} ${styles.fulfillmentSection}`}>
             <h3 className={styles.sectionHeading}>3. Pickup or delivery</h3>
 
             <fieldset className={styles.fulfillmentFieldset}>
@@ -451,7 +452,7 @@ export default function StepRentalDetails({
             ) : null}
           </section>
 
-          <section className={styles.stepSection}>
+          <section className={`${styles.stepSection} ${styles.quantitySection}`}>
             <h3 className={styles.sectionHeading}>4. Quantity</h3>
             <div className={styles.quantityPanel}>
               <div>
@@ -525,6 +526,12 @@ export default function StepRentalDetails({
                 </ul>
               </div>
             ) : null}
+            <div className={styles.summaryActions}>
+              {onBack ? <button type="button" className={formStyles.secondaryButton} onClick={onBack} disabled={checking}>Back</button> : <span />}
+              <button type="button" className={formStyles.primaryButton} disabled={!canContinue || checking} onClick={handleContinue}>
+                {checking ? "Checking…" : "Continue"}
+              </button>
+            </div>
           </div>
         </aside>
       </div>

@@ -47,7 +47,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
     const booking = await getBookingById(admin, bookingId);
     if (!booking) return errorResponse("The booking could not be found.", 404);
     if (booking.customerId !== user.id) return errorResponse("You do not have access to this booking.", 403);
-    if (!["pending", "approved", "confirmed"].includes(booking.status)) {
+    if (!["pending", "approved", "confirmed", "ready_for_release", "released"].includes(booking.status)) {
       return errorResponse("Payment is not available for this booking.", 409);
     }
 

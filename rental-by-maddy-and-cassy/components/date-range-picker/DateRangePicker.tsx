@@ -34,6 +34,7 @@ interface DateRangePickerProps {
   maxRentalDays?: number;
   singleDate?: boolean;
   hideSelectionSummary?: boolean;
+  compact?: boolean;
 }
 
 export default function DateRangePicker({
@@ -45,6 +46,7 @@ export default function DateRangePicker({
   maxRentalDays = 30,
   singleDate = false,
   hideSelectionSummary = false,
+  compact = false,
 }: DateRangePickerProps) {
   const [visibleMonth, setVisibleMonth] = useState(startOfMonth(startDate ?? new Date()));
   const [error, setError] = useState<string | null>(null);
@@ -127,7 +129,7 @@ export default function DateRangePicker({
   const leadingBlanks = getDay(monthStart);
 
   return (
-    <div className={styles.wrapper}>
+    <div className={`${styles.wrapper} ${compact ? styles.compact : ""}`}>
       <div className={styles.header}>
         <button
           type="button"

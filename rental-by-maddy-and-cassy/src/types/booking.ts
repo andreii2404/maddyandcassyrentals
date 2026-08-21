@@ -12,6 +12,8 @@ export type BookingStatus = Database["public"]["Enums"]["booking_status"];
 
 export type FulfillmentMethod = Database["public"]["Enums"]["fulfillment_method"];
 
+export type BalancePaymentPreference = "online_gcash" | "in_person";
+
 export interface BookingProductSnapshot {
   name: string;
   brand: string;
@@ -93,6 +95,12 @@ export interface Booking {
   deliveryFee: number;
   pickupConvenienceFee?: number;
   totalAmount: number;
+  balancePaymentPreference: BalancePaymentPreference;
+  balancePreferenceUpdatedAt?: string;
+  payLaterAllowed: boolean;
+  payLaterAllowedAt?: string;
+  payLaterAllowedBy?: string;
+  payLaterNote?: string;
   location?: string;
   cityMunicipality?: string;
   province?: string;

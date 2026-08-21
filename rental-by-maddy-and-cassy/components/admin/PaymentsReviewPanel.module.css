@@ -6,6 +6,30 @@
 .reviewCount { display:grid; min-width:70px; padding:.55rem .65rem; border:1px solid rgba(154,89,101,.11); border-radius:12px; background:#fff; text-align:center; }
 .reviewCount strong { color:var(--color-primary); font-size:1rem; }
 .reviewCount span { color:var(--color-charcoal); font-size:.52rem; font-weight:700; text-transform:uppercase; }
+.balanceWorkspace { display:grid; gap:.65rem; padding:.8rem; border:1px solid rgba(154,89,101,.2); border-radius:14px; background:#fff; }
+.balanceHeader { display:flex; align-items:flex-start; justify-content:space-between; gap:.75rem; }
+.balanceHeader>div { display:grid; gap:.08rem; }
+.balanceHeader>div>span { color:var(--color-primary); font-size:.54rem; font-weight:900; letter-spacing:.07em; }
+.balanceHeader strong { font-size:1rem; }
+.balanceHeader small { color:var(--color-charcoal); font-size:.6rem; }
+.balanceDue { padding:.3rem .5rem; border-radius:999px; background:var(--color-status-yellow-bg); color:var(--color-status-yellow); font-size:.52rem; font-weight:800; white-space:nowrap; }
+.collectionPanel,.exceptionPanel { overflow:hidden; border:1px solid var(--color-light-gray); border-radius:11px; }
+.collectionPanel summary,.exceptionPanel summary { padding:.65rem .75rem; color:var(--color-text-primary); font-size:.65rem; font-weight:800; cursor:pointer; }
+.collectionPanel[open] summary,.exceptionPanel[open] summary { border-bottom:1px solid var(--color-light-gray); background:var(--color-background-soft); }
+.collectionForm { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.6rem; padding:.7rem; }
+.collectionForm label { display:grid; gap:.28rem; min-width:0; }
+.collectionForm label span,.exceptionBody textarea+button { font-size:.58rem; font-weight:700; }
+.collectionForm input,.collectionForm select,.collectionForm textarea,.exceptionBody textarea { width:100%; min-height:36px; padding:.5rem .6rem; border:1px solid var(--color-light-gray); border-radius:8px; background:#fff; color:var(--color-text-primary); font:inherit; font-size:.64rem; }
+.collectionForm textarea,.exceptionBody textarea { resize:vertical; line-height:1.4; }
+.fullField { grid-column:1/-1; }
+.collectionForm .recordButton,.exceptionBody button { min-height:36px; padding:.5rem .7rem; border:1px solid var(--color-primary); border-radius:9px; background:var(--color-primary); color:#fff; font:inherit; font-size:.62rem; font-weight:800; cursor:pointer; }
+.collectionForm .recordButton:disabled,.exceptionBody button:disabled { opacity:.55; cursor:not-allowed; }
+.collectionWarning { align-self:center; color:var(--color-status-red); font-size:.58rem; }
+.exceptionPanel { border-color:var(--color-status-yellow-border); }
+.exceptionBody { display:grid; gap:.55rem; padding:.7rem; background:var(--color-status-yellow-bg); }
+.exceptionBody p { margin:0; color:var(--color-charcoal); font-size:.61rem; line-height:1.5; }
+.exceptionBody button { justify-self:start; background:var(--color-charcoal); border-color:var(--color-charcoal); }
+.fullyPaid { margin:0; padding:.7rem; border:1px solid var(--color-status-green-border); border-radius:11px; background:var(--color-status-green-bg); color:var(--color-status-green); font-size:.65rem; font-weight:800; }
 .empty { margin:0; padding:.85rem; border:1px dashed var(--color-light-gray); border-radius:12px; color:var(--color-charcoal); font-size:.68rem; text-align:center; }
 .list { display:grid; gap:.7rem; }
 .card { min-width:0; padding:.85rem; border:1px solid var(--color-light-gray); border-radius:14px; background:#fff; }
@@ -38,4 +62,4 @@
 .rejectEditor textarea:focus { border-color:var(--color-status-red); box-shadow:0 0 0 3px rgba(170,65,65,.1); }
 .rejectEditor>div { display:flex; justify-content:flex-end; gap:.45rem; }
 .rejectEditor .sendButton { border-color:var(--color-status-red); background:var(--color-status-red); color:#fff; }
-@media(max-width:520px){.panelHeader{flex-direction:column}.facts{grid-template-columns:1fr}.actions{display:grid;grid-template-columns:1fr}.actions .openButton{margin-right:0}.rejectEditor>div{align-items:stretch;flex-direction:column-reverse}.rejectEditor button{width:100%}}
+@media(max-width:520px){.panelHeader,.balanceHeader{flex-direction:column}.collectionForm,.facts{grid-template-columns:1fr}.fullField{grid-column:auto}.actions{display:grid;grid-template-columns:1fr}.actions .openButton{margin-right:0}.rejectEditor>div{align-items:stretch;flex-direction:column-reverse}.rejectEditor button{width:100%}}
