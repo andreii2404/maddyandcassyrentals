@@ -4,7 +4,14 @@ import { useState } from "react";
 import { formatCustomerAddress, type CustomerInfoDraft } from "@/src/types/reservationDraft";
 import { PHILIPPINE_PROVINCES } from "@/src/data/philippineLocations";
 import { updateUserProfile } from "@/src/services/userService";
-import { isValidPhoneNumber, normalizePhoneInput, PHONE_DIGIT_COUNT } from "@/src/lib/authValidation";
+import {
+  getMaxBirthDate,
+  isAtLeastMinimumAge,
+  isValidPhoneNumber,
+  normalizePhoneInput,
+  PHONE_DIGIT_COUNT,
+  UNDERAGE_ERROR_MESSAGE,
+} from "@/src/lib/authValidation";
 import formStyles from "@/components/ui/Form.module.css";
 import styles from "./StepShared.module.css";
 
@@ -44,6 +51,8 @@ export default function StepCustomerInfo({
     }
     if (customerInfo.birthDate && new Date(`${customerInfo.birthDate}T00:00:00`) > new Date()) {
       nextErrors.birthDate = "Birth date cannot be in the future.";
+    } else if (customerInfo.birthDate && !isAtLeastMinimumAge(customerInfo.birthDate)) {
+      nextErrors.birthDate = UNDERAGE_ERROR_MESSAGE;
     }
     if (!customerInfo.streetBarangay.trim()) nextErrors.streetBarangay = "Street and barangay are required.";
     if (!customerInfo.cityMunicipality.trim()) nextErrors.cityMunicipality = "City or municipality is required.";
@@ -56,6 +65,14 @@ export default function StepCustomerInfo({
 
   async function handleContinue() {
     if (!validate()) return;
+
+    // Guest checkout is an anonymous Supabase session, not a customer
+    // account -- the details entered here belong on the booking snapshot
+    // only (see bookingSubmissionService), not on a persisted profile row.
+    if (isGuest) {
+      onContinue();
+      return;
+    }
 
     setSaving(true);
     setSaveError(null);
@@ -91,7 +108,7 @@ export default function StepCustomerInfo({
       </p>
       {isGuest ? (
         <p className={styles.confirmCallout}>
-          Guest checkout is active. Use an email you can access because payment verification and booking updates will use it.
+          Guest checkout is active. Use an email you can access because booking updates will use it.
         </p>
       ) : null}
 
@@ -144,27 +161,29 @@ export default function StepCustomerInfo({
           {errors.phone ? <p className={formStyles.errorText}>{errors.phone}</p> : null}
         </div>
 
-        <div className={formStyles.field}>
-          <label className={formStyles.label} htmlFor="birthDate">
-            Birth date <span className={styles.optional}>(birthday perk)</span>
-          </label>
-          <input
-            id="birthDate"
-            type="date"
-            autoComplete="bday"
-            max={new Date().toISOString().slice(0, 10)}
-            disabled={birthDateLocked}
-            className={`${formStyles.input} ${errors.birthDate ? formStyles.inputError : ""}`}
-            value={customerInfo.birthDate}
-            onChange={(event) => onUpdate({ birthDate: event.target.value })}
-          />
-          <p className={styles.fieldNote}>
-            {birthDateVerified
-              ? "Verified. Eligible birth-month rentals receive ₱100 off automatically."
-              : "Optional. The date must match the valid ID submitted during verification."}
-          </p>
-          {errors.birthDate ? <p className={formStyles.errorText}>{errors.birthDate}</p> : null}
-        </div>
+        {!isGuest ? (
+          <div className={formStyles.field}>
+            <label className={formStyles.label} htmlFor="birthDate">
+              Birth date <span className={styles.optional}>(birthday perk)</span>
+            </label>
+            <input
+              id="birthDate"
+              type="date"
+              autoComplete="bday"
+              max={getMaxBirthDate()}
+              disabled={birthDateLocked}
+              className={`${formStyles.input} ${errors.birthDate ? formStyles.inputError : ""}`}
+              value={customerInfo.birthDate}
+              onChange={(event) => onUpdate({ birthDate: event.target.value })}
+            />
+            <p className={styles.fieldNote}>
+              {birthDateVerified
+                ? "Verified. Eligible birth-month rentals receive ₱100 off automatically."
+                : "Optional. The date must match the valid ID submitted during verification."}
+            </p>
+            {errors.birthDate ? <p className={formStyles.errorText}>{errors.birthDate}</p> : null}
+          </div>
+        ) : null}
       </div>
 
       <div className={formStyles.field}>

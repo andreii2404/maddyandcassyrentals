@@ -68,6 +68,11 @@
   color: var(--color-status-green);
 }
 
+.pending {
+  background: var(--color-status-yellow-bg);
+  color: var(--color-status-yellow);
+}
+
 .failed,
 .expired,
 .refunded {
@@ -123,6 +128,56 @@
 .trustRow strong { color: var(--color-text-primary); font-size: 0.6rem; }
 .trustRow span { margin-top: 0.14rem; color: var(--color-charcoal); font-size: 0.52rem; line-height: 1.35; }
 
+.gcash {
+  display: grid;
+  grid-template-columns: minmax(96px, 120px) 1fr;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.75rem;
+  border: 1px solid var(--color-dusty-rose);
+  border-radius: 13px;
+  background: var(--color-background-soft);
+}
+
+.gcash > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.gcash span {
+  color: var(--color-charcoal);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.gcash strong {
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--color-text-primary);
+}
+
+.qrImageWrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border: 1px solid var(--color-light-gray);
+  border-radius: 12px;
+  background: var(--color-white);
+}
+
+.qrImageWrapper img {
+  object-fit: contain;
+  padding: 0.3rem;
+}
+
+@media (max-width: 430px) {
+  .gcash { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+  .gcash .qrImageWrapper { width: 55%; max-width: 160px; }
+}
+
 .panel button {
   align-self: stretch;
   width: 100%;
@@ -148,16 +203,3 @@
   .trustRow div { border-right: 0; border-bottom: 1px solid rgba(154, 89, 101, 0.1); }
   .trustRow div:last-child { border-bottom: 0; }
 }
-.manualForm { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 0.8rem; padding: 0.75rem; border: 1px solid #e2d5d2; border-radius: 12px; background: #fffaf9; }
-.qrWrap { display: grid; gap: 0.4rem; align-content: start; }
-.qrWrap img { width: 100%; height: auto; border: 6px solid #fff; border-radius: 9px; }
-.qrWrap a { padding: 0.45rem; border-radius: 8px; background: #17653a; color: #fff; text-align: center; text-decoration: none; font-size: 0.67rem; font-weight: 800; }
-.manualFields { display: grid; gap: 0.45rem; }
-.manualFields > strong { font-size: 0.92rem; }
-.manualFields > p { margin: 0; color: #665d59; font-size: 0.7rem; line-height: 1.4; }
-.manualFields label { display: grid; gap: 0.22rem; font-size: 0.66rem; font-weight: 800; }
-.manualFields input { width: 100%; min-width: 0; min-height: 38px; padding: 0.45rem 0.55rem; border: 1px solid #dec9c7; border-radius: 8px; background: #fff; font: inherit; }
-.manualActions { display: flex; gap: 0.45rem; }
-.manualActions button { flex: 1; }
-.manualActions .secondary { background: #fff; color: #8d4e5b; border: 1px solid #d6b5bb; }
-@media (max-width: 620px) { .manualForm { grid-template-columns: 1fr; } .qrWrap { width: min(100%, 220px); margin-inline: auto; } }

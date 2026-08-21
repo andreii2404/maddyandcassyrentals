@@ -9,6 +9,12 @@ import {
   getAdminAuditLogs,
   type AdminAuditLog,
 } from "@/src/services/operationsService";
+import {
+  formatAuditAction,
+  formatAuditActor,
+  formatAuditDetails,
+  formatBookingReference,
+} from "@/src/lib/auditLogLabels";
 import styles from "../operations.module.css";
 
 export default function AdminAuditPage() {
@@ -42,13 +48,18 @@ export default function AdminAuditPage() {
 
   const filtered = useMemo(() => {
     const query = filter.trim().toLowerCase();
-    return (logs ?? []).filter(
-      (log) =>
-        !query ||
-        `${log.action} ${log.actorUserId ?? ""} ${log.entityType} ${log.entityId ?? ""}`
-          .toLowerCase()
-          .includes(query),
-    );
+    return (logs ?? []).filter((log) => {
+      if (!query) return true;
+      const searchable = [
+        formatAuditAction(log.action),
+        formatAuditActor(log),
+        formatAuditDetails(log),
+        log.bookingId ? formatBookingReference(log.bookingId) : "",
+      ]
+        .join(" ")
+        .toLowerCase();
+      return searchable.includes(query);
+    });
   }, [logs, filter]);
 
   return (
@@ -56,8 +67,8 @@ export default function AdminAuditPage() {
       <div className={styles.page}>
         <header className={styles.header}>
           <div>
-            <p>IMMUTABLE HISTORY</p>
-            <h1>Business Audit Logs</h1>
+            <p>SYSTEM ACTIVITY</p>
+            <h1>Activity History</h1>
             <span>
               Review booking, payment, catalog, pricing, and account actions.
             </span>
@@ -65,8 +76,8 @@ export default function AdminAuditPage() {
           <input
             value={filter}
             onChange={(event) => setFilter(event.target.value)}
-            placeholder="Filter audit activity"
-            aria-label="Filter audit activity"
+            placeholder="Search activity"
+            aria-label="Search activity"
           />
         </header>
 
@@ -82,29 +93,25 @@ export default function AdminAuditPage() {
                 <table>
                   <thead>
                     <tr>
-                      <th>Action</th>
-                      <th>Actor</th>
-                      <th>Target</th>
-                      <th>Booking</th>
-                      <th>Date</th>
+                      <th>Activity</th>
+                      <th>Performed by</th>
+                      <th>Details</th>
+                      <th>Booking #</th>
+                      <th>Date &amp; time</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filtered.map((log) => (
                       <tr key={log.id}>
                         <td>
-                          <strong>{log.action}</strong>
+                          <strong>{formatAuditAction(log.action)}</strong>
                         </td>
-                        <td>
-                          {log.actorType}: {log.actorUserId ?? "system"}
-                        </td>
-                        <td>
-                          {log.entityType}: {log.entityId ?? "-"}
-                        </td>
+                        <td>{formatAuditActor(log)}</td>
+                        <td>{formatAuditDetails(log)}</td>
                         <td>
                           {log.bookingId ? (
                             <Link href={`/admin/bookings/${log.bookingId}`}>
-                              {log.bookingId.slice(0, 8)}
+                              {formatBookingReference(log.bookingId)}
                             </Link>
                           ) : (
                             "—"

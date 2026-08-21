@@ -7,8 +7,6 @@ import Spinner from "@/components/ui/Spinner";
 import { useAuth } from "@/hooks/useAuth";
 import {
   getAdminPayments,
-  getAdminPaymentProofUrl,
-  reviewManualPayment,
   type AdminPaymentsData,
 } from "@/src/services/operationsService";
 import styles from "../operations.module.css";
@@ -25,35 +23,6 @@ export default function AdminPaymentsPage() {
   const { user } = useAuth();
   const [data, setData] = useState<AdminPaymentsData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [reviewingId, setReviewingId] = useState<string | null>(null);
-  const [reviewNotesById, setReviewNotesById] = useState<Record<string, string>>({});
-
-  async function openProof(paymentId: string) {
-    try {
-      const url = await getAdminPaymentProofUrl(paymentId);
-      window.open(url, "_blank", "noopener,noreferrer");
-    } catch (proofError) {
-      setError(proofError instanceof Error ? proofError.message : "The payment proof could not be opened.");
-    }
-  }
-
-  async function reviewPayment(paymentId: string, action: "verify" | "reject") {
-    const notes = reviewNotesById[paymentId]?.trim() ?? "";
-    if (action === "reject" && notes.length < 5) {
-      setError("Add a clear rejection reason before rejecting the payment proof.");
-      return;
-    }
-    setReviewingId(paymentId);
-    setError(null);
-    try {
-      await reviewManualPayment(paymentId, action, notes);
-      setData(await getAdminPayments());
-    } catch (reviewError) {
-      setError(reviewError instanceof Error ? reviewError.message : "The payment review could not be completed.");
-    } finally {
-      setReviewingId(null);
-    }
-  }
 
   useEffect(() => {
     let active = true;
@@ -96,9 +65,9 @@ export default function AdminPaymentsPage() {
         <header className={styles.header}>
           <div>
             <p>PAYMENT OPERATIONS</p>
-            <h1>GCash Payment Verification</h1>
+            <h1>Payments &amp; Webhooks</h1>
             <span>
-              Review customer GCash receipts, verify matching transactions, and issue official receipts.
+              Review manually submitted GCash payments. Historic PayMongo transactions remain visible below.
             </span>
           </div>
         </header>
@@ -121,7 +90,7 @@ export default function AdminPaymentsPage() {
                 </strong>
               </article>
               <article>
-                <span>Proofs to Review</span>
+                <span>Pending Checkouts</span>
                 <strong>
                   {
                     payments.filter(
@@ -131,8 +100,8 @@ export default function AdminPaymentsPage() {
                 </strong>
               </article>
               <article>
-                <span>Rejected Proofs</span>
-                <strong>{payments.filter((payment) => payment.status === "rejected").length}</strong>
+                <span>Webhook Events</span>
+                <strong>{data.events.length}</strong>
               </article>
             </section>
 
@@ -140,7 +109,7 @@ export default function AdminPaymentsPage() {
               <div className={styles.panelHeader}>
                 <div>
                   <h2>Payment Records</h2>
-                  <p>Customer-submitted GCash references and proof review.</p>
+                  <p>Customer checkout and provider references.</p>
                 </div>
               </div>
               {payments.length ? (
@@ -152,10 +121,9 @@ export default function AdminPaymentsPage() {
                         <th>Reference</th>
                         <th>Amount</th>
                         <th>Status</th>
-                        <th>Proof</th>
+                        <th>Mode</th>
                         <th>Method</th>
                         <th>Created</th>
-                        <th>Review</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -167,7 +135,7 @@ export default function AdminPaymentsPage() {
                             </Link>
                           </td>
                           <td>
-                            {payment.externalReference || payment.paymongoPaymentId || "—"}
+                            {payment.paymongoPaymentId || payment.externalReference || "—"}
                           </td>
                           <td>{money(payment.amount)}</td>
                           <td>
@@ -177,23 +145,9 @@ export default function AdminPaymentsPage() {
                               {payment.status}
                             </span>
                           </td>
-                          <td>{payment.proofDocumentId ? <button type="button" onClick={() => void openProof(payment.id)}>Open proof</button> : "Legacy online"}</td>
+                          <td>{payment.proofDocumentId ? "Manual" : "PayMongo"}</td>
                           <td>{payment.paymentMethod || "—"}</td>
                           <td>{formatDate(payment.createdAt)}</td>
-                          <td>
-                            {payment.proofDocumentId && ["submitted", "under_review"].includes(payment.status) ? (
-                              <div className={styles.rowActions}>
-                                <input
-                                  value={reviewNotesById[payment.id] ?? ""}
-                                  onChange={(event) => setReviewNotesById((current) => ({ ...current, [payment.id]: event.target.value }))}
-                                  placeholder="Review note (required to reject)"
-                                  aria-label={`Review note for payment ${payment.externalReference ?? payment.id}`}
-                                />
-                                <button type="button" disabled={reviewingId === payment.id} onClick={() => void reviewPayment(payment.id, "verify")}>Verify</button>
-                                <button type="button" disabled={reviewingId === payment.id} onClick={() => void reviewPayment(payment.id, "reject")}>Reject</button>
-                              </div>
-                            ) : "—"}
-                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -204,14 +158,15 @@ export default function AdminPaymentsPage() {
               )}
             </section>
 
-            {data.events.length ? <section className={styles.panel}>
+            <section className={styles.panel}>
               <div className={styles.panelHeader}>
                 <div>
-                  <h2>Legacy PayMongo Webhook Archive</h2>
-                  <p>Read-only historical events from the previous payment integration.</p>
+                  <h2>Legacy Webhook Log</h2>
+                  <p>Historic signed PayMongo events from before the switch to manual GCash payments.</p>
                 </div>
               </div>
-              <div className={styles.tableWrap}>
+              {data.events.length ? (
+                <div className={styles.tableWrap}>
                   <table>
                     <thead>
                       <tr>
@@ -253,7 +208,12 @@ export default function AdminPaymentsPage() {
                     </tbody>
                   </table>
                 </div>
-            </section> : null}
+              ) : (
+                <p className={styles.empty}>
+                  No webhook events on record.
+                </p>
+              )}
+            </section>
           </>
         ) : null}
       </div>

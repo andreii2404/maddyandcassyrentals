@@ -54,6 +54,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
       return errorResponse("Verification documents have already been submitted.", 409);
     }
 
+    // Manual GCash payments never reach "verified" until an admin reviews
+    // them (see docs/PRODUCTION.md payment flow). Gate on the customer having
+    // submitted payment proof at all, not on admin verification -- that
+    // happens later and must not block the rest of the booking flow.
     const { data: submittedPayment } = await supabase
       .from("booking_payment_submissions")
       .select("id")
@@ -62,7 +66,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
       .limit(1)
       .maybeSingle();
     if (!submittedPayment) {
-      return errorResponse("Submit your GCash payment proof before uploading verification documents.", 409);
+      return errorResponse("Submit your reservation payment proof before uploading documents.", 409);
     }
 
     const formData = await request.formData();
@@ -91,7 +95,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
     return NextResponse.json({ success: true, path, bucket });
   } catch (error) {
     if (error instanceof RequestSecurityError) return errorResponse(error.message, error.status);
-    console.error("Private booking document upload failed", error);
+    const kind = new URL(request.url).searchParams.get("kind");
+    const { bookingId } = await params;
+    console.error(`Private booking document upload failed kind=${kind} bookingId=${bookingId}`, error);
     return errorResponse("This file could not be securely uploaded.", 500);
   }
 }

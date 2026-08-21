@@ -15,7 +15,10 @@ async function main() {
     bookingRef: "MC-20260730-DEMO",
     customerName: "Sample Customer",
     customerEmail: "customer@example.com",
-    productName: "Fujifilm Instax Mini 12",
+    items: [
+      { productName: "Fujifilm Instax Mini 12", pricePerDay: 625, quantity: 1, rentalDays: 2, lineTotal: 1250 },
+      { productName: "Ring Light 18-inch", pricePerDay: 300, quantity: 2, rentalDays: 2, lineTotal: 1200 },
+    ],
     rentalDates: "July 30, 2026 - July 31, 2026 (2 days)",
     amount: 1250,
     issuedAt: "July 30, 2026, 3:30 PM",
@@ -36,11 +39,33 @@ async function main() {
   };
   const agreementInput = {
     ...base,
+    items: [
+      {
+        productName: "Fujifilm Instax Mini 12",
+        pricePerDay: 625,
+        quantity: 1,
+        rentalDays: 2,
+        lineTotal: 1250,
+        includedAccessories: ["Protective case", "Wrist strap", "USB charging cable"],
+        units: [{ unitCode: "INSTAX-001", serialNumber: "SN-778812" }],
+      },
+      {
+        productName: "Ring Light 18-inch",
+        pricePerDay: 300,
+        quantity: 2,
+        rentalDays: 2,
+        lineTotal: 1200,
+        includedAccessories: ["Tripod stand", "Phone clip"],
+        units: [
+          { unitCode: "RING-004", serialNumber: null },
+          { unitCode: "RING-005", serialNumber: null },
+        ],
+      },
+    ],
     address: "Sta. Cruz, Manila",
     phone: "+63 917 000 0000",
     fulfillmentMethod: "Pickup",
     customerLocation: "Sta. Cruz, Manila",
-    includedAccessories: ["Protective case", "Wrist strap", "USB charging cable"],
     termsVersion: "2026-01",
     signedAt: "July 30, 2026, 3:35 PM",
     typedFullName: "Sample Customer",

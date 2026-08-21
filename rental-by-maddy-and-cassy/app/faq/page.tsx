@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Navbar from "@/components/navbar/Navbar";
 import GuidePage, { type GuideSection } from "@/components/rental-guide/GuidePage";
 
 const sections: GuideSection[] = [
@@ -18,7 +17,7 @@ const sections: GuideSection[] = [
   {
     title: "Is a security deposit required?",
     paragraphs: [
-      "A non-refundable security deposit may apply. Its exact amount is shown on the product page and included in the final amount before you submit your GCash payment proof.",
+      "A non-refundable security deposit may apply. Its exact amount is shown on the product page and included in the final checkout amount before you pay via GCash.",
     ],
   },
   {
@@ -73,7 +72,6 @@ export const metadata: Metadata = {
 export default function FAQPage() {
   return (
     <div>
-      <Navbar />
       <GuidePage
         eyebrow="HELP CENTER"
         title="Frequently Asked Questions"

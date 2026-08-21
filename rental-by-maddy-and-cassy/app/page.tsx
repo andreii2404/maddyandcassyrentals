@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Navbar from "@/components/navbar/Navbar";
 import Hero from "@/components/hero/Hero";
 import FeaturedProducts from "@/components/storefront/FeaturedProducts";
 import ReviewCarousel, { type StorefrontReview } from "@/components/storefront/ReviewCarousel";
@@ -11,7 +10,7 @@ export const revalidate = 60;
 const bookingSteps = [
   ["01", "Choose your gear", "Browse the catalog, compare daily rates, and open the item you want to rent."],
   ["02", "Set your reservation", "Select one or more rental days, then choose pickup or delivery."],
-  ["03", "Secure your booking", "Pay either 50% or the full amount through GCash, then submit the receipt for verification."],
+  ["03", "Secure your booking", "Pay either 50% or the full amount manually via GCash and submit your proof of payment."],
   ["04", "Submit verification", "Upload the required customer and emergency-contact documents."],
   ["05", "Sign the agreement", "Review the generated rental terms and add your electronic signature."],
   ["06", "Receive confirmation", "Follow the confirmed booking, receipt, payment history, and invoice in your account."],
@@ -52,7 +51,6 @@ export default async function Home() {
 
   return (
     <div className={styles.page}>
-      <Navbar />
       <main>
         <Hero products={products} />
 

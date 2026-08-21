@@ -4,7 +4,7 @@ import SearchIcon from "@/components/icons/SearchIcon";
 import styles from "./CatalogFilters.module.css";
 
 export type CategoryFilter = string;
-export type SortOption = "featured" | "price-asc" | "price-desc" | "name-asc";
+export type SortOption = "featured" | "price-asc" | "price-desc" | "rating-desc" | "name-asc";
 
 interface CatalogFiltersProps {
   search: string;
@@ -32,7 +32,7 @@ export default function CatalogFilters({
   categories,
 }: CatalogFiltersProps) {
   return (
-    <div className={styles.filters}>
+    <div className={styles.toolbar}>
       <div className={styles.categoryRow} role="group" aria-label="Filter by category">
         {categories.map((item) => (
           <button
@@ -69,9 +69,10 @@ export default function CatalogFilters({
             className={styles.select}
             aria-label="Sort products"
           >
-            <option value="featured">Featured</option>
+            <option value="featured">Recommended</option>
             <option value="price-asc">Price: Low to High</option>
             <option value="price-desc">Price: High to Low</option>
+            <option value="rating-desc">Highest Rated</option>
             <option value="name-asc">Name: A to Z</option>
           </select>
         </label>
@@ -85,11 +86,11 @@ export default function CatalogFilters({
           />
           Available only
         </label>
-      </div>
 
-      <p className={styles.resultCount} aria-live="polite">
-        {resultCount} {resultCount === 1 ? "product" : "products"} found
-      </p>
+        <p className={styles.resultCount} aria-live="polite">
+          {resultCount} {resultCount === 1 ? "product" : "products"} found
+        </p>
+      </div>
     </div>
   );
 }

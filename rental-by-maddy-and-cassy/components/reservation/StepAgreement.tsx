@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { AgreementDraft } from "@/src/types/reservationDraft";
 import AgreementDocument, { type AgreementDocumentData } from "./AgreementDocument";
 import SignaturePad from "@/components/signature-pad/SignaturePad";
@@ -15,6 +15,14 @@ interface StepAgreementProps {
   onBack: () => void;
   onContinue: () => void;
   submitting?: boolean;
+  /**
+   * False while assigned-unit codes/serials are still being confirmed, or if
+   * that confirmation failed -- Sign stays disabled either way. Every
+   * booking-creation RPC only ever returns a booking after fully allocating
+   * units, so this is a loading/defensive gate, never expected to fail.
+   */
+  unitsReady?: boolean;
+  unitsCheckError?: string | null;
 }
 
 const CONFIRMATIONS: Array<{ key: keyof AgreementDraft; label: ReactNode }> = [
@@ -66,13 +74,34 @@ export default function StepAgreement({
   onBack,
   onContinue,
   submitting = false,
+  unitsReady = true,
+  unitsCheckError = null,
 }: StepAgreementProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const expandDialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isExpanded) return;
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setIsExpanded(false);
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    expandDialogRef.current?.focus();
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isExpanded]);
+
   const allChecked = CONFIRMATIONS.every((item) => Boolean(agreement[item.key]));
   const hasSignature =
     agreement.signatureMethod === "drawn"
       ? !!agreement.signatureDataUrl
       : !!agreement.signatureDataUrl;
-  const canContinue = allChecked && hasSignature && agreement.typedFullName.trim().length > 1;
+  const canContinue =
+    allChecked && hasSignature && agreement.typedFullName.trim().length > 1 && unitsReady && !unitsCheckError;
 
   return (
     <div className={styles.wrapper}>
@@ -81,7 +110,45 @@ export default function StepAgreement({
         Please review the agreement below carefully before signing.
       </p>
 
+      <div className={styles.viewerToolbar}>
+        <button
+          type="button"
+          className={styles.expandButton}
+          onClick={() => setIsExpanded(true)}
+        >
+          Expand Agreement
+        </button>
+      </div>
       <AgreementDocument data={agreementData} />
+
+      {isExpanded ? (
+        <div className={styles.expandOverlay} onMouseDown={() => setIsExpanded(false)}>
+          <div
+            ref={expandDialogRef}
+            className={styles.expandDialog}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Rental Agreement"
+            tabIndex={-1}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className={styles.expandHeader}>
+              <h3 className={styles.expandTitle}>Rental Agreement</h3>
+              <button
+                type="button"
+                className={styles.expandCloseButton}
+                onClick={() => setIsExpanded(false)}
+                aria-label="Minimize agreement"
+              >
+                Close &amp; Minimize
+              </button>
+            </div>
+            <div className={styles.expandBody}>
+              <AgreementDocument data={agreementData} variant="expanded" />
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className={styles.agreementActionGrid}>
         <section>
@@ -131,6 +198,12 @@ export default function StepAgreement({
         </section>
       </div>
 
+      {unitsCheckError ? (
+        <p className={formStyles.errorText} role="alert">
+          {unitsCheckError}
+        </p>
+      ) : null}
+
       <div className={styles.footer}>
         <button
           type="button"
@@ -146,7 +219,11 @@ export default function StepAgreement({
           disabled={!canContinue || submitting}
           onClick={onContinue}
         >
-          {submitting ? "Submitting…" : "Sign & Submit Agreement"}
+          {submitting
+            ? "Submitting…"
+            : !unitsReady && !unitsCheckError
+              ? "Confirming assigned units…"
+              : "Sign & Submit Agreement"}
         </button>
       </div>
     </div>

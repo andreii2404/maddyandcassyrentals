@@ -13,6 +13,7 @@ import { createClient } from "@/src/lib/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/ToastProvider";
 import type { Booking, UserProfile } from "@/src/types/database";
+import { bookingHeadline } from "@/src/lib/bookingDisplay";
 import Spinner from "@/components/ui/Spinner";
 import StatusBadge from "@/components/status-badge/StatusBadge";
 import styles from "./userDetail.module.css";
@@ -207,7 +208,7 @@ export default function AdminUserDetail({ uid }: { uid: string }) {
                 {bookings.map((booking) => (
                   <tr key={booking.id}>
                     <td>{booking.bookingRef}</td>
-                    <td>{booking.productSnapshot.name}</td>
+                    <td>{bookingHeadline(booking.items)}</td>
                     <td>
                       {formatDate(booking.startDate)} – {formatDate(booking.endDate)}
                     </td>

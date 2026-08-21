@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
-import Navbar from "@/components/navbar/Navbar";
 import SignInForm from "./SignInForm";
 import styles from "../auth.module.css";
 
@@ -13,7 +12,6 @@ export const metadata: Metadata = {
 export default function SignInPage() {
   return (
     <div>
-      <Navbar />
       <main className={styles.main}>
         <div className={styles.authLayout}>
           <section className={styles.authIntro} aria-labelledby="customer-access-heading">

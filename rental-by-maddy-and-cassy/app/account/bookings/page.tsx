@@ -13,6 +13,7 @@ import {
   getFulfillmentProgressLabel,
   type BookingHistoryFilter,
 } from "@/src/lib/bookingManagement";
+import { bookingHeadline, bookingTotalDailyRate, bookingTotalQuantity } from "@/src/lib/bookingDisplay";
 import BookingSummaryCard from "@/components/booking-summary/BookingSummaryCard";
 import StatusBadge from "@/components/status-badge/StatusBadge";
 import Spinner from "@/components/ui/Spinner";
@@ -78,8 +79,10 @@ export default function BookingsListPage() {
     return (bookings ?? []).filter((booking) => {
       if (!bookingMatchesHistoryFilter(booking, filter)) return false;
       if (!query) return true;
-      return [booking.bookingRef, booking.productSnapshot.name, booking.productSnapshot.brand]
-        .some((value) => value.toLowerCase().includes(query));
+      return [
+        booking.bookingRef,
+        ...booking.items.flatMap((item) => [item.productName, item.brand]),
+      ].some((value) => value.toLowerCase().includes(query));
     });
   }, [bookings, filter, search]);
 
@@ -201,15 +204,15 @@ export default function BookingsListPage() {
                 <Link href={`/account/bookings/${booking.id}`} className={styles.cardLink}>
                   <BookingSummaryCard
                     bookingRef={booking.bookingRef}
-                    productName={booking.productSnapshot.name}
-                    brand={booking.productSnapshot.brand}
+                    productName={bookingHeadline(booking.items)}
+                    brand={booking.items.length === 1 ? booking.productSnapshot.brand : ""}
                     productImage={booking.productSnapshot.image}
-                    pricePerDay={booking.productSnapshot.pricePerDay}
+                    pricePerDay={bookingTotalDailyRate(booking.items)}
                     currency={booking.productSnapshot.currency}
                     startDate={new Date(booking.startDate)}
                     endDate={new Date(booking.endDate)}
                     dayCount={booking.dayCount}
-                    quantity={booking.quantity}
+                    quantity={bookingTotalQuantity(booking.items)}
                     fulfillmentMethod={booking.fulfillmentMethod}
                     customerLocation={booking.fulfillmentMethod === "pickup" ? "Business pickup point" : [booking.location, booking.cityMunicipality, booking.province].filter(Boolean).join(", ")}
                     statusSlot={<StatusBadge status={booking.status} />}

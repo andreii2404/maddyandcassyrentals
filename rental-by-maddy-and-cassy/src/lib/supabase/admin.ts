@@ -10,7 +10,7 @@ let serviceClient: ReturnType<typeof createSupabaseClient<Database>> | null = nu
  *
  * Only import this from server-only code that has already independently
  * verified the caller (e.g. after `requireActiveAdmin()`, or inside the
- * trusted server-side payment verification handler). Never import this
+ * PayMongo webhook handler after signature verification). Never import this
  * module from a Client Component or expose `SUPABASE_SECRET_KEY` to the
  * browser.
  */

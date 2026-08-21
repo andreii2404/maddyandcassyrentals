@@ -20,9 +20,9 @@ export const ADMIN_BOOKING_ACTIONS: Record<BookingStatus, AdminBookingAction[]> 
       description: "Accept the rental request after checking its basic details and availability.",
     },
     {
-      status: "cancelled",
+      status: "rejected",
       label: "Decline Booking",
-      description: "Close this request and explain the reason clearly to the customer.",
+      description: "Reject this request and explain the reason clearly to the customer.",
       requiresNote: true,
       tone: "danger",
     },

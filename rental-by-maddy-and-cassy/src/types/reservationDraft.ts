@@ -33,6 +33,13 @@ export interface CustomerInfoDraft {
   instagramLink: string;
 }
 
+export interface ManualPaymentDraft {
+  referenceNumber: string;
+  accountName: string;
+  accountNumber: string;
+  proofFile: File | null;
+}
+
 export type SignatureMethod = "drawn" | "uploaded";
 
 export interface AgreementDraft {
@@ -68,6 +75,7 @@ export interface ReservationDraft {
   province: string;
   paymentOption: Exclude<PaymentOption, "balance">;
   customerInfo: CustomerInfoDraft;
+  manualPayment: ManualPaymentDraft;
   requirements: RequirementsDraft;
   agreement: AgreementDraft;
 }
@@ -96,6 +104,12 @@ export function createEmptyDraft(): ReservationDraft {
       address: "",
       facebookLink: "",
       instagramLink: "",
+    },
+    manualPayment: {
+      referenceNumber: "",
+      accountName: "",
+      accountNumber: "",
+      proofFile: null,
     },
     requirements: {
       idOneFile: null,

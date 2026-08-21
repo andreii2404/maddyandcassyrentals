@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import Navbar from "@/components/navbar/Navbar";
 import { getProductById } from "@/src/services/productService";
 import ReserveFlowClient from "./ReserveFlowClient";
 
@@ -27,42 +26,13 @@ export default async function ReservePage({ params, searchParams }: ReservePageP
   }
 
   const returnParams = new URLSearchParams();
-  for (const key of ["bookingId", "items"]) {
+  for (const key of ["bookingId", "payment", "cartItem"]) {
     const value = query[key];
     if (typeof value === "string" && value) returnParams.set(key, value);
   }
 
-  const itemSelections = typeof query.items === "string"
-    ? query.items.split(",").slice(0, 10).flatMap((entry) => {
-        const [productId, quantityText] = entry.split(":");
-        const quantity = Number(quantityText);
-        return /^[0-9a-f-]{36}$/i.test(productId) && Number.isInteger(quantity) && quantity >= 1 && quantity <= 10
-          ? [{ productId, quantity }]
-          : [];
-      })
-    : [];
-  const selectedProducts = await Promise.all(itemSelections.map(async (selection) => ({
-    ...selection,
-    product: await getProductById(selection.productId),
-  })));
-  const cartProducts = selectedProducts.flatMap(({ product: selectedProduct, quantity }) =>
-    selectedProduct?.isActive
-      ? [{
-          product: selectedProduct,
-          quantity,
-          units: {
-            totalUnits: selectedProduct.totalUnits,
-            availableUnits: selectedProduct.availableUnits,
-            reservedUnits: selectedProduct.reservedUnits,
-            rentedUnits: selectedProduct.rentedUnits,
-          },
-        }]
-      : [],
-  );
-
   return (
     <div>
-      <Navbar />
       <main>
         <ReserveFlowClient
           product={product}
@@ -72,7 +42,6 @@ export default async function ReservePage({ params, searchParams }: ReservePageP
             reservedUnits: product.reservedUnits,
             rentedUnits: product.rentedUnits,
           }}
-          cartProducts={cartProducts.length ? cartProducts : undefined}
           returnQuery={returnParams.toString()}
         />
       </main>

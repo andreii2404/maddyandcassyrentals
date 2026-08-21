@@ -7,9 +7,65 @@ import {
   createFinalAgreementPdf,
   createInvoicePdf,
   createReceiptPdf,
+  type DocumentLineItem,
 } from "@/src/lib/pdf/customerDocuments";
 import type { Booking } from "@/src/types/booking";
 import type { AgreementDoc } from "@/src/types/booking";
+
+/**
+ * booking.items already carries frozen-at-creation product/price snapshots
+ * (not live inventory) -- safe to use directly for invoice/receipt line
+ * items, which never need unit/serial numbers.
+ */
+function bookingItemsToDocumentLineItems(booking: Booking): DocumentLineItem[] {
+  return booking.items.map((item) => ({
+    productName: item.productName,
+    pricePerDay: item.dailyRate,
+    quantity: item.quantity,
+    rentalDays: booking.dayCount,
+    lineTotal: item.lineRentalSubtotal,
+  }));
+}
+
+/**
+ * The signed agreement must read unit/serial numbers from the frozen
+ * agreement_versions.agreement_snapshot -- never from live inventory --
+ * because units are what the customer actually agreed to and signed for.
+ * Falls back to the deprecated flat single-item snapshot shape for any
+ * agreement written before the items[] array existed, then to booking.items
+ * (no units) if there is somehow no snapshot at all.
+ */
+function agreementLineItems(booking: Booking, agreement: AgreementDoc): DocumentLineItem[] {
+  const snapshot = agreement.agreementSnapshot;
+  if (snapshot?.items?.length) {
+    return snapshot.items.map((item) => ({
+      productName: item.productName,
+      pricePerDay: item.pricePerDay,
+      quantity: item.quantity,
+      rentalDays: item.rentalDays,
+      lineTotal: item.lineTotal,
+      includedAccessories: item.includedAccessories,
+      units: item.units,
+    }));
+  }
+  if (snapshot?.productName) {
+    const quantity = snapshot.quantity ?? 1;
+    const pricePerDay = snapshot.pricePerDay ?? 0;
+    const rentalDays = snapshot.dayCount ?? booking.dayCount;
+    return [
+      {
+        productName: snapshot.productName,
+        pricePerDay,
+        quantity,
+        rentalDays,
+        lineTotal: pricePerDay * quantity * rentalDays,
+        includedAccessories: snapshot.includedAccessories,
+        units: [],
+      },
+    ];
+  }
+  return bookingItemsToDocumentLineItems(booking).map((item) => ({ ...item, units: [] }));
+}
 
 export function formatManilaDate(value: string | Date, withTime = false): string {
   const date = typeof value === "string" ? new Date(value) : value;
@@ -58,14 +114,7 @@ export async function generateAndSaveInvoice(
     bookingRef: booking.bookingRef,
     customerName: booking.customerSnapshot.fullName || "Customer",
     customerEmail: booking.customerSnapshot.email || "",
-    productName: (booking.items?.length ?? 0) > 1
-      ? booking.items!.map((item) => `${item.quantity}× ${item.productSnapshot.name}`).join("; ")
-      : booking.productSnapshot.name || "Rental item",
-    items: booking.items?.map((item) => ({
-      productName: item.productSnapshot.name,
-      quantity: item.quantity,
-      dailyRate: item.dailyRate,
-    })),
+    items: bookingItemsToDocumentLineItems(booking),
     rentalDates: bookingRentalDates(booking),
     amount: input.amountDueNow,
     totalAmount: input.totalAmount,
@@ -94,14 +143,7 @@ export async function generateAndSaveReceipt(
     bookingRef: booking.bookingRef,
     customerName: booking.customerSnapshot.fullName || "Customer",
     customerEmail: booking.customerSnapshot.email || "",
-    productName: (booking.items?.length ?? 0) > 1
-      ? booking.items!.map((item) => `${item.quantity}× ${item.productSnapshot.name}`).join("; ")
-      : booking.productSnapshot.name || "Rental item",
-    items: booking.items?.map((item) => ({
-      productName: item.productSnapshot.name,
-      quantity: item.quantity,
-      dailyRate: item.dailyRate,
-    })),
+    items: bookingItemsToDocumentLineItems(booking),
     rentalDates: bookingRentalDates(booking),
     amount: input.amount,
     issuedAt: formatManilaDate(new Date(), true),
@@ -142,22 +184,12 @@ export async function generateAndSaveFinalAgreement(
     customerEmail: booking.customerSnapshot.email || "",
     phone: booking.customerSnapshot.phone || "",
     address: booking.customerSnapshot.address || "",
-    productName: (booking.items?.length ?? 0) > 1
-      ? booking.items!.map((item) => `${item.quantity}× ${item.productSnapshot.name}`).join("; ")
-      : booking.productSnapshot.name || "Rental item",
-    items: booking.items?.map((item) => ({
-      productName: item.productSnapshot.name,
-      quantity: item.quantity,
-      dailyRate: item.dailyRate,
-    })),
+    items: agreementLineItems(booking, agreement),
     rentalDates: bookingRentalDates(booking),
     amount: booking.totalAmount,
     issuedAt: formatManilaDate(new Date(), true),
     fulfillmentMethod: booking.fulfillmentMethod,
     customerLocation: booking.location || "",
-    includedAccessories: (booking.items?.length ?? 0) > 1
-      ? booking.items!.flatMap((item) => item.productSnapshot.included.map((included) => `${item.productSnapshot.name}: ${included}`))
-      : booking.productSnapshot.included ?? [],
     termsVersion: agreement.versionNumber ? `v${agreement.versionNumber}` : "2026-01",
     signedAt: customerSignature ? formatManilaDate(customerSignature.signedAt, true) : "",
     typedFullName: customerSignature?.signerName || booking.customerSnapshot.fullName || "Customer",

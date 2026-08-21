@@ -5,7 +5,7 @@ import { calculateReturnDateTime } from "../src/lib/rentalTiming";
 
 test("checkout totals include quantity, discount, and non-refundable deposit", () => {
   const pricing = calculateReservationPricing(
-    { listPricePerDay: 1_000, pricePerDay: 900, refundableDeposit: 500 },
+    { id: "product-1", name: "Test Product", listPricePerDay: 1_000, pricePerDay: 900, refundableDeposit: 500 },
     {
       quantity: 2,
       startDate: new Date("2026-08-10T01:00:00.000Z"),
@@ -33,7 +33,7 @@ test("checkout totals include quantity, discount, and non-refundable deposit", (
 
 test("checkout normalizes invalid quantities to one unit", () => {
   const pricing = calculateReservationPricing(
-    { listPricePerDay: 700, pricePerDay: 700, refundableDeposit: 0 },
+    { id: "product-1", name: "Test Product", listPricePerDay: 700, pricePerDay: 700, refundableDeposit: 0 },
     {
       quantity: 0,
       startDate: new Date("2026-08-10T00:00:00"),
@@ -48,7 +48,7 @@ test("checkout normalizes invalid quantities to one unit", () => {
 
 test("birthday and 11th-rental perks stack and are capped by the rental subtotal", () => {
   const pricing = calculateReservationPricing(
-    { listPricePerDay: 250, pricePerDay: 250, refundableDeposit: 0 },
+    { id: "product-1", name: "Test Product", listPricePerDay: 250, pricePerDay: 250, refundableDeposit: 0 },
     {
       quantity: 1,
       startDate: new Date("2026-08-10T00:00:00"),
@@ -66,7 +66,7 @@ test("birthday and 11th-rental perks stack and are capped by the rental subtotal
 
 test("checkout includes only the server-calculated pickup convenience fee", () => {
   const pricing = calculateReservationPricing(
-    { listPricePerDay: 1_000, pricePerDay: 1_000, refundableDeposit: 0 },
+    { id: "product-1", name: "Test Product", listPricePerDay: 1_000, pricePerDay: 1_000, refundableDeposit: 0 },
     {
       quantity: 1,
       startDate: new Date("2026-08-11T11:00:00.000Z"),

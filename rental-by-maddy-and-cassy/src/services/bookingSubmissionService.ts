@@ -11,11 +11,6 @@ export interface SubmitBookingResult {
   bookingNumber?: string;
 }
 
-export interface ReservationProductLine {
-  product: Product;
-  quantity: number;
-}
-
 function validateReservationDetails(draft: ReservationDraft): void {
   if (!draft.startDate || !draft.endDate || !draft.fulfillmentMethod) {
     throw new Error("Missing rental details.");
@@ -51,7 +46,6 @@ export async function createBookingReservation(
   supabase: SupabaseClient<Database>,
   product: Product,
   draft: ReservationDraft,
-  selectedLines?: ReservationProductLine[],
 ): Promise<SubmitBookingResult> {
   validateReservationDetails(draft);
   const { customerInfo } = draft;
@@ -63,41 +57,7 @@ export async function createBookingReservation(
     product.dailyRate * rentalDays * draft.quantity * (product.discountPercent / 100) * 100,
   ) / 100;
 
-  const lines = selectedLines?.length ? selectedLines : [{ product, quantity: draft.quantity }];
-  const customerSnapshot = {
-    fullName: customerInfo.fullName.trim(),
-    email: customerInfo.email.trim(),
-    phone: customerInfo.phone.trim(),
-    address: formatCustomerAddress(customerInfo),
-    facebookLink: customerInfo.facebookLink.trim(),
-    instagramLink: customerInfo.instagramLink.trim(),
-  };
-  const productSnapshot = (lineProduct: Product) => ({
-    name: lineProduct.name,
-    brand: lineProduct.brand ?? "",
-    category: lineProduct.category,
-    image: lineProduct.images[0]?.url || "/images/product-placeholder.png",
-    pricePerDay: lineProduct.pricePerDay,
-    currency: lineProduct.currency,
-    included: lineProduct.included,
-  });
-
-  const result = lines.length > 1
-    ? await submitMultiItemBookingWithDateGuard(supabase, {
-        items: lines.map((line) => ({
-          productId: line.product.id,
-          quantity: line.quantity,
-          productSnapshot: productSnapshot(line.product),
-        })),
-        pickupAt: startDate.toISOString(),
-        rentalDays,
-        fulfillmentMethod,
-        location: fulfillmentMethod === "delivery" ? draft.customerLocation.trim() : undefined,
-        cityMunicipality: fulfillmentMethod === "delivery" ? draft.cityMunicipality.trim() : undefined,
-        province: fulfillmentMethod === "delivery" ? draft.province.trim() : undefined,
-        customerSnapshot,
-      })
-    : await submitBookingWithDateGuard(supabase, {
+  const result = await submitBookingWithDateGuard(supabase, {
     productId: product.id,
     quantity: draft.quantity,
     pickupAt: startDate.toISOString(),
@@ -109,11 +69,111 @@ export async function createBookingReservation(
     cityMunicipality: fulfillmentMethod === "delivery" ? draft.cityMunicipality.trim() : undefined,
     province: fulfillmentMethod === "delivery" ? draft.province.trim() : undefined,
     discountAmount,
-    productSnapshot: productSnapshot(product),
-    customerSnapshot,
+    productSnapshot: {
+      name: product.name,
+      brand: product.brand ?? "",
+      category: product.category,
+      image: product.images[0]?.url || "/images/product-placeholder.png",
+      pricePerDay: product.pricePerDay,
+      currency: product.currency,
+      included: product.included,
+    },
+    customerSnapshot: {
+      fullName: customerInfo.fullName.trim(),
+      email: customerInfo.email.trim(),
+      phone: customerInfo.phone.trim(),
+      address: formatCustomerAddress(customerInfo),
+      facebookLink: customerInfo.facebookLink.trim(),
+      instagramLink: customerInfo.instagramLink.trim(),
+    },
   });
 
   return { bookingId: result.bookingId, bookingNumber: result.bookingRef };
+}
+
+/**
+ * Cart checkout: one booking spanning every selected line, one shared rental
+ * period. `draft.quantity` is ignored -- each line carries its own quantity
+ * from the cart. Unlike createBookingReservation, no product name/price/
+ * discount/deposit is ever sent to the server -- create_multi_item_booking()
+ * derives all of that itself from `products`.
+ */
+export async function createMultiItemBookingReservation(
+  supabase: SupabaseClient<Database>,
+  lines: { product: Product; quantity: number }[],
+  draft: ReservationDraft,
+): Promise<SubmitBookingResult> {
+  if (lines.length === 0) {
+    throw new Error("Your cart is empty.");
+  }
+  validateReservationDetails(draft);
+  const { customerInfo } = draft;
+  const startDate = draft.startDate!;
+  const endDate = draft.endDate!;
+  const fulfillmentMethod = draft.fulfillmentMethod!;
+  const rentalDays = getDayCount(startDate, endDate);
+
+  const result = await submitMultiItemBookingWithDateGuard(supabase, {
+    items: lines.map((line) => ({ productId: line.product.id, quantity: line.quantity })),
+    pickupAt: startDate.toISOString(),
+    rentalDays,
+    fulfillmentMethod,
+    location: fulfillmentMethod === "delivery" ? draft.customerLocation.trim() : undefined,
+    cityMunicipality: fulfillmentMethod === "delivery" ? draft.cityMunicipality.trim() : undefined,
+    province: fulfillmentMethod === "delivery" ? draft.province.trim() : undefined,
+    customerSnapshot: {
+      fullName: customerInfo.fullName.trim(),
+      email: customerInfo.email.trim(),
+      phone: customerInfo.phone.trim(),
+      address: formatCustomerAddress(customerInfo),
+      facebookLink: customerInfo.facebookLink.trim(),
+      instagramLink: customerInfo.instagramLink.trim(),
+    },
+  });
+
+  return { bookingId: result.bookingId, bookingNumber: result.bookingRef };
+}
+
+const UPLOAD_TIMEOUT_MS = 30_000;
+const REQUEST_TIMEOUT_MS = 20_000;
+// Hard ceiling for the whole submit-documents call (uploads + finalize),
+// independent of each fetch's own per-request timeout below. A single
+// per-request AbortController driven by setTimeout is not a reliable
+// upper bound on its own: mobile browsers throttle/suspend timers for a
+// backgrounded tab (e.g. the customer switches apps to find their ID
+// photo mid-upload), which can delay that abort well past its nominal
+// timeout and leave Promise.all -- and therefore the "Submitting..."
+// button -- waiting indefinitely with no error ever surfaced. This
+// watchdog force-aborts every in-flight request (see parentSignal below)
+// so the button always unlocks and the user always sees an error within
+// a bounded time, no matter what the network or tab state is doing.
+const OVERALL_SUBMIT_TIMEOUT_MS = 60_000;
+
+async function fetchWithTimeout(
+  input: string,
+  init: RequestInit,
+  timeoutMs: number,
+  timeoutMessage: string,
+  parentSignal?: AbortSignal,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const onParentAbort = () => controller.abort();
+  if (parentSignal) {
+    if (parentSignal.aborted) controller.abort();
+    else parentSignal.addEventListener("abort", onParentAbort);
+  }
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error(timeoutMessage);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+    parentSignal?.removeEventListener("abort", onParentAbort);
+  }
 }
 
 function extensionFromContentType(contentType: string): string {
@@ -149,11 +209,12 @@ function dataUrlToBlob(dataUrl: string): Blob {
 }
 
 export async function submitBookingDocuments(bookingId: string, draft: ReservationDraft): Promise<void> {
-  // The reservation was already validated and persisted before checkout.
-  // When a saved booking is resumed, the client rebuilds the draft from that
-  // authoritative booking. Do not revalidate rental/address fields here:
-  // legacy bookings may not have every newer structured address field, and
-  // document submission only owns the requirements and agreement data below.
+  // The reservation was already validated and persisted before payment
+  // submission. When a session resumes on a different device/browser, the
+  // client rebuilds the draft from that authoritative booking. Do not
+  // revalidate rental/address fields here: legacy bookings may not have every
+  // newer structured address field, and document submission only owns the
+  // requirements and agreement data below.
   const { requirements } = draft;
   if (
     !requirements.idOneFile ||
@@ -196,6 +257,9 @@ export async function submitBookingDocuments(bookingId: string, draft: Reservati
   );
   const submissionId = crypto.randomUUID();
 
+  const overallController = new AbortController();
+  const overallTimeoutId = setTimeout(() => overallController.abort(), OVERALL_SUBMIT_TIMEOUT_MS);
+
   async function uploadDocument(
     kind: "idOne" | "idTwo" | "selfie" | "emergencyId" | "signature",
     file: File,
@@ -205,68 +269,121 @@ export async function submitBookingDocuments(bookingId: string, draft: Reservati
     formData.append("file", file);
     let response: Response;
     try {
-      response = await fetch(
+      response = await fetchWithTimeout(
         `/api/bookings/${encodeURIComponent(bookingId)}/documents/upload` +
           `?kind=${encodeURIComponent(kind)}&submissionId=${encodeURIComponent(submissionId)}`,
         { method: "POST", credentials: "same-origin", body: formData },
+        UPLOAD_TIMEOUT_MS,
+        `${label} took too long to upload. Check your connection and try again.`,
+        overallController.signal,
       );
-    } catch {
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("took too long")) throw error;
+      if (process.env.NODE_ENV !== "production") {
+        console.error(`[submitBookingDocuments] upload failed for kind="${kind}" bookingId=${bookingId}`, error);
+      }
       throw new Error(`${label} could not reach the upload server. Check your connection and try again.`);
     }
     const body = (await response.json().catch(() => null)) as { path?: unknown; error?: unknown } | null;
     if (!response.ok || typeof body?.path !== "string") {
+      if (process.env.NODE_ENV !== "production") {
+        console.error(
+          `[submitBookingDocuments] upload rejected for kind="${kind}" bookingId=${bookingId} status=${response.status}`,
+          body,
+        );
+      }
       throw new Error(typeof body?.error === "string" ? body.error : `${label} could not be uploaded.`);
     }
     return body.path;
   }
 
-  const uploadedFiles = {
-    idOne: await uploadDocument("idOne", requirements.idOneFile, "First valid ID"),
-    idTwo: await uploadDocument("idTwo", requirements.idTwoFile, "Second valid ID"),
-    selfie: await uploadDocument("selfie", requirements.selfieFile, "Selfie with ID"),
-    emergencyId: await uploadDocument("emergencyId", requirements.emergencyContact.idFile, "Emergency contact ID"),
-    signature: await uploadDocument("signature", signatureFile, "Electronic signature"),
-  };
+  try {
+    // These four ID/selfie uploads and the signature upload are independent of
+    // one another (distinct storage paths), so running them in parallel instead
+    // of one-by-one turns the wait into max(latency) instead of sum(latency) --
+    // this was the single biggest contributor to the "Submitting..." delay.
+    // overallController bounds the whole batch (see OVERALL_SUBMIT_TIMEOUT_MS)
+    // so one stalled upload can never hang the submission indefinitely.
+    const [idOne, idTwo, selfie, emergencyId, signature] = await Promise.all([
+      uploadDocument("idOne", requirements.idOneFile, "First valid ID"),
+      uploadDocument("idTwo", requirements.idTwoFile, "Second valid ID"),
+      uploadDocument("selfie", requirements.selfieFile, "Selfie with ID"),
+      uploadDocument("emergencyId", requirements.emergencyContact.idFile, "Emergency contact ID"),
+      uploadDocument("signature", signatureFile, "Electronic signature"),
+    ]);
+    const uploadedFiles = { idOne, idTwo, selfie, emergencyId, signature };
 
-  const submitResponse = await fetch(`/api/bookings/${encodeURIComponent(bookingId)}/documents/submit`, {
-    method: "POST",
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      submissionId,
-      files: uploadedFiles,
-      facebookLink: requirements.facebookLink.trim(),
-      instagramLink: requirements.instagramLink.trim(),
-      emergencyContact: {
-        fullName: requirements.emergencyContact.fullName.trim(),
-        relationship: requirements.emergencyContact.relationship.trim(),
-        phone: requirements.emergencyContact.phone.trim(),
-        facebookLink: requirements.emergencyContact.facebookLink.trim(),
+    const submitResponse = await fetchWithTimeout(
+      `/api/bookings/${encodeURIComponent(bookingId)}/documents/submit`,
+      {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          submissionId,
+          files: uploadedFiles,
+          facebookLink: requirements.facebookLink.trim(),
+          instagramLink: requirements.instagramLink.trim(),
+          emergencyContact: {
+            fullName: requirements.emergencyContact.fullName.trim(),
+            relationship: requirements.emergencyContact.relationship.trim(),
+            phone: requirements.emergencyContact.phone.trim(),
+            facebookLink: requirements.emergencyContact.facebookLink.trim(),
+          },
+          acknowledgements: {
+            infoAccurate: agreement.infoAccurate,
+            agreedToTerms: agreement.agreedToTerms,
+            understoodRentalRules: agreement.understoodRentalRules,
+            authorizedESignature: agreement.authorizedESignature,
+            readPrivacyNotice: agreement.readPrivacyNotice,
+            emergencyContactAuthorized: agreement.emergencyContactAuthorized,
+          },
+          signatureMethod: agreement.signatureMethod,
+          typedFullName: agreement.typedFullName.trim(),
+        }),
       },
-      acknowledgements: {
-        infoAccurate: agreement.infoAccurate,
-        agreedToTerms: agreement.agreedToTerms,
-        understoodRentalRules: agreement.understoodRentalRules,
-        authorizedESignature: agreement.authorizedESignature,
-        readPrivacyNotice: agreement.readPrivacyNotice,
-        emergencyContactAuthorized: agreement.emergencyContactAuthorized,
-      },
-      signatureMethod: agreement.signatureMethod,
-      typedFullName: agreement.typedFullName.trim(),
-    }),
-  });
-  if (!submitResponse.ok) {
-    const body = (await submitResponse.json().catch(() => null)) as { error?: unknown } | null;
-    throw new Error(typeof body?.error === "string" ? body.error : "The documents could not be securely submitted.");
+      REQUEST_TIMEOUT_MS,
+      "Submitting your documents took too long. Check your connection and try again.",
+      overallController.signal,
+    );
+    if (!submitResponse.ok) {
+      const body = (await submitResponse.json().catch(() => null)) as { error?: unknown } | null;
+      if (process.env.NODE_ENV !== "production") {
+        console.error(
+          `[submitBookingDocuments] finalize rejected bookingId=${bookingId} status=${submitResponse.status}`,
+          body,
+        );
+      }
+      throw new Error(typeof body?.error === "string" ? body.error : "The documents could not be securely submitted.");
+    }
+  } catch (error) {
+    if (overallController.signal.aborted && error instanceof Error && !error.message.includes("took too long")) {
+      throw new Error("Submission is taking too long. Check your connection and try again.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(overallTimeoutId);
   }
 
-  const response = await fetch(`/api/bookings/${encodeURIComponent(bookingId)}/documents/agreement`, {
-    method: "POST",
-    credentials: "same-origin",
-  });
-  if (!response.ok) {
-    console.warn("Documents were submitted, but the signed agreement PDF is still being prepared.");
-  }
+  // The signed-agreement PDF (server-side download + render + upload) is the
+  // slowest single step and, per the existing fallback message below, is
+  // already treated as non-fatal -- there's no reason to make the customer
+  // wait on it before moving to the next step. Fire it and let it finish in
+  // the background; documents/agreement is idempotent to retry/regenerate.
+  void fetchWithTimeout(
+    `/api/bookings/${encodeURIComponent(bookingId)}/documents/agreement`,
+    { method: "POST", credentials: "same-origin" },
+    REQUEST_TIMEOUT_MS,
+    "Signed agreement PDF generation timed out.",
+  )
+    .then((response) => {
+      if (!response.ok) {
+        console.warn("Documents were submitted, but the signed agreement PDF is still being prepared.");
+      }
+    })
+    .catch((error) => {
+      console.warn("Documents were submitted, but the signed agreement PDF is still being prepared.", error);
+    });
 }
 
 export async function submitBooking(

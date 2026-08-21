@@ -9,6 +9,9 @@
 .statusTopline h2,
 .sectionHeading h2 { margin: 0; font-size: 1.12rem; letter-spacing: -0.02em; }
 .statusMessage { max-width: 680px; margin: 0.85rem 0 1.1rem; color: var(--color-charcoal); font-size: 0.8rem; line-height: 1.65; }
+.rejectedBadgeButton { padding: 0; border: 0; background: none; cursor: pointer; }
+.viewReasonLink { display: block; margin: -0.7rem 0 1.1rem; padding: 0; border: 0; background: none; color: var(--color-status-red); font-size: 0.72rem; font-weight: 700; text-decoration: underline; cursor: pointer; }
+.rejectionReasonText { margin: 0; color: var(--color-charcoal); font-size: 0.8rem; line-height: 1.6; }
 .statusFacts { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 0.7rem; margin: 0; }
 .statusFacts div { padding: 0.75rem; border: 1px solid rgba(154,89,101,0.1); border-radius: 12px; background: rgba(255,255,255,0.65); }
 .statusFacts dt { color: #837b7a; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }

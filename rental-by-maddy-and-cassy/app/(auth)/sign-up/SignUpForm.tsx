@@ -9,12 +9,14 @@ import { z } from "zod";
 import { sendEmailOtp } from "@/src/services/authService";
 import {
   EARLIEST_BIRTH_DATE,
+  getMaxBirthDate,
+  isAtLeastMinimumAge,
   isValidBirthDate,
   isValidPhoneNumber,
   normalizeEmail,
   normalizePhoneInput,
   PHONE_DIGIT_COUNT,
-  toDateInputValue,
+  UNDERAGE_ERROR_MESSAGE,
 } from "@/src/lib/authValidation";
 import formStyles from "@/components/ui/Form.module.css";
 import styles from "../auth.module.css";
@@ -22,10 +24,10 @@ import styles from "../auth.module.css";
 const schema = z.object({
   fullName: z.string().trim().min(2, "Enter your complete name").max(150, "Name is too long"),
   phone: z.string().refine(isValidPhoneNumber, `Phone number must contain exactly ${PHONE_DIGIT_COUNT} digits`),
-  birthDate: z.string().min(1, "Birthdate is required").refine(
-    isValidBirthDate,
-    "Enter a real birthdate that is not in the future",
-  ),
+  birthDate: z.string()
+    .min(1, "Birthdate is required")
+    .refine(isValidBirthDate, "Enter a real birthdate that is not in the future")
+    .refine(isAtLeastMinimumAge, UNDERAGE_ERROR_MESSAGE),
   email: z.string().trim().min(1, "Email is required").email("Enter a valid email address"),
 });
 
@@ -150,7 +152,7 @@ export default function SignUpForm() {
             type="date"
             autoComplete="bday"
             min={EARLIEST_BIRTH_DATE}
-            max={toDateInputValue(new Date())}
+            max={getMaxBirthDate()}
             className={`${formStyles.input} ${errors.birthDate ? formStyles.inputError : ""}`}
             aria-invalid={!!errors.birthDate}
             aria-describedby={errors.birthDate ? "signup-birth-date-error" : "signup-birth-date-help"}

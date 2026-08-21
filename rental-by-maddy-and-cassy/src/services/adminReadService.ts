@@ -66,8 +66,9 @@ export async function getAuditLogs(supabase: SupabaseClient<Database>): Promise<
 /**
  * public.payment_event_logs no longer exists — the closest equivalent is
  * public.audit_logs filtered to payment-submission entity events (see the
- * 'payment.verified' / 'payment.checkout_created' actions logged by
- * paymentFulfillment.ts and the manual GCash submission route).
+ * 'payment.verified' / 'payment.reviewed' / 'payment.proof_submitted' actions
+ * logged by paymentFulfillment.ts and the manual GCash payment routes under
+ * app/api/bookings/[bookingId]/payment/ and app/api/admin/bookings/[bookingId]/payments/).
  */
 export async function getPaymentAuditLogs(supabase: SupabaseClient<Database>): Promise<AuditLogEntry[]> {
   const { data, error } = await supabase

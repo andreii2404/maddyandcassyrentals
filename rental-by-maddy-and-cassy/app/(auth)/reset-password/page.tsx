@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { cookies } from "next/headers";
-import Navbar from "@/components/navbar/Navbar";
 import ResetPasswordForm from "./ResetPasswordForm";
 import styles from "../auth.module.css";
 
@@ -15,7 +14,6 @@ export default async function ResetPasswordPage() {
   const recoveryReady = cookieStore.get("maddy_password_recovery")?.value === "1";
   return (
     <div>
-      <Navbar />
       <main className={styles.main}>
         <div className={styles.authLayout}>
           <section className={styles.authIntro} aria-labelledby="new-password-heading">

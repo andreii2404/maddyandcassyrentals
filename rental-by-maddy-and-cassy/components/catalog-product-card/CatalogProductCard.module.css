@@ -2,23 +2,40 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  border-radius: 16px;
+  border-radius: 18px;
   background: var(--color-white);
   border: 1px solid var(--color-light-gray);
-  box-shadow: 0 16px 36px rgba(36, 36, 36, 0.07);
+  box-shadow: 0 10px 24px rgba(36, 36, 36, 0.06);
   overflow: hidden;
-  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   height: 100%;
 }
 
-.card:hover {
-  transform: translateY(-5px);
-  border-color: var(--color-dusty-rose);
-  box-shadow: 0 22px 46px rgba(36, 36, 36, 0.1);
+@media (hover: hover) and (pointer: fine) {
+  .card:hover {
+    transform: translateY(-3px);
+    border-color: var(--color-dusty-rose);
+    box-shadow: 0 18px 34px rgba(36, 36, 36, 0.1);
+  }
+
+  .card:hover .image {
+    transform: scale(1.03);
+  }
 }
 
-.imageLink {
-  display: block;
+.cardUnavailable {
+  box-shadow: none;
+}
+
+.cardLink {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.cardLink:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
 }
 
 .imageWrapper {
@@ -26,10 +43,17 @@
   width: 100%;
   aspect-ratio: 4 / 3;
   background: var(--color-light-gray);
+  overflow: hidden;
 }
 
 .image {
   object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.cardUnavailable .image {
+  filter: grayscale(35%);
+  opacity: 0.75;
 }
 
 .productBadge {
@@ -44,17 +68,32 @@
   color: var(--color-white);
 }
 
+.unavailableRibbon {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(36, 36, 36, 0.35);
+  color: var(--color-white);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .favoriteButton {
   position: absolute;
   top: 0.65rem;
   right: 0.65rem;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 34px;
   height: 34px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.92);
   border: 1px solid var(--color-light-gray);
   color: var(--color-primary);
   cursor: pointer;
@@ -71,7 +110,8 @@
 }
 
 .info {
-  padding: 0.75rem 0.85rem 0.85rem;
+  position: relative;
+  padding: 0.85rem 0.95rem 0.95rem;
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
@@ -80,33 +120,31 @@
 
 .category {
   margin: 0;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--color-primary);
   font-weight: 600;
 }
 
+.name {
+  margin: 0.1rem 0 0;
+  font-size: 1.04rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
 .brand {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   color: var(--color-charcoal);
 }
 
-.specSummary {
-  align-self: flex-start;
-  margin: 0.15rem 0 0;
-  padding: 0.28rem 0.55rem;
-  border-radius: 999px;
-  background: var(--color-background-soft);
-  color: var(--color-primary-hover);
-  font-size: 0.7rem;
-  font-weight: 700;
-}
-
 .rating {
-  margin: 0.1rem 0 0;
-  font-size: 0.82rem;
+  margin: 0.2rem 0 0;
+  font-size: 0.85rem;
   font-weight: 600;
   color: var(--color-text-primary);
 }
@@ -116,37 +154,21 @@
   color: var(--color-charcoal);
 }
 
-.availabilityBadge {
-  margin: 0.3rem 0 0.1rem;
-  align-self: flex-start;
-}
-
-.nameLink {
-  text-decoration: none;
-  color: inherit;
-}
-
-.name {
-  margin: 0;
-  font-size: 1.02rem;
-  font-weight: 600;
-  color: var(--color-text-primary);
-  letter-spacing: -0.01em;
-}
-
-.nameLink:hover .name {
-  color: var(--color-primary);
+.ratingPlaceholder {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  color: var(--color-charcoal);
 }
 
 .priceBlock {
   display: grid;
   gap: 0.08rem;
-  margin: 0.2rem 0 0.6rem;
+  margin: 0.35rem 0 0;
 }
 
 .price {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: var(--color-primary);
 }
@@ -171,57 +193,67 @@
   margin-left: 0.2rem;
 }
 
-.actions {
-  margin-top: auto;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
-}
-
-.detailsButton,
-.cartButton,
-.reserveButton {
-  text-align: center;
-  padding: 0.55rem 0.6rem;
+.availabilityPill {
+  align-self: flex-start;
+  margin: 0.4rem 0 0.2rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.28rem 0.65rem;
   border-radius: 999px;
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   font-weight: 600;
-  text-decoration: none;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, opacity 0.2s ease;
+  border: 1px solid transparent;
   white-space: nowrap;
 }
 
-.cartButton {
-  border: 1px solid var(--color-dusty-rose);
-  background: var(--color-white);
-  color: var(--color-primary);
-  cursor: pointer;
+.availabilityDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+  flex-shrink: 0;
 }
 
-.cartButton:hover:not(:disabled) {
-  background: var(--color-blush);
+.availableLevelAvailable {
+  color: var(--color-status-green);
+  background: var(--color-status-green-bg);
+  border-color: var(--color-status-green-border);
 }
 
-.cartButton:disabled {
-  color: var(--color-charcoal);
-  cursor: not-allowed;
-  opacity: .65;
+.availableLevelLimited {
+  color: var(--color-status-yellow);
+  background: var(--color-status-yellow-bg);
+  border-color: var(--color-status-yellow-border);
 }
 
-.detailsButton {
-  background: var(--color-blush);
-  color: var(--color-primary);
-  border: 1px solid var(--color-dusty-rose);
+.availableLevelFull {
+  color: var(--color-status-red);
+  background: var(--color-status-red-bg);
+  border-color: var(--color-status-red-border);
 }
 
-.detailsButton:hover {
-  background: var(--color-dusty-rose);
+.actions {
+  position: relative;
+  z-index: 2;
+  margin-top: auto;
+  padding-top: 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .reserveButton {
-  grid-column: 1 / -1;
+  text-align: center;
+  padding: 0.7rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
   background: var(--color-primary);
   color: var(--color-white);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 .reserveButton:hover {
@@ -237,13 +269,58 @@
   opacity: 0.7;
 }
 
+.secondaryActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+.detailsButton,
+.cartButton {
+  text-align: center;
+  padding: 0.5rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+  white-space: nowrap;
+}
+
+.detailsButton {
+  background: var(--color-blush);
+  color: var(--color-primary);
+  border: 1px solid var(--color-dusty-rose);
+}
+
+.detailsButton:hover {
+  background: var(--color-dusty-rose);
+}
+
+.cartButton {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-charcoal);
+  cursor: pointer;
+}
+
+.cartButton:hover:not(:disabled) {
+  color: var(--color-primary);
+  background: var(--color-background-soft);
+}
+
+.cartButton:disabled {
+  color: var(--color-light-gray);
+  cursor: not-allowed;
+}
+
 @media (max-width: 640px) {
-  .info { padding: 0.65rem; }
-  .name { font-size: 0.9rem; }
+  .info { padding: 0.7rem; }
+  .name { font-size: 0.94rem; }
   .brand,
-  .rating { font-size: 0.7rem; }
-  .price { font-size: 0.95rem; }
+  .rating { font-size: 0.72rem; }
+  .price { font-size: 1rem; }
+  .reserveButton { padding: 0.6rem 0.5rem; font-size: 0.82rem; }
   .detailsButton,
-  .cartButton,
-  .reserveButton { padding: 0.5rem 0.35rem; font-size: 0.68rem; }
+  .cartButton { padding: 0.5rem 0.4rem; font-size: 0.7rem; }
 }

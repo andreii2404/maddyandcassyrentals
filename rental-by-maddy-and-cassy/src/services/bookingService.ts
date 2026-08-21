@@ -3,6 +3,7 @@ import type { Database, Tables } from "@/src/lib/supabase/database.types";
 import type {
   AgreementStatus,
   Booking,
+  BookingItemLine,
   FulfillmentMethod,
   RequirementsStatus,
 } from "@/src/types/booking";
@@ -97,69 +98,78 @@ function primaryProductImageUrl(
   return supabase.storage.from("product-images").getPublicUrl(first.storage_path).data.publicUrl;
 }
 
+function includedFromSpecifications(specifications: unknown): string[] {
+  const record = (specifications as Record<string, string>) ?? {};
+  return record.included
+    ? record.included.split(",").map((value) => value.trim()).filter(Boolean)
+    : [];
+}
+
+function mapBookingItem(
+  supabase: SupabaseClient<Database>,
+  item: BookingItemRow,
+  dayCount: number,
+): BookingItemLine {
+  const dailyRate = item.daily_rate_snapshot ?? 0;
+  const assignedUnitCount = (item.unit_reservations ?? []).filter((reservation) =>
+    ACTIVE_RESERVATION_STATUSES.has(reservation.status),
+  ).length;
+  return {
+    bookingItemId: item.id,
+    productId: item.product_id,
+    productName: item.product_name_snapshot || item.products?.name || "Rental item",
+    brand: item.products?.brands?.name ?? "",
+    category: item.products?.categories?.name ?? "",
+    image: primaryProductImageUrl(supabase, item.products?.product_images),
+    quantity: item.quantity,
+    dailyRate,
+    refundableDeposit: item.deposit_per_unit_snapshot ?? 0,
+    included: includedFromSpecifications(item.products?.specifications),
+    lineRentalSubtotal: dailyRate * item.quantity * dayCount,
+    assignedUnitCount,
+  };
+}
+
 function assembleBooking(
   supabase: SupabaseClient<Database>,
   row: JoinedBookingRow,
   totals: Tables<"booking_totals"> | undefined,
   profile: Tables<"profiles"> | undefined,
 ): Booking {
-  const itemRows = row.booking_items ?? [];
-  const item = itemRows[0];
+  const item = row.booking_items?.[0];
   const fulfillment = row.booking_fulfillments;
   const legacyPeriod = parseRentalPeriod(row.rental_period);
   const startDate = row.pickup_at || legacyPeriod.startDate;
   const endDate = row.return_at || legacyPeriod.endDate;
-  const quantity = itemRows.reduce((sum, rowItem) => sum + rowItem.quantity, 0) || 1;
+  const quantity = item?.quantity ?? 1;
+  const dayCount = totals?.rental_days ?? 0;
 
-  const specifications = (item?.products?.specifications as Record<string, string>) ?? {};
-  const included = specifications.included
-    ? specifications.included.split(",").map((value) => value.trim()).filter(Boolean)
-    : [];
+  const included = includedFromSpecifications(item?.products?.specifications);
+
+  const items = (row.booking_items ?? []).map((bookingItem) =>
+    mapBookingItem(supabase, bookingItem, dayCount),
+  );
 
   const inventoryUnitId =
     item?.unit_reservations?.find((reservation) => ACTIVE_RESERVATION_STATUSES.has(reservation.status))
       ?.inventory_unit_id ?? null;
 
-  const items = itemRows.map((rowItem) => {
-    const itemSpecifications = (rowItem.products?.specifications as Record<string, string>) ?? {};
-    const itemIncluded = itemSpecifications.included
-      ? itemSpecifications.included.split(",").map((value) => value.trim()).filter(Boolean)
-      : [];
-    return {
-      id: rowItem.id,
-      productId: rowItem.product_id,
-      quantity: rowItem.quantity,
-      dailyRate: rowItem.daily_rate_snapshot,
-      depositPerUnit: rowItem.deposit_per_unit_snapshot,
-      productSnapshot: {
-        name: rowItem.product_name_snapshot || rowItem.products?.name || "Rental item",
-        brand: rowItem.products?.brands?.name ?? "",
-        category: rowItem.products?.categories?.name ?? "",
-        image: primaryProductImageUrl(supabase, rowItem.products?.product_images),
-        pricePerDay: rowItem.daily_rate_snapshot,
-        currency: row.currency_code,
-        included: itemIncluded,
-      },
-    };
-  });
-  const multiItem = items.length > 1;
-
   return {
     id: row.id,
     bookingRef: row.booking_reference,
     customerId: row.customer_id,
+    items,
     productId: item?.product_id ?? "",
     inventoryUnitId,
     quantity,
-    items,
     status: row.status,
     fulfillmentMethod: (fulfillment?.method ?? "pickup") as FulfillmentMethod,
     startDate,
     endDate,
     nextAvailableAt: row.next_available_at,
-    dayCount: totals?.rental_days ?? 0,
-    dailyRate: items.reduce((sum, line) => sum + line.dailyRate * line.quantity, 0),
-    refundableDeposit: items.reduce((sum, line) => sum + line.depositPerUnit * line.quantity, 0),
+    dayCount,
+    dailyRate: item?.daily_rate_snapshot ?? 0,
+    refundableDeposit: totals?.deposit_total ?? 0,
     rentalSubtotal: totals?.rental_subtotal ?? 0,
     specialDiscountAmount: totals?.special_discount_total ?? 0,
     birthdayDiscountAmount: row.birthday_discount_amount,
@@ -178,13 +188,13 @@ function assembleBooking(
     customerNotes: row.customer_notes ?? undefined,
     adminNotes: row.admin_notes ?? undefined,
     productSnapshot: {
-      name: multiItem ? `${items.length} rental items` : item?.product_name_snapshot || item?.products?.name || "Rental item",
-      brand: multiItem ? "Maddy & Cassy selection" : item?.products?.brands?.name ?? "",
-      category: multiItem ? "Combined reservation" : item?.products?.categories?.name ?? "",
-      image: multiItem ? items[0]?.productSnapshot.image ?? "/images/product-placeholder.png" : primaryProductImageUrl(supabase, item?.products?.product_images),
-      pricePerDay: items.reduce((sum, line) => sum + line.dailyRate * line.quantity, 0),
+      name: item?.product_name_snapshot || item?.products?.name || "Rental item",
+      brand: item?.products?.brands?.name ?? "",
+      category: item?.products?.categories?.name ?? "",
+      image: primaryProductImageUrl(supabase, item?.products?.product_images),
+      pricePerDay: item?.daily_rate_snapshot ?? 0,
       currency: row.currency_code,
-      included: multiItem ? items.flatMap((line) => line.productSnapshot.included) : included,
+      included,
     },
     customerSnapshot: {
       fullName: profile?.display_name ?? "",

@@ -9,6 +9,7 @@ import {
   getBookingMilestones,
   getBookingStatusMessage,
   getFulfillmentProgressLabel,
+  getRejectionReason,
 } from "@/src/lib/bookingManagement";
 import {
   cancelBookingAsCustomer,
@@ -17,6 +18,7 @@ import {
 import { createClient } from "@/src/lib/supabase/client";
 import { useToast } from "@/components/ui/ToastProvider";
 import StatusBadge from "@/components/status-badge/StatusBadge";
+import Modal from "@/components/ui/Modal";
 import styles from "./CustomerBookingManagement.module.css";
 
 interface Props {
@@ -59,6 +61,7 @@ export default function CustomerBookingManagement({
   const [saving, setSaving] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const [reasonModalOpen, setReasonModalOpen] = useState(false);
   const [fulfillmentMethod, setFulfillmentMethod] = useState(booking.fulfillmentMethod);
   const [location, setLocation] = useState(booking.location ?? "");
   const [cityMunicipality, setCityMunicipality] = useState(booking.cityMunicipality ?? "");
@@ -74,6 +77,7 @@ export default function CustomerBookingManagement({
   const canEdit = canCustomerEditBooking(booking, lockedProgress);
   const canCancel = canCustomerCancelBooking(booking.status);
   const milestones = getBookingMilestones(booking);
+  const rejectionReason = booking.status === "rejected" ? getRejectionReason(statusHistory) : undefined;
 
   async function handleEditSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -128,9 +132,24 @@ export default function CustomerBookingManagement({
             <p>CURRENT BOOKING STATUS</p>
             <h2 id="current-status-heading">{getFulfillmentProgressLabel(booking.status, booking.fulfillmentMethod)}</h2>
           </div>
-          <StatusBadge status={booking.status} />
+          {rejectionReason ? (
+            <button
+              type="button"
+              className={styles.rejectedBadgeButton}
+              onClick={() => setReasonModalOpen(true)}
+            >
+              <StatusBadge status={booking.status} />
+            </button>
+          ) : (
+            <StatusBadge status={booking.status} />
+          )}
         </div>
         <p className={styles.statusMessage}>{getBookingStatusMessage(booking.status, booking.fulfillmentMethod)}</p>
+        {rejectionReason ? (
+          <button type="button" className={styles.viewReasonLink} onClick={() => setReasonModalOpen(true)}>
+            View rejection reason
+          </button>
+        ) : null}
         <dl className={styles.statusFacts}>
           <div><dt>Reference number</dt><dd>{booking.bookingRef}</dd></div>
           <div><dt>Fulfillment</dt><dd>{booking.fulfillmentMethod === "delivery" ? "Delivery" : "Pickup"}</dd></div>
@@ -241,6 +260,12 @@ export default function CustomerBookingManagement({
           </div>
         ) : null}
       </section>
+
+      {reasonModalOpen && rejectionReason ? (
+        <Modal title="Booking rejected" onClose={() => setReasonModalOpen(false)}>
+          <p className={styles.rejectionReasonText}>{rejectionReason}</p>
+        </Modal>
+      ) : null}
     </>
   );
 }

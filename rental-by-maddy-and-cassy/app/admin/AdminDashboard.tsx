@@ -84,7 +84,7 @@ export default function AdminDashboard() {
             <article className={styles.metricCard}>
               <span>Successful Payments</span>
               <strong>{data.metrics.successfulPayments}</strong>
-              <small>Verified GCash payments and retained historical records</small>
+              <small>Verified GCash payments</small>
             </article>
             <article className={styles.metricCard}>
               <span>Failed Payments</span>

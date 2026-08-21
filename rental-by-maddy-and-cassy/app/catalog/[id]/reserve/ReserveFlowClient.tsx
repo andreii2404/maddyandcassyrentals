@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Product } from "@/types/product";
 import type { UnitCounts } from "@/lib/availability";
@@ -22,11 +22,17 @@ import {
   createBookingReservation,
   submitBookingDocuments,
 } from "@/src/services/bookingSubmissionService";
-import { getReservationResumeState, submitManualGcashPayment } from "@/src/services/paymentService";
-import { getCustomerRewardProgress } from "@/src/services/bookingService";
+import { getReservationResumeState, submitManualPayment } from "@/src/services/paymentService";
+import { getBookingById, getCustomerRewardProgress } from "@/src/services/bookingService";
 import { startGuestCheckout } from "@/src/services/authService";
 import { useCart } from "@/hooks/useCart";
 import { calculateReservationPricing } from "@/src/lib/reservationPricing";
+import {
+  activeUnitAssignments,
+  assertUnitAssignmentsComplete,
+  getBookingUnitAssignments,
+} from "@/src/services/unitAssignmentService";
+import type { AgreementUnitAssignment } from "@/src/types/booking";
 import {
   reservationProgressKey,
   restoreReservationProgress,
@@ -49,10 +55,9 @@ interface ReserveFlowClientProps {
   product: Product;
   units: UnitCounts;
   returnQuery?: string;
-  cartProducts?: Array<{ product: Product; units: UnitCounts; quantity: number }>;
 }
 
-function ReserveFlowInner({ product: primaryProduct, units: primaryUnits, cartProducts, isGuest }: ReserveFlowClientProps & { isGuest: boolean }) {
+function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & { isGuest: boolean }) {
   const { user, profile } = useAuth();
   const { showToast } = useToast();
   const { items: cartItems, removeItem: removeCartItem } = useCart();
@@ -67,6 +72,11 @@ function ReserveFlowInner({ product: primaryProduct, units: primaryUnits, cartPr
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [receiptReady, setReceiptReady] = useState(false);
   const [submittingDocuments, setSubmittingDocuments] = useState(false);
+  // React state updates (and therefore the disabled button) land a render
+  // after the click; a fast double-click can fire handleDocumentSubmission
+  // twice before that render happens. This ref is set synchronously so the
+  // second call is rejected immediately, regardless of render timing.
+  const documentSubmissionInFlightRef = useRef(false);
   const [prefilled, setPrefilled] = useState(false);
   const [progressHydrated, setProgressHydrated] = useState(false);
   const [progressRestored, setProgressRestored] = useState(false);
@@ -75,34 +85,11 @@ function ReserveFlowInner({ product: primaryProduct, units: primaryUnits, cartPr
     completedRentals: 0,
     loyaltyRewardUsed: false,
   });
+  const [unitsReady, setUnitsReady] = useState(false);
+  const [unitsCheckError, setUnitsCheckError] = useState<string | null>(null);
+  const [assignedUnits, setAssignedUnits] = useState<AgreementUnitAssignment[]>([]);
 
-  const bookingLines = useMemo(
-    () => cartProducts?.length
-      ? cartProducts
-      : [{ product: primaryProduct, units: primaryUnits, quantity: draft.quantity }],
-    [cartProducts, draft.quantity, primaryProduct, primaryUnits],
-  );
-  const isMultiItem = bookingLines.length > 1;
-  const product = useMemo<Product>(() => isMultiItem ? {
-    ...primaryProduct,
-    name: `${bookingLines.length} rental items`,
-    shortDescription: "Combined cart reservation",
-    dailyRate: bookingLines.reduce((sum, line) => sum + line.product.dailyRate * line.quantity, 0),
-    listPricePerDay: bookingLines.reduce((sum, line) => sum + line.product.listPricePerDay * line.quantity, 0),
-    pricePerDay: bookingLines.reduce((sum, line) => sum + line.product.pricePerDay * line.quantity, 0),
-    refundableDeposit: bookingLines.reduce((sum, line) => sum + line.product.refundableDeposit * line.quantity, 0),
-    discountPercent: 0,
-    included: bookingLines.flatMap((line) => line.product.included),
-    specs: {},
-    specifications: {},
-    totalUnits: bookingLines.reduce((sum, line) => sum + line.units.totalUnits, 0),
-  } : primaryProduct, [bookingLines, isMultiItem, primaryProduct]);
-  const units = isMultiItem
-    ? { totalUnits: bookingLines.reduce((sum, line) => sum + line.units.totalUnits, 0), availableUnits: 0, reservedUnits: 0, rentedUnits: 0 }
-    : primaryUnits;
-  const selectedUnitCount = bookingLines.reduce((sum, line) => sum + line.quantity, 0);
-
-  const progressKey = reservationProgressKey(user!.id, isMultiItem ? bookingLines.map((line) => line.product.id).join("-") : product.id);
+  const progressKey = reservationProgressKey(user!.id, product.id);
 
   useEffect(() => {
     let rawProgress: string | null = null;
@@ -113,12 +100,15 @@ function ReserveFlowInner({ product: primaryProduct, units: primaryUnits, cartPr
     }
     const restored = restoreReservationProgress(rawProgress);
     if (restored) {
-      const hasVerifiedPayment = restored.paymentState === "paid" || restored.paymentState === "partially_paid";
+      // Any non-"unpaid" state means the customer already submitted payment
+      // details/proof in Step 3 -- admin verification happens later and
+      // should not force them back through payment submission again.
+      const hasSubmittedPayment = restored.paymentState !== "unpaid";
       // Verification files and signature images are intentionally never saved
       // to localStorage. Return to the document step when those files are needed.
       const safeStep = !restored.bookingId
         ? Math.min(restored.step, 3)
-        : hasVerifiedPayment
+        : hasSubmittedPayment
           ? Math.min(restored.step, 4)
           : Math.min(restored.step, 3);
       // One-time hydration from the browser-owned draft backup.
@@ -147,7 +137,7 @@ function ReserveFlowInner({ product: primaryProduct, units: primaryUnits, cartPr
         fullName: current.customerInfo.fullName || (isGuest ? "" : profile?.displayName ?? (user.user_metadata?.display_name as string | undefined) ?? ""),
         email: current.customerInfo.email || (isGuest ? "" : profile?.email ?? user.email ?? ""),
         phone: current.customerInfo.phone || profile?.phoneNumber || "",
-        birthDate: current.customerInfo.birthDate || profile?.birthDate || "",
+        birthDate: current.customerInfo.birthDate || (isGuest ? "" : profile?.birthDate) || "",
         streetBarangay: current.customerInfo.streetBarangay || profileAddress.streetBarangay,
         cityMunicipality: current.customerInfo.cityMunicipality || profileAddress.cityMunicipality,
         province: current.customerInfo.province || profileAddress.province,
@@ -226,14 +216,15 @@ function ReserveFlowInner({ product: primaryProduct, units: primaryUnits, cartPr
   }, [user, isGuest]);
 
   useEffect(() => {
-    if (isMultiItem || !cartProducts?.length || cartProducts[0]?.product.id !== product.id) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("cartItem") !== product.id) return;
     const cartItem = cartItems.find((item) => item.productId === product.id);
     if (!cartItem) return;
     const quantity = Math.min(Math.max(1, cartItem.quantity), Math.max(1, units.totalUnits));
     // Sync the persisted browser cart into the editable reservation draft.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setDraft((current) => current.quantity === quantity ? current : { ...current, quantity });
-  }, [cartItems, cartProducts, isMultiItem, product.id, units.totalUnits]);
+  }, [cartItems, product.id, units.totalUnits]);
 
   useEffect(() => {
     if (!user) return;
@@ -244,10 +235,12 @@ function ReserveFlowInner({ product: primaryProduct, units: primaryUnits, cartPr
     let cancelled = false;
 
     async function refreshBooking() {
-      // A saved booking ID is authoritative. Resume at Payment Submission
-      // without asking the customer to enter their rental details again.
+      // A booking ID supplied by a resume link is authoritative. Move to
+      // Payment Submission immediately instead of letting an empty or stale
+      // browser draft show Rental Details while the booking loads.
       setBookingId(activeBookingId);
       setStep(3);
+      setCheckingPayment(true);
 
       let resumeState;
       try {
@@ -260,18 +253,17 @@ function ReserveFlowInner({ product: primaryProduct, units: primaryUnits, cartPr
         );
         return;
       }
+      if (cancelled) return;
       const booking = resumeState.booking;
-      if (booking.productId !== product.id || cancelled) {
+      if (booking.productId !== product.id) {
         setCheckingPayment(false);
         setPaymentError("This reservation belongs to a different rental item.");
         return;
       }
 
-      const nextState: BookingPaymentState = resumeState.paymentState;
-
       setBookingId(booking.id);
       setBookingNumber(booking.bookingRef);
-      setPaymentState(nextState);
+      setPaymentState(resumeState.paymentState);
       setIsDemoPayment(resumeState.isDemoPayment);
       setReceiptReady(resumeState.receiptReady);
       setDraft((current) => ({
@@ -302,6 +294,51 @@ function ReserveFlowInner({ product: primaryProduct, units: primaryUnits, cartPr
     };
   }, [user, product.id]);
 
+  useEffect(() => {
+    if (step !== 5 || !bookingId) return;
+    let cancelled = false;
+
+    async function confirmUnits() {
+      try {
+        const supabase = createClient();
+        const booking = await getBookingById(supabase, bookingId!);
+        const item = booking?.items[0];
+        if (!booking || !item) throw new Error("This booking could not be found.");
+        const assignments = await getBookingUnitAssignments(supabase, bookingId!);
+        assertUnitAssignmentsComplete(
+          [{ bookingItemId: item.bookingItemId, quantity: item.quantity }],
+          assignments,
+        );
+        if (cancelled) return;
+        setAssignedUnits(
+          activeUnitAssignments(assignments.get(item.bookingItemId)).map((assignment) => ({
+            unitCode: assignment.unitCode,
+            serialNumber: assignment.serialNumber,
+          })),
+        );
+        setUnitsReady(true);
+      } catch (error) {
+        if (cancelled) return;
+        setUnitsCheckError(
+          error instanceof Error
+            ? error.message
+            : "We couldn't confirm your assigned unit. Please try again.",
+        );
+      }
+    }
+
+    const checkTimerId = window.setTimeout(() => {
+      if (cancelled) return;
+      setUnitsReady(false);
+      setUnitsCheckError(null);
+      void confirmUnits();
+    }, 0);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(checkTimerId);
+    };
+  }, [step, bookingId]);
+
   const updateDraft = useCallback((patch: Partial<ReservationDraft>) => {
     setDraft((current) => ({ ...current, ...patch }));
   }, []);
@@ -311,7 +348,7 @@ function ReserveFlowInner({ product: primaryProduct, units: primaryUnits, cartPr
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  async function handlePayment(proofFile: File, referenceNumber: string) {
+  async function handleManualPaymentContinue() {
     if (!user) return;
     setOpeningPayment(true);
     setPaymentError(null);
@@ -321,35 +358,40 @@ function ReserveFlowInner({ product: primaryProduct, units: primaryUnits, cartPr
       let activeBookingNumber = bookingNumber;
       if (!activeBookingId) {
         const supabase = createClient();
-        const reservation = await createBookingReservation(
-          supabase,
-          primaryProduct,
-          draft,
-          bookingLines.map((line) => ({ product: line.product, quantity: line.quantity })),
-        );
+        const reservation = await createBookingReservation(supabase, product, draft);
         activeBookingId = reservation.bookingId;
         activeBookingNumber = reservation.bookingNumber ?? reservation.bookingId;
         setBookingId(activeBookingId);
         setBookingNumber(activeBookingNumber);
       }
 
-      await submitManualGcashPayment({
-        bookingId: activeBookingId,
-        paymentOption: draft.paymentOption,
-        referenceNumber,
-        proofFile,
-      });
-      setPaymentState("pending");
-      setOpeningPayment(false);
-      showToast("GCash payment proof submitted for admin verification.", "success");
+      if (paymentState === "unpaid") {
+        if (!draft.manualPayment.proofFile) {
+          throw new Error("Upload a screenshot or proof of payment.");
+        }
+        await submitManualPayment(activeBookingId, {
+          referenceNumber: draft.manualPayment.referenceNumber.trim(),
+          accountName: draft.manualPayment.accountName.trim(),
+          accountNumber: draft.manualPayment.accountNumber.trim(),
+          paymentOption: draft.paymentOption,
+          proofFile: draft.manualPayment.proofFile,
+        });
+        setPaymentState("pending");
+      }
+      goToStep(4);
     } catch (error) {
+      setPaymentError(
+        error instanceof Error ? error.message : "We couldn't submit your payment details. Please try again.",
+      );
+    } finally {
       setOpeningPayment(false);
-      setPaymentError(error instanceof Error ? error.message : "The GCash payment proof could not be submitted.");
     }
   }
 
   async function handleDocumentSubmission() {
     if (!user || !bookingId || !bookingNumber) return;
+    if (documentSubmissionInFlightRef.current) return;
+    documentSubmissionInFlightRef.current = true;
     setSubmittingDocuments(true);
     try {
       await submitBookingDocuments(bookingId, draft);
@@ -358,51 +400,62 @@ function ReserveFlowInner({ product: primaryProduct, units: primaryUnits, cartPr
       } catch {
         // A completed booking no longer depends on the local draft backup.
       }
-      bookingLines.forEach((line) => removeCartItem(line.product.id));
+      removeCartItem(product.id);
       showToast("Verification documents and signed agreement submitted.", "success");
+      // Advance immediately on success -- submitBookingDocuments no longer
+      // waits on the (slow, non-fatal) signed-agreement PDF render.
       goToStep(6);
     } catch (error) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error("[handleDocumentSubmission] agreement submission failed", { bookingId, error });
+      }
       showToast(
         error instanceof Error ? error.message : "We couldn't submit your documents. Please try again.",
         "error",
       );
     } finally {
+      documentSubmissionInFlightRef.current = false;
       setSubmittingDocuments(false);
     }
   }
 
+  const pricing = calculateReservationPricing(product, draft, rewardProgress, isGuest);
   const agreementData = {
     bookingRef: bookingNumber ?? "Created before payment",
     customerName: draft.customerInfo.fullName || "-",
-    productName: product.name,
-    brand: product.brand ?? "",
+    items: [
+      {
+        productName: product.name,
+        brand: product.brand ?? "",
+        quantity: draft.quantity,
+        pricePerDay: product.pricePerDay,
+        rentalDays: pricing.rentalDays,
+        lineTotal: pricing.productSubtotal,
+        includedAccessories: product.included,
+        units: assignedUnits,
+      },
+    ],
     startDate: draft.startDate ?? new Date(),
     endDate: draft.endDate ?? new Date(),
     dayCount: getDayCount(draft.startDate, draft.endDate),
     fulfillmentMethod: draft.fulfillmentMethod ?? "pickup",
     customerLocation: draft.fulfillmentMethod ? formatCustomerLocation(draft) || "-" : "-",
-    pricePerDay: product.pricePerDay,
-    quantity: draft.quantity,
     currency: product.currency,
-    includedAccessories: product.included,
-    items: bookingLines.map((line) => ({
-      productName: line.product.name,
-      brand: line.product.brand ?? "",
-      quantity: line.quantity,
-      pricePerDay: line.product.pricePerDay,
-      includedAccessories: line.product.included,
-    })),
-  } as const;
-  const pricing = calculateReservationPricing(product, draft, rewardProgress);
+    subtotal: pricing.productSubtotal,
+    discountAmount: pricing.discountAmount,
+    depositAmount: pricing.depositAmount,
+    fees: pricing.fees,
+    finalAmount: pricing.finalAmount,
+  };
 
   return (
     <div className={styles.wrapper}>
       <header className={styles.reserveHeader}>
         <div>
           <p className={styles.eyebrow}>GUIDED RESERVATION</p>
-          <h1>{isMultiItem ? "Reserve your selected rentals" : `Reserve ${product.name}`}</h1>
+          <h1>Reserve {product.name}</h1>
           <p>
-            Choose your schedule, submit your GCash payment proof, complete verification, and sign the agreement.
+            Choose your schedule, pay securely, submit verification, and sign the agreement.
           </p>
         </div>
         <div className={styles.headerRate}>
@@ -426,11 +479,11 @@ function ReserveFlowInner({ product: primaryProduct, units: primaryUnits, cartPr
 
       <ReservationStepper steps={STEP_LABELS} currentStep={step} />
 
-      <div className={styles.flowLayout}>
+      <div className={`${styles.flowLayout} ${step === 2 ? styles.flowLayoutNoSidebar : ""}`}>
+        {step === 2 ? null : (
         <aside className={styles.bookingSummary} aria-label="Selected rental summary">
           <p className={styles.summaryEyebrow}>YOUR SELECTED RENTAL</p>
           <h2>{product.name}</h2>
-          {isMultiItem ? <ul className={styles.summaryItems}>{bookingLines.map((line) => <li key={line.product.id}><span>{line.product.name}</span><strong>× {line.quantity}</strong></li>)}</ul> : null}
           {Object.keys(product.specs).length > 0 ? (
             <dl className={styles.summarySpecs}>
               {Object.entries(product.specs).map(([label, value]) => (
@@ -443,12 +496,12 @@ function ReserveFlowInner({ product: primaryProduct, units: primaryUnits, cartPr
           ) : null}
           <dl className={styles.summaryFacts}>
             <div>
-              <dt>{isMultiItem ? "Selected units" : "Rental inventory"}</dt>
-              <dd>{isMultiItem ? selectedUnitCount : units.totalUnits} {isMultiItem ? "in this checkout" : `${units.totalUnits === 1 ? "unit" : "units"} total`}</dd>
+              <dt>Rental inventory</dt>
+              <dd>{units.totalUnits} {units.totalUnits === 1 ? "unit" : "units"} total</dd>
             </div>
             <div>
-              <dt>{isMultiItem ? "Products" : "Quantity"}</dt>
-              <dd>{isMultiItem ? `${bookingLines.length} products` : `${draft.quantity} ${draft.quantity === 1 ? "unit" : "units"}`}</dd>
+              <dt>Quantity</dt>
+              <dd>{draft.quantity} {draft.quantity === 1 ? "unit" : "units"}</dd>
             </div>
             <div>
               <dt>Current total</dt>
@@ -463,14 +516,15 @@ function ReserveFlowInner({ product: primaryProduct, units: primaryUnits, cartPr
               <dd>{step} of {STEP_LABELS.length}</dd>
             </div>
           </dl>
-          <Link href={isMultiItem ? "/cart" : `/catalog/${product.id}`} className={styles.detailsLink}>
-            {isMultiItem ? "Review cart selection" : "Review item details"}
+          <Link href={`/catalog/${product.id}`} className={styles.detailsLink}>
+            Review item details
           </Link>
           <div className={styles.secureNote}>
             <strong>Secure booking flow</strong>
-            <span>Pay by the official GCash QR and upload your receipt for admin verification.</span>
+            <span>Payment is completed manually via GCash before document submission.</span>
           </div>
         </aside>
+        )}
 
         <div className={styles.card}>
           <div className={styles.cardTopline}>
@@ -486,8 +540,8 @@ function ReserveFlowInner({ product: primaryProduct, units: primaryUnits, cartPr
             }
             onContinue={() => goToStep(2)}
             isGuest={isGuest}
-            birthDateLocked={Boolean(profile?.birthDate)}
-            birthDateVerified={Boolean(profile?.birthDateVerifiedAt)}
+            birthDateLocked={!isGuest && Boolean(profile?.birthDate)}
+            birthDateVerified={!isGuest && Boolean(profile?.birthDateVerifiedAt)}
           />
         ) : null}
 
@@ -496,7 +550,7 @@ function ReserveFlowInner({ product: primaryProduct, units: primaryUnits, cartPr
             product={product}
             units={units}
             draft={draft}
-            lineItems={isMultiItem ? bookingLines : undefined}
+            pricing={pricing}
             onUpdate={updateDraft}
             onBack={() => goToStep(1)}
             onContinue={() => goToStep(3)}
@@ -508,6 +562,7 @@ function ReserveFlowInner({ product: primaryProduct, units: primaryUnits, cartPr
             product={product}
             draft={draft}
             rewardProgress={rewardProgress}
+            isGuest={isGuest}
             paymentState={paymentState}
             isDemoPayment={isDemoPayment}
             bookingId={bookingId ?? undefined}
@@ -517,9 +572,11 @@ function ReserveFlowInner({ product: primaryProduct, units: primaryUnits, cartPr
             checking={checkingPayment}
             error={paymentError}
             onPaymentOptionChange={(paymentOption) => updateDraft({ paymentOption })}
+            onManualPaymentUpdate={(patch) =>
+              updateDraft({ manualPayment: { ...draft.manualPayment, ...patch } })
+            }
             onBack={() => goToStep(2)}
-            onPay={(proofFile, referenceNumber) => void handlePayment(proofFile, referenceNumber)}
-            onContinue={() => goToStep(4)}
+            onContinue={() => void handleManualPaymentContinue()}
           />
         ) : null}
 
@@ -542,6 +599,8 @@ function ReserveFlowInner({ product: primaryProduct, units: primaryUnits, cartPr
             onBack={() => goToStep(4)}
             onContinue={() => void handleDocumentSubmission()}
             submitting={submittingDocuments}
+            unitsReady={unitsReady}
+            unitsCheckError={unitsCheckError}
           />
         ) : null}
 
@@ -578,8 +637,9 @@ export default function ReserveFlowClient(props: ReserveFlowClientProps) {
           <p className={styles.eyebrow}>RESERVATION RECOVERY</p>
           <h1 id="resume-booking-heading">Sign in to resume your payment confirmation.</h1>
           <p>
-            Your reservation link is safe. Sign in with the same customer email and we&apos;ll
-            return you directly to Payment Submission without asking you to enter the rental details again.
+            Your reservation link is safe. Your previous session expired, so sign in with the
+            same customer email and we&apos;ll return you directly to Payment Submission without
+            asking you to enter the rental details again.
           </p>
           <div className={`${styles.gateOptions} ${styles.resumeGate}`}>
             <div>
@@ -604,7 +664,7 @@ export default function ReserveFlowClient(props: ReserveFlowClientProps) {
         <div className={styles.gateOptions}>
           <div>
             <strong>Continue as guest</strong>
-            <span>No password required. You will still provide an email for booking and payment-review updates.</span>
+            <span>No password required. You will still provide an email for booking updates.</span>
             <button
               type="button"
               disabled={startingGuest}

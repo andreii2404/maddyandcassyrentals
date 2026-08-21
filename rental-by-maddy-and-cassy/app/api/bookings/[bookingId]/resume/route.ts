@@ -69,6 +69,7 @@ export async function GET(
         bookingRef: booking.bookingRef,
         productId: booking.productId,
         quantity: booking.quantity,
+        items: booking.items.map((item) => ({ productId: item.productId, quantity: item.quantity })),
         startDate: booking.startDate,
         endDate: booking.endDate,
         pickupConvenienceFee: booking.pickupConvenienceFee ?? 0,

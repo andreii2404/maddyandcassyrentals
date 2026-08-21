@@ -16,13 +16,11 @@ function documentNumber(prefix: string, bookingRef: string, id: string): string 
 
 export interface FulfillPaymentInput {
   paymentSubmissionId: string;
-  providerPaymentId?: string;
-  externalReference?: string;
+  providerPaymentId: string;
   paymentMethod: string;
   providerStatus?: string;
   providerMetadata?: Record<string, unknown>;
   providerEventId?: string;
-  reviewedBy?: string;
 }
 
 export interface FulfillPaymentResult {
@@ -32,15 +30,17 @@ export interface FulfillPaymentResult {
 }
 
 /**
- * Runs every side effect of a verified payment: marks the payment
- * submission verified, issues a receipt (with PDF), logs the event, and — if
- * every other confirmation gate already cleared — flips the booking to
- * 'confirmed' via the service-role-only system_confirm_booking() RPC and
- * finalizes the signed agreement PDF. Called from both the production
- * manual GCash review and any retained legacy provider route, always with the
- * service-role (RLS-bypassing) admin client, and always after the caller has
- * independently verified the payment is real (signature check or dev-only
- * demo gate) — never from client-supplied status alone.
+ * Runs every side effect of a verified payment: marks the payment submission
+ * verified, issues a receipt (with PDF), logs the event, and — if every other
+ * confirmation gate already cleared — flips the booking to 'confirmed' via the
+ * service-role-only system_confirm_booking() RPC and finalizes the signed
+ * agreement PDF. Called from the admin manual-payment-review route after an
+ * administrator has verified a customer's submitted GCash proof of payment,
+ * always with the service-role (RLS-bypassing) admin client — never from
+ * client-supplied status alone. (Formerly also called from the PayMongo
+ * webhook and sandbox demo-complete route before payments moved to manual
+ * GCash review; `providerPaymentId` still lands in the paymongo_payment_id
+ * column, which now doubles as a general external-reference slot.)
  *
  * There is no more booking_invoices table, so the old "update the matching
  * invoice's amount_paid/balance_due" step has no equivalent and is dropped —
@@ -72,17 +72,13 @@ export async function fulfillVerifiedPayment(
     ...((payment.provider_metadata as Record<string, unknown>) ?? {}),
     ...(input.providerMetadata ?? {}),
   };
-  const providerReference =
-    input.externalReference || input.providerPaymentId || payment.external_reference || payment.id;
   await admin
     .from("booking_payment_submissions")
     .update({
       status: "verified",
-      paymongo_payment_id: input.providerPaymentId || payment.paymongo_payment_id,
-      external_reference: input.externalReference || payment.external_reference,
+      paymongo_payment_id: input.providerPaymentId,
       payment_method: input.paymentMethod,
       provider_metadata: toJson(mergedMetadata),
-      reviewed_by: input.reviewedBy || payment.reviewed_by,
       reviewed_at: now,
       completed_at: now,
     })
@@ -95,7 +91,7 @@ export async function fulfillVerifiedPayment(
   await generateAndSaveReceipt(admin, {
     booking,
     receiptNumber,
-    paymentReference: providerReference,
+    paymentReference: input.providerPaymentId,
     paymentMethod: input.paymentMethod,
     storagePath: receiptPath,
     amount: payment.declared_amount,
@@ -119,7 +115,7 @@ export async function fulfillVerifiedPayment(
     p_previous_values: { status: payment.status },
     p_new_values: {
       status: "verified",
-      paymentReference: providerReference,
+      providerPaymentId: input.providerPaymentId,
       paymentMethod: input.paymentMethod,
     },
   });
@@ -143,7 +139,7 @@ export async function fulfillVerifiedPayment(
   if (agreementRow?.status === "completed" && booking.status === "approved") {
     const { data: confirmedBooking, error: confirmError } = await admin.rpc(
       "system_confirm_booking",
-      { p_booking_id: booking.id, p_note: "Auto-confirmed after verified payment." },
+      { p_booking_id: booking.id, p_note: "Auto-confirmed after verified GCash payment." },
     );
 
     if (!confirmError && confirmedBooking) {
@@ -192,7 +188,7 @@ export async function fulfillVerifiedPayment(
               signedAt: s.signed_at,
             })),
           },
-          paymentReference: providerReference,
+          paymentReference: input.providerPaymentId,
           storagePath: agreementPath,
         });
 

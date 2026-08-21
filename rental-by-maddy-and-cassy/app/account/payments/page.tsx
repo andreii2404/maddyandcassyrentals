@@ -8,6 +8,7 @@ import { getBookingsForUser } from "@/src/services/bookingService";
 import { getBookingPayments } from "@/src/services/paymentService";
 import type { Booking } from "@/src/types/booking";
 import type { PaymentRecord } from "@/src/types/payment";
+import { bookingHeadline } from "@/src/lib/bookingDisplay";
 import Spinner from "@/components/ui/Spinner";
 import styles from "./payments.module.css";
 
@@ -70,7 +71,7 @@ export default function PaymentHistoryPage() {
         <div>
           <p>PAYMENT RECORDS</p>
           <h1>Payment History</h1>
-          <span>Track submitted GCash proofs, verification status, and official receipts.</span>
+          <span>Track your GCash payment submissions and verified payments.</span>
         </div>
         <Link href="/account/bookings">Back to bookings</Link>
       </header>
@@ -86,7 +87,7 @@ export default function PaymentHistoryPage() {
             <article key={`${booking.id}-${payment.id}`} className={styles.card}>
               <div>
                 <Link href={`/account/bookings/${booking.id}`}>{booking.bookingRef}</Link>
-                <p>{booking.productSnapshot.name}</p>
+                <p>{bookingHeadline(booking.items)}</p>
                 <small>{new Date(payment.createdAt).toLocaleString("en-PH")}</small>
               </div>
               <div className={styles.payment}>

@@ -64,8 +64,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           try {
             // INITIAL_SESSION can contain a locally cached user whose refresh
             // token has since been revoked. Validate it with Auth before the
-            // app treats the customer as signed in; otherwise external flows can
-            // return to a stale-looking session whose database calls are anon.
+            // app treats the customer as signed in; otherwise a resumed
+            // reservation link can land on a stale-looking session whose
+            // database calls are anon.
             const verifiedUser = nextUser
               ? await getCurrentUser().catch(() => null)
               : null;

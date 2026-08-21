@@ -25,8 +25,15 @@ interface DateRangePickerProps {
   endDate: Date | null;
   onChange: (range: { startDate: Date | null; endDate: Date | null }) => void;
   disabledDateKeys: Set<string>;
+  /**
+   * Subset of disabledDateKeys where every blocking booking has already been
+   * approved/confirmed/released by admin (vs. still pending review). Colored
+   * grey instead of red — still unselectable, same as any disabled date.
+   */
+  confirmedDateKeys?: Set<string>;
   maxRentalDays?: number;
   singleDate?: boolean;
+  hideSelectionSummary?: boolean;
 }
 
 export default function DateRangePicker({
@@ -34,8 +41,10 @@ export default function DateRangePicker({
   endDate,
   onChange,
   disabledDateKeys,
+  confirmedDateKeys,
   maxRentalDays = 30,
   singleDate = false,
+  hideSelectionSummary = false,
 }: DateRangePickerProps) {
   const [visibleMonth, setVisibleMonth] = useState(startOfMonth(startDate ?? new Date()));
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +56,10 @@ export default function DateRangePicker({
 
   function isBooked(day: Date): boolean {
     return disabledDateKeys.has(toDateKey(day));
+  }
+
+  function isConfirmed(day: Date): boolean {
+    return !!confirmedDateKeys?.has(toDateKey(day));
   }
 
   function isDisabled(day: Date): boolean {
@@ -148,6 +161,7 @@ export default function DateRangePicker({
         {daysInMonth.map((day) => {
           const past = isPast(day);
           const booked = !past && isBooked(day);
+          const confirmed = booked && isConfirmed(day);
           const disabled = past || booked;
           const selected =
             !!selectionStartDay && !!selectionEndDay
@@ -157,7 +171,8 @@ export default function DateRangePicker({
           let statusLabel = "";
           if (selected) statusLabel = ", selected";
           else if (past) statusLabel = ", past date";
-          else if (booked) statusLabel = ", already booked";
+          else if (confirmed) statusLabel = ", reserved and confirmed, unavailable";
+          else if (booked) statusLabel = ", temporarily reserved, pending review";
           else statusLabel = ", available";
 
           return (
@@ -174,7 +189,8 @@ export default function DateRangePicker({
                 styles.day,
                 !isSameMonth(day, visibleMonth) ? styles.outsideMonth : "",
                 !selected && past ? styles.dayPast : "",
-                !selected && booked ? styles.dayBooked : "",
+                !selected && confirmed ? styles.dayConfirmed : "",
+                !selected && booked && !confirmed ? styles.dayBooked : "",
                 !selected && !disabled ? styles.dayAvailable : "",
                 selected ? styles.dayEdge : "",
               ]
@@ -191,7 +207,7 @@ export default function DateRangePicker({
         })}
       </div>
 
-      {startDate && selectionEnd ? (
+      {hideSelectionSummary ? null : startDate && selectionEnd ? (
         <p className={styles.selectionSummary} role="status">
           <span className={styles.selectionIcon} aria-hidden="true">✓</span>
           <span>
@@ -221,7 +237,8 @@ export default function DateRangePicker({
 
       <p className={styles.legend}>
         <span className={styles.legendSwatch} data-variant="available" /> Available
-        <span className={styles.legendSwatch} data-variant="booked" /> Booked
+        <span className={styles.legendSwatch} data-variant="booked" /> Pending review
+        <span className={styles.legendSwatch} data-variant="confirmed" /> Confirmed
         <span className={styles.legendSwatch} data-variant="selected" /> Selected
         <span className={styles.legendSwatch} data-variant="disabled" /> Past
       </p>

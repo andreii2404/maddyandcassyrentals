@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { enforceRateLimit, requireActiveAdmin, RequestSecurityError } from "@/src/lib/server/requestSecurity";
 import { getAllBookings } from "@/src/services/bookingService";
+import { bookingHeadline } from "@/src/lib/bookingDisplay";
 
 export const runtime = "nodejs";
 
@@ -28,8 +29,10 @@ export async function GET(request: Request): Promise<NextResponse> {
       if (!CLOSED_STATUSES.has(booking.status)) activeBookings += 1;
       if (booking.status === "returned") completedRentals += 1;
       if (booking.requirementsStatus === "pending_review") pendingVerification += 1;
-      const productName = booking.productSnapshot.name || "Rental item";
-      productBookingCounts.set(productName, (productBookingCounts.get(productName) ?? 0) + 1);
+      for (const item of booking.items) {
+        const productName = item.productName || "Rental item";
+        productBookingCounts.set(productName, (productBookingCounts.get(productName) ?? 0) + 1);
+      }
     }
 
     const paymentRows = payments ?? [];
@@ -56,7 +59,7 @@ export async function GET(request: Request): Promise<NextResponse> {
         id: booking.id,
         bookingRef: booking.bookingRef,
         customerName: booking.customerSnapshot.fullName || "Customer",
-        productName: booking.productSnapshot.name || "Rental item",
+        productName: bookingHeadline(booking.items),
         status: booking.status,
         createdAt: booking.createdAt,
       })),

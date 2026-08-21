@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Navbar from "@/components/navbar/Navbar";
 import { getActiveProducts } from "@/src/services/productService";
 import CartView from "./CartView";
 
@@ -14,7 +13,6 @@ export default async function CartPage() {
   const products = await getActiveProducts();
   return (
     <div>
-      <Navbar />
       <main>
         <CartView products={products} />
       </main>

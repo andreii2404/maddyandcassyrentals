@@ -3,6 +3,7 @@ import { z } from "zod";
 import { enforceRateLimit, requireUser, RequestSecurityError } from "@/src/lib/server/requestSecurity";
 import { createAdminClient } from "@/src/lib/supabase/admin";
 import type { Database } from "@/src/lib/supabase/database.types";
+import { isAtLeastMinimumAge, UNDERAGE_ERROR_MESSAGE } from "@/src/lib/authValidation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,6 +35,9 @@ export async function PATCH(request: Request): Promise<NextResponse> {
       const birthDate = new Date(`${parsed.data.birthDate}T00:00:00Z`);
       if (Number.isNaN(birthDate.getTime()) || birthDate > new Date()) {
         return errorResponse("Birth date cannot be in the future.", 400);
+      }
+      if (!isAtLeastMinimumAge(parsed.data.birthDate)) {
+        return errorResponse(UNDERAGE_ERROR_MESSAGE, 400);
       }
     }
 

@@ -9,7 +9,6 @@ export async function GET() {
   const checks = {
     database: false,
     storage: false,
-    manualGcashPayment: true,
     bookingEmailConfigured: isBookingEmailConfigured(),
   };
 
@@ -32,7 +31,7 @@ export async function GET() {
     // Return a safe degraded response without exposing provider details.
   }
 
-  const healthy = checks.database && checks.storage && checks.manualGcashPayment;
+  const healthy = checks.database && checks.storage;
 
   return NextResponse.json(
     { status: healthy ? "ok" : "degraded", checks, timestamp: new Date().toISOString() },

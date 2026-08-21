@@ -1,23 +1,25 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { differenceInCalendarDays } from "date-fns";
+import { useEffect, useMemo, useState } from "react";
+import { differenceInCalendarDays, format, isSameDay } from "date-fns";
 import type { Product } from "@/types/product";
 import type { UnitCounts } from "@/lib/availability";
 import type { FulfillmentMethod } from "@/src/types/booking";
 import type { ReservationDraft } from "@/src/types/reservationDraft";
+import type { ReservationPricing } from "@/src/lib/reservationPricing";
 import {
+  getCalendarDateStatuses,
   getTimeAvailability,
   type TimeAvailability,
 } from "@/src/services/availabilityService";
 import {
-  calculateNextAvailableDateTime,
   calculateReturnDateTime,
   combineManilaPickupDateTime,
   formatManilaDateTime,
   formatManilaPickupTime,
   isOutsideNormalPickupWindow,
   isValidPickupTime,
+  manilaTimeInputValue,
   pickupDateKey,
 } from "@/src/lib/rentalTiming";
 import DateRangePicker from "@/components/date-range-picker/DateRangePicker";
@@ -25,29 +27,72 @@ import formStyles from "@/components/ui/Form.module.css";
 import styles from "./StepRentalDetails.module.css";
 import { PHILIPPINE_PROVINCES } from "@/src/data/philippineLocations";
 
+function isPickupTimeInPast(date: Date | null, time: string): boolean {
+  if (!date || !isValidPickupTime(time)) return false;
+  const candidate = combineManilaPickupDateTime(pickupDateKey(date), time);
+  return !Number.isNaN(candidate.getTime()) && candidate.getTime() <= Date.now();
+}
+
 interface StepRentalDetailsProps {
   product: Product;
   units: UnitCounts;
   draft: ReservationDraft;
+  pricing: ReservationPricing;
   onUpdate: (patch: Partial<ReservationDraft>) => void;
   onContinue: () => void;
   onBack?: () => void;
-  lineItems?: Array<{ product: Product; units: UnitCounts; quantity: number }>;
 }
 
 export default function StepRentalDetails({
   product,
   units,
   draft,
+  pricing,
   onUpdate,
   onContinue,
   onBack,
-  lineItems,
 }: StepRentalDetailsProps) {
-  const disabledDateKeys = useMemo(() => new Set<string>(), []);
+  const [disabledDateKeys, setDisabledDateKeys] = useState<Set<string>>(new Set());
+  const [confirmedDateKeys, setConfirmedDateKeys] = useState<Set<string>>(new Set());
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [timeAvailability, setTimeAvailability] = useState<TimeAvailability | null>(null);
+  const [pastTimeNotice, setPastTimeNotice] = useState(() =>
+    isPickupTimeInPast(draft.startDate, draft.pickupTime),
+  );
+  const [nowTick, setNowTick] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNowTick(Date.now()), 30000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  // Mark calendar days that are fully booked for every active unit, from the
+  // same server-backed reserved_window data the pickup-time/quantity/checkout
+  // checks below use -- so the calendar can't show a date as pickable that
+  // the exact-time check would then reject. Days where every blocking
+  // booking is already admin-approved/confirmed/released render grey
+  // (confirmedDateKeys); days still blocked only by pending-review bookings
+  // render red. This is still a UX-only, day-granularity hint: the
+  // authoritative check is getTimeAvailability below, and the real guard is
+  // the create_*_booking RPC at submission.
+  useEffect(() => {
+    let cancelled = false;
+    getCalendarDateStatuses(product.id)
+      .then(({ disabledDateKeys, confirmedDateKeys }) => {
+        if (cancelled) return;
+        setDisabledDateKeys(disabledDateKeys);
+        setConfirmedDateKeys(confirmedDateKeys);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setDisabledDateKeys(new Set());
+        setConfirmedDateKeys(new Set());
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [product.id]);
 
   const pickupAt = useMemo(() => {
     if (!draft.startDate || !isValidPickupTime(draft.pickupTime)) return null;
@@ -55,46 +100,25 @@ export default function StepRentalDetails({
     return Number.isNaN(value.getTime()) ? null : value;
   }, [draft.pickupTime, draft.startDate]);
 
+  const isPickupToday = !!draft.startDate && pickupDateKey(draft.startDate) === pickupDateKey(new Date(nowTick));
+  const earliestPickupTimeToday = manilaTimeInputValue(new Date(nowTick));
+  const isPickupTimePast = !!pickupAt && pickupAt.getTime() <= nowTick;
+
   const selectedRentalEndDate = draft.rentalEndDate ?? draft.startDate;
   const rentalDays = draft.startDate && selectedRentalEndDate
     ? Math.max(1, differenceInCalendarDays(selectedRentalEndDate, draft.startDate) + 1)
     : 1;
   const returnAt = pickupAt ? calculateReturnDateTime(pickupAt, rentalDays) : null;
-  const nextAvailableAt = pickupAt ? calculateNextAvailableDateTime(pickupAt, rentalDays) : null;
-  const selectedLines = useMemo(
-    () => lineItems?.length ? lineItems : [{ product, units, quantity: draft.quantity }],
-    [draft.quantity, lineItems, product, units],
-  );
-
-  const checkSelectedAvailability = useCallback(async (at: Date): Promise<TimeAvailability> => {
-    const results = await Promise.all(selectedLines.map(async (line) => ({
-      line,
-      availability: await getTimeAvailability(line.product.id, at, line.quantity, rentalDays),
-    })));
-    const allAvailable = results.every(({ line, availability }) => availability.availableUnits >= line.quantity);
-    const nextTimes = results.flatMap(({ availability }) => availability.nextAvailableAt ? [availability.nextAvailableAt] : []);
-    const outside = isOutsideNormalPickupWindow(draft.pickupTime);
-    const fee = outside
-      ? results.every(({ availability }) => availability.pickupConvenienceFee > 0) ? 100 : 0
-      : 0;
-    return {
-      totalUnits: selectedLines.length > 1 ? selectedLines.length : results[0]?.availability.totalUnits ?? 0,
-      availableUnits: selectedLines.length > 1 ? (allAvailable ? selectedLines.length : results.filter(({ line, availability }) => availability.availableUnits >= line.quantity).length) : results[0]?.availability.availableUnits ?? 0,
-      unavailableUnits: selectedLines.length > 1 ? results.filter(({ line, availability }) => availability.availableUnits < line.quantity).length : results[0]?.availability.unavailableUnits ?? 0,
-      nextAvailableAt: nextTimes.sort((a, b) => Date.parse(b) - Date.parse(a))[0] ?? null,
-      pickupConvenienceFee: fee,
-    };
-  }, [draft.pickupTime, rentalDays, selectedLines]);
 
   useEffect(() => {
     if (!pickupAt || pickupAt.getTime() <= Date.now()) return;
     let cancelled = false;
     const timer = window.setTimeout(() => {
-      checkSelectedAvailability(pickupAt)
+      getTimeAvailability(product.id, pickupAt, draft.quantity, rentalDays)
         .then((result) => {
           if (cancelled) return;
           setTimeAvailability(result);
-          const fee = result.pickupConvenienceFee;
+          const fee = draft.fulfillmentMethod === "pickup" ? result.pickupConvenienceFee : 0;
           if (draft.pickupConvenienceFee !== fee) {
             onUpdate({ pickupConvenienceFee: fee });
           }
@@ -107,7 +131,7 @@ export default function StepRentalDetails({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [checkSelectedAvailability, draft.pickupConvenienceFee, onUpdate, pickupAt]);
+  }, [draft.fulfillmentMethod, draft.pickupConvenienceFee, draft.quantity, onUpdate, pickupAt, product.id, rentalDays]);
 
   const isDelivery = draft.fulfillmentMethod === "delivery";
   const hasValidLocation =
@@ -119,38 +143,72 @@ export default function StepRentalDetails({
   const canContinue =
     !!draft.startDate &&
     !!pickupAt &&
+    !isPickupTimePast &&
     !!returnAt &&
     !!draft.fulfillmentMethod &&
     hasValidLocation &&
     draft.quantity >= 1 &&
     !!timeAvailability &&
-    (selectedLines.length > 1
-      ? timeAvailability.availableUnits === selectedLines.length
-      : draft.quantity <= timeAvailability.availableUnits);
+    draft.quantity <= timeAvailability.availableUnits;
+
+  const missingItems: string[] = [];
+  if (!draft.startDate) {
+    missingItems.push("Choose your rental dates.");
+  }
+  if (draft.startDate && !isValidPickupTime(draft.pickupTime)) {
+    missingItems.push("Choose a pickup time.");
+  } else if (isPickupTimePast) {
+    missingItems.push("Pick a pickup time that hasn't passed yet.");
+  }
+  if (!draft.fulfillmentMethod) {
+    missingItems.push("Choose pickup or delivery.");
+  } else if (isDelivery && !hasValidLocation) {
+    missingItems.push("Add your complete delivery address.");
+  }
+  if (pickupAt && !isPickupTimePast && draft.fulfillmentMethod && hasValidLocation) {
+    if (!timeAvailability) {
+      missingItems.push("Checking availability for this pickup time…");
+    } else if (draft.quantity > timeAvailability.availableUnits) {
+      missingItems.push(`Only ${timeAvailability.availableUnits} unit${timeAvailability.availableUnits === 1 ? "" : "s"} available at this time — lower the quantity.`);
+    }
+  }
+
+  const selectedDatesLabel =
+    draft.startDate && selectedRentalEndDate
+      ? isSameDay(draft.startDate, selectedRentalEndDate)
+        ? format(draft.startDate, "EEE, MMM d, yyyy")
+        : `${format(draft.startDate, "MMM d, yyyy")} – ${format(selectedRentalEndDate, "MMM d, yyyy")}`
+      : "Not selected yet";
 
   function updatePickupSchedule(
     date: Date | null,
     rentalEndDate: Date | null = date,
     pickupTime = draft.pickupTime,
   ) {
-    if (!date || !rentalEndDate || !isValidPickupTime(pickupTime)) {
+    // A time that's already past for today's date is never accepted -- drop
+    // it back to unset rather than let a stale selection sit in the field.
+    const rejectPastTime = isValidPickupTime(pickupTime) && isPickupTimeInPast(date, pickupTime);
+    const effectiveTime = rejectPastTime ? "" : pickupTime;
+    setPastTimeNotice(rejectPastTime);
+
+    if (!date || !rentalEndDate || !isValidPickupTime(effectiveTime)) {
       onUpdate({
         startDate: date,
         endDate: null,
         rentalEndDate,
-        pickupTime,
+        pickupTime: effectiveTime,
         pickupConvenienceFee: 0,
       });
       setTimeAvailability(null);
       return;
     }
-    const nextPickupAt = combineManilaPickupDateTime(pickupDateKey(date), pickupTime);
+    const nextPickupAt = combineManilaPickupDateTime(pickupDateKey(date), effectiveTime);
     const nextRentalDays = Math.max(1, differenceInCalendarDays(rentalEndDate, date) + 1);
     onUpdate({
       startDate: nextPickupAt,
       endDate: calculateReturnDateTime(nextPickupAt, nextRentalDays),
       rentalEndDate,
-      pickupTime,
+      pickupTime: effectiveTime,
       pickupConvenienceFee: 0,
     });
     setTimeAvailability(null);
@@ -169,7 +227,7 @@ export default function StepRentalDetails({
         pickupConvenienceFee: timeAvailability?.pickupConvenienceFee ?? 0,
       });
     } else {
-      onUpdate({ fulfillmentMethod: method, pickupConvenienceFee: timeAvailability?.pickupConvenienceFee ?? 0 });
+      onUpdate({ fulfillmentMethod: method, pickupConvenienceFee: 0 });
     }
   }
 
@@ -181,7 +239,7 @@ export default function StepRentalDetails({
       return;
     }
     if (pickupAt.getTime() <= Date.now()) {
-      setError("Please select a future pickup date and time.");
+      setError("Please select a future pickup time.");
       return;
     }
     if (!draft.fulfillmentMethod) {
@@ -196,7 +254,7 @@ export default function StepRentalDetails({
     setChecking(true);
     let latestAvailability: TimeAvailability;
     try {
-      latestAvailability = await checkSelectedAvailability(pickupAt);
+      latestAvailability = await getTimeAvailability(product.id, pickupAt, draft.quantity, rentalDays);
     } catch {
       setChecking(false);
       setError("The exact pickup-time availability could not be checked. Please try again.");
@@ -204,12 +262,12 @@ export default function StepRentalDetails({
     }
     setChecking(false);
     setTimeAvailability(latestAvailability);
-    const fee = latestAvailability.pickupConvenienceFee;
+    const fee = draft.fulfillmentMethod === "pickup" ? latestAvailability.pickupConvenienceFee : 0;
     if (draft.pickupConvenienceFee !== fee) {
       onUpdate({ pickupConvenienceFee: fee });
     }
 
-    if (selectedLines.length > 1 ? latestAvailability.availableUnits < selectedLines.length : latestAvailability.availableUnits < draft.quantity) {
+    if (latestAvailability.availableUnits < draft.quantity) {
       const requestedTime = formatManilaPickupTime(pickupAt);
       const availableMessage = latestAvailability.nextAvailableAt
         ? ` and will be available starting ${formatManilaDateTime(latestAvailability.nextAvailableAt)}`
@@ -228,184 +286,247 @@ export default function StepRentalDetails({
       <div>
         <h2 className={styles.flowHeading}>Reservation</h2>
         <p className={styles.flowSubheading}>
-          Select one date, or select a start and end date for a multi-day rental. Each rental day
-          follows the 22-hour use period, with a two-hour preparation period after the final return.
+          Pick your dates, choose a pickup time, and let us know how you&apos;d like to get your rental.
         </p>
       </div>
-      <div className={styles.grid}>
-        <div>
-          <h3 className={styles.sectionHeading}>Pickup Date &amp; Time</h3>
-          <div className={styles.scheduleGrid}>
+
+      <div className={styles.layout}>
+        <div className={styles.mainColumn}>
+          <section className={styles.stepSection}>
+            <h3 className={styles.sectionHeading}>1. Choose your dates</h3>
+            <p className={styles.sectionHint}>
+              Select one date, or select a start and end date for a multi-day rental.
+            </p>
             <DateRangePicker
               startDate={draft.startDate}
               endDate={selectedRentalEndDate}
               onChange={({ startDate, endDate }) => updatePickupSchedule(startDate, endDate)}
               disabledDateKeys={disabledDateKeys}
+              confirmedDateKeys={confirmedDateKeys}
+              hideSelectionSummary
             />
-            <div className={styles.scheduleDetails}>
-              <div className={styles.pickupTimeField}>
-                <label htmlFor="pickupTime">Pickup time</label>
-                <input
-                  id="pickupTime"
-                  type="time"
-                  step={900}
-                  value={draft.pickupTime}
-                  onChange={(event) => updatePickupSchedule(
-                    draft.startDate,
-                    selectedRentalEndDate,
-                    event.target.value,
-                  )}
-                />
-                <span>Normal window: 9:00 AM–7:00 PM</span>
-              </div>
+          </section>
 
-              <p className={styles.availabilityStatus} role="status">
-                {pickupAt && !timeAvailability
-                  ? "Checking this exact pickup time..."
-                  : timeAvailability
-                    ? selectedLines.length > 1
-                      ? `${timeAvailability.availableUnits} of ${timeAvailability.totalUnits} selected products available for this exact schedule.`
-                      : `${timeAvailability.availableUnits} of ${timeAvailability.totalUnits} unit${timeAvailability.totalUnits === 1 ? "" : "s"} available.`
-                    : "Select a date and time to check this unit."}
-              </p>
-
-              {pickupAt && returnAt && nextAvailableAt ? (
-                <dl className={styles.timingSummary}>
-                  <div><dt>Pickup</dt><dd>{formatManilaDateTime(pickupAt)}</dd></div>
-                  <div><dt>Return ({rentalDays} {rentalDays === 1 ? "day" : "days"})</dt><dd>{formatManilaDateTime(returnAt)}</dd></div>
-                  <div><dt>Ready again</dt><dd>{formatManilaDateTime(nextAvailableAt)}</dd></div>
-                </dl>
-              ) : null}
-
-              {pickupAt && isOutsideNormalPickupWindow(draft.pickupTime) && timeAvailability ? (
-                <p className={styles.convenienceNotice}>
-                  {timeAvailability.pickupConvenienceFee > 0
-                    ? `A ₱100 convenience fee applies because you voluntarily chose ${draft.fulfillmentMethod === "delivery" ? "delivery" : "pickup"} before 9:00 AM or after 7:00 PM.`
-                    : "No convenience fee applies because item availability requires this later time."}
+          <section className={styles.stepSection}>
+            <h3 className={styles.sectionHeading}>2. Choose a pickup time</h3>
+            <div className={styles.pickupTimeField}>
+              <label htmlFor="pickupTime">Pickup time</label>
+              <input
+                id="pickupTime"
+                type="time"
+                step={900}
+                min={isPickupToday ? earliestPickupTimeToday : undefined}
+                value={draft.pickupTime}
+                onChange={(event) => updatePickupSchedule(
+                  draft.startDate,
+                  selectedRentalEndDate,
+                  event.target.value,
+                )}
+              />
+              <span>Normal window: 9:00 AM–7:00 PM</span>
+              {pastTimeNotice || isPickupTimePast ? (
+                <p className={formStyles.errorText} role="alert">
+                  Please select a future pickup time.
                 </p>
               ) : null}
-
-              {selectedLines.length > 1 ? (
-                <div className={styles.multiItemPanel}>
-                  <div><strong>Items in this reservation</strong><span>Quantities come from your cart.</span></div>
-                  <ul>{selectedLines.map((line) => <li key={line.product.id}><span>{line.product.name}</span><strong>× {line.quantity}</strong></li>)}</ul>
-                </div>
-              ) : <div className={styles.quantityPanel}>
-                <div>
-                  <label htmlFor="rentalQuantity">Quantity</label>
-                  <span>{units.totalUnits} {units.totalUnits === 1 ? "unit" : "units"} in inventory</span>
-                </div>
-                <div className={styles.quantityControl}>
-                  <button type="button" onClick={() => onUpdate({ quantity: draft.quantity - 1 })} disabled={draft.quantity <= 1} aria-label="Decrease rental quantity">−</button>
-                  <input
-                    id="rentalQuantity"
-                    type="number"
-                    min={1}
-                    max={Math.max(1, timeAvailability?.availableUnits ?? units.totalUnits)}
-                    value={draft.quantity}
-                    onChange={(event) => onUpdate({ quantity: Math.max(1, Math.min(Math.max(1, units.totalUnits), Number(event.target.value) || 1)) })}
-                  />
-                  <button type="button" onClick={() => onUpdate({ quantity: draft.quantity + 1 })} disabled={draft.quantity >= units.totalUnits} aria-label="Increase rental quantity">+</button>
-                </div>
-              </div>}
             </div>
-          </div>
-        </div>
 
-        <div className={styles.fulfillmentColumn}>
-          <h3 className={styles.sectionHeading}>Location &amp; Fulfillment</h3>
+            <p className={styles.availabilityStatus} role="status">
+              {pickupAt && !timeAvailability
+                ? "Checking this exact pickup time..."
+                : timeAvailability
+                  ? `${timeAvailability.availableUnits} of ${timeAvailability.totalUnits} unit${timeAvailability.totalUnits === 1 ? "" : "s"} available.`
+                  : "Select a date and time to check this unit."}
+            </p>
 
-          <fieldset className={styles.fulfillmentFieldset}>
-            <legend className={formStyles.label}>
-              Pickup or delivery<span className={formStyles.required}>*</span>
-            </legend>
+            {timeAvailability && draft.quantity > timeAvailability.availableUnits ? (
+              <p className={formStyles.errorText} role="status">
+                {timeAvailability.nextAvailableAt
+                  ? `This unit is still assigned to a previous rental and will be available starting ${formatManilaDateTime(timeAvailability.nextAvailableAt)}.`
+                  : "This unit is still assigned to a previous rental at this time. Try a different date or pickup time."}
+              </p>
+            ) : null}
 
-            <label className={styles.fulfillmentOption}>
-              <input
-                type="radio"
-                name="fulfillmentMethod"
-                checked={draft.fulfillmentMethod === "pickup"}
-                onChange={() => handleFulfillmentChange("pickup" as FulfillmentMethod)}
-              />
-              <span>
-                <strong>Pickup</strong>
-                <span className={styles.fulfillmentDetail}>
-                  Right Focus Off Campus, Manuel Hizon, Sta. Cruz, Manila. Available by
-                  appointment from 9:00 AM to 7:00 PM.
-                </span>
-              </span>
-            </label>
+            {draft.fulfillmentMethod === "pickup" && pickupAt && isOutsideNormalPickupWindow(draft.pickupTime) && timeAvailability ? (
+              <p className={styles.convenienceNotice}>
+                {timeAvailability.pickupConvenienceFee > 0
+                  ? "A ₱100 convenience fee applies because you chose a pickup outside 9:00 AM–7:00 PM."
+                  : "No convenience fee applies because availability requires this later pickup time."}
+              </p>
+            ) : null}
+          </section>
 
-            <label className={styles.fulfillmentOption}>
-              <input
-                type="radio"
-                name="fulfillmentMethod"
-                checked={draft.fulfillmentMethod === "delivery"}
-                onChange={() => handleFulfillmentChange("delivery" as FulfillmentMethod)}
-              />
-              <span>
-                <strong>Delivery</strong>
-                <span className={styles.fulfillmentDetail}>
-                  Delivery is arranged manually by the business. Delivery fees and courier
-                  arrangements are handled directly with you, outside this website.
-                </span>
-              </span>
-            </label>
-          </fieldset>
+          <section className={styles.stepSection}>
+            <h3 className={styles.sectionHeading}>3. Pickup or delivery</h3>
 
-          {isDelivery ? (
-            <>
-              <div className={formStyles.field}>
-                <label className={formStyles.label} htmlFor="customerLocation">
-                  Delivery address<span className={formStyles.required}>*</span>
-                </label>
-                <textarea
-                  id="customerLocation"
-                  autoComplete="address-line1"
-                  className={formStyles.textarea}
-                  value={draft.customerLocation}
-                  onChange={(event) => onUpdate({ customerLocation: event.target.value })}
-                  placeholder="House/unit number, street, barangay, and any landmark details"
+            <fieldset className={styles.fulfillmentFieldset}>
+              <legend className={formStyles.label}>
+                How would you like to get your rental?<span className={formStyles.required}>*</span>
+              </legend>
+
+              <label className={styles.fulfillmentOption}>
+                <input
+                  type="radio"
+                  name="fulfillmentMethod"
+                  checked={draft.fulfillmentMethod === "pickup"}
+                  onChange={() => handleFulfillmentChange("pickup" as FulfillmentMethod)}
                 />
-              </div>
+                <span>
+                  <strong>Pickup</strong>
+                  <span className={styles.fulfillmentDetail}>
+                    Right Focus Off Campus, Manuel Hizon, Sta. Cruz, Manila. Available by
+                    appointment from 9:00 AM to 7:00 PM.
+                  </span>
+                </span>
+              </label>
 
-              <div className={formStyles.row}>
+              <label className={styles.fulfillmentOption}>
+                <input
+                  type="radio"
+                  name="fulfillmentMethod"
+                  checked={draft.fulfillmentMethod === "delivery"}
+                  onChange={() => handleFulfillmentChange("delivery" as FulfillmentMethod)}
+                />
+                <span>
+                  <strong>Delivery</strong>
+                  <span className={styles.fulfillmentDetail}>
+                    Delivery is arranged manually by the business. Delivery fees and courier
+                    arrangements are handled directly with you, outside this website.
+                  </span>
+                </span>
+              </label>
+            </fieldset>
+
+            {isDelivery ? (
+              <>
                 <div className={formStyles.field}>
-                  <label className={formStyles.label} htmlFor="cityMunicipality">
-                    City/Municipality<span className={formStyles.required}>*</span>
+                  <label className={formStyles.label} htmlFor="customerLocation">
+                    Delivery address<span className={formStyles.required}>*</span>
                   </label>
-                  <input
-                    id="cityMunicipality"
-                    type="text"
-                    autoComplete="address-level2"
-                    className={formStyles.input}
-                    value={draft.cityMunicipality}
-                    onChange={(event) => onUpdate({ cityMunicipality: event.target.value })}
-                    placeholder="e.g. Manila"
+                  <textarea
+                    id="customerLocation"
+                    autoComplete="address-line1"
+                    className={formStyles.textarea}
+                    value={draft.customerLocation}
+                    onChange={(event) => onUpdate({ customerLocation: event.target.value })}
+                    placeholder="House/unit number, street, barangay, and any landmark details"
                   />
                 </div>
 
-                <div className={formStyles.field}>
-                  <label className={formStyles.label} htmlFor="province">
-                    Province<span className={formStyles.required}>*</span>
-                  </label>
-                  <select
-                    id="province"
-                    autoComplete="address-level1"
-                    className={formStyles.select}
-                    value={draft.province}
-                    onChange={(event) => onUpdate({ province: event.target.value })}
-                  >
-                    <option value="">Select province</option>
-                    {PHILIPPINE_PROVINCES.map((province) => (
-                      <option key={province} value={province}>{province}</option>
-                    ))}
-                  </select>
+                <div className={formStyles.row}>
+                  <div className={formStyles.field}>
+                    <label className={formStyles.label} htmlFor="cityMunicipality">
+                      City/Municipality<span className={formStyles.required}>*</span>
+                    </label>
+                    <input
+                      id="cityMunicipality"
+                      type="text"
+                      autoComplete="address-level2"
+                      className={formStyles.input}
+                      value={draft.cityMunicipality}
+                      onChange={(event) => onUpdate({ cityMunicipality: event.target.value })}
+                      placeholder="e.g. Manila"
+                    />
+                  </div>
+
+                  <div className={formStyles.field}>
+                    <label className={formStyles.label} htmlFor="province">
+                      Province<span className={formStyles.required}>*</span>
+                    </label>
+                    <select
+                      id="province"
+                      autoComplete="address-level1"
+                      className={formStyles.select}
+                      value={draft.province}
+                      onChange={(event) => onUpdate({ province: event.target.value })}
+                    >
+                      <option value="">Select province</option>
+                      {PHILIPPINE_PROVINCES.map((province) => (
+                        <option key={province} value={province}>{province}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
+              </>
+            ) : null}
+          </section>
+
+          <section className={styles.stepSection}>
+            <h3 className={styles.sectionHeading}>4. Quantity</h3>
+            <div className={styles.quantityPanel}>
+              <div>
+                <label htmlFor="rentalQuantity">How many do you need?</label>
+                <span>{units.totalUnits} {units.totalUnits === 1 ? "unit" : "units"} in inventory</span>
               </div>
-            </>
-          ) : null}
+              <div className={styles.quantityControl}>
+                <button type="button" onClick={() => onUpdate({ quantity: draft.quantity - 1 })} disabled={draft.quantity <= 1} aria-label="Decrease rental quantity">−</button>
+                <input
+                  id="rentalQuantity"
+                  type="number"
+                  min={1}
+                  max={Math.max(1, timeAvailability?.availableUnits ?? units.totalUnits)}
+                  value={draft.quantity}
+                  onChange={(event) => onUpdate({ quantity: Math.max(1, Math.min(Math.max(1, units.totalUnits), Number(event.target.value) || 1)) })}
+                />
+                <button type="button" onClick={() => onUpdate({ quantity: draft.quantity + 1 })} disabled={draft.quantity >= units.totalUnits} aria-label="Increase rental quantity">+</button>
+              </div>
+            </div>
+          </section>
         </div>
+
+        <aside className={styles.summaryColumn} aria-label="Booking summary">
+          <div className={styles.summaryCard}>
+            <p className={styles.summaryEyebrow}>5. Review &amp; Booking Summary</p>
+            <h3 className={styles.summaryProduct}>{product.name}</h3>
+
+            <dl className={styles.summaryList}>
+              <div>
+                <dt>Selected dates</dt>
+                <dd>{selectedDatesLabel}</dd>
+              </div>
+              <div>
+                <dt>Pickup time</dt>
+                <dd>{pickupAt ? formatManilaPickupTime(pickupAt) : "Not selected yet"}</dd>
+              </div>
+              <div>
+                <dt>Return time</dt>
+                <dd>{returnAt ? formatManilaDateTime(returnAt) : "Not selected yet"}</dd>
+              </div>
+              <div>
+                <dt>Quantity</dt>
+                <dd>{draft.quantity} {draft.quantity === 1 ? "unit" : "units"}</dd>
+              </div>
+              <div>
+                <dt>Pickup/Delivery</dt>
+                <dd>
+                  {draft.fulfillmentMethod === "pickup"
+                    ? "Pickup"
+                    : draft.fulfillmentMethod === "delivery"
+                      ? "Delivery"
+                      : "Not selected yet"}
+                </dd>
+              </div>
+            </dl>
+
+            <div className={styles.summaryTotal}>
+              <span>Current total</span>
+              <strong>
+                {pricing.rentalDays > 0 ? `${product.currency}${pricing.finalAmount.toLocaleString()}` : "Choose dates"}
+              </strong>
+            </div>
+
+            {!canContinue && missingItems.length > 0 ? (
+              <div className={styles.missingNotice} role="status">
+                <strong>Still needed:</strong>
+                <ul>
+                  {missingItems.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+        </aside>
       </div>
 
       {error ? (

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import { AuthProvider } from "@/src/contexts/AuthContext";
 import { ToastProvider } from "@/components/ui/ToastProvider";
+import NavbarGate from "@/components/navbar/NavbarGate";
 import SiteFooter from "@/components/footer/SiteFooter";
 import "./globals.css";
 
@@ -31,12 +32,13 @@ export default function RootLayout({
     <html
       lang="en"
       className={poppins.variable}
-      data-scroll-behavior="smooth"
+      data-scroll-behavior="auto"
       suppressHydrationWarning
     >
       <body>
         <AuthProvider>
           <ToastProvider>
+            <NavbarGate />
             {children}
             <SiteFooter />
           </ToastProvider>

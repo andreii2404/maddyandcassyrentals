@@ -82,9 +82,9 @@ export default function StepRequirements({
     <div className={styles.wrapper}>
       <h2 className={styles.heading}>Verification Document Submission</h2>
       <p className={styles.subheading}>
-        Your reservation payment has been verified. Now submit the documents needed to verify
-        the renter. Accepted valid IDs: {ACCEPTED_ID_EXAMPLES}. At least one ID must show your
-        current address and signature.
+        Your reservation payment proof has been submitted and is pending admin verification. Now
+        submit the documents needed to verify the renter. Accepted valid IDs: {ACCEPTED_ID_EXAMPLES}.
+        At least one ID must show your current address and signature.
       </p>
 
       <div className={styles.documentGrid}>

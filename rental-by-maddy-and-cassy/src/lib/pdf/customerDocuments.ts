@@ -16,20 +16,27 @@ const INK = rgb(0.15, 0.15, 0.15);
 const MUTED = rgb(0.38, 0.38, 0.38);
 const BORDER = rgb(0.86, 0.84, 0.84);
 
+/** One row of the itemized table shared by every customer document. */
+export interface DocumentLineItem {
+  productName: string;
+  pricePerDay: number;
+  quantity: number;
+  rentalDays: number;
+  lineTotal: number;
+  includedAccessories?: string[];
+  /** Present only on the signed agreement -- the frozen unit(s) assigned to this line. */
+  units?: { unitCode: string; serialNumber: string | null }[];
+}
+
 interface CustomerDocumentBase {
   bookingRef: string;
   customerName: string;
   customerEmail: string;
-  productName: string;
+  items: DocumentLineItem[];
   rentalDates: string;
   amount: number;
   issuedAt: string;
   isDemo?: boolean;
-  items?: Array<{
-    productName: string;
-    quantity: number;
-    dailyRate: number;
-  }>;
 }
 
 export interface InvoicePdfInput extends CustomerDocumentBase {
@@ -51,7 +58,6 @@ export interface AgreementPdfInput extends CustomerDocumentBase {
   phone: string;
   fulfillmentMethod: string;
   customerLocation: string;
-  includedAccessories: string[];
   termsVersion: string;
   signedAt: string;
   typedFullName: string;
@@ -220,30 +226,14 @@ function drawSummary(
     columnWidth,
   );
   y = Math.min(leftY, rightY);
-  const itemSummary = input.items && input.items.length > 1
-    ? input.items.map((item, index) => `${index + 1}. ${item.quantity} x ${item.productName} - ${money(item.dailyRate)} / day`).join("\n")
-    : input.productName;
-  const itemY = drawField(
-    page,
-    regular,
-    bold,
-    input.items && input.items.length > 1 ? `Rental items (${input.items.length})` : "Rental item",
-    itemSummary,
-    MARGIN,
-    y,
-    columnWidth,
-  );
-  const datesY = drawField(
-    page,
-    regular,
-    bold,
-    "Rental dates",
-    input.rentalDates,
-    MARGIN + columnWidth + 20,
-    y,
-    columnWidth,
-  );
-  return Math.min(itemY, datesY);
+  return drawField(page, regular, bold, "Rental dates", input.rentalDates, MARGIN, y, PAGE_WIDTH - MARGIN * 2);
+}
+
+function itemsCaption(items: DocumentLineItem[]): string {
+  const totalUnits = items.reduce((sum, item) => sum + item.quantity, 0);
+  const itemLabel = items.length === 1 ? "item" : "items";
+  const unitLabel = totalUnits === 1 ? "unit" : "units";
+  return `${items.length} ${itemLabel} (${totalUnits} ${unitLabel} total)`;
 }
 
 function drawAmountBox(
@@ -253,6 +243,7 @@ function drawAmountBox(
   amount: number,
   y: number,
   label: string,
+  caption: string,
 ): number {
   page.drawRectangle({
     x: MARGIN,
@@ -276,7 +267,7 @@ function drawAmountBox(
     font: bold,
     color: INK,
   });
-  page.drawText("Rental fee x 1", {
+  page.drawText(safeText(caption), {
     x: MARGIN + 16,
     y: y - 42,
     size: 9,
@@ -286,11 +277,147 @@ function drawAmountBox(
   return y - 82;
 }
 
+interface TableColumn {
+  label: string;
+  width: number;
+  align: "left" | "right";
+}
+
+const ITEM_COLUMNS: TableColumn[] = [
+  { label: "PRODUCT", width: 190, align: "left" },
+  { label: "PRICE/DAY", width: 90, align: "right" },
+  { label: "QTY", width: 50, align: "right" },
+  { label: "DAYS", width: 50, align: "right" },
+  { label: "LINE TOTAL", width: 119.28, align: "right" },
+];
+
+const ITEM_TABLE_BOTTOM_LIMIT = 130;
+
+function columnX(index: number): number {
+  let x = MARGIN;
+  for (let i = 0; i < index; i += 1) x += ITEM_COLUMNS[i].width;
+  return x;
+}
+
+function drawTableCell(
+  page: PDFPage,
+  font: PDFFont,
+  text: string,
+  columnIndex: number,
+  y: number,
+  size: number,
+  color: ReturnType<typeof rgb>,
+): void {
+  const column = ITEM_COLUMNS[columnIndex];
+  const x = columnX(columnIndex);
+  const safe = safeText(text);
+  if (column.align === "left") {
+    page.drawText(safe, { x: x + 6, y, size, font, color });
+  } else {
+    const textWidth = font.widthOfTextAtSize(safe, size);
+    page.drawText(safe, { x: x + column.width - 6 - textWidth, y, size, font, color });
+  }
+}
+
+function drawTableHeader(page: PDFPage, bold: PDFFont, y: number): number {
+  const headerHeight = 20;
+  page.drawRectangle({
+    x: MARGIN,
+    y: y - headerHeight,
+    width: PAGE_WIDTH - MARGIN * 2,
+    height: headerHeight,
+    color: BLUSH,
+  });
+  ITEM_COLUMNS.forEach((column, index) => drawTableCell(page, bold, column.label, index, y - 14, 7.5, ROSE));
+  return y - headerHeight - 6;
+}
+
+function itemExtraLines(
+  regular: PDFFont,
+  item: DocumentLineItem,
+): string[] {
+  const width = PAGE_WIDTH - MARGIN * 2 - 12;
+  const lines: string[] = [];
+  if (item.includedAccessories?.length) {
+    lines.push(...wrap(`Included: ${item.includedAccessories.join(", ")}`, regular, 7.5, width));
+  }
+  if (item.units) {
+    const unitsText = item.units.length
+      ? `Assigned unit(s): ${item.units
+          .map((unit) => `${unit.unitCode}${unit.serialNumber ? ` (SN ${unit.serialNumber})` : ""}`)
+          .join(", ")}`
+      : "Assigned unit(s): pending";
+    lines.push(...wrap(unitsText, regular, 7.5, width));
+  }
+  return lines;
+}
+
+/** Product | Price/Day | Quantity | Rental Days | Line Total -- one row per line, paginating as needed. */
+function drawItemsTable(
+  pdf: PDFDocument,
+  page: PDFPage,
+  regular: PDFFont,
+  bold: PDFFont,
+  items: DocumentLineItem[],
+  y: number,
+): { page: PDFPage; y: number } {
+  let currentPage = page;
+  let currentY = drawTableHeader(currentPage, bold, y);
+
+  for (const item of items) {
+    const nameLines = wrap(item.productName, regular, 8.5, ITEM_COLUMNS[0].width - 12);
+    const extraLines = itemExtraLines(regular, item);
+    const rowHeight = Math.max(1, nameLines.length) * 11 + extraLines.length * 10 + 14;
+
+    if (currentY - rowHeight < ITEM_TABLE_BOTTOM_LIMIT) {
+      currentPage = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+      currentY = drawTableHeader(currentPage, bold, PAGE_HEIGHT - MARGIN);
+    }
+
+    const firstLineY = currentY - 13;
+    drawTableCell(currentPage, regular, money(item.pricePerDay), 1, firstLineY, 8.5, INK);
+    drawTableCell(currentPage, regular, `${item.quantity}`, 2, firstLineY, 8.5, INK);
+    drawTableCell(currentPage, regular, `${item.rentalDays}`, 3, firstLineY, 8.5, INK);
+    drawTableCell(currentPage, bold, money(item.lineTotal), 4, firstLineY, 8.5, INK);
+
+    let lineY = firstLineY;
+    for (const line of nameLines) {
+      drawTableCell(currentPage, regular, line, 0, lineY, 8.5, INK);
+      lineY -= 11;
+    }
+    for (const line of extraLines) {
+      currentPage.drawText(safeText(line), { x: MARGIN + 6, y: lineY, size: 7.5, font: regular, color: MUTED });
+      lineY -= 10;
+    }
+
+    currentY = lineY - 4;
+    currentPage.drawLine({
+      start: { x: MARGIN, y: currentY + 10 },
+      end: { x: PAGE_WIDTH - MARGIN, y: currentY + 10 },
+      thickness: 0.4,
+      color: BORDER,
+    });
+  }
+
+  return { page: currentPage, y: currentY - 4 };
+}
+
+function ensureSpace(
+  pdf: PDFDocument,
+  page: PDFPage,
+  y: number,
+  needed: number,
+): { page: PDFPage; y: number } {
+  if (y - needed >= 90) return { page, y };
+  const newPage = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+  return { page: newPage, y: PAGE_HEIGHT - MARGIN };
+}
+
 export async function createInvoicePdf(input: InvoicePdfInput): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   const regular = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
-  const page = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+  let page = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
   let y = addBrandHeader(
     page,
     bold,
@@ -299,10 +426,13 @@ export async function createInvoicePdf(input: InvoicePdfInput): Promise<Uint8Arr
     input.isDemo,
   );
   y = drawSummary(page, regular, bold, input, y);
+  ({ page, y } = drawItemsTable(pdf, page, regular, bold, input.items, y));
+  ({ page, y } = ensureSpace(pdf, page, y, 170));
+
   const totalAmount = input.totalAmount ?? input.amount;
   const amountDueNow = input.amountDueNow ?? input.amount;
   const remainingBalance = input.remainingBalance ?? Math.max(0, totalAmount - amountDueNow);
-  y = drawAmountBox(page, regular, bold, totalAmount, y, "Total rental amount");
+  y = drawAmountBox(page, regular, bold, totalAmount, y, "Total rental amount", itemsCaption(input.items));
   const dueY = drawField(
     page,
     regular,
@@ -331,7 +461,7 @@ export async function createInvoicePdf(input: InvoicePdfInput): Promise<Uint8Arr
     regular,
     input.isDemo
       ? "DEMO ONLY - This invoice is for flow testing and is not a valid demand for payment."
-      : "Pay the exact amount through the official GCash QR and submit the receipt for verification.",
+      : "This booking invoice is payable manually via GCash and verified by our team against the reservation.",
   );
   pdf.setTitle(`Invoice ${safeText(input.invoiceNumber)}`);
   pdf.setAuthor("Rental by Maddy & Cassy");
@@ -342,7 +472,7 @@ export async function createReceiptPdf(input: ReceiptPdfInput): Promise<Uint8Arr
   const pdf = await PDFDocument.create();
   const regular = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
-  const page = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+  let page = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
   let y = addBrandHeader(
     page,
     bold,
@@ -351,12 +481,15 @@ export async function createReceiptPdf(input: ReceiptPdfInput): Promise<Uint8Arr
     input.isDemo,
   );
   y = drawSummary(page, regular, bold, input, y);
-  y = drawAmountBox(page, regular, bold, input.amount, y, "Payment received");
+  ({ page, y } = drawItemsTable(pdf, page, regular, bold, input.items, y));
+  ({ page, y } = ensureSpace(pdf, page, y, 170));
+
+  y = drawAmountBox(page, regular, bold, input.amount, y, "Payment received", itemsCaption(input.items));
   y = drawField(
     page,
     regular,
     bold,
-    input.isDemo ? "Demo transaction reference" : "GCash reference number",
+    input.isDemo ? "Demo transaction reference" : "GCash transaction reference",
     input.paymentReference,
     MARGIN,
     y,
@@ -399,19 +532,19 @@ export async function createFinalAgreementPdf(
   const pdf = await PDFDocument.create();
   const regular = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
-  const pageOne = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+  let page = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
   let y = addBrandHeader(
-    pageOne,
+    page,
     bold,
     input.isDemo ? "Demo Rental Agreement" : "Rental Agreement",
     `Booking ${input.bookingRef}`,
     input.isDemo,
   );
-  y = drawSummary(pageOne, regular, bold, input, y);
+  y = drawSummary(page, regular, bold, input, y);
   const half = (PAGE_WIDTH - MARGIN * 2 - 20) / 2;
-  const phoneY = drawField(pageOne, regular, bold, "Phone", input.phone, MARGIN, y, half);
+  const phoneY = drawField(page, regular, bold, "Phone", input.phone, MARGIN, y, half);
   const addressY = drawField(
-    pageOne,
+    page,
     regular,
     bold,
     "Address",
@@ -422,7 +555,7 @@ export async function createFinalAgreementPdf(
   );
   y = Math.min(phoneY, addressY);
   const methodY = drawField(
-    pageOne,
+    page,
     regular,
     bold,
     "Handover method",
@@ -432,7 +565,7 @@ export async function createFinalAgreementPdf(
     half,
   );
   const locationY = drawField(
-    pageOne,
+    page,
     regular,
     bold,
     "Location",
@@ -442,128 +575,122 @@ export async function createFinalAgreementPdf(
     half,
   );
   y = Math.min(methodY, locationY);
-  y = drawField(
-    pageOne,
-    regular,
-    bold,
-    "Included accessories",
-    input.includedAccessories.join(", ") || "None listed",
-    MARGIN,
-    y,
-    PAGE_WIDTH - MARGIN * 2,
-  );
-  y = drawAmountBox(pageOne, regular, bold, input.amount, y, "Reservation payment received");
-  drawField(pageOne, regular, bold, "Payment confirmation", input.paymentReference, MARGIN, y, 270);
-  drawField(pageOne, regular, bold, "Reservation secured", input.confirmedAt, MARGIN + 310, y, 180);
+
+  ({ page, y } = drawItemsTable(pdf, page, regular, bold, input.items, y));
+  ({ page, y } = ensureSpace(pdf, page, y, 150));
+
+  y = drawAmountBox(page, regular, bold, input.amount, y, "Reservation payment received", itemsCaption(input.items));
+  drawField(page, regular, bold, "Payment confirmation", input.paymentReference, MARGIN, y, 270);
+  drawField(page, regular, bold, "Reservation secured", input.confirmedAt, MARGIN + 310, y, 180);
   addFooter(
-    pageOne,
+    page,
     regular,
-    `${input.isDemo ? "DEMO FLOW TEST - " : ""}Agreement terms version ${input.termsVersion} - Page 1 of 2`,
+    `${input.isDemo ? "DEMO FLOW TEST - " : ""}Agreement terms version ${input.termsVersion}`,
   );
 
   const pageTwo = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-  y = PAGE_HEIGHT - MARGIN;
+  let y2 = PAGE_HEIGHT - MARGIN;
   if (input.isDemo) {
     pageTwo.drawText("DEMO FLOW TEST - NOT A VALID PAYMENT RECORD", {
       x: PAGE_WIDTH - MARGIN - 225,
-      y,
+      y: y2,
       size: 7.5,
       font: bold,
       color: ROSE,
     });
-    y -= 24;
+    y2 -= 24;
   }
   pageTwo.drawText("RENTAL TERMS & CONDITIONS", {
     x: MARGIN,
-    y,
+    y: y2,
     size: 15,
     font: bold,
     color: ROSE,
   });
-  y -= 31;
+  y2 -= 31;
 
   const terms = [
-    "The rented item remains the property of Rental by Maddy & Cassy at all times.",
-    "The customer agrees to return the item on or before the agreed return date and through the agreed pickup or delivery arrangement.",
-    "The customer is responsible for reasonable care of the item and will use it only for its intended purpose.",
+    "Every rented item remains the property of Rental by Maddy & Cassy at all times.",
+    "The customer agrees to return every item on or before the agreed return date and through the agreed pickup or delivery arrangement.",
+    "The customer is responsible for reasonable care of each item and will use it only for its intended purpose.",
     "Late returns may result in additional charges communicated by the business.",
     "Damage, loss, or missing accessories will be assessed by the business. The customer agrees to cooperate in resolving the resulting costs.",
-    "Payment is confirmed only after the business verifies the submitted GCash reference and proof shown in the corresponding receipt.",
-    "The customer authorizes the electronic signature below and agrees that it is binding for this booking.",
+    "Payment is confirmed only through the verified GCash transaction shown in this agreement and its corresponding receipt.",
+    "The customer authorizes the electronic signature below and agrees that it is binding for this booking and every item listed above.",
     "Personal information and verification documents are used only for identity verification, booking fulfillment, legal compliance, and legitimate business records.",
   ];
 
   terms.forEach((term, index) => {
     const lines = wrap(`${index + 1}. ${term}`, regular, 10.5, PAGE_WIDTH - MARGIN * 2);
     for (const line of lines) {
-      pageTwo.drawText(line, { x: MARGIN, y, size: 10.5, font: regular, color: INK });
-      y -= 17;
+      pageTwo.drawText(line, { x: MARGIN, y: y2, size: 10.5, font: regular, color: INK });
+      y2 -= 17;
     }
-    y -= 9;
+    y2 -= 9;
   });
 
-  y -= 14;
+  y2 -= 14;
   pageTwo.drawLine({
-    start: { x: MARGIN, y },
-    end: { x: PAGE_WIDTH - MARGIN, y },
+    start: { x: MARGIN, y: y2 },
+    end: { x: PAGE_WIDTH - MARGIN, y: y2 },
     thickness: 0.7,
     color: BORDER,
   });
-  y -= 29;
+  y2 -= 29;
   pageTwo.drawText("CUSTOMER ELECTRONIC SIGNATURE", {
     x: MARGIN,
-    y,
+    y: y2,
     size: 9,
     font: bold,
     color: MUTED,
   });
-  y -= 18;
+  y2 -= 18;
 
   const signature = await embedSignature(pdf, input.signatureBytes, input.signatureContentType);
   if (signature) {
     const scale = Math.min(230 / signature.width, 80 / signature.height, 1);
     pageTwo.drawImage(signature, {
       x: MARGIN,
-      y: y - signature.height * scale,
+      y: y2 - signature.height * scale,
       width: signature.width * scale,
       height: signature.height * scale,
     });
   } else {
     pageTwo.drawText(safeText(input.typedFullName), {
       x: MARGIN,
-      y: y - 34,
+      y: y2 - 34,
       size: 18,
       font: bold,
       color: INK,
     });
   }
-  y -= 96;
-  drawField(pageTwo, regular, bold, "Legally signed by", input.typedFullName, MARGIN, y, half);
-  drawField(pageTwo, regular, bold, "Signed at", input.signedAt, MARGIN + half + 20, y, half);
+  y2 -= 96;
+  drawField(pageTwo, regular, bold, "Legally signed by", input.typedFullName, MARGIN, y2, half);
+  drawField(pageTwo, regular, bold, "Signed at", input.signedAt, MARGIN + half + 20, y2, half);
   if (input.businessSignerName) {
-    y -= 68;
+    y2 -= 68;
     pageTwo.drawLine({
-      start: { x: MARGIN, y },
-      end: { x: PAGE_WIDTH - MARGIN, y },
+      start: { x: MARGIN, y: y2 },
+      end: { x: PAGE_WIDTH - MARGIN, y: y2 },
       thickness: 0.7,
       color: BORDER,
     });
-    y -= 27;
+    y2 -= 27;
     pageTwo.drawText("BUSINESS COUNTERSIGNATURE", {
       x: MARGIN,
-      y,
+      y: y2,
       size: 9,
       font: bold,
       color: MUTED,
     });
-    y -= 24;
-    drawField(pageTwo, regular, bold, "Authorized business signer", input.businessSignerName, MARGIN, y, half);
-    drawField(pageTwo, regular, bold, "Countersigned at", input.businessSignedAt || input.confirmedAt, MARGIN + half + 20, y, half);
+    y2 -= 24;
+    drawField(pageTwo, regular, bold, "Authorized business signer", input.businessSignerName, MARGIN, y2, half);
+    drawField(pageTwo, regular, bold, "Countersigned at", input.businessSignedAt || input.confirmedAt, MARGIN + half + 20, y2, half);
   }
   addFooter(
     pageTwo,
     regular,
-    `${input.isDemo ? "DEMO FLOW TEST - " : ""}Agreement terms version ${input.termsVersion} - Page 2 of 2`,
+    `${input.isDemo ? "DEMO FLOW TEST - " : ""}Agreement terms version ${input.termsVersion} - Terms & Signatures`,
   );
 
   pdf.setTitle(`Signed Rental Agreement - ${safeText(input.bookingRef)}`);

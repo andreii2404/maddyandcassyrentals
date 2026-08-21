@@ -102,7 +102,7 @@ export default function SiteFooter() {
       <div className={styles.bottom}>
         <p>© {new Date().getFullYear()} Rental by Maddy &amp; Cassy. All rights reserved.</p>
         <div>
-          <span>Manual GCash payments · verified by our rental team</span>
+          <span>Secure checkout via GCash</span>
           <Link href="/privacy">Privacy</Link>
           <Link href="/terms">Terms</Link>
         </div>

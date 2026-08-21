@@ -18,17 +18,31 @@ export function toDateKey(date: Date): string {
 /** How far ahead the reservation calendar pre-fetches fully-booked days. */
 const CALENDAR_WINDOW_DAYS = 180;
 
+export interface CalendarDateStatuses {
+  /** Every fully-booked date, regardless of why (superset of confirmedDateKeys). */
+  disabledDateKeys: Set<string>;
+  /**
+   * Fully-booked dates where every blocking unit_reservations row belongs to
+   * a booking already approved/confirmed/ready_for_release/released by
+   * admin — these will not reopen on their own and should render as
+   * "confirmed" (grey) rather than "reserved" (red).
+   */
+  confirmedDateKeys: Set<string>;
+}
+
 /**
  * Date keys ("YYYY-MM-DD"), within the next CALENDAR_WINDOW_DAYS, on which
  * every active unit of a product is already held by a tentative/confirmed/
- * in_use reservation. Backed by the public.get_product_availability_calendar()
- * RPC — customers can't SELECT inventory_units/unit_reservations directly, so
- * this SECURITY DEFINER function is the only public source for calendar
- * greying. This is a non-atomic, UX-only read — the real guard is the
- * public.create_booking() RPC, which re-checks conflicts with row locks at
+ * in_use reservation, split into the fully-booked superset and the subset
+ * where admin has already approved/confirmed/released every blocking
+ * booking. Backed by the public.get_product_availability_calendar() RPC —
+ * customers can't SELECT inventory_units/unit_reservations/bookings
+ * directly, so this SECURITY DEFINER function is the only public source for
+ * calendar coloring. This is a non-atomic, UX-only read — the real guard is
+ * the create_*_booking RPCs, which re-check conflicts with row locks at
  * submission time.
  */
-export async function getFullyBookedDateKeys(productId: string): Promise<Set<string>> {
+export async function getCalendarDateStatuses(productId: string): Promise<CalendarDateStatuses> {
   const supabase = createPublicClient();
   const today = new Date();
   const windowEnd = new Date(today);
@@ -42,11 +56,17 @@ export async function getFullyBookedDateKeys(productId: string): Promise<Set<str
 
   if (error) throw new Error(error.message);
 
-  const fullyBooked = new Set<string>();
+  const disabledDateKeys = new Set<string>();
+  const confirmedDateKeys = new Set<string>();
   for (const row of data ?? []) {
-    if (row.total_units > 0 && row.available_units <= 0) fullyBooked.add(row.day);
+    if (row.total_units <= 0 || row.available_units > 0) continue;
+    disabledDateKeys.add(row.day);
+    const unavailableUnits = row.total_units - row.available_units;
+    if ((row.confirmed_unavailable_units ?? 0) >= unavailableUnits) {
+      confirmedDateKeys.add(row.day);
+    }
   }
-  return fullyBooked;
+  return { disabledDateKeys, confirmedDateKeys };
 }
 
 export async function isRangeAvailable(
@@ -89,4 +109,34 @@ export async function getTimeAvailability(
     nextAvailableAt: row?.next_available_at ?? null,
     pickupConvenienceFee: Number(row?.pickup_convenience_fee ?? 0),
   };
+}
+
+/**
+ * Pre-flight, per-product availability check for every cart line against one
+ * shared pickup time/rental-day window -- this is the "which item is
+ * unavailable" UX check the multi-item checkout's rental-details step shows
+ * before the customer can continue. Same technique as
+ * inventoryService.subscribeToAllInventory(): Promise.all over the existing
+ * single-product RPC, no new RPC needed. Not authoritative -- the
+ * create_multi_item_booking RPC re-checks (and locks) at submission time.
+ */
+export async function checkBatchTimeAvailability(
+  items: { productId: string; quantity: number }[],
+  pickupAt: Date,
+  rentalDays: number,
+): Promise<Map<string, TimeAvailability>> {
+  const entries = await Promise.all(
+    items.map(async ({ productId, quantity }) => {
+      try {
+        return [productId, await getTimeAvailability(productId, pickupAt, quantity, rentalDays)] as const;
+      } catch {
+        return [productId, null] as const;
+      }
+    }),
+  );
+  const result = new Map<string, TimeAvailability>();
+  for (const [productId, availability] of entries) {
+    if (availability) result.set(productId, availability);
+  }
+  return result;
 }

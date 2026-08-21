@@ -126,28 +126,6 @@ export function getAdminPayments(): Promise<AdminPaymentsData> {
   return getAdminData("/api/admin/payments");
 }
 
-export async function getAdminPaymentProofUrl(paymentId: string): Promise<string> {
-  const data = await getAdminData<{ url: string }>(`/api/admin/payments/${encodeURIComponent(paymentId)}/proof`);
-  return data.url;
-}
-
-export async function reviewManualPayment(
-  paymentId: string,
-  action: "verify" | "reject",
-  notes: string,
-): Promise<void> {
-  const response = await fetch(`/api/admin/payments/${encodeURIComponent(paymentId)}/review`, {
-    method: "POST",
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action, notes }),
-  });
-  const body = (await response.json().catch(() => null)) as { error?: unknown } | null;
-  if (!response.ok) {
-    throw new Error(typeof body?.error === "string" ? body.error : "The payment review could not be completed.");
-  }
-}
-
 export function getAdminReviews(): Promise<AdminReviewsData> {
   return getAdminData("/api/admin/reviews");
 }

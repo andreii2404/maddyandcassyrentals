@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -63,18 +63,83 @@ function getServerHashSnapshot() {
   return "";
 }
 
+function getHrefHash(href: string): string {
+  const index = href.indexOf("#");
+  return index === -1 ? "" : href.slice(index);
+}
+
 export default function Navbar() {
   const { user, profile, isAdmin } = useAuth();
+  // Anonymous Supabase sessions back guest checkout. They carry a real `user`
+  // object but are not a customer account, so account-only nav must treat
+  // them the same as signed-out visitors.
+  const isAccountHolder = Boolean(user) && !user?.is_anonymous;
   const { favorites } = useFavorites();
   const { totalQuantity } = useCart();
   const router = useRouter();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
-  const hash = useSyncExternalStore(subscribeToHash, getHashSnapshot, getServerHashSnapshot);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const guideRef = useRef<HTMLDivElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
+  const syncedHash = useSyncExternalStore(subscribeToHash, getHashSnapshot, getServerHashSnapshot);
+  // Next.js <Link> navigates same-page hash changes via history.pushState,
+  // which never fires a "hashchange" event, so syncedHash alone lags behind
+  // a click. clickedHash is an optimistic override applied the instant a nav
+  // link is clicked so the active state updates in the same frame.
+  const [clickedHash, setClickedHash] = useState<string | null>(null);
+  const hash = clickedHash ?? syncedHash;
+
+  function closeDropdowns() {
+    setGuideOpen(false);
+    setProfileOpen(false);
+  }
+
+  // The navbar stays mounted across client-side route changes, so any open
+  // dropdown must be closed explicitly when the route (or in-page hash) changes.
+  useEffect(() => {
+    const closeTimerId = window.setTimeout(closeDropdowns, 0);
+    return () => window.clearTimeout(closeTimerId);
+  }, [pathname, hash]);
+
+  // Defer back to the real browser hash once it catches up (back/forward,
+  // full loads) or once a full route change happens, so the override never
+  // goes stale.
+  useEffect(() => {
+    const syncTimerId = window.setTimeout(() => setClickedHash(null), 0);
+    return () => window.clearTimeout(syncTimerId);
+  }, [pathname, syncedHash]);
+
+  useEffect(() => {
+    if (!guideOpen && !profileOpen) return undefined;
+
+    function handlePointerDown(event: MouseEvent) {
+      const target = event.target as Node;
+      if (guideOpen && guideRef.current && !guideRef.current.contains(target)) {
+        setGuideOpen(false);
+      }
+      if (profileOpen && profileRef.current && !profileRef.current.contains(target)) {
+        setProfileOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") closeDropdowns();
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [guideOpen, profileOpen]);
 
   async function handleSignOut() {
     await logout();
     setMenuOpen(false);
+    setProfileOpen(false);
     router.push("/");
   }
 
@@ -128,35 +193,51 @@ export default function Navbar() {
                 href={item.href}
                 className={`${styles.link} ${active ? styles.linkActive : ""}`}
                 aria-current={active ? "page" : undefined}
+                onClick={() => {
+                  closeDropdowns();
+                  setClickedHash(getHrefHash(item.href));
+                }}
               >
                 {item.label}
               </Link>
             );
           })}
 
-          <details className={styles.guideMenu}>
-            <summary className={`${styles.guideTrigger} ${guideActive ? styles.linkActive : ""}`}>
+          <div className={styles.guideMenu} ref={guideRef}>
+            <button
+              type="button"
+              className={`${styles.guideTrigger} ${guideActive ? styles.linkActive : ""} ${guideOpen ? styles.guideTriggerOpen : ""}`}
+              aria-expanded={guideOpen}
+              aria-haspopup="true"
+              onClick={() => {
+                setGuideOpen((open) => !open);
+                setProfileOpen(false);
+              }}
+            >
               Rental Guide
               <ChevronIcon />
-            </summary>
-            <div className={styles.guideDropdown}>
-              <p>Plan your rental</p>
-              {guideLinks.map((item) => {
-                const active = pathname === item.href;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`${styles.guideMenuLink} ${active ? styles.guideMenuLinkActive : ""}`}
-                    aria-current={active ? "page" : undefined}
-                  >
-                    <span>{item.label}</span>
-                    <small>{item.description}</small>
-                  </Link>
-                );
-              })}
-            </div>
-          </details>
+            </button>
+            {guideOpen ? (
+              <div className={styles.guideDropdown}>
+                <p>Plan your rental</p>
+                {guideLinks.map((item) => {
+                  const active = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`${styles.guideMenuLink} ${active ? styles.guideMenuLinkActive : ""}`}
+                      aria-current={active ? "page" : undefined}
+                      onClick={() => setGuideOpen(false)}
+                    >
+                      <span>{item.label}</span>
+                      <small>{item.description}</small>
+                    </Link>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
         </nav>
 
         <div className={styles.actions}>
@@ -183,32 +264,43 @@ export default function Navbar() {
 
           <span className={styles.actionDivider} aria-hidden="true" />
 
-          {user ? (
-            <details className={styles.profileMenu}>
-              <summary className={styles.profileTrigger}>
+          {isAccountHolder ? (
+            <div className={styles.profileMenu} ref={profileRef}>
+              <button
+                type="button"
+                className={`${styles.profileTrigger} ${profileOpen ? styles.profileTriggerOpen : ""}`}
+                aria-expanded={profileOpen}
+                aria-haspopup="true"
+                onClick={() => {
+                  setProfileOpen((open) => !open);
+                  setGuideOpen(false);
+                }}
+              >
                 <span className={styles.profileAvatar}>{initial}</span>
                 <span className={styles.profileCopy}>
                   <small>{isAdmin ? "Administrator" : "Welcome back"}</small>
                   <strong>{firstName}</strong>
                 </span>
                 <ChevronIcon />
-              </summary>
-              <div className={styles.profileDropdown}>
-                <div className={styles.profileDropdownHeader}>
-                  <span className={styles.profileAvatar}>{initial}</span>
-                  <div>
-                    <strong>{displayName}</strong>
-                    <small>{isAdmin ? "Admin account" : "Customer account"}</small>
+              </button>
+              {profileOpen ? (
+                <div className={styles.profileDropdown}>
+                  <div className={styles.profileDropdownHeader}>
+                    <span className={styles.profileAvatar}>{initial}</span>
+                    <div>
+                      <strong>{displayName}</strong>
+                      <small>{isAdmin ? "Admin account" : "Customer account"}</small>
+                    </div>
                   </div>
+                  <Link href={accountHomeHref} className={styles.profileMenuLink} onClick={() => setProfileOpen(false)}>{accountHomeLabel}</Link>
+                  <Link href={profileHref} className={styles.profileMenuLink} onClick={() => setProfileOpen(false)}>{profileLabel}</Link>
+                  {!isAdmin ? (
+                    <Link href="/account/payments" className={styles.profileMenuLink} onClick={() => setProfileOpen(false)}>Payment History</Link>
+                  ) : null}
+                  <button type="button" className={styles.profileMenuButton} onClick={handleSignOut}>Sign Out</button>
                 </div>
-                <Link href={accountHomeHref} className={styles.profileMenuLink}>{accountHomeLabel}</Link>
-                <Link href={profileHref} className={styles.profileMenuLink}>{profileLabel}</Link>
-                {!isAdmin ? (
-                  <Link href="/account/payments" className={styles.profileMenuLink}>Payment History</Link>
-                ) : null}
-                <button type="button" className={styles.profileMenuButton} onClick={handleSignOut}>Sign Out</button>
-              </div>
-            </details>
+              ) : null}
+            </div>
           ) : (
             <div className={styles.loginActions}>
               <Link href="/sign-in" className={styles.customerLink}>Customer Login</Link>
@@ -240,7 +332,10 @@ export default function Navbar() {
             aria-expanded={menuOpen}
             aria-controls="mobile-navigation"
             aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
-            onClick={() => setMenuOpen((open) => !open)}
+            onClick={() => {
+              setMenuOpen((open) => !open);
+              closeDropdowns();
+            }}
           >
             <span />
             <span />
@@ -275,7 +370,10 @@ export default function Navbar() {
                     href={item.href}
                     className={`${styles.mobileLink} ${active ? styles.mobileLinkActive : ""}`}
                     aria-current={active ? "page" : undefined}
-                    onClick={closeMenu}
+                    onClick={() => {
+                      closeMenu();
+                      setClickedHash(getHrefHash(item.href));
+                    }}
                   >
                     {item.label}<span aria-hidden="true">→</span>
                   </Link>
@@ -305,8 +403,8 @@ export default function Navbar() {
             </nav>
 
             <div className={styles.mobileAccount}>
-              <p className={styles.mobileLabel}>{user ? "Your Account" : "Account"}</p>
-              {user ? (
+              <p className={styles.mobileLabel}>{isAccountHolder ? "Your Account" : "Account"}</p>
+              {isAccountHolder ? (
                 <>
                   <div className={styles.mobileProfileSummary}>
                     <span className={styles.profileAvatar}>{initial}</span>

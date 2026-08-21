@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Navbar from "@/components/navbar/Navbar";
 import GuidePage, { type GuideSection } from "@/components/rental-guide/GuidePage";
 
 const sections: GuideSection[] = [
@@ -53,13 +52,12 @@ export const metadata: Metadata = {
 export default function HowToBookPage() {
   return (
     <div>
-      <Navbar />
       <GuidePage
         eyebrow="RENTAL GUIDE"
         title="How to Book"
         introduction="Follow these steps to request your unit, complete verification, and arrange pickup or delivery."
         sections={sections}
-        notice="Reservation payments and applicable non-refundable deposits are sent through GCash and verified by the rental team. Delivery courier costs are arranged separately."
+        notice="Reservation payments and applicable non-refundable deposits are paid manually via GCash and verified by our team. Delivery courier costs are arranged separately."
       />
     </div>
   );

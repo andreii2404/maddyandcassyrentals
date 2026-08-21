@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Navbar from "@/components/navbar/Navbar";
 import GuidePage, { type GuideSection } from "@/components/rental-guide/GuidePage";
 
 const sections: GuideSection[] = [
@@ -94,14 +93,13 @@ export const metadata: Metadata = {
 export default function TermsPage() {
   return (
     <div>
-      <Navbar />
       <GuidePage
         eyebrow="RENTAL POLICY"
         title="Terms & Conditions"
         introduction="These policies apply to booking requests, verification, equipment handover, proper use, and return of every rental unit."
         sections={sections}
         layout="stack"
-        notice="Reservation payments and applicable non-refundable deposits are sent through GCash and manually verified by the rental team. Courier delivery costs are arranged separately."
+        notice="Reservation payments and applicable non-refundable deposits are paid manually via GCash and verified by our team. Courier delivery costs are arranged separately with the rental team."
       />
     </div>
   );

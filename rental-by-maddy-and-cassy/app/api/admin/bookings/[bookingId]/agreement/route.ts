@@ -155,9 +155,9 @@ export async function POST(
       booking,
       agreement,
       paymentReference:
-        verifiedPayment.external_reference ||
         verifiedPayment.paymongo_payment_id ||
-        "Verified GCash payment",
+        verifiedPayment.external_reference ||
+        "Verified payment",
       storagePath: finalPath,
     });
 

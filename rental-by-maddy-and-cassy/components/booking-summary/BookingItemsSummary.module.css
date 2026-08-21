@@ -1,0 +1,125 @@
+.wrap {
+  margin: 0.75rem 0;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  margin: 0 0 0.75rem;
+  border: 1px solid var(--color-light-gray);
+  border-radius: 12px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.table th,
+.table td {
+  padding: 0.6rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.table th {
+  color: var(--color-charcoal);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--color-background-soft);
+  white-space: nowrap;
+}
+
+.table td {
+  color: var(--color-text-primary);
+  font-weight: 600;
+  border-top: 1px solid var(--color-light-gray);
+  white-space: nowrap;
+}
+
+.table td:first-child {
+  white-space: normal;
+}
+
+.table th:last-child,
+.table td:last-child {
+  text-align: right;
+}
+
+.productCell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.productName {
+  font-weight: 700;
+}
+
+.brand {
+  color: var(--color-charcoal);
+  font-weight: 600;
+  margin-right: 0.35rem;
+}
+
+.meta {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--color-charcoal);
+}
+
+.metaPending {
+  font-size: 0.72rem;
+  font-weight: 500;
+  font-style: italic;
+  color: var(--color-charcoal);
+}
+
+.totals {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.4rem 1.5rem;
+  margin: 0;
+  padding: 0.65rem 0.8rem;
+  background: var(--color-background-soft);
+  border-radius: 8px;
+}
+
+.totals dt {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-charcoal);
+}
+
+.totals dd {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: right;
+  color: var(--color-text-primary);
+}
+
+.grandTotal {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid var(--color-border);
+  padding-top: 0.4rem;
+  margin-top: 0.1rem;
+}
+
+.grandTotal dt,
+.grandTotal dd {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+@media (max-width: 560px) {
+  .totals {
+    grid-template-columns: 1fr;
+  }
+}

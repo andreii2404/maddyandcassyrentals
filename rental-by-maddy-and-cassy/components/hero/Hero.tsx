@@ -52,8 +52,8 @@ export default function Hero({ products }: HeroProps) {
               <CalendarIcon size={18} />
               Check Availability
             </Link>
-            <a href="#how-it-works" className={styles.secondaryButton}>
-              How Renting Works
+            <a href="#how-it-works" className={styles.tertiaryLink}>
+              How Renting Works <span aria-hidden="true">→</span>
             </a>
           </div>
 
