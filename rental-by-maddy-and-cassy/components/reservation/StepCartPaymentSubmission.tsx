@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import type { ManualPaymentDraft, ReservationDraft } from "@/src/types/reservationDraft";
 import type { MultiItemReservationPricing } from "@/src/lib/reservationPricing";
+import { GCASH_RECIPIENT } from "@/src/lib/gcashPayment";
 import {
   COMPLETED_RENTALS_BEFORE_REWARD,
   type RewardProgress,
@@ -21,7 +22,6 @@ function money(currency: string, value: number): string {
   })}`;
 }
 
-const GCASH_ACCOUNT_NAME = "FATIMA KLYE SIERRA";
 const GCASH_PAYMENT_TYPES = ["GCash", "GCash to GCash", "GCash to Bank"];
 
 export type BookingPaymentState = "unpaid" | "pending" | "partially_paid" | "paid";
@@ -168,14 +168,18 @@ export default function StepCartPaymentSubmission({
       <div className={styles.gcash}>
         <div className={styles.qrCard}>
           <div className={styles.qrImageWrapper}>
-            <Image src="/images/gcash-payment-qr.png" alt="GCash payment QR code" fill sizes="180px" />
+            <Image src={GCASH_RECIPIENT.qrImagePath} alt="GCash payment QR code" fill sizes="180px" />
           </div>
           <span className={styles.qrHint}>Scan with your GCash app</span>
         </div>
         <div className={styles.gcashDetails}>
           <div>
             <span className={styles.detailLabel}>Account name</span>
-            <strong className={styles.accountName}>{GCASH_ACCOUNT_NAME}</strong>
+            <strong className={styles.accountName}>{GCASH_RECIPIENT.accountName}</strong>
+          </div>
+          <div>
+            <span className={styles.detailLabel}>Mobile number</span>
+            <strong className={styles.accountName}>{GCASH_RECIPIENT.maskedMobileNumber}</strong>
           </div>
           <div>
             <span className={styles.detailLabel}>Accepted payment options</span>

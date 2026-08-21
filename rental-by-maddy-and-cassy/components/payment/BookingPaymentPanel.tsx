@@ -4,13 +4,12 @@ import { useState } from "react";
 import Image from "next/image";
 import { useToast } from "@/components/ui/ToastProvider";
 import { submitManualPayment } from "@/src/services/paymentService";
+import { GCASH_RECIPIENT } from "@/src/lib/gcashPayment";
 import FileUploadField from "@/components/file-upload/FileUploadField";
 import formStyles from "@/components/ui/Form.module.css";
 import type { Booking } from "@/src/types/booking";
 import type { PaymentRecord } from "@/src/types/payment";
 import styles from "./BookingPaymentPanel.module.css";
-
-const GCASH_ACCOUNT_NAME = "FATIMA KLYE SIERRA";
 
 function money(value: number): string {
   return `PHP ${value.toLocaleString("en-PH", {
@@ -155,11 +154,13 @@ export default function BookingPaymentPanel({
           </p>
           <div className={styles.gcash}>
             <div className={styles.qrImageWrapper}>
-              <Image src="/images/gcash-payment-qr.png" alt="GCash payment QR code" fill sizes="140px" />
+              <Image src={GCASH_RECIPIENT.qrImagePath} alt="GCash payment QR code" fill sizes="140px" />
             </div>
             <div>
               <span>Account name</span>
-              <strong>{GCASH_ACCOUNT_NAME}</strong>
+              <strong>{GCASH_RECIPIENT.accountName}</strong>
+              <span>Mobile number</span>
+              <strong>{GCASH_RECIPIENT.maskedMobileNumber}</strong>
             </div>
           </div>
 
