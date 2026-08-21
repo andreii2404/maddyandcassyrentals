@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useToast } from "@/components/ui/ToastProvider";
-import { submitManualPayment } from "@/src/services/paymentService";
+import { submitManualPayment, updateBalancePaymentPreference } from "@/src/services/paymentService";
 import { GCASH_RECIPIENT } from "@/src/lib/gcashPayment";
 import FileUploadField from "@/components/file-upload/FileUploadField";
 import formStyles from "@/components/ui/Form.module.css";
@@ -34,6 +34,8 @@ export default function BookingPaymentPanel({
   const [accountNumber, setAccountNumber] = useState("");
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
+  const [balancePreference, setBalancePreference] = useState(booking.balancePaymentPreference);
+  const [savingPreference, setSavingPreference] = useState(false);
 
   const hasPendingPayment = payments.some((payment) => ["submitted", "under_review"].includes(payment.status));
   const latestPayment = [...payments].sort(
@@ -54,8 +56,37 @@ export default function BookingPaymentPanel({
         ? "paid"
         : "partially_paid";
 
-  const paymentAvailable = ["pending", "approved", "confirmed"].includes(booking.status);
+  const paymentAvailable = ["pending", "approved", "confirmed", "ready_for_release", "released"].includes(booking.status);
   const dueNow = paymentStatus === "partially_paid" ? balanceDue : totalAmount;
+  const pickupDeadline = new Date(booking.startDate).toLocaleString("en-PH", {
+    timeZone: "Asia/Manila",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  const showGcashForm = paymentStatus !== "partially_paid" || balancePreference === "online_gcash";
+
+  async function chooseBalancePreference(preference: "online_gcash" | "in_person") {
+    if (preference === balancePreference || savingPreference) return;
+    setSavingPreference(true);
+    try {
+      await updateBalancePaymentPreference(booking.id, preference);
+      setBalancePreference(preference);
+      showToast(
+        preference === "in_person"
+          ? "Your remaining balance is marked for in-person payment."
+          : "Your remaining balance is set for online GCash payment.",
+        "success",
+      );
+      await onPaymentUpdated?.();
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "The balance option could not be saved.", "error");
+    } finally {
+      setSavingPreference(false);
+    }
+  }
 
   function validate(): boolean {
     const nextErrors: string[] = [];
@@ -118,6 +149,19 @@ export default function BookingPaymentPanel({
         <strong>{money(paymentStatus === "partially_paid" ? balanceDue : totalAmount)}</strong>
       </div>
 
+      {paymentStatus === "partially_paid" ? (
+        <div className={styles.paymentPlan} aria-label="Payment schedule">
+          <div className={styles.planComplete}>
+            <span aria-hidden="true">✓</span>
+            <div><small>Reservation payment</small><strong>{money(amountPaid)} verified</strong></div>
+          </div>
+          <div className={styles.planCurrent}>
+            <span aria-hidden="true">2</span>
+            <div><small>Remaining balance</small><strong>{money(balanceDue)} due by {pickupDeadline}</strong></div>
+          </div>
+        </div>
+      ) : null}
+
       <dl className={styles.breakdown}>
         <div><dt>Rental subtotal</dt><dd>{money(booking.rentalSubtotal)}</dd></div>
         {booking.birthdayDiscountAmount > 0 ? (
@@ -150,9 +194,47 @@ export default function BookingPaymentPanel({
       ) : paymentAvailable ? (
         <>
           <p className={styles.message}>
-            Send <strong>{money(dueNow)}</strong> via GCash to the account below, then submit your proof of payment.
+            {paymentStatus === "partially_paid"
+              ? "Choose how you want to settle the remaining balance. You may change this choice anytime before the booking is closed."
+              : <>Send <strong>{money(dueNow)}</strong> via GCash to the account below, then submit your proof of payment.</>}
           </p>
-          <div className={styles.gcash}>
+
+          {paymentStatus === "partially_paid" ? (
+            <div className={styles.channelChoices} aria-label="Remaining balance payment method">
+              <button
+                type="button"
+                className={balancePreference === "online_gcash" ? styles.channelSelected : styles.channelChoice}
+                onClick={() => void chooseBalancePreference("online_gcash")}
+                disabled={savingPreference}
+              >
+                <span>ONLINE</span>
+                <strong>Pay through GCash</strong>
+                <small>Scan the QR, submit proof, and receive a receipt after verification.</small>
+              </button>
+              <button
+                type="button"
+                className={balancePreference === "in_person" ? styles.channelSelected : styles.channelChoice}
+                onClick={() => void chooseBalancePreference("in_person")}
+                disabled={savingPreference}
+              >
+                <span>AT HANDOVER</span>
+                <strong>Pay in person</strong>
+                <small>Pay by cash or GCash when you receive the rental. Admin records your receipt.</small>
+              </button>
+            </div>
+          ) : null}
+
+          {paymentStatus === "partially_paid" && balancePreference === "in_person" ? (
+            <div className={styles.inPersonNotice}>
+              <span aria-hidden="true">✓</span>
+              <div>
+                <strong>In-person payment selected</strong>
+                <p>Prepare <b>{money(balanceDue)}</b> for pickup or delivery. This balance is only marked paid after an administrator records the cash or GCash transaction.</p>
+              </div>
+            </div>
+          ) : null}
+
+          {showGcashForm ? <><div className={styles.gcash}>
             <div className={styles.qrImageWrapper}>
               <Image src={GCASH_RECIPIENT.qrImagePath} alt="GCash payment QR code" fill sizes="140px" />
             </div>
@@ -218,6 +300,7 @@ export default function BookingPaymentPanel({
           <button type="button" onClick={() => void handleSubmit()} disabled={submitting}>
             {submitting ? "Submitting payment…" : "Submit Payment Proof"}
           </button>
+          </> : null}
         </>
       ) : (
         <p className={styles.message}>Payment is unavailable because this booking is no longer active.</p>

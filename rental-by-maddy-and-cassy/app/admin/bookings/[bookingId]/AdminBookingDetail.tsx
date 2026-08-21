@@ -313,6 +313,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
     .reduce((sum, p) => sum + p.amount, 0);
   const paymentStatusLabel =
     amountPaid <= 0 ? "Unpaid" : amountPaid >= booking.totalAmount - 0.01 ? "Paid" : "Partially Paid";
+  const handoverPaymentReady = amountPaid >= booking.totalAmount - 0.01 || booking.payLaterAllowed;
   const canCountersignAgreement = Boolean(
     agreement?.status === "awaiting_business_signature" &&
     customerSignature &&
@@ -451,6 +452,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
             <div className={styles.actionChoiceGrid} aria-label="Available booking actions">
               {actions.map((action) => {
                 const selected = action.status === selectedStatus;
+                const blockedByBalance = action.status === "released" && !handoverPaymentReady;
                 return (
                   <button
                     key={action.status}
@@ -458,19 +460,22 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                     className={`${styles.actionChoice} ${action.tone === "danger" ? styles.dangerChoice : ""} ${selected ? styles.actionChoiceSelected : ""}`}
                     onClick={() => { setSelectedStatus(action.status); setNote(""); }}
                     aria-pressed={selected}
-                    disabled={updating}
+                    disabled={updating || blockedByBalance}
                   >
                     <span className={styles.actionChoiceIcon} aria-hidden="true">{action.tone === "danger" ? "!" : "→"}</span>
                     <span className={styles.actionChoiceCopy}>
                       <small>{action.tone === "danger" ? "Close booking" : "Recommended next step"}</small>
                       <strong>{action.label}</strong>
-                      <span>{action.description}</span>
+                      <span>{blockedByBalance ? "Record the remaining balance or approve a pay-later exception in Agreement & Payment first." : action.description}</span>
                     </span>
                     <span className={styles.actionChoiceState}>{selected ? "Selected" : "Choose"}</span>
                   </button>
                 );
-              })}
-            </div>
+            })}
+          </div>
+            {actions.some((action) => action.status === "released") && !handoverPaymentReady ? (
+              <p className={styles.choosePrompt}>Handover is protected: the remaining balance must be recorded before “Released to Customer” becomes available.</p>
+            ) : null}
             {selectedAction ? (
               <div className={`${styles.actionConfirmation} ${selectedAction.tone === "danger" ? styles.dangerConfirmation : ""}`}>
                 <div>
@@ -680,6 +685,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                 ) : <p className={styles.emptyRecord}>No customer-facing receipt has been issued yet.</p>}
                 <PaymentsReviewPanel
                   bookingId={bookingId}
+                  booking={booking}
                   payments={payments}
                   onOpenProof={(payment: PaymentRecord) => {
                     if (payment.proofStorageBucket && payment.proofStoragePath) {

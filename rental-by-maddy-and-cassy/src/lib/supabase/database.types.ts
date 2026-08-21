@@ -809,6 +809,8 @@ export type Database = {
         Row: {
           admin_notes: string | null
           approved_at: string | null
+          balance_payment_preference: string
+          balance_preference_updated_at: string | null
           birth_date_snapshot: string | null
           birthday_discount_amount: number
           birthday_discount_status: string
@@ -824,6 +826,10 @@ export type Database = {
           loyalty_discount_amount: number
           loyalty_discount_status: string
           next_available_at: string
+          pay_later_allowed: boolean
+          pay_later_allowed_at: string | null
+          pay_later_allowed_by: string | null
+          pay_later_note: string | null
           pickup_at: string
           ready_for_release_at: string | null
           rejected_at: string | null
@@ -837,6 +843,8 @@ export type Database = {
         Insert: {
           admin_notes?: string | null
           approved_at?: string | null
+          balance_payment_preference?: string
+          balance_preference_updated_at?: string | null
           birth_date_snapshot?: string | null
           birthday_discount_amount?: number
           birthday_discount_status?: string
@@ -852,6 +860,10 @@ export type Database = {
           loyalty_discount_amount?: number
           loyalty_discount_status?: string
           next_available_at: string
+          pay_later_allowed?: boolean
+          pay_later_allowed_at?: string | null
+          pay_later_allowed_by?: string | null
+          pay_later_note?: string | null
           pickup_at: string
           ready_for_release_at?: string | null
           rejected_at?: string | null
@@ -865,6 +877,8 @@ export type Database = {
         Update: {
           admin_notes?: string | null
           approved_at?: string | null
+          balance_payment_preference?: string
+          balance_preference_updated_at?: string | null
           birth_date_snapshot?: string | null
           birthday_discount_amount?: number
           birthday_discount_status?: string
@@ -880,6 +894,10 @@ export type Database = {
           loyalty_discount_amount?: number
           loyalty_discount_status?: string
           next_available_at?: string
+          pay_later_allowed?: boolean
+          pay_later_allowed_at?: string | null
+          pay_later_allowed_by?: string | null
+          pay_later_note?: string | null
           pickup_at?: string
           ready_for_release_at?: string | null
           rejected_at?: string | null

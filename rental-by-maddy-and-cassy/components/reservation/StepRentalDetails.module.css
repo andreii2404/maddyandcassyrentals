@@ -6,26 +6,31 @@
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
-  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) minmax(238px, 276px);
+  gap: 0.7rem;
   align-items: start;
 }
 
 .mainColumn {
-  display: flex;
-  flex-direction: column;
-  gap: 0.9rem;
+  display: grid;
+  grid-template-columns: minmax(280px, 330px) minmax(250px, 1fr);
+  grid-template-rows: auto auto auto;
+  gap: 0.55rem;
   min-width: 0;
 }
 
 .stepSection {
   min-width: 0;
+  padding: 0.68rem;
+  border: 1px solid var(--color-light-gray);
+  border-radius: 14px;
+  background: var(--color-white);
 }
 
-.stepSection:not(:last-child) {
-  padding-bottom: 0.9rem;
-  border-bottom: 1px solid var(--color-light-gray);
-}
+.dateSection { grid-column: 1; grid-row: 1 / span 3; }
+.timeSection { grid-column: 2; grid-row: 1; }
+.fulfillmentSection { grid-column: 2; grid-row: 2; }
+.quantitySection { grid-column: 2; grid-row: 3; }
 
 .sectionHeading {
   margin: 0 0 0.15rem;
@@ -35,13 +40,13 @@
 }
 
 .sectionHint {
-  margin: 0 0 0.6rem;
+  margin: 0 0 0.45rem;
   color: var(--color-charcoal);
   font-size: 0.72rem;
   line-height: 1.4;
 }
 
-.quantityPanel { display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; gap: .5rem; min-width: 0; padding: .65rem; border: 1px solid var(--color-light-gray); border-radius: 12px; background: var(--color-background-soft); }
+.quantityPanel { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .5rem; min-width: 0; padding: .55rem; border: 1px solid var(--color-light-gray); border-radius: 11px; background: var(--color-background-soft); }
 .quantityPanel label { display: block; color: var(--color-text-primary); font-size: .82rem; font-weight: 700; }
 .quantityPanel span { display: block; margin-top: .1rem; color: var(--color-charcoal); font-size: .64rem; line-height: 1.3; }
 .quantityControl { display: grid; grid-template-columns: 32px minmax(40px, 1fr) 32px; width: min(100%, 132px); min-width: 0; overflow: hidden; border: 1px solid var(--color-dusty-rose); border-radius: 999px; background: var(--color-white); }
@@ -52,8 +57,8 @@
 .quantityControl input::-webkit-inner-spin-button { appearance: none; }
 
 .availabilityStatus {
-  margin: 0.5rem 0 0;
-  padding: 0.5rem 0.6rem;
+  margin: 0.4rem 0 0;
+  padding: 0.42rem 0.5rem;
   border-radius: 10px;
   background: var(--color-background-soft);
   font-size: 0.72rem;
@@ -63,12 +68,14 @@
 
 .pickupTimeField {
   display: grid;
-  gap: 0.35rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.25rem 0.55rem;
   margin-top: 0;
   max-width: none;
 }
 
 .pickupTimeField label {
+  grid-column: 1 / -1;
   font-size: 0.82rem;
   font-weight: 700;
   color: var(--color-text-primary);
@@ -76,7 +83,7 @@
 
 .pickupTimeField input {
   width: 100%;
-  max-width: 220px;
+  max-width: none;
   min-height: 40px;
   padding: 0.55rem 0.7rem;
   border: 1px solid var(--color-border);
@@ -87,6 +94,7 @@
 }
 
 .pickupTimeField span {
+  align-self: center;
   font-size: 0.66rem;
   color: var(--color-charcoal);
 }
@@ -106,16 +114,18 @@
   border: none;
   padding: 0;
   margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
 }
+
+.fulfillmentFieldset legend { grid-column: 1 / -1; margin-bottom: 0.1rem; }
 
 .fulfillmentOption {
   display: flex;
   gap: 0.55rem;
   align-items: flex-start;
-  padding: 0.65rem 0.75rem;
+  padding: 0.55rem 0.6rem;
   border: 1px solid var(--color-light-gray);
   border-radius: 14px;
   cursor: pointer;
@@ -147,7 +157,7 @@
   display: block;
   font-size: 0.7rem;
   color: var(--color-charcoal);
-  line-height: 1.5;
+  line-height: 1.35;
 }
 
 .summaryColumn {
@@ -159,8 +169,8 @@
 .summaryCard {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
-  padding: 0.85rem;
+  gap: 0.48rem;
+  padding: 0.72rem;
   border: 1px solid var(--color-light-gray);
   border-radius: 16px;
   background: var(--color-white);
@@ -177,8 +187,8 @@
 }
 
 .summaryProduct {
-  margin: 0 0 0.55rem;
-  padding-bottom: 0.55rem;
+  margin: 0 0 0.35rem;
+  padding-bottom: 0.4rem;
   border-bottom: 1px solid var(--color-light-gray);
   color: var(--color-text-primary);
   font-size: 1rem;
@@ -208,7 +218,7 @@
 
 .summaryList {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.4rem;
   margin: 0;
 }
 
@@ -279,6 +289,16 @@
   line-height: 1.35;
 }
 
+.summaryActions {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.45rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--color-light-gray);
+}
+
+.summaryActions button { min-height: 38px; padding: 0.5rem 0.7rem; font-size: 0.7rem; }
+
 .footer {
   position: sticky;
   z-index: 5;
@@ -301,12 +321,42 @@
   .summaryColumn {
     position: static;
   }
+
+  .summaryActions { display: none; }
+}
+
+@media (min-width: 961px) {
+  .footer { display: none; }
+}
+
+@media (max-width: 720px) {
+  .mainColumn {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+
+  .dateSection,
+  .timeSection,
+  .fulfillmentSection,
+  .quantitySection {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .fulfillmentFieldset { grid-template-columns: 1fr; }
+  .fulfillmentFieldset legend { grid-column: auto; }
 }
 
 @media (max-width: 680px) {
   .pickupTimeField input {
     max-width: none;
   }
+}
+
+@media (max-width: 430px) {
+  .pickupTimeField { grid-template-columns: 1fr; }
+  .pickupTimeField label { grid-column: auto; }
+  .quantityPanel { grid-template-columns: 1fr; }
 }
 
 .flowHeading {

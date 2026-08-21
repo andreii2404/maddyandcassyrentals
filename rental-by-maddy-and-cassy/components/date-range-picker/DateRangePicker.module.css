@@ -6,6 +6,15 @@
   max-width: 360px;
 }
 
+.compact {
+  max-width: 320px;
+  padding: 0.65rem;
+}
+
+.compact .header { margin-bottom: 0.4rem; }
+.compact .legend { margin-top: 0.45rem; font-size: 0.61rem; }
+.compact .day { border-radius: 8px; font-size: 0.74rem; }
+
 .header {
   display: flex;
   align-items: center;
