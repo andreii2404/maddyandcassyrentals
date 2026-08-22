@@ -230,7 +230,8 @@ export default function AdminDashboard() {
                   <tbody>
                     {data.recentBookings.map((booking) => {
                       const href = `/admin/bookings/${booking.id}`;
-                      const isPendingReview = booking.requirementsStatus === "pending_review";
+                      const isClosed = booking.status === "rejected" || booking.status === "cancelled";
+                      const isPendingReview = booking.requirementsStatus === "pending_review" && !isClosed;
                       const goToBooking = () => router.push(href);
                       const stopRowNav = (event: React.MouseEvent) => event.stopPropagation();
                       return (
@@ -266,7 +267,7 @@ export default function AdminDashboard() {
                           <td data-label="Submitted">{formatDate(booking.createdAt)}</td>
                           <td data-label="Action" className={styles.actionCell}>
                             <Link href={href} className={styles.openLink} onClick={stopRowNav}>
-                              Review
+                              {isPendingReview ? "Review" : "View"}
                             </Link>
                           </td>
                         </tr>
