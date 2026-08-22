@@ -213,16 +213,13 @@
   background: var(--color-background);
 }
 
-.detailGrid {
-  display: grid;
-  margin: 0;
+.detailPanel {
   padding: 0.9rem 1.1rem;
-  grid-template-columns: repeat(4, minmax(140px, 1fr));
-  gap: 0.75rem 1rem;
 }
 
-.detailGrid dt {
-  margin: 0 0 0.2rem;
+.detailLabel {
+  display: block;
+  margin-bottom: 0.3rem;
   color: var(--color-charcoal);
   font-size: 0.6rem;
   font-weight: 700;
@@ -230,34 +227,12 @@
   text-transform: uppercase;
 }
 
-.detailGrid dd {
+.detailText {
   margin: 0;
   color: var(--color-text-primary);
-  font-size: 0.72rem;
-  word-break: break-word;
-}
-
-.fullWidth {
-  grid-column: 1 / -1;
-}
-
-.detailGrid pre {
-  overflow-x: auto;
-  margin: 0;
-  padding: 0.6rem 0.7rem;
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
-  background: var(--color-white);
-  font-size: 0.68rem;
+  font-size: 0.78rem;
   line-height: 1.5;
-  white-space: pre-wrap;
   word-break: break-word;
-}
-
-.truncate {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .loading {
@@ -404,10 +379,6 @@
     border: 1px solid var(--color-border);
     border-top: none;
     border-radius: 0 0 14px 14px;
-  }
-
-  .detailGrid {
-    grid-template-columns: 1fr;
   }
 
   .pagination {

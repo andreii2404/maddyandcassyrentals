@@ -19,6 +19,7 @@ import {
   formatAuditActor,
   formatAuditDetails,
   formatBookingReference,
+  formatWhatHappened,
   getActivityCategory,
   type ActivityCategory,
 } from "@/src/lib/auditLogLabels";
@@ -39,10 +40,6 @@ const ACTIVITY_TYPE_OPTIONS: Array<{ value: ActivityCategory | ""; label: string
 function formatTimestamp(value: string | null | undefined): string {
   if (!value) return "—";
   return new Date(value).toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "short" });
-}
-
-function hasEntries(value: Record<string, unknown> | undefined): value is Record<string, unknown> {
-  return Boolean(value && Object.keys(value).length > 0);
 }
 
 export default function AdminAuditPage() {
@@ -320,51 +317,12 @@ export default function AdminAuditPage() {
                             {expanded ? (
                               <tr className={styles.detailRow}>
                                 <td colSpan={5}>
-                                  <dl className={styles.detailGrid}>
-                                    <div>
-                                      <dt>Entity</dt>
-                                      <dd>
-                                        {log.entityType}
-                                        {log.entityId ? ` · ${log.entityId}` : ""}
-                                      </dd>
-                                    </div>
-                                    <div>
-                                      <dt>Actor ID</dt>
-                                      <dd>{log.actorUserId ?? "—"}</dd>
-                                    </div>
-                                    <div>
-                                      <dt>IP address</dt>
-                                      <dd>{log.ipAddress ?? "—"}</dd>
-                                    </div>
-                                    <div>
-                                      <dt>User agent</dt>
-                                      <dd className={styles.truncate}>{log.userAgent ?? "—"}</dd>
-                                    </div>
-                                    {hasEntries(log.previousValues) ? (
-                                      <div className={styles.fullWidth}>
-                                        <dt>Previous values</dt>
-                                        <dd>
-                                          <pre>{JSON.stringify(log.previousValues, null, 2)}</pre>
-                                        </dd>
-                                      </div>
-                                    ) : null}
-                                    {hasEntries(log.newValues) ? (
-                                      <div className={styles.fullWidth}>
-                                        <dt>New values</dt>
-                                        <dd>
-                                          <pre>{JSON.stringify(log.newValues, null, 2)}</pre>
-                                        </dd>
-                                      </div>
-                                    ) : null}
-                                    {hasEntries(log.metadata) ? (
-                                      <div className={styles.fullWidth}>
-                                        <dt>Metadata</dt>
-                                        <dd>
-                                          <pre>{JSON.stringify(log.metadata, null, 2)}</pre>
-                                        </dd>
-                                      </div>
-                                    ) : null}
-                                  </dl>
+                                  <div className={styles.detailPanel}>
+                                    <span className={styles.detailLabel}>What happened</span>
+                                    <p className={styles.detailText}>
+                                      {formatWhatHappened(log, actorName)}
+                                    </p>
+                                  </div>
                                 </td>
                               </tr>
                             ) : null}
