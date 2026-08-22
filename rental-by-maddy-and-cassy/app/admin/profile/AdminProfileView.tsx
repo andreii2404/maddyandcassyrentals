@@ -65,7 +65,7 @@ export default function AdminProfileView() {
       <header className={styles.header}>
         <p className={styles.eyebrow}>ADMINISTRATOR ACCOUNT</p>
         <h1>Admin Profile</h1>
-        <p>Your verified administrator identity and Supabase authorization record.</p>
+        <p>Your administrator identity and access details.</p>
       </header>
 
       <section className={styles.card} aria-labelledby="admin-name">
@@ -73,7 +73,7 @@ export default function AdminProfileView() {
           <span className={styles.avatar} aria-hidden="true">
             {displayName.charAt(0).toUpperCase()}
           </span>
-          <div>
+          <div className={styles.identityText}>
             <h2 id="admin-name">{displayName}</h2>
             <p>{email}</p>
           </div>
@@ -88,18 +88,28 @@ export default function AdminProfileView() {
             <dd>Administrator</dd>
           </div>
           <div>
-            <dt>User ID</dt>
-            <dd className={styles.uid}>{admin.userId}</dd>
+            <dt>Status</dt>
+            <dd>{admin.isActive ? "Active" : "Inactive"}</dd>
           </div>
           <div>
-            <dt>Admin Access Created</dt>
+            <dt>Access Created</dt>
             <dd>{formatDate(admin.createdAt)}</dd>
           </div>
         </dl>
 
+        <details className={styles.systemDetails}>
+          <summary>System Details</summary>
+          <dl>
+            <div>
+              <dt>User ID</dt>
+              <dd className={styles.uid}>{admin.userId}</dd>
+            </div>
+          </dl>
+        </details>
+
         <p className={styles.note}>
-          Administrator access is controlled by the protected <code>public.user_roles</code> table
-          and cannot be changed from the customer account interface.
+          This account has full administrator access. Reach out to another administrator if you
+          need this changed.
         </p>
       </section>
     </div>

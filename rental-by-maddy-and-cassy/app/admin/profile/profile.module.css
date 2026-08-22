@@ -1,11 +1,11 @@
 .page {
   width: 100%;
-  max-width: 920px;
+  max-width: 640px;
   margin: 0 auto;
 }
 
 .header {
-  margin-bottom: 1.4rem;
+  margin-bottom: 1.1rem;
 }
 
 .eyebrow {
@@ -29,7 +29,7 @@
 }
 
 .card {
-  padding: 1.6rem;
+  padding: 1.3rem;
   border: 1px solid var(--color-light-gray);
   border-radius: 20px;
   background: var(--color-white);
@@ -39,43 +39,51 @@
 .identity {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding-bottom: 1.4rem;
+  gap: 0.85rem;
+  padding-bottom: 1.1rem;
   border-bottom: 1px solid var(--color-light-gray);
 }
 
 .avatar {
   display: flex;
-  width: 58px;
-  height: 58px;
+  width: 50px;
+  height: 50px;
   border-radius: 999px;
   background: linear-gradient(135deg, var(--color-dusty-rose), var(--color-primary));
   color: var(--color-white);
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  font-size: 1.45rem;
+  font-size: 1.25rem;
   font-weight: 700;
+}
+
+.identityText {
+  min-width: 0;
 }
 
 .identity h2 {
   margin: 0;
-  font-size: 1.25rem;
+  overflow-wrap: anywhere;
+  font-size: 1.1rem;
 }
 
 .identity p {
-  margin: 0.3rem 0 0;
+  margin: 0.2rem 0 0;
+  overflow-wrap: anywhere;
   color: var(--color-charcoal);
-  font-size: 0.84rem;
+  font-size: 0.82rem;
 }
 
 .status {
   display: inline-flex;
+  flex-shrink: 0;
   margin-left: auto;
-  padding: 0.42rem 0.7rem;
+  padding: 0.38rem 0.65rem;
   border-radius: 999px;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .active {
@@ -92,30 +100,80 @@
 
 .details {
   display: grid;
-  margin: 1.4rem 0;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
+  margin: 1.1rem 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
 }
 
 .details > div {
   min-width: 0;
-  padding: 0.9rem;
+  padding: 0.75rem;
   border-radius: 12px;
   background: var(--color-background);
 }
 
 .details dt {
   color: var(--color-charcoal);
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 .details dd {
-  margin: 0.35rem 0 0;
+  margin: 0.3rem 0 0;
   overflow-wrap: anywhere;
   font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.systemDetails {
+  margin: 0 0 1rem;
+  border: 1px solid var(--color-light-gray);
+  border-radius: 12px;
+  background: var(--color-background);
+}
+
+.systemDetails summary {
+  padding: 0.65rem 0.9rem;
+  color: var(--color-charcoal);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.systemDetails summary::-webkit-details-marker {
+  display: none;
+}
+
+.systemDetails summary::before {
+  display: inline-block;
+  margin-right: 0.4rem;
+  content: "▸";
+  transition: transform 0.15s ease;
+}
+
+.systemDetails[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.systemDetails dl {
+  margin: 0;
+  padding: 0 0.9rem 0.9rem;
+}
+
+.systemDetails dt {
+  color: var(--color-charcoal);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.systemDetails dd {
+  margin: 0.3rem 0 0;
+  overflow-wrap: anywhere;
 }
 
 .uid {
@@ -125,13 +183,13 @@
 
 .note {
   margin: 0;
-  padding: 0.9rem;
-  border: 1px solid var(--color-dusty-rose);
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--color-light-gray);
   border-radius: 12px;
-  background: rgba(242, 210, 207, 0.22);
+  background: var(--color-background);
   color: var(--color-charcoal);
   font-size: 0.78rem;
-  line-height: 1.6;
+  line-height: 1.55;
 }
 
 .loading {
@@ -149,7 +207,13 @@
   color: var(--color-status-red);
 }
 
-@media (max-width: 620px) {
+@media (max-width: 640px) {
+  .details {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 460px) {
   .identity {
     align-items: flex-start;
     flex-wrap: wrap;
