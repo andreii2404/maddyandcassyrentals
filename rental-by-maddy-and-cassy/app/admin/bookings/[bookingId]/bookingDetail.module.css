@@ -88,6 +88,80 @@
   50% { opacity: 0.35; }
 }
 
+.statusHero {
+  display: flex;
+  padding: 1.1rem 1.3rem;
+  border: 1px solid var(--color-dusty-rose);
+  border-radius: 18px;
+  background:
+    linear-gradient(120deg, rgba(215, 165, 165, 0.16), transparent 55%),
+    var(--color-white);
+  box-shadow: 0 12px 30px rgba(36, 36, 36, 0.05);
+  align-items: center;
+  gap: 1.2rem;
+}
+
+.statusHeroBlock {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.statusHeroBlockGrow {
+  flex: 1;
+}
+
+.statusHeroBlock > span {
+  color: var(--color-primary);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.statusHeroBadge {
+  display: flex;
+}
+
+.statusHeroBlock strong {
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+
+.statusHeroBlock p {
+  margin: 0;
+  color: var(--color-charcoal);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.statusHeroDivider {
+  width: 1px;
+  height: 44px;
+  background: var(--color-light-gray);
+  flex-shrink: 0;
+}
+
+.statusHeroButton {
+  min-height: 44px;
+  padding: 0.7rem 1.1rem;
+  border: 1px solid var(--color-primary);
+  border-radius: 11px;
+  background: var(--color-primary);
+  color: var(--color-white);
+  flex-shrink: 0;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.bookingSummarySection {
+  display: grid;
+}
+
 .exportButton,
 .applyButton,
 .signatureButton {
@@ -328,29 +402,17 @@
   line-height: 1.35;
 }
 
-.reviewOverview {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(340px, 0.9fr);
-  gap: 1rem;
-}
-
-.bookingSnapshot,
-.reviewChecklist {
+.bookingSnapshot {
   padding: 1.2rem;
   border: 1px solid var(--color-light-gray);
   border-radius: 20px;
-  background: var(--color-white);
-  box-shadow: 0 12px 34px rgba(36, 36, 36, 0.05);
-}
-
-.bookingSnapshot {
   background:
     radial-gradient(circle at 100% 0, rgba(215, 165, 165, 0.18), transparent 38%),
     var(--color-white);
+  box-shadow: 0 12px 34px rgba(36, 36, 36, 0.05);
 }
 
 .snapshotTopline,
-.checklistHeader,
 .snapshotFooter,
 .subsectionHeading {
   display: flex;
@@ -360,21 +422,12 @@
 }
 
 .snapshotTopline > span,
-.checklistHeader > div > span,
 .actionIntro > span {
   color: var(--color-primary);
   font-size: 0.67rem;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-}
-
-.snapshotTopline > strong {
-  padding: 0.35rem 0.65rem;
-  border-radius: 999px;
-  background: var(--color-blush);
-  color: var(--color-primary);
-  font-size: 0.7rem;
 }
 
 .bookingSnapshot h2 {
@@ -456,15 +509,6 @@
   text-decoration: none;
 }
 
-.checklistHeader {
-  align-items: flex-start;
-}
-
-.checklistHeader h2 {
-  margin: 0.25rem 0 0;
-  font-size: 1rem;
-}
-
 .readyPill,
 .pendingPill {
   padding: 0.35rem 0.6rem;
@@ -483,73 +527,93 @@
   color: var(--color-primary);
 }
 
-.checkList {
-  display: grid;
-  margin-top: 0.9rem;
-  gap: 0.5rem;
-}
-
-.checkReady,
-.checkPending {
-  display: grid;
-  padding: 0.62rem;
-  border: 1px solid var(--color-status-green-border);
-  border-radius: 12px;
-  background: var(--color-status-green-bg);
-  grid-template-columns: 26px minmax(0, 1fr);
-  gap: 0.6rem;
-  align-items: center;
-}
-
-.checkPending {
-  border-color: rgba(154, 89, 101, 0.18);
+.checklistCompact {
+  padding: 0.85rem 0.9rem;
+  border: 1px solid var(--color-light-gray);
+  border-radius: 14px;
   background: var(--color-background);
 }
 
-.checkReady > span,
-.checkPending > span {
+.checklistCompactHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.checklistCompactHeader > span:first-child {
+  color: var(--color-primary);
+  font-size: 0.67rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.checklistChips {
   display: grid;
-  width: 26px;
-  height: 26px;
+  margin-top: 0.65rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.checkChipReady,
+.checkChipPending {
+  display: grid;
+  min-width: 0;
+  padding: 0.55rem 0.6rem;
+  border: 1px solid var(--color-status-green-border);
+  border-radius: 11px;
+  background: var(--color-status-green-bg);
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.checkChipPending {
+  border-color: rgba(154, 89, 101, 0.18);
+  background: var(--color-white);
+}
+
+.checkChipReady > span,
+.checkChipPending > span {
+  display: grid;
+  width: 22px;
+  height: 22px;
   border-radius: 999px;
   background: var(--color-white);
   color: var(--color-status-green);
   place-items: center;
-  font-size: 0.72rem;
+  font-size: 0.62rem;
   font-weight: 800;
 }
 
-.checkPending > span {
+.checkChipPending > span {
+  background: var(--color-blush);
   color: var(--color-primary);
 }
 
-.checkReady div,
-.checkPending div {
-  display: grid;
-  grid-template-columns: minmax(80px, 0.7fr) minmax(110px, 1fr);
-  align-items: center;
-  gap: 0.15rem 0.6rem;
+.checkChipReady div,
+.checkChipPending div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.08rem;
 }
 
-.checkReady small,
-.checkPending small {
+.checkChipReady small,
+.checkChipPending small {
   color: var(--color-charcoal);
-  font-size: 0.63rem;
+  font-size: 0.6rem;
   font-weight: 700;
   text-transform: uppercase;
 }
 
-.checkReady strong,
-.checkPending strong {
-  font-size: 0.75rem;
-}
-
-.checkReady p,
-.checkPending p {
-  grid-column: 1 / -1;
-  margin: 0;
-  color: var(--color-charcoal);
-  font-size: 0.65rem;
+.checkChipReady strong,
+.checkChipPending strong {
+  overflow: hidden;
+  font-size: 0.74rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .actionIntro h2 {
@@ -818,13 +882,6 @@
 .emergencyGrid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.65rem;
-}
-
-.recordsLayout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
-  gap: 0.9rem;
-  align-items: start;
 }
 
 .recordCard {
@@ -1100,10 +1157,6 @@
 .dialogDangerButton { border-color: var(--color-status-red); background: var(--color-status-red); }
 
 @media (max-width: 1050px) {
-  .reviewOverview {
-    grid-template-columns: 1fr;
-  }
-
   .statusJourney { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.7rem 0; }
   .statusJourney li:nth-child(3)::after { display: none; }
 
@@ -1115,8 +1168,8 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .recordsLayout {
-    grid-template-columns: 1fr;
+  .checklistChips {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -1129,6 +1182,18 @@
   .headerActions {
     width: 100%;
     justify-content: space-between;
+  }
+
+  .statusHero {
+    flex-wrap: wrap;
+  }
+
+  .statusHeroDivider {
+    display: none;
+  }
+
+  .statusHeroButton {
+    width: 100%;
   }
 
   .actionChoiceGrid,
@@ -1186,18 +1251,12 @@
   }
 
   .snapshotFooter,
-  .checklistHeader {
+  .checklistCompactHeader {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .checkReady div,
-  .checkPending div {
+  .checklistChips {
     grid-template-columns: 1fr;
-  }
-
-  .checkReady p,
-  .checkPending p {
-    grid-column: auto;
   }
 }

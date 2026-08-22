@@ -358,6 +358,15 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   ];
   const remainingChecks = reviewChecks.filter((check) => !check.ready).length;
   const bookingMilestones = getBookingMilestones(booking);
+  const primaryAction = actions.find((action) => action.tone !== "danger") ?? null;
+
+  function jumpToNextStep() {
+    if (primaryAction) {
+      setSelectedStatus(primaryAction.status);
+      setNote("");
+    }
+    document.getElementById("admin-actions")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   return (
     <div className={styles.page}>
@@ -374,7 +383,6 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
             <span aria-hidden="true" />
             {getBookingLiveStatusLabel(liveStatus)}
           </span>
-          <StatusBadge status={booking.status} />
           <button
             type="button"
             className={styles.exportButton}
@@ -386,11 +394,37 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
         </div>
       </header>
 
-      <section className={styles.reviewOverview} aria-label="Booking review summary">
+      <section className={styles.statusHero} aria-label="Current status and recommended next step">
+        <div className={styles.statusHeroBlock}>
+          <span>Current status</span>
+          <div className={styles.statusHeroBadge}><StatusBadge status={booking.status} /></div>
+        </div>
+        <div className={styles.statusHeroDivider} aria-hidden="true" />
+        <div className={`${styles.statusHeroBlock} ${styles.statusHeroBlockGrow}`}>
+          <span>Recommended next step</span>
+          {primaryAction ? (
+            <>
+              <strong>{primaryAction.label}</strong>
+              <p>{primaryAction.description}</p>
+            </>
+          ) : (
+            <>
+              <strong>No further action needed</strong>
+              <p>This booking is complete or closed.</p>
+            </>
+          )}
+        </div>
+        {primaryAction ? (
+          <button type="button" className={styles.statusHeroButton} onClick={jumpToNextStep}>
+            Review &amp; apply
+          </button>
+        ) : null}
+      </section>
+
+      <section className={styles.bookingSummarySection} aria-label="Booking summary">
         <article className={styles.bookingSnapshot}>
           <div className={styles.snapshotTopline}>
-            <span>At a glance</span>
-            <strong>{formatStatus(booking.status)}</strong>
+            <span>Booking summary</span>
           </div>
           <h2>{bookingHeadline(booking.items)}</h2>
           <p className={styles.rentalWindow}>
@@ -408,34 +442,32 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
             <Link href={`/admin/users/${booking.customerId}`}>View customer account</Link>
           </div>
         </article>
+      </section>
 
-        <article className={styles.reviewChecklist}>
-          <div className={styles.checklistHeader}>
-            <div>
-              <span>Approval checklist</span>
-              <h2>{remainingChecks === 0 ? "All checks complete" : `${remainingChecks} item${remainingChecks === 1 ? "" : "s"} need attention`}</h2>
-            </div>
+      <section id="admin-actions" className={styles.actionPanel} aria-labelledby="booking-action-heading">
+        <div className={styles.actionIntro}>
+          <span>Admin actions</span>
+          <h2 id="booking-action-heading">Next Step</h2>
+          <p>Select a clear action card below. Every change is recorded, sent to the customer, and reflected automatically on their account.</p>
+        </div>
+
+        <div className={styles.checklistCompact}>
+          <div className={styles.checklistCompactHeader}>
+            <span>Approval checklist</span>
             <span className={remainingChecks === 0 ? styles.readyPill : styles.pendingPill}>
-              {remainingChecks === 0 ? "Ready" : "Review needed"}
+              {remainingChecks === 0 ? "Ready" : `${remainingChecks} item${remainingChecks === 1 ? "" : "s"} need attention`}
             </span>
           </div>
-          <div className={styles.checkList}>
+          <div className={styles.checklistChips}>
             {reviewChecks.map((check) => (
-              <div key={check.label} className={check.ready ? styles.checkReady : styles.checkPending}>
+              <div key={check.label} className={check.ready ? styles.checkChipReady : styles.checkChipPending} title={check.detail}>
                 <span aria-hidden="true">{check.ready ? "✓" : "!"}</span>
-                <div><small>{check.label}</small><strong>{check.value}</strong><p>{check.detail}</p></div>
+                <div><small>{check.label}</small><strong>{check.value}</strong></div>
               </div>
             ))}
           </div>
-        </article>
-      </section>
-
-      <section className={styles.actionPanel} aria-labelledby="booking-action-heading">
-        <div className={styles.actionIntro}>
-          <span>Booking operations</span>
-          <h2 id="booking-action-heading">Move the booking forward</h2>
-          <p>Select a clear action card below. Every change is recorded, sent to the customer, and reflected automatically on their account.</p>
         </div>
+
         <ol className={styles.statusJourney} aria-label="Booking status journey">
           {bookingMilestones.map((milestone, index) => (
             <li
@@ -505,7 +537,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
         <details className={styles.detailSection}>
           <summary>
             <span className={styles.sectionNumber}>01</span>
-            <div><strong>Customer &amp; Rental Details</strong><small>Contact, dates, pricing, delivery and accessories</small></div>
+            <div><strong>Customer Details</strong><small>Contact information and social links</small></div>
             <span className={styles.expandLabel}>View details</span>
           </summary>
           <div className={styles.detailBody}>
@@ -518,7 +550,16 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
               <div><dt>Facebook</dt><dd>{facebook ? <a href={facebook} target="_blank" rel="noopener noreferrer">Open profile</a> : "-"}</dd></div>
               <div><dt>Instagram</dt><dd>{instagram ? <a href={instagram} target="_blank" rel="noopener noreferrer">Open profile</a> : "-"}</dd></div>
             </dl>
-            <div className={styles.subsectionHeading}><h3>Rental &amp; Pricing</h3></div>
+          </div>
+        </details>
+
+        <details className={styles.detailSection}>
+          <summary>
+            <span className={styles.sectionNumber}>02</span>
+            <div><strong>Rental Details</strong><small>Dates, handover, items and pricing</small></div>
+            <span className={styles.expandLabel}>View details</span>
+          </summary>
+          <div className={styles.detailBody}>
             <dl className={styles.detailGrid}>
               <div><dt>Rental period</dt><dd>{formatDate(booking.startDate)} — {formatDate(booking.endDate)}</dd></div>
               <div><dt>Duration</dt><dd>{booking.dayCount} day(s)</dd></div>
@@ -538,9 +579,60 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
           </div>
         </details>
 
+        <details className={styles.detailSection}>
+          <summary>
+            <span className={styles.sectionNumber}>03</span>
+            <div><strong>Payment Status</strong><small>{paymentStatusLabel} · {payments.length} attempt{payments.length === 1 ? "" : "s"}</small></div>
+            <span className={styles.expandLabel}>View records</span>
+          </summary>
+          <div className={styles.detailBody}>
+            <article className={styles.recordCard}>
+              <div className={styles.recordHeader}>
+                <div><span>PAYMENT RECORDS</span><h3>Verified transactions</h3></div>
+                <span className={`${styles.recordStatus} ${amountPaid > 0 ? styles.recordComplete : styles.recordPending}`}>{paymentStatusLabel}</span>
+              </div>
+              <div className={styles.paymentAmount}>
+                <span>Verified amount</span>
+                <strong>PHP {amountPaid.toLocaleString("en-PH")}</strong>
+                <small>of PHP {booking.totalAmount.toLocaleString("en-PH")} booking total</small>
+              </div>
+              <dl className={styles.paymentFacts}>
+                <div><dt>Attempts</dt><dd>{payments.length}</dd></div>
+                <div><dt>Receipts</dt><dd>{receipts.length}</dd></div>
+                <div><dt>Balance</dt><dd>PHP {Math.max(0, booking.totalAmount - amountPaid).toLocaleString("en-PH")}</dd></div>
+              </dl>
+              {receipts.some((receipt) => receipt.documentPath) ? (
+                <div className={styles.receiptList}>
+                  {receipts.filter((receipt) => receipt.documentPath).map((receipt) => (
+                    <button key={receipt.id} type="button" onClick={() => openPrivateFile("receipts", receipt.documentPath!)}>
+                      <span className={styles.receiptIcon}>PDF</span>
+                      <span><strong>{receipt.receiptNumber ?? receipt.id.slice(0, 8)}</strong><small>Open official receipt</small></span>
+                      <span aria-hidden="true">↗</span>
+                    </button>
+                  ))}
+                </div>
+              ) : <p className={styles.emptyRecord}>No customer-facing receipt has been issued yet.</p>}
+              <PaymentsReviewPanel
+                bookingId={bookingId}
+                booking={booking}
+                payments={payments}
+                onOpenProof={(payment: PaymentRecord) => {
+                  if (payment.proofStorageBucket && payment.proofStoragePath) {
+                    openPrivateFile(
+                      payment.proofStorageBucket as Parameters<typeof getBookingFileUrl>[1],
+                      payment.proofStoragePath,
+                    );
+                  }
+                }}
+                onUpdated={loadDetails}
+              />
+            </article>
+          </div>
+        </details>
+
         <details className={styles.detailSection} open={booking.requirementsStatus === "pending_review" || booking.requirementsStatus === "rejected"}>
           <summary>
-            <span className={styles.sectionNumber}>02</span>
+            <span className={styles.sectionNumber}>04</span>
             <div><strong>Verification Documents</strong><small>{REQUIREMENTS_STATUS_LABELS[booking.requirementsStatus] ?? formatStatus(booking.requirementsStatus)} · {documents.length} file{documents.length === 1 ? "" : "s"}</small></div>
             <span className={styles.expandLabel}>Review files</span>
           </summary>
@@ -567,12 +659,11 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
 
         <details className={styles.detailSection} open={agreement?.status === "awaiting_business_signature"}>
           <summary>
-            <span className={styles.sectionNumber}>03</span>
-            <div><strong>Agreement &amp; Payment</strong><small>{paymentStatusLabel} · {AGREEMENT_STATUS_LABELS[booking.agreementStatus] ?? formatStatus(booking.agreementStatus)}</small></div>
+            <span className={styles.sectionNumber}>05</span>
+            <div><strong>Rental Agreement</strong><small>{AGREEMENT_STATUS_LABELS[booking.agreementStatus] ?? formatStatus(booking.agreementStatus)}</small></div>
             <span className={styles.expandLabel}>{agreement?.status === "awaiting_business_signature" ? "Action required" : "View records"}</span>
           </summary>
           <div className={styles.detailBody}>
-            <div className={styles.recordsLayout}>
               <article className={styles.recordCard}>
                 <div className={styles.recordHeader}>
                   <div><span>RENTAL AGREEMENT</span><h3>Signature workflow</h3></div>
@@ -656,55 +747,12 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                   ) : null}
                 </> : <p className={styles.emptyRecord}>The customer has not submitted a rental agreement yet.</p>}
               </article>
-
-              <article className={styles.recordCard}>
-                <div className={styles.recordHeader}>
-                  <div><span>PAYMENT RECORDS</span><h3>Verified transactions</h3></div>
-                  <span className={`${styles.recordStatus} ${amountPaid > 0 ? styles.recordComplete : styles.recordPending}`}>{paymentStatusLabel}</span>
-                </div>
-                <div className={styles.paymentAmount}>
-                  <span>Verified amount</span>
-                  <strong>PHP {amountPaid.toLocaleString("en-PH")}</strong>
-                  <small>of PHP {booking.totalAmount.toLocaleString("en-PH")} booking total</small>
-                </div>
-                <dl className={styles.paymentFacts}>
-                  <div><dt>Attempts</dt><dd>{payments.length}</dd></div>
-                  <div><dt>Receipts</dt><dd>{receipts.length}</dd></div>
-                  <div><dt>Balance</dt><dd>PHP {Math.max(0, booking.totalAmount - amountPaid).toLocaleString("en-PH")}</dd></div>
-                </dl>
-                {receipts.some((receipt) => receipt.documentPath) ? (
-                  <div className={styles.receiptList}>
-                    {receipts.filter((receipt) => receipt.documentPath).map((receipt) => (
-                      <button key={receipt.id} type="button" onClick={() => openPrivateFile("receipts", receipt.documentPath!)}>
-                        <span className={styles.receiptIcon}>PDF</span>
-                        <span><strong>{receipt.receiptNumber ?? receipt.id.slice(0, 8)}</strong><small>Open official receipt</small></span>
-                        <span aria-hidden="true">↗</span>
-                      </button>
-                    ))}
-                  </div>
-                ) : <p className={styles.emptyRecord}>No customer-facing receipt has been issued yet.</p>}
-                <PaymentsReviewPanel
-                  bookingId={bookingId}
-                  booking={booking}
-                  payments={payments}
-                  onOpenProof={(payment: PaymentRecord) => {
-                    if (payment.proofStorageBucket && payment.proofStoragePath) {
-                      openPrivateFile(
-                        payment.proofStorageBucket as Parameters<typeof getBookingFileUrl>[1],
-                        payment.proofStoragePath,
-                      );
-                    }
-                  }}
-                  onUpdated={loadDetails}
-                />
-              </article>
-            </div>
           </div>
         </details>
 
         <details className={styles.detailSection}>
           <summary>
-            <span className={styles.sectionNumber}>04</span>
+            <span className={styles.sectionNumber}>06</span>
             <div><strong>Status Activity</strong><small>{statusHistory.length} recorded update{statusHistory.length === 1 ? "" : "s"}</small></div>
             <span className={styles.expandLabel}>View timeline</span>
           </summary>
