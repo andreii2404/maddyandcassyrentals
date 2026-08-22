@@ -48,6 +48,25 @@ function errorResponse(message: string, status: number) {
   return NextResponse.json({ success: false, error: message }, { status });
 }
 
+interface SupabaseFailure {
+  message: string;
+  code?: string;
+  details?: string;
+  hint?: string;
+}
+
+function throwSupabaseFailure(operation: string, error: SupabaseFailure): never {
+  const diagnostic = [
+    error.message,
+    error.code ? `code=${error.code}` : "",
+    error.details ? `details=${error.details}` : "",
+    error.hint ? `hint=${error.hint}` : "",
+  ]
+    .filter(Boolean)
+    .join(" | ");
+  throw new Error(`${operation} failed: ${diagnostic}`, { cause: error });
+}
+
 function expectedPrefix(userId: string, bookingId: string, fileName: string, submissionId: string): string {
   return `${userId}/${bookingId}/${fileName}-${submissionId}.`;
 }
@@ -63,7 +82,8 @@ async function verifyUploadedFile(
   }
   const folder = path.slice(0, path.lastIndexOf("/"));
   const fileName = path.slice(path.lastIndexOf("/") + 1);
-  const { data } = await admin.storage.from(bucket).list(folder, { search: fileName });
+  const { data, error } = await admin.storage.from(bucket).list(folder, { search: fileName });
+  if (error) throwSupabaseFailure(`Storage verification for ${bucket}`, error);
   if (!data?.some((entry) => entry.name === fileName)) {
     throw new RequestSecurityError("An uploaded document could not be verified.", 400);
   }
@@ -72,7 +92,7 @@ async function verifyUploadedFile(
 export async function POST(request: Request, { params }: { params: Promise<{ bookingId: string }> }) {
   try {
     enforceRateLimit(request, "booking-document-submit", 8, 10 * 60_000);
-    const { user } = await requireUser();
+    const { supabase, user } = await requireUser();
     const { bookingId } = await params;
     const input = metadataSchema.parse(await request.json());
     const admin = createAdminClient();
@@ -95,13 +115,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
     // them. Gate on the customer having submitted payment proof at all, not
     // on admin verification -- that happens later and must not block the
     // rest of the booking flow.
-    const { data: submittedPayment } = await admin
+    const { data: submittedPayment, error: submittedPaymentError } = await admin
       .from("booking_payment_submissions")
       .select("id")
       .eq("booking_id", bookingId)
       .in("status", ["submitted", "under_review", "verified"])
       .limit(1)
       .maybeSingle();
+    if (submittedPaymentError) {
+      throwSupabaseFailure("Reservation payment verification", submittedPaymentError);
+    }
     if (!submittedPayment) {
       return errorResponse("Submit your reservation payment proof before submitting documents.", 409);
     }
@@ -109,7 +132,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
     // The agreement is about to be finalized for signing -- reconfirm every
     // item's active unit allocation from the real reservation rows (never a
     // placeholder) before freezing anything into the snapshot below.
-    const unitAssignments = await getBookingUnitAssignments(admin, bookingId);
+    // get_booking_unit_assignments intentionally authorizes with auth.uid().
+    // Calling it with the service-role client supplies no end-user identity
+    // and returns 42501 NOT_AUTHORIZED. Use the already-verified customer
+    // session; the RPC itself then confirms that this user owns the booking.
+    const unitAssignments = await getBookingUnitAssignments(supabase, bookingId);
     try {
       assertUnitAssignmentsComplete(
         booking.items.map((item) => ({ bookingItemId: item.bookingItemId, quantity: item.quantity })),
@@ -179,10 +206,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
           .select("id"),
       ]);
     if (customerDocumentsError || !customerDocuments || customerDocuments.length !== documentRows.length) {
-      throw new Error(customerDocumentsError?.message ?? "A verification document could not be recorded.");
+      if (customerDocumentsError) {
+        throwSupabaseFailure("Recording verification documents", customerDocumentsError);
+      }
+      throw new Error("Recording verification documents returned an incomplete result.");
     }
     if (requirementsError || !requirements || requirements.length !== documentRows.length) {
-      throw new Error(requirementsError?.message ?? "A booking requirement could not be recorded.");
+      if (requirementsError) {
+        throwSupabaseFailure("Recording booking requirements", requirementsError);
+      }
+      throw new Error("Recording booking requirements returned an incomplete result.");
     }
 
     const { error: submissionsError } = await admin.from("booking_requirement_submissions").insert(
@@ -193,7 +226,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
         submitted_at: now,
       })),
     );
-    if (submissionsError) throw new Error(submissionsError.message);
+    if (submissionsError) {
+      throwSupabaseFailure("Linking verification documents to requirements", submissionsError);
+    }
 
     const agreementSnapshot: AgreementSnapshot = {
       customerName: booking.customerSnapshot.fullName || input.typedFullName,
@@ -232,7 +267,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
       })
       .select("id")
       .single();
-    if (agreementError || !agreement) throw new Error(agreementError?.message ?? "Agreement could not be created.");
+    if (agreementError) throwSupabaseFailure("Creating the rental agreement", agreementError);
+    if (!agreement) throw new Error("Creating the rental agreement returned no record.");
 
     const { data: agreementVersion, error: versionError } = await admin
       .from("agreement_versions")
@@ -247,7 +283,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
       .select("id")
       .single();
     if (versionError || !agreementVersion) {
-      throw new Error(versionError?.message ?? "Agreement version could not be created.");
+      if (versionError) throwSupabaseFailure("Creating the agreement version", versionError);
+      throw new Error("Creating the agreement version returned no record.");
     }
 
     // requirements_status / agreement_status are derived, not stored columns
@@ -303,11 +340,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
         p_booking_id: bookingId,
       }),
     ]);
-    if (acknowledgementsError) throw new Error(acknowledgementsError.message);
-    if (signatureError) throw new Error(signatureError.message);
-    if (emergencyContactError) throw new Error(emergencyContactError.message);
-    if (statusHistoryError) throw new Error(statusHistoryError.message);
-    if (auditLogError) throw new Error(auditLogError.message);
+    if (acknowledgementsError) {
+      throwSupabaseFailure("Recording agreement acknowledgements", acknowledgementsError);
+    }
+    if (signatureError) throwSupabaseFailure("Recording the customer signature", signatureError);
+    if (emergencyContactError) {
+      throwSupabaseFailure("Recording the emergency contact", emergencyContactError);
+    }
+    if (statusHistoryError) throwSupabaseFailure("Recording booking history", statusHistoryError);
+    if (auditLogError) throwSupabaseFailure("Recording the audit event", auditLogError);
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -316,7 +357,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
       return errorResponse("Check the verification details and agreement, then try again.", 400);
     }
     const { bookingId } = await params;
-    console.error(`Booking document finalization failed bookingId=${bookingId}`, error);
+    if (process.env.NODE_ENV !== "production") {
+      console.error(`Booking document finalization failed bookingId=${bookingId}`, error);
+    } else {
+      console.error("Booking document finalization failed", {
+        bookingId,
+        name: error instanceof Error ? error.name : "UnknownError",
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
     return errorResponse("The documents could not be finalized. Please try again.", 500);
   }
 }
