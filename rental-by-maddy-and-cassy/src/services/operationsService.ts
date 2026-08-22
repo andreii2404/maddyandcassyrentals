@@ -1,6 +1,6 @@
 import type { Product } from "@/types/product";
 import type { BookingStatus, RequirementsStatus } from "@/src/types/booking";
-import type { PaymentRecord } from "@/src/types/payment";
+import type { AdminPaymentRecord } from "@/src/types/payment";
 import type { AuditLogEntry } from "@/src/types/admin";
 
 export interface AdminDashboardData {
@@ -96,7 +96,7 @@ export interface AdminReviewsData {
 }
 
 export interface AdminPaymentsData {
-  payments: PaymentRecord[];
+  payments: AdminPaymentRecord[];
   total: number;
   page: number;
   pageSize: number;

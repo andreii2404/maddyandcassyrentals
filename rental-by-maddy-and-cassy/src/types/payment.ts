@@ -44,6 +44,12 @@ export interface PaymentRecord {
   updatedAt: string;
 }
 
+/** PaymentRecord enriched with booking/customer context, for the admin Payment Records list. */
+export interface AdminPaymentRecord extends PaymentRecord {
+  bookingRef: string;
+  customerName: string;
+}
+
 /** One row of public.booking_receipts. */
 export interface BookingReceipt {
   id: string;

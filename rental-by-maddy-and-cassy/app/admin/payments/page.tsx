@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import AdminShell from "@/components/admin/AdminShell";
 import Spinner from "@/components/ui/Spinner";
+import PaymentProofModal, { type PaymentWithProof } from "@/components/admin/PaymentProofModal";
 import { useAuth } from "@/hooks/useAuth";
 import { getAdminPayments, type AdminPaymentsData } from "@/src/services/operationsService";
+import type { AdminPaymentRecord } from "@/src/types/payment";
 import styles from "../operations.module.css";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50] as const;
@@ -22,6 +24,10 @@ function formatDate(value: string | null) {
 
 function formatLabel(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function hasProof(payment: AdminPaymentRecord): payment is PaymentWithProof {
+  return Boolean(payment.proofStorageBucket && payment.proofStoragePath);
 }
 
 type PageEntry = number | "ellipsis";
@@ -110,6 +116,7 @@ export default function AdminPaymentsPage() {
   const [paymentsPageSize, setPaymentsPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
   const [paymentsData, setPaymentsData] = useState<AdminPaymentsData | null>(null);
   const [paymentsError, setPaymentsError] = useState<string | null>(null);
+  const [proofPayment, setProofPayment] = useState<PaymentWithProof | null>(null);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -203,6 +210,7 @@ export default function AdminPaymentsPage() {
                         <th>Status</th>
                         <th>Payment Type</th>
                         <th>Date</th>
+                        <th>Proof</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -224,6 +232,19 @@ export default function AdminPaymentsPage() {
                           </td>
                           <td>{formatLabel(payment.stage)}</td>
                           <td>{formatDate(payment.createdAt)}</td>
+                          <td>
+                            {hasProof(payment) ? (
+                              <button
+                                type="button"
+                                className={styles.viewProofButton}
+                                onClick={() => setProofPayment(payment)}
+                              >
+                                View Proof
+                              </button>
+                            ) : (
+                              <span className={styles.noProof}>No proof submitted</span>
+                            )}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -248,6 +269,9 @@ export default function AdminPaymentsPage() {
           </>
         ) : null}
       </div>
+      {proofPayment ? (
+        <PaymentProofModal payment={proofPayment} onClose={() => setProofPayment(null)} />
+      ) : null}
     </AdminShell>
   );
 }

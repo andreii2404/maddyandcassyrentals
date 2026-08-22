@@ -1,13 +1,19 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/src/lib/supabase/database.types";
+import type { Database, Tables } from "@/src/lib/supabase/database.types";
 import { mapPaymentSubmission } from "@/src/services/paymentService";
-import type { PaymentRecord } from "@/src/types/payment";
+import { resolveAccountName } from "@/src/lib/accountDisplay";
+import type { AdminPaymentRecord } from "@/src/types/payment";
 import type { AuditLogEntry } from "@/src/types/admin";
 
 export interface PaymentRecordsPage {
-  records: PaymentRecord[];
+  records: AdminPaymentRecord[];
   total: number;
 }
+
+type PaymentSubmissionWithContextRow = Tables<"booking_payment_submissions"> & {
+  customer_documents: { storage_bucket: string; storage_path: string; original_filename: string | null } | null;
+  bookings: { booking_reference: string; customer_id: string } | null;
+};
 
 export interface PaymentMetricsSummary {
   verifiedRevenue: number;
@@ -33,7 +39,10 @@ export async function getPaymentRecordsPage(
 
   let query = supabase
     .from("booking_payment_submissions")
-    .select("*", { count: "exact" })
+    .select(
+      "*, customer_documents(storage_bucket, storage_path, original_filename), bookings(booking_reference, customer_id)",
+      { count: "exact" },
+    )
     .is("paymongo_payment_id", null)
     .order("created_at", { ascending: false });
 
@@ -51,7 +60,27 @@ export async function getPaymentRecordsPage(
 
   const { data, error, count } = await query.range(from, to);
   if (error) throw new Error(error.message);
-  return { records: (data ?? []).map(mapPaymentSubmission), total: count ?? 0 };
+
+  const rows = (data ?? []) as unknown as PaymentSubmissionWithContextRow[];
+  const customerIds = Array.from(
+    new Set(rows.map((row) => row.bookings?.customer_id).filter((id): id is string => Boolean(id))),
+  );
+  const { data: profiles, error: profilesError } = customerIds.length
+    ? await supabase.from("profiles").select("id, display_name, contact_email").in("id", customerIds)
+    : { data: [], error: null };
+  if (profilesError) throw new Error(profilesError.message);
+  const profileById = new Map((profiles ?? []).map((profile) => [profile.id, profile]));
+
+  const records = rows.map((row): AdminPaymentRecord => {
+    const profile = row.bookings?.customer_id ? profileById.get(row.bookings.customer_id) : undefined;
+    return {
+      ...mapPaymentSubmission(row),
+      bookingRef: row.bookings?.booking_reference ?? "Unknown booking",
+      customerName: resolveAccountName({ displayName: profile?.display_name, email: profile?.contact_email }),
+    };
+  });
+
+  return { records, total: count ?? 0 };
 }
 
 /** Lightweight aggregate for the Payments dashboard cards — kept independent of the paginated table query. */
