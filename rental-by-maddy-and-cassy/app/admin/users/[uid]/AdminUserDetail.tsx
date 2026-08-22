@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/ToastProvider";
 import type { Booking, UserProfile } from "@/src/types/database";
 import { bookingHeadline } from "@/src/lib/bookingDisplay";
+import { resolveAccountName } from "@/src/lib/accountDisplay";
 import Spinner from "@/components/ui/Spinner";
 import StatusBadge from "@/components/status-badge/StatusBadge";
 import styles from "./userDetail.module.css";
@@ -105,6 +106,7 @@ export default function AdminUserDetail({ uid }: { uid: string }) {
   }
 
   const { account, bookings, isAdministrator } = data;
+  const accountName = resolveAccountName(account);
 
   return (
     <div className={styles.page}>
@@ -114,14 +116,14 @@ export default function AdminUserDetail({ uid }: { uid: string }) {
 
       <header className={styles.profileHeader}>
         <span className={styles.avatar} aria-hidden="true">
-          {account.displayName?.charAt(0).toUpperCase() || "C"}
+          {accountName.charAt(0).toUpperCase()}
         </span>
         <div>
           <p className={styles.eyebrow}>
             {isAdministrator ? "ADMINISTRATOR ACCOUNT" : "CUSTOMER ACCOUNT"}
           </p>
-          <h1>{account.displayName || "Unnamed account"}</h1>
-          <p>{account.email}</p>
+          <h1>{accountName}</h1>
+          <p>{account.email || "No email on file"}</p>
         </div>
         <span className={`${styles.status} ${styles[account.accountStatus]}`}>
           {account.accountStatus}

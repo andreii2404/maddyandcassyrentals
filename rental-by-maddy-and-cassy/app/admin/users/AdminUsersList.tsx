@@ -5,6 +5,7 @@ import Link from "next/link";
 import { getAllAdmins } from "@/src/services/adminService";
 import { getAllUsers } from "@/src/services/userService";
 import type { Admin, UserProfile } from "@/src/types/database";
+import { resolveAccountName } from "@/src/lib/accountDisplay";
 import Spinner from "@/components/ui/Spinner";
 import styles from "./users.module.css";
 
@@ -111,15 +112,17 @@ export default function AdminUsersList() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredUsers.map((account) => (
+                  {filteredUsers.map((account) => {
+                    const name = resolveAccountName(account);
+                    return (
                     <tr key={account.id}>
                       <td>
                         <Link href={`/admin/users/${account.id}`} className={styles.accountLink}>
                           <span className={styles.avatar} aria-hidden="true">
-                            {account.displayName?.charAt(0).toUpperCase() || "C"}
+                            {name.charAt(0).toUpperCase()}
                           </span>
                           <span>
-                            <strong>{account.displayName || "Unnamed account"}</strong>
+                            <strong>{name}</strong>
                             <small>View account</small>
                           </span>
                         </Link>
@@ -134,7 +137,8 @@ export default function AdminUsersList() {
                       </td>
                       <td>{formatDate(account.createdAt)}</td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

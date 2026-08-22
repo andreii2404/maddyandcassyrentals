@@ -20,6 +20,7 @@ import {
   type BookingHistoryFilter,
 } from "@/src/lib/bookingManagement";
 import { bookingHeadline } from "@/src/lib/bookingDisplay";
+import { resolveAccountName } from "@/src/lib/accountDisplay";
 import styles from "./bookings.module.css";
 
 const STATUS_OPTIONS: Array<{ value: "" | BookingStatus; label: string }> = [
@@ -43,7 +44,12 @@ function formatDate(value: string | undefined | null): string {
 }
 
 function customerName(booking: Booking, user?: UserProfile): string {
-  return booking.customerSnapshot?.fullName || user?.displayName || "Customer";
+  const snapshotName = booking.customerSnapshot?.fullName?.trim();
+  if (snapshotName) return snapshotName;
+  if (user) return resolveAccountName(user);
+  const snapshotEmail = booking.customerSnapshot?.email?.trim();
+  if (snapshotEmail) return snapshotEmail;
+  return "Guest";
 }
 
 export default function AdminBookingsList() {
