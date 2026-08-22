@@ -97,7 +97,21 @@ export interface AdminReviewsData {
 
 export interface AdminPaymentsData {
   payments: PaymentRecord[];
+  total: number;
+  page: number;
+  pageSize: number;
+  metrics: {
+    verifiedRevenue: number;
+    successfulPayments: number;
+    pendingCheckouts: number;
+  };
+}
+
+export interface AdminPaymentEventsData {
   events: PayMongoWebhookEvent[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 async function getAdminData<T>(path: string): Promise<T> {
@@ -123,8 +137,28 @@ export async function getAdminAuditLogs(): Promise<AdminAuditLog[]> {
   return data.logs;
 }
 
-export function getAdminPayments(): Promise<AdminPaymentsData> {
-  return getAdminData("/api/admin/payments");
+export function getAdminPayments(params: {
+  page: number;
+  pageSize: number;
+  search?: string;
+}): Promise<AdminPaymentsData> {
+  const query = new URLSearchParams({
+    page: String(params.page),
+    pageSize: String(params.pageSize),
+  });
+  if (params.search) query.set("search", params.search);
+  return getAdminData(`/api/admin/payments?${query.toString()}`);
+}
+
+export function getAdminPaymentEvents(params: {
+  page: number;
+  pageSize: number;
+}): Promise<AdminPaymentEventsData> {
+  const query = new URLSearchParams({
+    page: String(params.page),
+    pageSize: String(params.pageSize),
+  });
+  return getAdminData(`/api/admin/payments/events?${query.toString()}`);
 }
 
 export function getAdminReviews(): Promise<AdminReviewsData> {

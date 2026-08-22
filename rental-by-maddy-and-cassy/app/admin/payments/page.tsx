@@ -1,15 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import AdminShell from "@/components/admin/AdminShell";
 import Spinner from "@/components/ui/Spinner";
 import { useAuth } from "@/hooks/useAuth";
 import {
   getAdminPayments,
+  getAdminPaymentEvents,
   type AdminPaymentsData,
+  type AdminPaymentEventsData,
 } from "@/src/services/operationsService";
 import styles from "../operations.module.css";
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50] as const;
+const DEFAULT_PAGE_SIZE = 10;
+const SEARCH_DEBOUNCE_MS = 300;
 
 function money(value: number) {
   return `PHP ${value.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`;
@@ -19,25 +25,121 @@ function formatDate(value: string | null) {
   return value ? new Date(value).toLocaleString("en-PH") : "—";
 }
 
+type PageEntry = number | "ellipsis";
+
+function getPageNumbers(current: number, pageCount: number): PageEntry[] {
+  if (pageCount <= 7) return Array.from({ length: pageCount }, (_, i) => i + 1);
+  const keep = new Set<number>([1, pageCount, current - 1, current, current + 1]);
+  const sorted = [...keep].filter((page) => page >= 1 && page <= pageCount).sort((a, b) => a - b);
+  const entries: PageEntry[] = [];
+  let previous = 0;
+  for (const page of sorted) {
+    if (previous && page - previous > 1) entries.push("ellipsis");
+    entries.push(page);
+    previous = page;
+  }
+  return entries;
+}
+
+function PaginationBar({
+  page,
+  pageSize,
+  total,
+  onPageChange,
+  onPageSizeChange,
+}: {
+  page: number;
+  pageSize: number;
+  total: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
+}) {
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const to = Math.min(page * pageSize, total);
+
+  return (
+    <footer className={styles.pagination}>
+      <span>{total === 0 ? "No records" : `Showing ${from}–${to} of ${total}`}</span>
+      <div className={styles.paginationControls}>
+        <label className={styles.pageSizeLabel}>
+          Rows per page
+          <select value={pageSize} onChange={(event) => onPageSizeChange(Number(event.target.value))}>
+            {PAGE_SIZE_OPTIONS.map((size) => (
+              <option key={size} value={size}>
+                {size}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className={styles.pageButtons}>
+          <button type="button" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
+            Previous
+          </button>
+          {getPageNumbers(page, pageCount).map((entry, index) =>
+            entry === "ellipsis" ? (
+              <span key={`ellipsis-${index}`} className={styles.pageEllipsis}>
+                …
+              </span>
+            ) : (
+              <button
+                key={entry}
+                type="button"
+                className={entry === page ? styles.pageButtonActive : undefined}
+                disabled={entry === page}
+                onClick={() => onPageChange(entry)}
+              >
+                {entry}
+              </button>
+            ),
+          )}
+          <button type="button" disabled={page >= pageCount} onClick={() => onPageChange(page + 1)}>
+            Next
+          </button>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
 export default function AdminPaymentsPage() {
   const { user } = useAuth();
-  const [data, setData] = useState<AdminPaymentsData | null>(null);
-  const [error, setError] = useState<string | null>(null);
+
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [paymentsPage, setPaymentsPage] = useState(1);
+  const [paymentsPageSize, setPaymentsPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
+  const [paymentsData, setPaymentsData] = useState<AdminPaymentsData | null>(null);
+  const [paymentsError, setPaymentsError] = useState<string | null>(null);
+
+  const [eventsPage, setEventsPage] = useState(1);
+  const [eventsPageSize, setEventsPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
+  const [eventsData, setEventsData] = useState<AdminPaymentEventsData | null>(null);
+  const [eventsError, setEventsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearch(searchInput.trim());
+      setPaymentsPage(1);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(timeoutId);
+  }, [searchInput]);
 
   useEffect(() => {
     let active = true;
     if (!user) return;
 
-    getAdminPayments()
-      .then((records) => {
-        if (active) setData(records);
+    getAdminPayments({ page: paymentsPage, pageSize: paymentsPageSize, search: debouncedSearch || undefined })
+      .then((result) => {
+        if (active) {
+          setPaymentsData(result);
+          setPaymentsError(null);
+        }
       })
       .catch((loadError: unknown) => {
         if (active) {
-          setError(
-            loadError instanceof Error
-              ? loadError.message
-              : "Payment activity could not be loaded.",
+          setPaymentsError(
+            loadError instanceof Error ? loadError.message : "Payment activity could not be loaded.",
           );
         }
       });
@@ -45,19 +147,33 @@ export default function AdminPaymentsPage() {
     return () => {
       active = false;
     };
-  }, [user]);
+  }, [user, paymentsPage, paymentsPageSize, debouncedSearch]);
 
-  const payments = useMemo(
-    () =>
-      [...(data?.payments ?? [])].sort(
-        (a, b) =>
-          Date.parse(b.createdAt || "") - Date.parse(a.createdAt || ""),
-      ),
-    [data],
-  );
-  const paidRevenue = payments
-    .filter((payment) => payment.status === "verified")
-    .reduce((sum, payment) => sum + payment.amount, 0);
+  useEffect(() => {
+    let active = true;
+    if (!user) return;
+
+    getAdminPaymentEvents({ page: eventsPage, pageSize: eventsPageSize })
+      .then((result) => {
+        if (active) {
+          setEventsData(result);
+          setEventsError(null);
+        }
+      })
+      .catch((loadError: unknown) => {
+        if (active) {
+          setEventsError(
+            loadError instanceof Error ? loadError.message : "Webhook activity could not be loaded.",
+          );
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user, eventsPage, eventsPageSize]);
+
+  const loading = !paymentsData && !paymentsError;
 
   return (
     <AdminShell>
@@ -71,37 +187,29 @@ export default function AdminPaymentsPage() {
             </span>
           </div>
         </header>
-        {error ? <div className={styles.error}>{error}</div> : null}
-        {!data && !error ? (
+        {paymentsError ? <div className={styles.error}>{paymentsError}</div> : null}
+        {loading ? (
           <div className={styles.loading}>
             <Spinner size={28} label="Loading payments" />
           </div>
-        ) : data ? (
+        ) : paymentsData ? (
           <>
             <section className={styles.metrics}>
               <article>
                 <span>Recorded Revenue</span>
-                <strong>{money(paidRevenue)}</strong>
+                <strong>{money(paymentsData.metrics.verifiedRevenue)}</strong>
               </article>
               <article>
                 <span>Successful Payments</span>
-                <strong>
-                  {payments.filter((payment) => payment.status === "verified").length}
-                </strong>
+                <strong>{paymentsData.metrics.successfulPayments}</strong>
               </article>
               <article>
                 <span>Pending Checkouts</span>
-                <strong>
-                  {
-                    payments.filter(
-                      (payment) => payment.status === "submitted" || payment.status === "under_review",
-                    ).length
-                  }
-                </strong>
+                <strong>{paymentsData.metrics.pendingCheckouts}</strong>
               </article>
               <article>
                 <span>Webhook Events</span>
-                <strong>{data.events.length}</strong>
+                <strong>{eventsData?.total ?? 0}</strong>
               </article>
             </section>
 
@@ -111,8 +219,16 @@ export default function AdminPaymentsPage() {
                   <h2>Payment Records</h2>
                   <p>Customer checkout and provider references.</p>
                 </div>
+                <input
+                  type="search"
+                  className={styles.searchInput}
+                  placeholder="Search booking, reference, status, method…"
+                  value={searchInput}
+                  onChange={(event) => setSearchInput(event.target.value)}
+                  aria-label="Search payment records"
+                />
               </div>
-              {payments.length ? (
+              {paymentsData.payments.length ? (
                 <div className={styles.tableWrap}>
                   <table>
                     <thead>
@@ -127,7 +243,7 @@ export default function AdminPaymentsPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {payments.map((payment) => (
+                      {paymentsData.payments.map((payment) => (
                         <tr key={payment.id}>
                           <td>
                             <Link href={`/admin/bookings/${payment.bookingId}`}>
@@ -154,8 +270,20 @@ export default function AdminPaymentsPage() {
                   </table>
                 </div>
               ) : (
-                <p className={styles.empty}>No payment records yet.</p>
+                <p className={styles.empty}>
+                  {debouncedSearch ? "No payment records match your search." : "No payment records yet."}
+                </p>
               )}
+              <PaginationBar
+                page={paymentsData.page}
+                pageSize={paymentsData.pageSize}
+                total={paymentsData.total}
+                onPageChange={setPaymentsPage}
+                onPageSizeChange={(size) => {
+                  setPaymentsPageSize(size);
+                  setPaymentsPage(1);
+                }}
+              />
             </section>
 
             <section className={styles.panel}>
@@ -165,7 +293,8 @@ export default function AdminPaymentsPage() {
                   <p>Historic signed PayMongo events from before the switch to manual GCash payments.</p>
                 </div>
               </div>
-              {data.events.length ? (
+              {eventsError ? <div className={styles.error}>{eventsError}</div> : null}
+              {eventsData?.events.length ? (
                 <div className={styles.tableWrap}>
                   <table>
                     <thead>
@@ -178,41 +307,45 @@ export default function AdminPaymentsPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {[...data.events]
-                        .sort(
-                          (a, b) =>
-                            Date.parse(b.receivedAt || "") -
-                            Date.parse(a.receivedAt || ""),
-                        )
-                        .map((event) => (
-                          <tr key={event.id}>
-                            <td>{event.providerEventId}</td>
-                            <td>{event.eventType}</td>
-                            <td>{event.signatureValid ? "Verified" : "Unverified"}</td>
-                            <td>
-                              <span
-                                className={`${styles.pill} ${styles[event.processingStatus] ?? ""}`}
-                              >
-                                {event.processingStatus}
-                              </span>
-                            </td>
-                            <td>
-                              {event.paymentSubmissionId ? (
-                                <span>{event.paymentSubmissionId.slice(0, 8)}</span>
-                              ) : (
-                                "—"
-                              )}
-                            </td>
-                          </tr>
-                        ))}
+                      {eventsData.events.map((event) => (
+                        <tr key={event.id}>
+                          <td>{event.providerEventId}</td>
+                          <td>{event.eventType}</td>
+                          <td>{event.signatureValid ? "Verified" : "Unverified"}</td>
+                          <td>
+                            <span
+                              className={`${styles.pill} ${styles[event.processingStatus] ?? ""}`}
+                            >
+                              {event.processingStatus}
+                            </span>
+                          </td>
+                          <td>
+                            {event.paymentSubmissionId ? (
+                              <span>{event.paymentSubmissionId.slice(0, 8)}</span>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
-              ) : (
-                <p className={styles.empty}>
-                  No webhook events on record.
-                </p>
-              )}
+              ) : eventsData ? (
+                <p className={styles.empty}>No webhook events on record.</p>
+              ) : null}
+              {eventsData ? (
+                <PaginationBar
+                  page={eventsData.page}
+                  pageSize={eventsData.pageSize}
+                  total={eventsData.total}
+                  onPageChange={setEventsPage}
+                  onPageSizeChange={(size) => {
+                    setEventsPageSize(size);
+                    setEventsPage(1);
+                  }}
+                />
+              ) : null}
             </section>
           </>
         ) : null}

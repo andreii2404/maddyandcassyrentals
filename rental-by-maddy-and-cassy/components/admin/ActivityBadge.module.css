@@ -1,0 +1,47 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.28rem 0.55rem;
+  border-radius: 999px;
+  gap: 0.35rem;
+  color: var(--color-charcoal);
+  font-size: 0.66rem;
+  font-weight: 700;
+  white-space: nowrap;
+  background: var(--color-background);
+}
+
+.badge[data-category="booking"] {
+  background: var(--color-blush);
+  color: var(--color-primary);
+}
+
+.badge[data-category="payment"] {
+  background: var(--color-status-green-bg);
+  color: var(--color-status-green);
+}
+
+.badge[data-category="documents"] {
+  background: var(--color-status-yellow-bg);
+  color: var(--color-status-yellow);
+}
+
+.badge[data-category="account"] {
+  background: rgba(58, 106, 178, 0.12);
+  color: #2f5fae;
+}
+
+.badge[data-category="catalog"] {
+  background: rgba(107, 70, 193, 0.12);
+  color: #6b46c1;
+}
+
+.badge[data-category="admin"] {
+  background: rgba(85, 85, 85, 0.12);
+  color: var(--color-text-primary);
+}
+
+.badge[data-category="other"] {
+  background: var(--color-background);
+  color: var(--color-charcoal);
+}

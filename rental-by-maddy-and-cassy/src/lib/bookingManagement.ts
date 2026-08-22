@@ -69,6 +69,36 @@ export function getRejectionReason(statusHistory: StatusHistoryEntry[]): string 
   return entry?.note;
 }
 
+export const DECLINE_REASON_OPTIONS = [
+  "Invalid/Fake ID",
+  "Incomplete Documents",
+  "Payment Issue",
+  "Information Mismatch",
+  "Product/Date Unavailable",
+  "Policy Requirement Not Met",
+  "Other",
+] as const;
+
+export type DeclineReason = (typeof DECLINE_REASON_OPTIONS)[number];
+
+/** Combines the admin's structured decline reason and explanation into the single note text stored on the status history entry. */
+export function formatDeclineNote(reason: string, details: string): string {
+  return `Decline reason: ${reason}\nDetails: ${details.trim()}`;
+}
+
+export interface ParsedDeclineNote {
+  reason: string;
+  details: string;
+}
+
+/** Reads a structured decline note back out, for notes saved by formatDeclineNote(). Older freeform decline notes won't match. */
+export function parseDeclineNote(note: string | undefined): ParsedDeclineNote | undefined {
+  if (!note) return undefined;
+  const match = note.match(/^Decline reason:\s*(.+?)\nDetails:\s*([\s\S]*)$/);
+  if (!match) return undefined;
+  return { reason: match[1].trim(), details: match[2].trim() };
+}
+
 export function canCustomerCancelBooking(status: BookingStatus): boolean {
   return status === "pending" || status === "approved";
 }

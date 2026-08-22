@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { enforceRateLimit, requireActiveAdmin, RequestSecurityError } from "@/src/lib/server/requestSecurity";
-import { getPaymentRecordsPage, getPaymentMetricsSummary } from "@/src/services/adminReadService";
+import { getPaymentEventsPage } from "@/src/services/adminReadService";
 
 export const runtime = "nodejs";
 
@@ -19,25 +19,21 @@ function parsePage(raw: string | null): number {
 
 export async function GET(request: Request): Promise<NextResponse> {
   try {
-    enforceRateLimit(request, "admin-payments-read", 60, 60_000);
+    enforceRateLimit(request, "admin-payment-events-read", 60, 60_000);
     const { supabase } = await requireActiveAdmin();
 
     const url = new URL(request.url);
     const page = parsePage(url.searchParams.get("page"));
     const pageSize = parsePageSize(url.searchParams.get("pageSize"));
-    const search = url.searchParams.get("search") ?? undefined;
 
-    const [{ records, total }, metrics] = await Promise.all([
-      getPaymentRecordsPage(supabase, { page, pageSize, search }),
-      getPaymentMetricsSummary(supabase),
-    ]);
+    const { records, total } = await getPaymentEventsPage(supabase, { page, pageSize });
 
-    return NextResponse.json({ payments: records, total, page, pageSize, metrics });
+    return NextResponse.json({ events: records, total, page, pageSize });
   } catch (error) {
     if (error instanceof RequestSecurityError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    console.error("Admin payment activity read failed", error);
-    return NextResponse.json({ error: "Payment activity could not be loaded." }, { status: 500 });
+    console.error("Admin webhook event read failed", error);
+    return NextResponse.json({ error: "Webhook activity could not be loaded." }, { status: 500 });
   }
 }

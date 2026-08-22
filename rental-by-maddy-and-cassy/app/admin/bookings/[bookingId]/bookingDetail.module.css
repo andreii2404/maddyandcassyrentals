@@ -234,7 +234,8 @@
   font-weight: 700;
 }
 
-.actionControls textarea {
+.actionControls textarea,
+.actionControls select {
   width: 100%;
   padding: 0.65rem 0.75rem;
   border: 1px solid var(--color-light-gray);
@@ -250,9 +251,15 @@
   resize: vertical;
 }
 
-.actionControls textarea:focus {
+.actionControls textarea:focus,
+.actionControls select:focus {
   border-color: var(--color-dusty-rose);
   box-shadow: 0 0 0 3px rgba(215, 165, 165, 0.2);
+}
+
+.actionControls select:disabled {
+  background: #f5f4f2;
+  cursor: not-allowed;
 }
 
 .dangerButton {

@@ -29,7 +29,12 @@ import {
 import styles from "./bookingDetail.module.css";
 import RequirementsReviewPanel from "@/components/admin/RequirementsReviewPanel";
 import PaymentsReviewPanel from "@/components/admin/PaymentsReviewPanel";
-import { getBookingMilestones, getFulfillmentProgressLabel } from "@/src/lib/bookingManagement";
+import {
+  DECLINE_REASON_OPTIONS,
+  formatDeclineNote,
+  getBookingMilestones,
+  getFulfillmentProgressLabel,
+} from "@/src/lib/bookingManagement";
 import BookingItemsSummary from "@/components/booking-summary/BookingItemsSummary";
 import { bookingHeadline, bookingItemsSummaryData } from "@/src/lib/bookingDisplay";
 
@@ -88,6 +93,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   const [error, setError] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<"" | BookingStatus>("");
   const [note, setNote] = useState("");
+  const [declineReason, setDeclineReason] = useState("");
   const [updating, setUpdating] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [businessSignerName, setBusinessSignerName] = useState("");
@@ -129,6 +135,8 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   );
 
   const selectedAction = actions.find((action) => action.status === selectedStatus);
+  const isDeclineAction = selectedAction?.status === "rejected";
+  const declineIncomplete = isDeclineAction && (!declineReason || note.trim().length < 5);
 
   useEffect(() => {
     if (!statusConfirmationOpen) return;
@@ -172,7 +180,16 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
 
   function requestStatusAction() {
     if (!state || !selectedStatus || !selectedAction) return;
-    if (selectedAction.requiresNote && !note.trim()) {
+    if (isDeclineAction) {
+      if (!declineReason) {
+        showToast("Select a decline reason before continuing.", "error");
+        return;
+      }
+      if (note.trim().length < 5) {
+        showToast("Add a short explanation of what was found before continuing.", "error");
+        return;
+      }
+    } else if (selectedAction.requiresNote && !note.trim()) {
       showToast("Please add administrator notes for this action.", "error");
       return;
     }
@@ -202,14 +219,17 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
         setStatusConfirmationOpen(false);
         setSelectedStatus("");
         setNote("");
+        setDeclineReason("");
         return;
       }
 
-      const updateResult = await updateAdminBookingStatus(bookingId, selectedStatus, note);
+      const noteToSend = isDeclineAction ? formatDeclineNote(declineReason, note) : note;
+      const updateResult = await updateAdminBookingStatus(bookingId, selectedStatus, noteToSend);
       await loadDetails();
       setStatusConfirmationOpen(false);
       setSelectedStatus("");
       setNote("");
+      setDeclineReason("");
       if (updateResult.emailRequired && !updateResult.emailSent) {
         showToast(
           updateResult.emailReason === "not_configured"
@@ -490,7 +510,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                     key={action.status}
                     type="button"
                     className={`${styles.actionChoice} ${action.tone === "danger" ? styles.dangerChoice : ""} ${selected ? styles.actionChoiceSelected : ""}`}
-                    onClick={() => { setSelectedStatus(action.status); setNote(""); }}
+                    onClick={() => { setSelectedStatus(action.status); setNote(""); setDeclineReason(""); }}
                     aria-pressed={selected}
                     disabled={updating || blockedByBalance}
                   >
@@ -515,13 +535,43 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                   <h3>{selectedAction.label}</h3>
                   <p>{selectedAction.description}</p>
                 </div>
-                <label className={styles.noteField}>
-                  <span>Message to customer{selectedAction.requiresNote ? " (required)" : " (optional)"}</span>
-                  <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={3} maxLength={1000} placeholder={selectedAction.requiresNote ? "Explain the reason clearly before continuing" : "Add a helpful update or handover instruction"} disabled={updating} />
-                </label>
+                {isDeclineAction ? (
+                  <>
+                    <label className={styles.noteField}>
+                      <span>Decline reason (required)</span>
+                      <select value={declineReason} onChange={(event) => setDeclineReason(event.target.value)} disabled={updating}>
+                        <option value="" disabled>Select a reason</option>
+                        {DECLINE_REASON_OPTIONS.map((reason) => (
+                          <option key={reason} value={reason}>{reason}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className={styles.noteField}>
+                      <span>Explanation for the customer (required)</span>
+                      <textarea
+                        value={note}
+                        onChange={(event) => setNote(event.target.value)}
+                        rows={3}
+                        maxLength={1000}
+                        placeholder="Describe exactly what was found and what the customer needs to know"
+                        disabled={updating}
+                      />
+                    </label>
+                  </>
+                ) : (
+                  <label className={styles.noteField}>
+                    <span>Message to customer{selectedAction.requiresNote ? " (required)" : " (optional)"}</span>
+                    <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={3} maxLength={1000} placeholder={selectedAction.requiresNote ? "Explain the reason clearly before continuing" : "Add a helpful update or handover instruction"} disabled={updating} />
+                  </label>
+                )}
                 <div className={styles.confirmationActions}>
-                  <button type="button" className={styles.cancelSelectionButton} onClick={() => { setSelectedStatus(""); setNote(""); }} disabled={updating}>Choose another action</button>
-                  <button type="button" className={`${styles.applyButton} ${selectedAction.tone === "danger" ? styles.dangerButton : ""}`} onClick={requestStatusAction} disabled={updating || (selectedAction.requiresNote && !note.trim())}>
+                  <button type="button" className={styles.cancelSelectionButton} onClick={() => { setSelectedStatus(""); setNote(""); setDeclineReason(""); }} disabled={updating}>Choose another action</button>
+                  <button
+                    type="button"
+                    className={`${styles.applyButton} ${selectedAction.tone === "danger" ? styles.dangerButton : ""}`}
+                    onClick={requestStatusAction}
+                    disabled={updating || (isDeclineAction ? declineIncomplete : (selectedAction.requiresNote && !note.trim()))}
+                  >
                     {updating ? "Updating customer..." : `Confirm ${selectedAction.label}`}
                   </button>
                 </div>
@@ -789,6 +839,12 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
               <p id="status-confirmation-description">Apply this update to booking <strong>{booking.bookingRef}</strong>?</p>
               <div className={styles.confirmationSummary}>
                 <strong>{selectedAction.description}</strong>
+                {isDeclineAction ? (
+                  <>
+                    <span><strong>Reason:</strong> {declineReason}</span>
+                    <span><strong>Explanation shown to customer:</strong> {note.trim()}</span>
+                  </>
+                ) : null}
                 <span>The customer&apos;s account and booking timeline will update immediately.</span>
               </div>
             </div>

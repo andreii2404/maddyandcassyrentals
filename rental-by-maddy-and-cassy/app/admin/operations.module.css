@@ -10,10 +10,20 @@
 .metrics span { color:var(--color-charcoal); font-size:.76rem; }
 .metrics strong { margin-top:.45rem; font-size:1.4rem; }
 .panel { overflow:hidden; margin-bottom:1rem; }
-.panelHeader { padding:1rem 1.2rem; border-bottom:1px solid var(--color-border); }
+.panelHeader { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:1rem 1.2rem; border-bottom:1px solid var(--color-border); flex-wrap:wrap; }
 .panelHeader h2,.panelHeader p { margin:0; }
 .panelHeader h2 { font-size:1rem; }
 .panelHeader p { margin-top:.25rem; color:var(--color-charcoal); font-size:.76rem; }
+.searchInput { width:min(280px,100%); padding:.6rem .85rem; border:1px solid var(--color-border); border-radius:999px; background:var(--color-white); font-size:.78rem; }
+.pagination { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.75rem; padding:.85rem 1.1rem; border-top:1px solid var(--color-border); background:var(--color-background); color:var(--color-charcoal); font-size:.72rem; }
+.paginationControls { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
+.pageSizeLabel { display:flex; align-items:center; gap:.4rem; font-size:.72rem; color:var(--color-charcoal); }
+.pageSizeLabel select { padding:.35rem .5rem; border:1px solid var(--color-border); border-radius:8px; background:var(--color-white); font:inherit; }
+.pageButtons { display:flex; align-items:center; gap:.35rem; }
+.pageButtons button { padding:.4rem .65rem; border:1px solid var(--color-border); border-radius:8px; background:var(--color-white); color:var(--color-charcoal); font:inherit; font-size:.72rem; cursor:pointer; }
+.pageButtons button:disabled { cursor:not-allowed; opacity:.45; }
+.pageButtonActive { background:var(--color-primary) !important; color:var(--color-white) !important; border-color:var(--color-primary) !important; opacity:1 !important; }
+.pageEllipsis { padding:0 .2rem; color:var(--color-charcoal); }
 .tableWrap { overflow-x:auto; }
 .tableWrap table { width:100%; border-collapse:collapse; }
 .tableWrap th,.tableWrap td { padding:.8rem .9rem; border-bottom:1px solid var(--color-border); font-size:.75rem; text-align:left; white-space:nowrap; }

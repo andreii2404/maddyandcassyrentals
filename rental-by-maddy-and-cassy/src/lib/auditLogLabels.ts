@@ -63,8 +63,59 @@ export function formatAuditAction(action: string): string {
   return ACTION_LABELS[action] ?? sentenceCase(action);
 }
 
-export function formatAuditActor(log: Pick<AdminAuditLog, "actorType">): string {
-  return ACTOR_LABELS[log.actorType] ?? sentenceCase(log.actorType);
+/** Generic role label, e.g. "Administrator" or "Customer", with no name lookup involved. */
+export function formatActorRole(actorType: AdminAuditLog["actorType"]): string {
+  return ACTOR_LABELS[actorType] ?? sentenceCase(actorType);
+}
+
+/**
+ * `actorNamesById` is an optional lookup (built from the profiles table) so the
+ * page can show a real customer/admin name instead of just the generic role —
+ * falls back to the role label when no name is known for that actor.
+ */
+export function formatAuditActor(
+  log: Pick<AdminAuditLog, "actorType" | "actorUserId">,
+  actorNamesById?: Map<string, string>,
+): string {
+  const name = log.actorUserId ? actorNamesById?.get(log.actorUserId) : undefined;
+  if (name) return name;
+  return formatActorRole(log.actorType);
+}
+
+export type ActivityCategory =
+  | "booking"
+  | "payment"
+  | "documents"
+  | "account"
+  | "catalog"
+  | "admin"
+  | "other";
+
+const CATEGORY_LABELS: Record<ActivityCategory, string> = {
+  booking: "Booking",
+  payment: "Payment",
+  documents: "Documents",
+  account: "Account",
+  catalog: "Catalog",
+  admin: "Admin",
+  other: "Other",
+};
+
+/** Groups the free-form audit `action` strings into the badge categories shown on the Activity History page. */
+export function getActivityCategory(action: string): ActivityCategory {
+  if (action.startsWith("verification.") || action === "booking.documents_submitted") {
+    return "documents";
+  }
+  if (action.startsWith("booking.")) return "booking";
+  if (action.startsWith("payment.")) return "payment";
+  if (action.startsWith("account.")) return "account";
+  if (action.startsWith("catalog.") || action.startsWith("inventory.")) return "catalog";
+  if (action.startsWith("admin.") || action.startsWith("agreement.")) return "admin";
+  return "other";
+}
+
+export function formatActivityCategory(category: ActivityCategory): string {
+  return CATEGORY_LABELS[category];
 }
 
 function formatEntityLabel(entityType: string): string {

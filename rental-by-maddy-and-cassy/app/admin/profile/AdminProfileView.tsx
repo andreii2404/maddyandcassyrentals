@@ -96,21 +96,6 @@ export default function AdminProfileView() {
             <dd>{formatDate(admin.createdAt)}</dd>
           </div>
         </dl>
-
-        <details className={styles.systemDetails}>
-          <summary>System Details</summary>
-          <dl>
-            <div>
-              <dt>User ID</dt>
-              <dd className={styles.uid}>{admin.userId}</dd>
-            </div>
-          </dl>
-        </details>
-
-        <p className={styles.note}>
-          This account has full administrator access. Reach out to another administrator if you
-          need this changed.
-        </p>
       </section>
     </div>
   );

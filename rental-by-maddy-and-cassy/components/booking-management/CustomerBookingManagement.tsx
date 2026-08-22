@@ -10,6 +10,7 @@ import {
   getBookingStatusMessage,
   getFulfillmentProgressLabel,
   getRejectionReason,
+  parseDeclineNote,
 } from "@/src/lib/bookingManagement";
 import {
   cancelBookingAsCustomer,
@@ -78,6 +79,7 @@ export default function CustomerBookingManagement({
   const canCancel = canCustomerCancelBooking(booking.status);
   const milestones = getBookingMilestones(booking);
   const rejectionReason = booking.status === "rejected" ? getRejectionReason(statusHistory) : undefined;
+  const parsedRejection = rejectionReason ? parseDeclineNote(rejectionReason) : undefined;
 
   async function handleEditSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -263,7 +265,14 @@ export default function CustomerBookingManagement({
 
       {reasonModalOpen && rejectionReason ? (
         <Modal title="Booking rejected" onClose={() => setReasonModalOpen(false)}>
-          <p className={styles.rejectionReasonText}>{rejectionReason}</p>
+          {parsedRejection ? (
+            <>
+              <span className={styles.rejectionReasonLabel}>{parsedRejection.reason}</span>
+              <p className={styles.rejectionReasonText}>{parsedRejection.details}</p>
+            </>
+          ) : (
+            <p className={styles.rejectionReasonText}>{rejectionReason}</p>
+          )}
         </Modal>
       ) : null}
     </>
