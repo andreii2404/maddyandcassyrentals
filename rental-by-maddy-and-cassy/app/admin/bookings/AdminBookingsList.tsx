@@ -54,17 +54,24 @@ export default function AdminBookingsList() {
   const [error, setError] = useState<string | null>(null);
 
   const loadBookings = useCallback(async () => {
+    // Bookings and users are fetched independently: each booking already
+    // carries its own customerSnapshot (see assembleBooking), so a failure
+    // loading the separate full user list (used only as a display-name/email
+    // fallback) must never hide bookings that loaded successfully.
+    const supabase = createClient();
     try {
-      const supabase = createClient();
-      const [bookingRecords, userRecords] = await Promise.all([
-        getAllBookings(supabase),
-        getAllUsers(),
-      ]);
+      const bookingRecords = await getAllBookings(supabase);
       setBookings(bookingRecords);
-      setUsers(userRecords);
       setError(null);
     } catch {
       setError("Bookings could not be loaded. Please refresh and try again.");
+    }
+
+    try {
+      const userRecords = await getAllUsers();
+      setUsers(userRecords);
+    } catch {
+      // Non-fatal: booking rows still render using their own customerSnapshot.
     }
   }, []);
 
