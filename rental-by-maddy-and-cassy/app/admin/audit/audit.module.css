@@ -370,6 +370,14 @@
     opacity: 0.7;
   }
 
+  .activityCell {
+    flex-wrap: wrap;
+  }
+
+  .activityCell strong {
+    white-space: normal;
+  }
+
   .detailRow {
     margin: 0 0.75rem;
   }
