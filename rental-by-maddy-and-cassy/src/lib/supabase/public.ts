@@ -1,7 +1,8 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "./database.types";
+import { getSharedBrowserClient } from "./browserSingleton";
 
-let publicClient: ReturnType<typeof createSupabaseClient<Database>> | null = null;
+let serverPublicClient: ReturnType<typeof createSupabaseClient<Database>> | null = null;
 
 /**
  * Anonymous-role Supabase client with no cookie/session binding. Safe to use
@@ -12,7 +13,12 @@ let publicClient: ReturnType<typeof createSupabaseClient<Database>> | null = nul
  * `to anon, authenticated` policies expose.
  */
 export function createPublicClient() {
-  if (publicClient) return publicClient;
+  // Client Components must use the application's one authenticated browser
+  // client. Creating a separate anonymous supabase-js client here also creates
+  // a second GoTrueClient for the same project and can race session refreshes.
+  if (typeof window !== "undefined") return getSharedBrowserClient();
+
+  if (serverPublicClient) return serverPublicClient;
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
@@ -21,8 +27,12 @@ export function createPublicClient() {
     throw new Error("Supabase public client is missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.");
   }
 
-  publicClient = createSupabaseClient<Database>(url, publishableKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
+  serverPublicClient = createSupabaseClient<Database>(url, publishableKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
   });
-  return publicClient;
+  return serverPublicClient;
 }
