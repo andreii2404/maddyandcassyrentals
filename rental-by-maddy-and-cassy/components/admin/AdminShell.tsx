@@ -33,10 +33,6 @@ const navSections = [
     title: "System",
     items: [{ href: "/admin/audit", label: "Audit Logs" }],
   },
-  {
-    title: "Account",
-    items: [{ href: "/admin/profile", label: "Admin Profile" }],
-  },
 ];
 
 function isActivePath(pathname: string, href: string): boolean {

@@ -148,8 +148,8 @@ export default function Navbar() {
   const initial = firstName.charAt(0).toUpperCase() || "A";
   const accountHomeHref = isAdmin ? "/admin" : "/account/bookings";
   const accountHomeLabel = isAdmin ? "Admin Dashboard" : "My Bookings";
-  const profileHref = isAdmin ? "/admin/profile" : "/account/profile";
-  const profileLabel = isAdmin ? "Admin Profile" : "My Profile";
+  const profileHref = "/account/profile";
+  const profileLabel = "My Profile";
   const guideActive = guideLinks.some((item) => pathname === item.href);
 
   function isPrimaryLinkActive(href: string): boolean {
@@ -293,7 +293,9 @@ export default function Navbar() {
                     </div>
                   </div>
                   <Link href={accountHomeHref} className={styles.profileMenuLink} onClick={() => setProfileOpen(false)}>{accountHomeLabel}</Link>
-                  <Link href={profileHref} className={styles.profileMenuLink} onClick={() => setProfileOpen(false)}>{profileLabel}</Link>
+                  {!isAdmin ? (
+                    <Link href={profileHref} className={styles.profileMenuLink} onClick={() => setProfileOpen(false)}>{profileLabel}</Link>
+                  ) : null}
                   {!isAdmin ? (
                     <Link href="/account/payments" className={styles.profileMenuLink} onClick={() => setProfileOpen(false)}>Payment History</Link>
                   ) : null}
@@ -412,7 +414,7 @@ export default function Navbar() {
                   </div>
                   <div className={styles.mobileAccountLinks}>
                     <Link href={accountHomeHref} onClick={closeMenu}>{accountHomeLabel}</Link>
-                    <Link href={profileHref} onClick={closeMenu}>{profileLabel}</Link>
+                    {!isAdmin ? <Link href={profileHref} onClick={closeMenu}>{profileLabel}</Link> : null}
                     {!isAdmin ? <Link href="/account/payments" onClick={closeMenu}>Payment History</Link> : null}
                     <button type="button" onClick={handleSignOut}>Sign Out</button>
                   </div>
