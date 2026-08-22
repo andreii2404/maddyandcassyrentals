@@ -387,6 +387,7 @@
 }
 
 .profileCopy strong {
+  display: block;
   max-width: 95px;
   overflow: hidden;
   font-size: 0.76rem;
@@ -398,6 +399,7 @@
   right: 0;
   display: grid;
   width: 230px;
+  max-width: calc(100vw - 1.5rem);
   padding: 0.65rem;
 }
 
@@ -405,8 +407,9 @@
   display: flex;
   align-items: center;
   gap: 0.65rem;
+  min-width: 0;
   margin-bottom: 0.45rem;
-  padding: 0.4rem 0.45rem 0.75rem;
+  padding: 0.4rem 0.7rem 0.75rem;
   border-bottom: 1px solid var(--color-light-gray);
 }
 
@@ -417,6 +420,7 @@
 }
 
 .profileDropdownHeader strong {
+  display: block;
   overflow: hidden;
   font-size: 0.8rem;
   text-overflow: ellipsis;
@@ -637,6 +641,7 @@
   .mobileGuideLinkActive { border-color: rgba(154, 89, 101, 0.28); background: white; color: var(--color-primary); }
 
   .mobileAccount {
+    min-width: 0;
     padding-left: 1.25rem;
     border-left: 1px solid rgba(154, 89, 101, 0.12);
   }
@@ -645,11 +650,12 @@
     display: flex;
     align-items: center;
     gap: 0.65rem;
+    min-width: 0;
     margin-bottom: 0.7rem;
   }
 
   .mobileProfileSummary > div { display: flex; min-width: 0; flex-direction: column; }
-  .mobileProfileSummary strong { overflow: hidden; font-size: 0.78rem; text-overflow: ellipsis; white-space: nowrap; }
+  .mobileProfileSummary strong { display: block; overflow: hidden; font-size: 0.78rem; text-overflow: ellipsis; white-space: nowrap; }
 
   .mobileAccountLinks,
   .mobileLoginActions {

@@ -5,11 +5,14 @@ import formStyles from "@/components/ui/Form.module.css";
 import styles from "./FileUploadField.module.css";
 
 interface FileUploadFieldProps {
+  id?: string;
   label: string;
   required?: boolean;
   accept?: string;
   maxSizeMb?: number;
   helpText?: string;
+  /** Externally-driven message (e.g. "this file is required") shown while no file is selected. */
+  errorMessage?: string | null;
   value: File | null;
   onChange: (file: File | null) => void;
 }
@@ -17,16 +20,20 @@ interface FileUploadFieldProps {
 const DEFAULT_ACCEPT = "image/jpeg,image/png,image/webp,application/pdf";
 
 export default function FileUploadField({
+  id,
   label,
   required = false,
   accept = DEFAULT_ACCEPT,
   maxSizeMb = 8,
   helpText,
+  errorMessage,
   value,
   onChange,
 }: FileUploadFieldProps) {
   const inputId = useId();
   const [error, setError] = useState<string | null>(null);
+  const requiredError = !value ? (errorMessage ?? null) : null;
+  const displayError = error ?? requiredError;
 
   const acceptedTypes = accept.split(",").map((type) => type.trim());
 
@@ -58,7 +65,7 @@ export default function FileUploadField({
   const isImage = value ? value.type.startsWith("image/") : false;
 
   return (
-    <div className={formStyles.field}>
+    <div id={id} className={formStyles.field}>
       <label className={formStyles.label} htmlFor={inputId}>
         {label}
         {required ? <span className={formStyles.required}>*</span> : null}
@@ -87,7 +94,10 @@ export default function FileUploadField({
           </button>
         </div>
       ) : (
-        <label className={styles.dropzone} htmlFor={inputId}>
+        <label
+          className={`${styles.dropzone} ${displayError ? styles.dropzoneError : ""}`}
+          htmlFor={inputId}
+        >
           <span className={styles.dropzoneText}>Click to choose a file</span>
           <span className={styles.dropzoneHint}>JPG, PNG, WEBP, or PDF · up to {maxSizeMb}MB</span>
         </label>
@@ -101,10 +111,10 @@ export default function FileUploadField({
         className={styles.hiddenInput}
       />
 
-      {helpText && !error ? <p className={formStyles.helpText}>{helpText}</p> : null}
-      {error ? (
+      {helpText && !displayError ? <p className={formStyles.helpText}>{helpText}</p> : null}
+      {displayError ? (
         <p className={formStyles.errorText} role="alert">
-          {error}
+          {displayError}
         </p>
       ) : null}
     </div>

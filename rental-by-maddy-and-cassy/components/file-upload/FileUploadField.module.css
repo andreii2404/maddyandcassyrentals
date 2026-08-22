@@ -26,6 +26,14 @@
   background: var(--color-blush);
 }
 
+.dropzoneError {
+  border-color: var(--color-status-red);
+}
+
+.dropzoneError:hover {
+  border-color: var(--color-status-red);
+}
+
 .dropzoneText {
   font-size: 0.78rem;
   font-weight: 600;

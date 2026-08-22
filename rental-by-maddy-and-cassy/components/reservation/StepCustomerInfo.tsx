@@ -12,8 +12,21 @@ import {
   PHONE_DIGIT_COUNT,
   UNDERAGE_ERROR_MESSAGE,
 } from "@/src/lib/authValidation";
+import { scrollToFirstError } from "@/src/lib/formScroll";
 import formStyles from "@/components/ui/Form.module.css";
 import styles from "./StepShared.module.css";
+
+const FIELD_ORDER: Array<keyof CustomerInfoDraft> = [
+  "fullName",
+  "email",
+  "phone",
+  "birthDate",
+  "streetBarangay",
+  "cityMunicipality",
+  "province",
+  "facebookLink",
+  "instagramLink",
+];
 
 interface StepCustomerInfoProps {
   uid: string;
@@ -60,7 +73,19 @@ export default function StepCustomerInfo({
     if (!customerInfo.facebookLink.trim()) nextErrors.facebookLink = "Your Facebook profile link is required.";
     if (!customerInfo.instagramLink.trim()) nextErrors.instagramLink = "Your Instagram profile link is required.";
     setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      scrollToFirstError(FIELD_ORDER, nextErrors);
+    }
     return Object.keys(nextErrors).length === 0;
+  }
+
+  function clearFieldError(field: keyof CustomerInfoDraft) {
+    setErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
   }
 
   async function handleContinue() {
@@ -121,7 +146,11 @@ export default function StepCustomerInfo({
             id="fullName"
             className={`${formStyles.input} ${errors.fullName ? formStyles.inputError : ""}`}
             value={customerInfo.fullName}
-            onChange={(event) => onUpdate({ fullName: event.target.value })}
+            onChange={(event) => {
+              const value = event.target.value;
+              onUpdate({ fullName: value });
+              if (value.trim()) clearFieldError("fullName");
+            }}
           />
           {errors.fullName ? <p className={formStyles.errorText}>{errors.fullName}</p> : null}
         </div>
@@ -135,7 +164,11 @@ export default function StepCustomerInfo({
             type="email"
             className={`${formStyles.input} ${errors.email ? formStyles.inputError : ""}`}
             value={customerInfo.email}
-            onChange={(event) => onUpdate({ email: event.target.value })}
+            onChange={(event) => {
+              const value = event.target.value;
+              onUpdate({ email: value });
+              if (value.trim() && /\S+@\S+\.\S+/.test(value)) clearFieldError("email");
+            }}
           />
           {errors.email ? <p className={formStyles.errorText}>{errors.email}</p> : null}
         </div>
@@ -155,7 +188,11 @@ export default function StepCustomerInfo({
             placeholder="09XXXXXXXXX"
             className={`${formStyles.input} ${errors.phone ? formStyles.inputError : ""}`}
             value={customerInfo.phone}
-            onChange={(event) => onUpdate({ phone: normalizePhoneInput(event.target.value) })}
+            onChange={(event) => {
+              const value = normalizePhoneInput(event.target.value);
+              onUpdate({ phone: value });
+              if (isValidPhoneNumber(value)) clearFieldError("phone");
+            }}
           />
           <p className={formStyles.helpText}>Use exactly 11 digits.</p>
           {errors.phone ? <p className={formStyles.errorText}>{errors.phone}</p> : null}
@@ -174,7 +211,14 @@ export default function StepCustomerInfo({
               disabled={birthDateLocked}
               className={`${formStyles.input} ${errors.birthDate ? formStyles.inputError : ""}`}
               value={customerInfo.birthDate}
-              onChange={(event) => onUpdate({ birthDate: event.target.value })}
+              onChange={(event) => {
+                const value = event.target.value;
+                onUpdate({ birthDate: value });
+                const isFutureDate = value && new Date(`${value}T00:00:00`) > new Date();
+                if (!value || (!isFutureDate && isAtLeastMinimumAge(value))) {
+                  clearFieldError("birthDate");
+                }
+              }}
             />
             <p className={styles.fieldNote}>
               {birthDateVerified
@@ -196,37 +240,49 @@ export default function StepCustomerInfo({
           placeholder="House/unit number, street, subdivision, and barangay"
           className={`${formStyles.input} ${errors.streetBarangay ? formStyles.inputError : ""}`}
           value={customerInfo.streetBarangay}
-          onChange={(event) => onUpdate({ streetBarangay: event.target.value })}
+          onChange={(event) => {
+            const value = event.target.value;
+            onUpdate({ streetBarangay: value });
+            if (value.trim()) clearFieldError("streetBarangay");
+          }}
         />
         {errors.streetBarangay ? <p className={formStyles.errorText}>{errors.streetBarangay}</p> : null}
       </div>
 
       <div className={formStyles.row}>
         <div className={formStyles.field}>
-          <label className={formStyles.label} htmlFor="customerCityMunicipality">
+          <label className={formStyles.label} htmlFor="cityMunicipality">
             City / Municipality<span className={formStyles.required}>*</span>
           </label>
           <input
-            id="customerCityMunicipality"
+            id="cityMunicipality"
             autoComplete="address-level2"
             placeholder="e.g. Manila"
             className={`${formStyles.input} ${errors.cityMunicipality ? formStyles.inputError : ""}`}
             value={customerInfo.cityMunicipality}
-            onChange={(event) => onUpdate({ cityMunicipality: event.target.value })}
+            onChange={(event) => {
+              const value = event.target.value;
+              onUpdate({ cityMunicipality: value });
+              if (value.trim()) clearFieldError("cityMunicipality");
+            }}
           />
           {errors.cityMunicipality ? <p className={formStyles.errorText}>{errors.cityMunicipality}</p> : null}
         </div>
 
         <div className={formStyles.field}>
-          <label className={formStyles.label} htmlFor="customerProvince">
+          <label className={formStyles.label} htmlFor="province">
             Province<span className={formStyles.required}>*</span>
           </label>
           <select
-            id="customerProvince"
+            id="province"
             autoComplete="address-level1"
             className={`${formStyles.select} ${errors.province ? formStyles.inputError : ""}`}
             value={customerInfo.province}
-            onChange={(event) => onUpdate({ province: event.target.value })}
+            onChange={(event) => {
+              const value = event.target.value;
+              onUpdate({ province: value });
+              if (value.trim()) clearFieldError("province");
+            }}
           >
             <option value="">Select province</option>
             {PHILIPPINE_PROVINCES.map((province) => (
@@ -248,7 +304,11 @@ export default function StepCustomerInfo({
             placeholder="https://facebook.com/yourprofile"
             className={`${formStyles.input} ${errors.facebookLink ? formStyles.inputError : ""}`}
             value={customerInfo.facebookLink}
-            onChange={(event) => onUpdate({ facebookLink: event.target.value })}
+            onChange={(event) => {
+              const value = event.target.value;
+              onUpdate({ facebookLink: value });
+              if (value.trim()) clearFieldError("facebookLink");
+            }}
           />
           {errors.facebookLink ? <p className={formStyles.errorText}>{errors.facebookLink}</p> : null}
         </div>
@@ -263,7 +323,11 @@ export default function StepCustomerInfo({
             placeholder="https://instagram.com/yourprofile"
             className={`${formStyles.input} ${errors.instagramLink ? formStyles.inputError : ""}`}
             value={customerInfo.instagramLink}
-            onChange={(event) => onUpdate({ instagramLink: event.target.value })}
+            onChange={(event) => {
+              const value = event.target.value;
+              onUpdate({ instagramLink: value });
+              if (value.trim()) clearFieldError("instagramLink");
+            }}
           />
           {errors.instagramLink ? <p className={formStyles.errorText}>{errors.instagramLink}</p> : null}
         </div>

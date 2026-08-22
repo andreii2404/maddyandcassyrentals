@@ -11,9 +11,14 @@ import {
   type RewardProgress,
 } from "@/src/lib/promotions";
 import FileUploadField from "@/components/file-upload/FileUploadField";
+import { scrollToFirstError } from "@/src/lib/formScroll";
 import formStyles from "@/components/ui/Form.module.css";
 import sharedStyles from "./StepShared.module.css";
 import styles from "./StepPaymentSubmission.module.css";
+
+type PaymentErrors = Partial<Record<string, string>>;
+
+const FIELD_ORDER = ["pay-reference", "pay-account-name", "pay-account-number", "pay-proof"];
 
 function money(value: number): string {
   return `PHP ${value.toLocaleString("en-PH", {
@@ -60,7 +65,7 @@ export default function StepPaymentSubmission({
   onBack,
   onContinue,
 }: StepPaymentSubmissionProps) {
-  const [errors, setErrors] = useState<string[]>([]);
+  const [errors, setErrors] = useState<PaymentErrors>({});
   const pricing = calculateReservationPricing(product, draft, rewardProgress, isGuest);
   const dueNow = draft.paymentOption === "deposit_50"
     ? Math.round(pricing.finalAmount * 50) / 100
@@ -70,26 +75,38 @@ export default function StepPaymentSubmission({
   // manual-payment fields are empty -- don't re-require them in that case.
   const alreadySubmitted = paymentState !== "unpaid";
 
+  function clearFieldError(field: string) {
+    setErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  }
+
   function validate(): boolean {
     if (alreadySubmitted) {
-      setErrors([]);
+      setErrors({});
       return true;
     }
-    const nextErrors: string[] = [];
+    const nextErrors: PaymentErrors = {};
     if (!draft.manualPayment.referenceNumber.trim()) {
-      nextErrors.push("Enter the GCash reference number for your payment.");
+      nextErrors["pay-reference"] = "Enter the GCash reference number for your payment.";
     }
     if (!draft.manualPayment.accountName.trim()) {
-      nextErrors.push("Enter the name of the account used to pay.");
+      nextErrors["pay-account-name"] = "Enter the name of the account used to pay.";
     }
     if (!draft.manualPayment.accountNumber.trim()) {
-      nextErrors.push("Enter the mobile number or account number used to pay.");
+      nextErrors["pay-account-number"] = "Enter the mobile number or account number used to pay.";
     }
     if (!draft.manualPayment.proofFile) {
-      nextErrors.push("Upload a screenshot or proof of payment.");
+      nextErrors["pay-proof"] = "Upload a screenshot or proof of payment.";
     }
     setErrors(nextErrors);
-    return nextErrors.length === 0;
+    if (Object.keys(nextErrors).length > 0) {
+      scrollToFirstError(FIELD_ORDER, nextErrors);
+    }
+    return Object.keys(nextErrors).length === 0;
   }
 
   function handleContinue() {
@@ -275,11 +292,16 @@ export default function StepPaymentSubmission({
           </label>
           <input
             id="pay-reference"
-            className={formStyles.input}
+            className={`${formStyles.input} ${errors["pay-reference"] ? formStyles.inputError : ""}`}
             value={draft.manualPayment.referenceNumber}
-            onChange={(event) => onManualPaymentUpdate({ referenceNumber: event.target.value })}
+            onChange={(event) => {
+              const value = event.target.value;
+              onManualPaymentUpdate({ referenceNumber: value });
+              if (value.trim()) clearFieldError("pay-reference");
+            }}
             disabled={opening}
           />
+          {errors["pay-reference"] ? <p className={formStyles.errorText}>{errors["pay-reference"]}</p> : null}
         </div>
         <div className={formStyles.field}>
           <label className={formStyles.label} htmlFor="pay-account-name">
@@ -287,11 +309,16 @@ export default function StepPaymentSubmission({
           </label>
           <input
             id="pay-account-name"
-            className={formStyles.input}
+            className={`${formStyles.input} ${errors["pay-account-name"] ? formStyles.inputError : ""}`}
             value={draft.manualPayment.accountName}
-            onChange={(event) => onManualPaymentUpdate({ accountName: event.target.value })}
+            onChange={(event) => {
+              const value = event.target.value;
+              onManualPaymentUpdate({ accountName: value });
+              if (value.trim()) clearFieldError("pay-account-name");
+            }}
             disabled={opening}
           />
+          {errors["pay-account-name"] ? <p className={formStyles.errorText}>{errors["pay-account-name"]}</p> : null}
         </div>
       </div>
 
@@ -301,29 +328,28 @@ export default function StepPaymentSubmission({
         </label>
         <input
           id="pay-account-number"
-          className={formStyles.input}
+          className={`${formStyles.input} ${errors["pay-account-number"] ? formStyles.inputError : ""}`}
           value={draft.manualPayment.accountNumber}
-          onChange={(event) => onManualPaymentUpdate({ accountNumber: event.target.value })}
+          onChange={(event) => {
+            const value = event.target.value;
+            onManualPaymentUpdate({ accountNumber: value });
+            if (value.trim()) clearFieldError("pay-account-number");
+          }}
           disabled={opening}
         />
+        {errors["pay-account-number"] ? <p className={formStyles.errorText}>{errors["pay-account-number"]}</p> : null}
       </div>
 
       <FileUploadField
+        id="pay-proof"
         label="Screenshot / proof of payment"
         required
+        errorMessage={errors["pay-proof"]}
         value={draft.manualPayment.proofFile}
         onChange={(file) => onManualPaymentUpdate({ proofFile: file })}
       />
 
       {bookingNumber ? <p className={styles.reference}>Reservation: {bookingNumber}</p> : null}
-
-      {errors.length > 0 ? (
-        <ul className={formStyles.errorText} role="alert">
-          {errors.map((message) => (
-            <li key={message}>{message}</li>
-          ))}
-        </ul>
-      ) : null}
 
       {error ? (
         <p className={formStyles.errorText} role="alert">
