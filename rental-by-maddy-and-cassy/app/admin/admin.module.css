@@ -316,6 +316,7 @@ a.secondaryCard:focus-visible {
   z-index: 1;
   background: var(--color-white);
   box-shadow: -8px 0 12px -10px rgba(36, 36, 36, 0.18);
+  transition: background 120ms ease;
 }
 
 .table tbody tr.row:hover .actionCell {
@@ -324,6 +325,10 @@ a.secondaryCard:focus-visible {
 
 .table tbody tr.rowPending .actionCell {
   background: var(--color-status-yellow-bg);
+}
+
+.table tbody tr.rowPending:hover td.actionCell {
+  background: #f7dfab;
 }
 
 .openLink {
