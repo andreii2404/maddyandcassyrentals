@@ -159,14 +159,15 @@
 .table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: auto;
 }
 
 .table th,
 .table td {
-  padding: 0.9rem 1rem;
+  padding: 0.65rem 0.75rem;
   border-bottom: 1px solid var(--color-light-gray);
   color: var(--color-charcoal);
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   text-align: left;
   vertical-align: middle;
   white-space: nowrap;
@@ -174,14 +175,24 @@
 
 .table th {
   background: var(--color-background);
-  font-size: 0.69rem;
+  font-size: 0.66rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
-.table tbody tr:hover {
+.table tbody tr.row {
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.table tbody tr.row:hover {
   background: rgba(242, 210, 207, 0.16);
+}
+
+.table tbody tr.row:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
 }
 
 .table td strong,
@@ -191,13 +202,21 @@
 
 .table td strong {
   color: var(--color-text-primary);
-  font-size: 0.8rem;
+  font-size: 0.79rem;
 }
 
 .table td small {
-  margin-top: 0.2rem;
+  margin-top: 0.15rem;
   color: var(--color-charcoal);
-  font-size: 0.7rem;
+  font-size: 0.68rem;
+  white-space: normal;
+}
+
+.table td[data-label="Customer"] small,
+.table td[data-label="Rental Item"] {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .bookingLink,
@@ -207,9 +226,41 @@
   text-decoration: none;
 }
 
-.bookingLink:hover,
-.openLink:hover {
+.bookingLink:hover {
   text-decoration: underline;
+}
+
+.actionCell {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  background: var(--color-white);
+  box-shadow: -8px 0 12px -10px rgba(36, 36, 36, 0.18);
+}
+
+.table tbody tr.row:hover .actionCell {
+  background: #fbf2f1;
+}
+
+.openLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 84px;
+  padding: 0.45rem 0.95rem;
+  border: 1px solid var(--color-primary);
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: var(--color-white);
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.openLink:hover {
+  background: var(--color-primary-dark, var(--color-primary));
+  opacity: 0.9;
+  text-decoration: none;
 }
 
 .loading {
@@ -271,6 +322,75 @@
 
   .filters label,
   .filters select {
+    width: 100%;
+  }
+}
+
+@media (max-width: 760px) {
+  .tableWrapper {
+    overflow-x: visible;
+  }
+
+  .table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    clip-path: inset(50%);
+  }
+
+  .table,
+  .table tbody,
+  .table tbody tr.row,
+  .table td {
+    display: block;
+    width: 100%;
+  }
+
+  .table tbody tr.row {
+    padding: 0.85rem 0.9rem;
+    margin-bottom: 0.75rem;
+    border: 1px solid var(--color-light-gray);
+    border-radius: 14px;
+  }
+
+  .table td {
+    padding: 0.35rem 0;
+    border-bottom: none;
+    white-space: normal;
+  }
+
+  .table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.15rem;
+    color: var(--color-charcoal);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    opacity: 0.7;
+  }
+
+  .table td[data-label="Customer"] small,
+  .table td[data-label="Rental Item"] {
+    max-width: none;
+  }
+
+  .actionCell {
+    position: static;
+    box-shadow: none;
+    background: transparent;
+    margin-top: 0.5rem;
+  }
+
+  .table tbody tr.row:hover .actionCell {
+    background: transparent;
+  }
+
+  .openLink {
     width: 100%;
   }
 }

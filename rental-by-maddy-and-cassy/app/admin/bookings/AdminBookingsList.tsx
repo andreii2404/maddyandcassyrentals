@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/src/lib/supabase/client";
 import { getAllBookings } from "@/src/services/bookingService";
 import { getAllUsers } from "@/src/services/userService";
@@ -46,6 +47,7 @@ function customerName(booking: Booking, user?: UserProfile): string {
 }
 
 export default function AdminBookingsList() {
+  const router = useRouter();
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [search, setSearch] = useState("");
@@ -199,35 +201,51 @@ export default function AdminBookingsList() {
                   <th>Status</th>
                   <th>Fulfillment Update</th>
                   <th>Submitted</th>
-                  <th aria-label="Open booking" />
+                  <th className={styles.actionCell} aria-label="Open booking" />
                 </tr>
               </thead>
               <tbody>
                 {filteredBookings.map((booking) => {
                   const user = usersById.get(booking.customerId);
+                  const href = `/admin/bookings/${booking.id}`;
+                  const goToBooking = () => router.push(href);
+                  const stopRowNav = (event: React.MouseEvent) => event.stopPropagation();
                   return (
-                    <tr key={booking.id}>
-                      <td>
-                        <Link href={`/admin/bookings/${booking.id}`} className={styles.bookingLink}>
+                    <tr
+                      key={booking.id}
+                      className={styles.row}
+                      tabIndex={0}
+                      role="link"
+                      aria-label={`Open booking ${booking.bookingRef}`}
+                      onClick={goToBooking}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          goToBooking();
+                        }
+                      }}
+                    >
+                      <td data-label="Booking">
+                        <Link href={href} className={styles.bookingLink} onClick={stopRowNav}>
                           {booking.bookingRef}
                         </Link>
                       </td>
-                      <td>
+                      <td data-label="Customer">
                         <strong>{customerName(booking, user)}</strong>
                         <small>{booking.customerSnapshot?.email || user?.email || "-"}</small>
                       </td>
-                      <td>{bookingHeadline(booking.items)}</td>
-                      <td>
+                      <td data-label="Rental Item">{bookingHeadline(booking.items)}</td>
+                      <td data-label="Dates">
                         {formatDate(booking.startDate)} - {formatDate(booking.endDate)}
                       </td>
-                      <td><StatusBadge status={booking.status} /></td>
-                      <td>
+                      <td data-label="Status"><StatusBadge status={booking.status} /></td>
+                      <td data-label="Fulfillment Update">
                         <strong>{getFulfillmentProgressLabel(booking.status, booking.fulfillmentMethod)}</strong>
                         <small>{booking.fulfillmentMethod === "delivery" ? "Delivery" : "Pickup"}</small>
                       </td>
-                      <td>{formatDate(booking.createdAt)}</td>
-                      <td>
-                        <Link href={`/admin/bookings/${booking.id}`} className={styles.openLink}>
+                      <td data-label="Submitted">{formatDate(booking.createdAt)}</td>
+                      <td data-label="Action" className={styles.actionCell}>
+                        <Link href={href} className={styles.openLink} onClick={stopRowNav}>
                           Review
                         </Link>
                       </td>
