@@ -1,16 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/lib/supabase/database.types";
 import { mapPaymentSubmission } from "@/src/services/paymentService";
-import type { PayMongoWebhookEvent, PaymentRecord } from "@/src/types/payment";
+import type { PaymentRecord } from "@/src/types/payment";
 import type { AuditLogEntry } from "@/src/types/admin";
 
 export interface PaymentRecordsPage {
   records: PaymentRecord[];
-  total: number;
-}
-
-export interface PaymentEventsPage {
-  records: PayMongoWebhookEvent[];
   total: number;
 }
 
@@ -39,6 +34,7 @@ export async function getPaymentRecordsPage(
   let query = supabase
     .from("booking_payment_submissions")
     .select("*", { count: "exact" })
+    .is("paymongo_payment_id", null)
     .order("created_at", { ascending: false });
 
   const search = options.search?.trim();
@@ -47,8 +43,6 @@ export async function getPaymentRecordsPage(
     query = query.or(
       [
         `external_reference.ilike.${pattern}`,
-        `paymongo_payment_id.ilike.${pattern}`,
-        `payment_method.ilike.${pattern}`,
         `status.ilike.${pattern}`,
         `booking_id::text.ilike.${pattern}`,
       ].join(","),
@@ -64,7 +58,10 @@ export async function getPaymentRecordsPage(
 export async function getPaymentMetricsSummary(
   supabase: SupabaseClient<Database>,
 ): Promise<PaymentMetricsSummary> {
-  const { data, error } = await supabase.from("booking_payment_submissions").select("status, declared_amount");
+  const { data, error } = await supabase
+    .from("booking_payment_submissions")
+    .select("status, declared_amount")
+    .is("paymongo_payment_id", null);
   if (error) throw new Error(error.message);
   const rows = data ?? [];
   const verified = rows.filter((row) => row.status === "verified");
@@ -72,40 +69,6 @@ export async function getPaymentMetricsSummary(
     verifiedRevenue: verified.reduce((sum, row) => sum + row.declared_amount, 0),
     successfulPayments: verified.length,
     pendingCheckouts: rows.filter((row) => row.status === "submitted" || row.status === "under_review").length,
-  };
-}
-
-export async function getPaymentEventsPage(
-  supabase: SupabaseClient<Database>,
-  options: { page: number; pageSize: number },
-): Promise<PaymentEventsPage> {
-  const page = Math.max(1, Math.floor(options.page));
-  const pageSize = options.pageSize;
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
-
-  const { data, error, count } = await supabase
-    .from("paymongo_webhook_events")
-    .select("*", { count: "exact" })
-    .order("received_at", { ascending: false })
-    .range(from, to);
-  if (error) throw new Error(error.message);
-  return {
-    records: (data ?? []).map(
-      (row): PayMongoWebhookEvent => ({
-        id: row.id,
-        providerEventId: row.provider_event_id,
-        eventType: row.event_type,
-        payload: row.payload as Record<string, unknown>,
-        signatureValid: row.signature_valid,
-        processingStatus: row.processing_status as PayMongoWebhookEvent["processingStatus"],
-        errorMessage: row.error_message ?? undefined,
-        paymentSubmissionId: row.payment_record_id ?? undefined,
-        receivedAt: row.received_at,
-        processedAt: row.processed_at ?? undefined,
-      }),
-    ),
-    total: count ?? 0,
   };
 }
 

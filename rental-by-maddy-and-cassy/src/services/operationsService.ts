@@ -1,6 +1,6 @@
 import type { Product } from "@/types/product";
 import type { BookingStatus, RequirementsStatus } from "@/src/types/booking";
-import type { PaymentRecord, PayMongoWebhookEvent } from "@/src/types/payment";
+import type { PaymentRecord } from "@/src/types/payment";
 import type { AuditLogEntry } from "@/src/types/admin";
 
 export interface AdminDashboardData {
@@ -107,13 +107,6 @@ export interface AdminPaymentsData {
   };
 }
 
-export interface AdminPaymentEventsData {
-  events: PayMongoWebhookEvent[];
-  total: number;
-  page: number;
-  pageSize: number;
-}
-
 async function getAdminData<T>(path: string): Promise<T> {
   const response = await fetch(path, { credentials: "same-origin", cache: "no-store" });
   const body = (await response.json().catch(() => null)) as (T & { error?: unknown }) | null;
@@ -148,17 +141,6 @@ export function getAdminPayments(params: {
   });
   if (params.search) query.set("search", params.search);
   return getAdminData(`/api/admin/payments?${query.toString()}`);
-}
-
-export function getAdminPaymentEvents(params: {
-  page: number;
-  pageSize: number;
-}): Promise<AdminPaymentEventsData> {
-  const query = new URLSearchParams({
-    page: String(params.page),
-    pageSize: String(params.pageSize),
-  });
-  return getAdminData(`/api/admin/payments/events?${query.toString()}`);
 }
 
 export function getAdminReviews(): Promise<AdminReviewsData> {

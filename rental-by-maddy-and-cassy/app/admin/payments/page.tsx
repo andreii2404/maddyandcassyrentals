@@ -5,12 +5,7 @@ import Link from "next/link";
 import AdminShell from "@/components/admin/AdminShell";
 import Spinner from "@/components/ui/Spinner";
 import { useAuth } from "@/hooks/useAuth";
-import {
-  getAdminPayments,
-  getAdminPaymentEvents,
-  type AdminPaymentsData,
-  type AdminPaymentEventsData,
-} from "@/src/services/operationsService";
+import { getAdminPayments, type AdminPaymentsData } from "@/src/services/operationsService";
 import styles from "../operations.module.css";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50] as const;
@@ -23,6 +18,10 @@ function money(value: number) {
 
 function formatDate(value: string | null) {
   return value ? new Date(value).toLocaleString("en-PH") : "—";
+}
+
+function formatLabel(value: string) {
+  return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 type PageEntry = number | "ellipsis";
@@ -112,11 +111,6 @@ export default function AdminPaymentsPage() {
   const [paymentsData, setPaymentsData] = useState<AdminPaymentsData | null>(null);
   const [paymentsError, setPaymentsError] = useState<string | null>(null);
 
-  const [eventsPage, setEventsPage] = useState(1);
-  const [eventsPageSize, setEventsPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
-  const [eventsData, setEventsData] = useState<AdminPaymentEventsData | null>(null);
-  const [eventsError, setEventsError] = useState<string | null>(null);
-
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       setDebouncedSearch(searchInput.trim());
@@ -149,30 +143,6 @@ export default function AdminPaymentsPage() {
     };
   }, [user, paymentsPage, paymentsPageSize, debouncedSearch]);
 
-  useEffect(() => {
-    let active = true;
-    if (!user) return;
-
-    getAdminPaymentEvents({ page: eventsPage, pageSize: eventsPageSize })
-      .then((result) => {
-        if (active) {
-          setEventsData(result);
-          setEventsError(null);
-        }
-      })
-      .catch((loadError: unknown) => {
-        if (active) {
-          setEventsError(
-            loadError instanceof Error ? loadError.message : "Webhook activity could not be loaded.",
-          );
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [user, eventsPage, eventsPageSize]);
-
   const loading = !paymentsData && !paymentsError;
 
   return (
@@ -181,10 +151,8 @@ export default function AdminPaymentsPage() {
         <header className={styles.header}>
           <div>
             <p>PAYMENT OPERATIONS</p>
-            <h1>Payments &amp; Webhooks</h1>
-            <span>
-              Review manually submitted GCash payments. Historic PayMongo transactions remain visible below.
-            </span>
+            <h1>Payments</h1>
+            <span>Review manually submitted GCash payments.</span>
           </div>
         </header>
         {paymentsError ? <div className={styles.error}>{paymentsError}</div> : null}
@@ -207,22 +175,18 @@ export default function AdminPaymentsPage() {
                 <span>Pending Checkouts</span>
                 <strong>{paymentsData.metrics.pendingCheckouts}</strong>
               </article>
-              <article>
-                <span>Webhook Events</span>
-                <strong>{eventsData?.total ?? 0}</strong>
-              </article>
             </section>
 
             <section className={styles.panel}>
               <div className={styles.panelHeader}>
                 <div>
                   <h2>Payment Records</h2>
-                  <p>Customer checkout and provider references.</p>
+                  <p>Manual GCash submissions and their review status.</p>
                 </div>
                 <input
                   type="search"
                   className={styles.searchInput}
-                  placeholder="Search booking, reference, status, method…"
+                  placeholder="Search booking, GCash reference, status…"
                   value={searchInput}
                   onChange={(event) => setSearchInput(event.target.value)}
                   aria-label="Search payment records"
@@ -234,12 +198,11 @@ export default function AdminPaymentsPage() {
                     <thead>
                       <tr>
                         <th>Booking</th>
-                        <th>Reference</th>
+                        <th>GCash Reference Number</th>
                         <th>Amount</th>
                         <th>Status</th>
-                        <th>Mode</th>
-                        <th>Method</th>
-                        <th>Created</th>
+                        <th>Payment Type</th>
+                        <th>Date</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -250,19 +213,16 @@ export default function AdminPaymentsPage() {
                               {payment.bookingId.slice(0, 8)}
                             </Link>
                           </td>
-                          <td>
-                            {payment.paymongoPaymentId || payment.externalReference || "—"}
-                          </td>
+                          <td>{payment.externalReference || "—"}</td>
                           <td>{money(payment.amount)}</td>
                           <td>
                             <span
                               className={`${styles.pill} ${styles[payment.status] ?? ""}`}
                             >
-                              {payment.status}
+                              {formatLabel(payment.status)}
                             </span>
                           </td>
-                          <td>{payment.proofDocumentId ? "Manual" : "PayMongo"}</td>
-                          <td>{payment.paymentMethod || "—"}</td>
+                          <td>{formatLabel(payment.stage)}</td>
                           <td>{formatDate(payment.createdAt)}</td>
                         </tr>
                       ))}
@@ -284,68 +244,6 @@ export default function AdminPaymentsPage() {
                   setPaymentsPage(1);
                 }}
               />
-            </section>
-
-            <section className={styles.panel}>
-              <div className={styles.panelHeader}>
-                <div>
-                  <h2>Legacy Webhook Log</h2>
-                  <p>Historic signed PayMongo events from before the switch to manual GCash payments.</p>
-                </div>
-              </div>
-              {eventsError ? <div className={styles.error}>{eventsError}</div> : null}
-              {eventsData?.events.length ? (
-                <div className={styles.tableWrap}>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Event</th>
-                        <th>Type</th>
-                        <th>Signature</th>
-                        <th>Status</th>
-                        <th>Payment</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {eventsData.events.map((event) => (
-                        <tr key={event.id}>
-                          <td>{event.providerEventId}</td>
-                          <td>{event.eventType}</td>
-                          <td>{event.signatureValid ? "Verified" : "Unverified"}</td>
-                          <td>
-                            <span
-                              className={`${styles.pill} ${styles[event.processingStatus] ?? ""}`}
-                            >
-                              {event.processingStatus}
-                            </span>
-                          </td>
-                          <td>
-                            {event.paymentSubmissionId ? (
-                              <span>{event.paymentSubmissionId.slice(0, 8)}</span>
-                            ) : (
-                              "—"
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : eventsData ? (
-                <p className={styles.empty}>No webhook events on record.</p>
-              ) : null}
-              {eventsData ? (
-                <PaginationBar
-                  page={eventsData.page}
-                  pageSize={eventsData.pageSize}
-                  total={eventsData.total}
-                  onPageChange={setEventsPage}
-                  onPageSizeChange={(size) => {
-                    setEventsPageSize(size);
-                    setEventsPage(1);
-                  }}
-                />
-              ) : null}
             </section>
           </>
         ) : null}
