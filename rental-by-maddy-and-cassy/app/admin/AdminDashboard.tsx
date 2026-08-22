@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import Spinner from "@/components/ui/Spinner";
 import StatusBadge from "@/components/status-badge/StatusBadge";
@@ -20,7 +21,26 @@ function formatDate(value: string | null): string {
   });
 }
 
+interface PriorityCard {
+  key: string;
+  label: string;
+  value: string;
+  caption: string;
+  cta: string;
+  href: string;
+  urgent: boolean;
+}
+
+interface SecondaryCard {
+  key: string;
+  label: string;
+  value: string;
+  caption: string;
+  href?: string;
+}
+
 export default function AdminDashboard() {
+  const router = useRouter();
   const { user, profile } = useAuth();
   const [data, setData] = useState<AdminDashboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +70,85 @@ export default function AdminDashboard() {
 
   const displayName = profile?.displayName ?? (user?.user_metadata?.display_name as string | undefined) ?? "Administrator";
 
+  const priorityCards: PriorityCard[] = data
+    ? [
+        {
+          key: "pendingReviews",
+          label: "Pending Reviews",
+          value: String(data.metrics.pendingVerification),
+          caption: "Submitted or correction-required bookings",
+          cta: "Review requirements",
+          href: "/admin/bookings",
+          urgent: data.metrics.pendingVerification > 0,
+        },
+        {
+          key: "activeBookings",
+          label: "Active Bookings",
+          value: String(data.metrics.activeBookings),
+          caption: "Currently in progress",
+          cta: "Manage open bookings",
+          href: "/admin/bookings",
+          urgent: false,
+        },
+        {
+          key: "failedPayments",
+          label: "Failed Payments",
+          value: String(data.metrics.failedPayments),
+          caption: "Checkout attempts requiring attention",
+          cta: "Review payment activity",
+          href: "/admin/payments",
+          urgent: data.metrics.failedPayments > 0,
+        },
+        {
+          key: "verifiedRevenue",
+          label: "Verified Revenue",
+          value: `PHP ${data.metrics.verifiedRevenue.toLocaleString("en-PH")}`,
+          caption: "Confirmed GCash payments",
+          cta: "View payment activity",
+          href: "/admin/payments",
+          urgent: false,
+        },
+      ]
+    : [];
+
+  const secondaryCards: SecondaryCard[] = data
+    ? [
+        {
+          key: "customerAccounts",
+          label: "Customer Accounts",
+          value: String(data.metrics.customerAccounts),
+          caption: "Registered renters",
+          href: "/admin/users",
+        },
+        {
+          key: "successfulPayments",
+          label: "Successful Payments",
+          value: String(data.metrics.successfulPayments),
+          caption: "Verified GCash payments",
+        },
+        {
+          key: "catalogProducts",
+          label: "Catalog Products",
+          value: String(data.metrics.catalogProducts),
+          caption: "Active and inactive catalog records",
+        },
+        {
+          key: "completedRentals",
+          label: "Completed Rentals",
+          value: String(data.metrics.completedRentals),
+          caption: "Recorded rental history",
+        },
+        {
+          key: "mostRequested",
+          label: "Most Requested Gadget",
+          value: data.metrics.popularProductName ?? "—",
+          caption: data.metrics.popularProductName
+            ? `${data.metrics.popularProductBookings} booking request(s)`
+            : "No booking data yet",
+        },
+      ]
+    : [];
+
   return (
     <div className={styles.page}>
       <header className={styles.pageHeader}>
@@ -68,65 +167,49 @@ export default function AdminDashboard() {
         </div>
       ) : data ? (
         <>
-          <section className={styles.metrics} aria-label="Business overview">
-            <article className={styles.metricCard}>
-              <span>Customer Accounts</span>
-              <strong>{data.metrics.customerAccounts}</strong>
-              <Link href="/admin/users">View all users</Link>
-            </article>
-            <article className={styles.metricCard}>
-              <span>Verified Revenue</span>
-              <strong>
-                PHP {data.metrics.verifiedRevenue.toLocaleString("en-PH")}
-              </strong>
-              <Link href="/admin/payments">View payment activity</Link>
-            </article>
-            <article className={styles.metricCard}>
-              <span>Successful Payments</span>
-              <strong>{data.metrics.successfulPayments}</strong>
-              <small>Verified GCash payments</small>
-            </article>
-            <article className={styles.metricCard}>
-              <span>Failed Payments</span>
-              <strong>{data.metrics.failedPayments}</strong>
-              <small>Checkout attempts requiring attention</small>
-            </article>
-            <article className={styles.metricCard}>
-              <span>Verification Queue</span>
-              <strong>{data.metrics.pendingVerification}</strong>
-              <small>Submitted or correction-required bookings</small>
-            </article>
-            <article className={styles.metricCard}>
-              <span>Most Requested Gadget</span>
-              <strong>{data.metrics.popularProductName ?? "—"}</strong>
-              <small>
-                {data.metrics.popularProductName
-                  ? `${data.metrics.popularProductBookings} booking request(s)`
-                  : "No booking data yet"}
-              </small>
-            </article>
-            <article className={styles.metricCard}>
-              <span>Active Bookings</span>
-              <strong>{data.metrics.activeBookings}</strong>
-              <Link href="/admin/bookings">Manage open bookings</Link>
-            </article>
-            <article className={styles.metricCard}>
-              <span>Catalog Products</span>
-              <strong>{data.metrics.catalogProducts}</strong>
-              <small>Active and inactive catalog records</small>
-            </article>
-            <article className={styles.metricCard}>
-              <span>Completed Rentals</span>
-              <strong>{data.metrics.completedRentals}</strong>
-              <small>Recorded rental history</small>
-            </article>
+          <p className={styles.sectionLabel}>Needs Your Attention</p>
+          <section className={styles.priorityMetrics} aria-label="Actionable metrics">
+            {priorityCards.map((card) => (
+              <Link
+                key={card.key}
+                href={card.href}
+                className={`${styles.priorityCard} ${card.urgent ? styles.urgent : ""}`}
+              >
+                <span className={styles.priorityLabel}>
+                  {card.label}
+                  {card.urgent ? <span className={styles.priorityFlag}>Action needed</span> : null}
+                </span>
+                <strong>{card.value}</strong>
+                <span className={styles.priorityCaption}>{card.caption}</span>
+                <span className={styles.priorityCta}>{card.cta} →</span>
+              </Link>
+            ))}
+          </section>
+
+          <p className={styles.sectionLabel}>Business Snapshot</p>
+          <section className={styles.secondaryMetrics} aria-label="Secondary metrics">
+            {secondaryCards.map((card) =>
+              card.href ? (
+                <Link key={card.key} href={card.href} className={styles.secondaryCard}>
+                  <span className={styles.secondaryLabel}>{card.label}</span>
+                  <strong>{card.value}</strong>
+                  <small>{card.caption}</small>
+                </Link>
+              ) : (
+                <article key={card.key} className={styles.secondaryCard}>
+                  <span className={styles.secondaryLabel}>{card.label}</span>
+                  <strong>{card.value}</strong>
+                  <small>{card.caption}</small>
+                </article>
+              ),
+            )}
           </section>
 
           <section className={styles.panel} aria-labelledby="recent-bookings-heading">
             <div className={styles.panelHeader}>
               <div>
                 <h2 id="recent-bookings-heading">Recent Booking Activity</h2>
-                <p>Latest booking requests across all customer accounts.</p>
+                <p>Newest and pending-review bookings across all customer accounts.</p>
               </div>
               <Link href="/admin/bookings">View all bookings</Link>
             </div>
@@ -141,24 +224,54 @@ export default function AdminDashboard() {
                       <th>Product</th>
                       <th>Status</th>
                       <th>Submitted</th>
+                      <th className={styles.actionCell} aria-label="Open booking" />
                     </tr>
                   </thead>
                   <tbody>
-                    {data.recentBookings.map((booking) => (
-                      <tr key={booking.id}>
-                        <td>
-                          <Link href={`/admin/bookings/${booking.id}`}>
-                            {booking.bookingRef}
-                          </Link>
-                        </td>
-                        <td>{booking.customerName}</td>
-                        <td>{booking.productName}</td>
-                        <td>
-                          <StatusBadge status={booking.status} />
-                        </td>
-                        <td>{formatDate(booking.createdAt)}</td>
-                      </tr>
-                    ))}
+                    {data.recentBookings.map((booking) => {
+                      const href = `/admin/bookings/${booking.id}`;
+                      const isPendingReview = booking.requirementsStatus === "pending_review";
+                      const goToBooking = () => router.push(href);
+                      const stopRowNav = (event: React.MouseEvent) => event.stopPropagation();
+                      return (
+                        <tr
+                          key={booking.id}
+                          className={`${styles.row} ${isPendingReview ? styles.rowPending : ""}`}
+                          tabIndex={0}
+                          role="link"
+                          aria-label={`Open booking ${booking.bookingRef}`}
+                          onClick={goToBooking}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              goToBooking();
+                            }
+                          }}
+                        >
+                          <td data-label="Booking">
+                            <Link href={href} className={styles.bookingLink} onClick={stopRowNav}>
+                              {booking.bookingRef}
+                            </Link>
+                          </td>
+                          <td data-label="Customer">{booking.customerName}</td>
+                          <td data-label="Product">{booking.productName}</td>
+                          <td data-label="Status">
+                            <span className={styles.statusCell}>
+                              <StatusBadge status={booking.status} />
+                              {isPendingReview ? (
+                                <span className={styles.reviewFlag}>Needs review</span>
+                              ) : null}
+                            </span>
+                          </td>
+                          <td data-label="Submitted">{formatDate(booking.createdAt)}</td>
+                          <td data-label="Action" className={styles.actionCell}>
+                            <Link href={href} className={styles.openLink} onClick={stopRowNav}>
+                              Review
+                            </Link>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

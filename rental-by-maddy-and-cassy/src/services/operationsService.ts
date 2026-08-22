@@ -1,5 +1,5 @@
 import type { Product } from "@/types/product";
-import type { BookingStatus } from "@/src/types/booking";
+import type { BookingStatus, RequirementsStatus } from "@/src/types/booking";
 import type { PaymentRecord, PayMongoWebhookEvent } from "@/src/types/payment";
 import type { AuditLogEntry } from "@/src/types/admin";
 
@@ -22,6 +22,7 @@ export interface AdminDashboardData {
     customerName: string;
     productName: string;
     status: BookingStatus;
+    requirementsStatus: RequirementsStatus;
     createdAt: string | null;
   }>;
 }

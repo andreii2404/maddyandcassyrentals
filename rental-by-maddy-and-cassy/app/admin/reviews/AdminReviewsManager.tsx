@@ -280,41 +280,51 @@ export default function AdminReviewsManager() {
               const isSaving = activeReviewId === review.id;
               return (
                 <article key={review.id} className={styles.reviewCard} data-status={review.status}>
-                  <div className={styles.reviewIdentity}>
+                  <div className={styles.cardHeader}>
                     <span className={styles.avatar} aria-hidden="true">
                       {review.customerName.charAt(0).toUpperCase() || "C"}
                     </span>
-                    <div>
-                      <strong>{review.customerName}</strong>
-                      <span>{review.customerEmail || "Verified customer account"}</span>
+                    <div className={styles.identity}>
+                      <strong title={review.customerName}>{review.customerName}</strong>
+                      <span className={styles.ratingLine}>
+                        <span className={styles.stars} aria-label={`${review.rating} out of 5 stars`}>
+                          {"★".repeat(review.rating)}<i>{"★".repeat(5 - review.rating)}</i>
+                        </span>
+                        <span className={styles.ratingValue}>{review.rating}.0</span>
+                      </span>
                     </div>
                     <span className={styles.statusPill} data-status={review.status}>
                       {statusLabel(review.status)}
                     </span>
                   </div>
 
-                  <div className={styles.reviewBody}>
-                    <div className={styles.ratingLine}>
-                      <span className={styles.stars} aria-label={`${review.rating} out of 5 stars`}>
-                        {"★".repeat(review.rating)}<i>{"★".repeat(5 - review.rating)}</i>
-                      </span>
-                      <strong>{review.rating}.0</strong>
-                    </div>
-                    <blockquote>
-                      {review.comment || "The customer submitted a rating without a written comment."}
-                    </blockquote>
-                    <time dateTime={review.createdAt}>Submitted {formatDate(review.createdAt)}</time>
-                  </div>
+                  <blockquote className={styles.reviewText}>
+                    {review.comment || "The customer submitted a rating without a written comment."}
+                  </blockquote>
 
-                  <dl className={styles.reviewContext}>
-                    <div><dt>Rental item</dt><dd>{review.productName}</dd></div>
-                    <div><dt>Booking reference</dt><dd>{review.bookingRef}</dd></div>
-                    <div><dt>Rental status</dt><dd>{review.bookingStatus.replaceAll("_", " ")}</dd></div>
+                  <dl className={styles.reviewMeta}>
                     <div>
-                      <dt>Moderation</dt>
-                      <dd>{review.moderatedAt ? `${review.moderatorName || "Administrator"} · ${formatDate(review.moderatedAt)}` : "Not reviewed yet"}</dd>
+                      <dt>Product</dt>
+                      <dd title={review.productName}>{review.productName}</dd>
+                    </div>
+                    <div>
+                      <dt>Booking ref</dt>
+                      <dd title={review.bookingRef}>{review.bookingRef}</dd>
+                    </div>
+                    <div>
+                      <dt>Rental status</dt>
+                      <dd>{review.bookingStatus.replaceAll("_", " ")}</dd>
                     </div>
                   </dl>
+
+                  <div className={styles.cardFootnote}>
+                    <time dateTime={review.createdAt}>Submitted {formatDate(review.createdAt)}</time>
+                    <span>
+                      {review.moderatedAt
+                        ? `Moderated by ${review.moderatorName || "Administrator"} · ${formatDate(review.moderatedAt)}`
+                        : "Not reviewed yet"}
+                    </span>
+                  </div>
 
                   <div className={styles.cardActions}>
                     {review.bookingId ? <Link href={`/admin/bookings/${review.bookingId}`}>View booking details</Link> : null}

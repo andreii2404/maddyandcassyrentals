@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { enforceRateLimit, requireActiveAdmin, RequestSecurityError } from "@/src/lib/server/requestSecurity";
 import { getAllBookings } from "@/src/services/bookingService";
 import { bookingHeadline } from "@/src/lib/bookingDisplay";
+import { resolveAccountName } from "@/src/lib/accountDisplay";
 
 export const runtime = "nodejs";
 
@@ -42,6 +43,16 @@ export async function GET(request: Request): Promise<NextResponse> {
     const failedPayments = paymentRows.filter((row) => row.status === "rejected" || row.status === "void").length;
     const popularProduct = [...productBookingCounts.entries()].sort((a, b) => b[1] - a[1])[0];
 
+    // Bookings are already newest-first (getAllBookings orders by created_at desc);
+    // bubble pending-review bookings to the top so they stay easy to spot without
+    // losing the newest-first order within each group.
+    const recentBookingsSorted = [...bookings].sort((a, b) => {
+      const aPending = a.requirementsStatus === "pending_review" ? 1 : 0;
+      const bPending = b.requirementsStatus === "pending_review" ? 1 : 0;
+      if (aPending !== bPending) return bPending - aPending;
+      return Date.parse(b.createdAt || "") - Date.parse(a.createdAt || "");
+    });
+
     return NextResponse.json({
       metrics: {
         customerAccounts: customerAccounts ?? 0,
@@ -55,12 +66,16 @@ export async function GET(request: Request): Promise<NextResponse> {
         popularProductName: popularProduct?.[0] ?? null,
         popularProductBookings: popularProduct?.[1] ?? 0,
       },
-      recentBookings: bookings.slice(0, 6).map((booking) => ({
+      recentBookings: recentBookingsSorted.slice(0, 8).map((booking) => ({
         id: booking.id,
         bookingRef: booking.bookingRef,
-        customerName: booking.customerSnapshot.fullName || "Customer",
+        customerName: resolveAccountName({
+          displayName: booking.customerSnapshot.fullName,
+          email: booking.customerSnapshot.email,
+        }),
         productName: bookingHeadline(booking.items),
         status: booking.status,
+        requirementsStatus: booking.requirementsStatus,
         createdAt: booking.createdAt,
       })),
     });

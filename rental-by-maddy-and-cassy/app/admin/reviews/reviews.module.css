@@ -202,79 +202,63 @@
 
 .reviewList {
   display: grid;
-  padding: 1rem;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.85rem;
+  padding: 0.85rem;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 0.65rem;
 }
 
 .reviewCard {
   display: flex;
   overflow: hidden;
   border: 1px solid var(--color-border);
-  border-top: 3px solid var(--color-dusty-rose);
-  border-radius: 16px;
+  border-radius: 14px;
   background: var(--color-white);
   flex-direction: column;
 }
 
-.reviewCard[data-status="approved"] {
-  border-top-color: var(--color-status-green);
-}
-
-.reviewCard[data-status="rejected"] {
-  border-top-color: var(--color-status-red-border);
-}
-
-.reviewIdentity {
+.cardHeader {
   display: grid;
   align-items: center;
-  padding: 0.9rem 1rem;
+  padding: 0.65rem 0.75rem;
   border-bottom: 1px solid var(--color-border);
   grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 0.65rem;
+  gap: 0.55rem;
 }
 
 .avatar {
   display: grid;
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: var(--color-blush);
   color: var(--color-primary);
   place-items: center;
-  font-size: 0.84rem;
+  font-size: 0.76rem;
   font-weight: 800;
 }
 
-.reviewIdentity > div {
+.identity {
+  display: flex;
   min-width: 0;
+  flex-direction: column;
+  gap: 0.18rem;
 }
 
-.reviewIdentity strong,
-.reviewIdentity > div span {
+.identity strong {
   display: block;
   overflow: hidden;
+  color: var(--color-text-primary);
+  font-size: 0.76rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.reviewIdentity strong {
-  color: var(--color-text-primary);
-  font-size: 0.78rem;
-}
-
-.reviewIdentity > div span {
-  margin-top: 0.12rem;
-  color: var(--color-charcoal);
-  font-size: 0.63rem;
-}
-
 .statusPill {
-  padding: 0.28rem 0.55rem;
+  padding: 0.24rem 0.5rem;
   border-radius: 999px;
   background: var(--color-status-yellow-bg);
   color: var(--color-status-yellow);
-  font-size: 0.59rem;
+  font-size: 0.57rem;
   font-weight: 800;
   white-space: nowrap;
 }
@@ -289,20 +273,16 @@
   color: var(--color-status-red);
 }
 
-.reviewBody {
-  padding: 0.95rem 1rem;
-}
-
 .ratingLine {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.35rem;
 }
 
 .stars {
   color: #c8891c;
-  font-size: 0.95rem;
-  letter-spacing: 0.05em;
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
 }
 
 .stars i {
@@ -310,57 +290,73 @@
   font-style: normal;
 }
 
-.ratingLine strong {
-  color: var(--color-text-primary);
-  font-size: 0.72rem;
-}
-
-.reviewBody blockquote {
-  min-height: 48px;
-  margin: 0.65rem 0 0.55rem;
-  color: var(--color-text-primary);
-  font-size: 0.76rem;
-  line-height: 1.55;
-}
-
-.reviewBody time {
+.ratingValue {
   color: var(--color-charcoal);
-  font-size: 0.61rem;
+  font-size: 0.63rem;
+  font-weight: 700;
 }
 
-.reviewContext {
-  display: grid;
+.reviewText {
+  overflow: hidden;
+  display: -webkit-box;
+  min-height: 0;
   margin: 0;
-  padding: 0 1rem 0.9rem;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.45rem;
+  padding: 0.6rem 0.75rem;
+  color: var(--color-text-primary);
+  font-size: 0.73rem;
+  line-height: 1.45;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
 }
 
-.reviewContext div {
+.reviewMeta {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0 0.75rem 0.6rem;
+  gap: 0.4rem;
+}
+
+.reviewMeta div {
+  display: flex;
+  overflow: hidden;
   min-width: 0;
-  padding: 0.6rem;
-  border-radius: 10px;
+  max-width: 100%;
+  padding: 0.3rem 0.5rem;
+  border-radius: 8px;
   background: var(--color-background);
+  align-items: baseline;
+  gap: 0.3rem;
 }
 
-.reviewContext dt {
-  margin-bottom: 0.15rem;
+.reviewMeta dt {
+  flex-shrink: 0;
   color: var(--color-charcoal);
-  font-size: 0.54rem;
+  font-size: 0.52rem;
   font-weight: 750;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
 }
 
-.reviewContext dd {
+.reviewMeta dd {
   overflow: hidden;
+  min-width: 0;
   margin: 0;
   color: var(--color-text-primary);
-  font-size: 0.65rem;
+  font-size: 0.63rem;
   font-weight: 650;
   text-overflow: ellipsis;
   text-transform: capitalize;
   white-space: nowrap;
+}
+
+.cardFootnote {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0 0.75rem 0.6rem;
+  color: var(--color-charcoal);
+  font-size: 0.58rem;
 }
 
 .cardActions {
@@ -368,10 +364,10 @@
   align-items: center;
   justify-content: space-between;
   margin-top: auto;
-  padding: 0.75rem 1rem;
+  padding: 0.6rem 0.75rem;
   border-top: 1px solid var(--color-border);
   background: var(--color-background);
-  gap: 0.75rem;
+  gap: 0.65rem;
 }
 
 .cardActions > div {
@@ -496,8 +492,7 @@
 }
 
 @media (max-width: 1100px) {
-  .metrics,
-  .reviewList {
+  .metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -524,10 +519,6 @@
   .statusTabs button {
     flex: 1 0 auto;
   }
-
-  .reviewList {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 560px) {
@@ -543,8 +534,7 @@
   }
 
   .metrics,
-  .toolbar,
-  .reviewContext {
+  .toolbar {
     grid-template-columns: 1fr;
   }
 
@@ -552,7 +542,7 @@
     grid-column: auto;
   }
 
-  .reviewIdentity {
+  .cardHeader {
     grid-template-columns: auto minmax(0, 1fr);
   }
 
