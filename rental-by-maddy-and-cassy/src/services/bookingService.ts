@@ -158,6 +158,7 @@ function assembleBooking(
     id: row.id,
     bookingRef: row.booking_reference,
     customerId: row.customer_id,
+    isGuestCheckout: row.is_guest_checkout,
     items,
     productId: item?.product_id ?? "",
     inventoryUnitId,
@@ -296,13 +297,14 @@ export async function getCustomerRewardProgress(
 ): Promise<RewardProgress> {
   const { data, error } = await supabase
     .from("bookings")
-    .select("status, loyalty_discount_amount, booking_reference")
+    .select("status, loyalty_discount_amount, booking_reference, is_guest_checkout")
     .eq("customer_id", userId);
   if (error) throw new Error(error.message);
 
   const rows = data ?? [];
-  const completedRentals = rows.filter((booking) => booking.status === "returned").length;
-  const rewardBooking = rows.find(
+  const accountBookings = rows.filter((booking) => !booking.is_guest_checkout);
+  const completedRentals = accountBookings.filter((booking) => booking.status === "returned").length;
+  const rewardBooking = accountBookings.find(
     (booking) => booking.loyalty_discount_amount > 0 && booking.status !== "cancelled",
   );
   return {

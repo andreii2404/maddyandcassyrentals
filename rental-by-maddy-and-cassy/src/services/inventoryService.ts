@@ -72,6 +72,7 @@ export interface SubmitBookingInput {
   productSnapshot: BookingProductSnapshot;
   customerSnapshot: BookingCustomerSnapshot;
   emergencyContact?: EmergencyContact;
+  isGuest?: boolean;
 }
 
 export interface SubmitBookingResult {
@@ -92,6 +93,16 @@ export async function submitBookingWithDateGuard(
   supabase: SupabaseClient<Database>,
   input: SubmitBookingInput,
 ): Promise<SubmitBookingResult> {
+  if (input.isGuest) {
+    const { error: guestContactError } = await supabase.rpc("save_guest_checkout_contact", {
+      p_customer_snapshot: toJson(input.customerSnapshot),
+    });
+    if (guestContactError) {
+      console.error("submitBookingWithDateGuard: guest contact save failed", guestContactError);
+      throw new Error("We couldn't securely save your guest contact details. Please check them and try again.");
+    }
+  }
+
   const { data, error } = await supabase.rpc("create_multi_day_time_based_booking", {
     p_product_id: input.productId,
     p_quantity: input.quantity ?? 1,
@@ -163,6 +174,7 @@ export interface SubmitMultiItemBookingInput {
   customerNotes?: string;
   customerSnapshot: BookingCustomerSnapshot;
   emergencyContact?: EmergencyContact;
+  isGuest?: boolean;
 }
 
 /**
@@ -177,6 +189,16 @@ export async function submitMultiItemBookingWithDateGuard(
   supabase: SupabaseClient<Database>,
   input: SubmitMultiItemBookingInput,
 ): Promise<SubmitBookingResult> {
+  if (input.isGuest) {
+    const { error: guestContactError } = await supabase.rpc("save_guest_checkout_contact", {
+      p_customer_snapshot: toJson(input.customerSnapshot),
+    });
+    if (guestContactError) {
+      console.error("submitMultiItemBookingWithDateGuard: guest contact save failed", guestContactError);
+      throw new Error("We couldn't securely save your guest contact details. Please check them and try again.");
+    }
+  }
+
   const { data, error } = await supabase.rpc("create_multi_item_booking", {
     p_items: toJson(input.items.map((item) => ({ productId: item.productId, quantity: item.quantity }))),
     p_pickup_at: input.pickupAt,

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { enforceRateLimit, requireActiveAdmin, RequestSecurityError } from "@/src/lib/server/requestSecurity";
 import { getBookingById } from "@/src/services/bookingService";
+import { bookingTrackingPath } from "@/src/lib/bookingAccess";
 
 export const runtime = "nodejs";
 
@@ -108,7 +109,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
         message: status === "approved"
           ? `Your ${documentType.replace(/_/g, " ")} was approved.${birthdayVerified ? " Your birthday-month discount is now verified." : ""}`
           : reason,
-        action_url: `/account/bookings/${bookingId}`,
+        action_url: bookingTrackingPath(bookingId, booking?.isGuestCheckout === true),
       });
     }
 

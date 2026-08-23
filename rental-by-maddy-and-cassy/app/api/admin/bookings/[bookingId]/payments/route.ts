@@ -3,6 +3,7 @@ import { enforceRateLimit, requireActiveAdmin, RequestSecurityError } from "@/sr
 import { createAdminClient } from "@/src/lib/supabase/admin";
 import { fulfillVerifiedPayment } from "@/src/lib/server/paymentFulfillment";
 import { getBookingById } from "@/src/services/bookingService";
+import { bookingTrackingPath } from "@/src/lib/bookingAccess";
 
 export const runtime = "nodejs";
 
@@ -226,7 +227,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
           notification_type: "payment_reviewed",
           title: "Payment proof rejected",
           message: reason,
-          action_url: `/account/bookings/${bookingId}`,
+          action_url: bookingTrackingPath(bookingId, booking.isGuestCheckout),
         });
       }
 

@@ -71,6 +71,8 @@ export interface Booking {
   id: string;
   bookingRef: string;
   customerId: string;
+  /** Snapshot of whether checkout used a temporary anonymous guest session. */
+  isGuestCheckout: boolean;
   /** Every line item on this booking -- for a single-item booking, length 1. */
   items: BookingItemLine[];
   productId: string;

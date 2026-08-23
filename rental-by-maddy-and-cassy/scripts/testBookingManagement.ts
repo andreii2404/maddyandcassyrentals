@@ -16,12 +16,14 @@ import {
 } from "../src/lib/reservationProgress";
 import { isDuplicateReviewError } from "../src/lib/reviewSubmission";
 import { buildBookingStatusEmail } from "../src/lib/bookingStatusEmailContent";
+import { bookingTrackingPath } from "../src/lib/bookingAccess";
 
 function booking(status: Booking["status"], method: Booking["fulfillmentMethod"] = "pickup"): Booking {
   return {
     id: "booking-id",
     bookingRef: "BK-TEST",
     customerId: "customer-id",
+    isGuestCheckout: false,
     items: [
       {
         bookingItemId: "booking-item-id",
@@ -67,6 +69,11 @@ function booking(status: Booking["status"], method: Booking["fulfillmentMethod"]
     updatedAt: "2026-08-09T00:00:00.000Z",
   };
 }
+
+test("guest booking links stay outside account-only route guards", () => {
+  assert.equal(bookingTrackingPath("booking/id", true), "/guest/bookings/booking%2Fid");
+  assert.equal(bookingTrackingPath("booking-id", false, "#booking-documents"), "/account/bookings/booking-id#booking-documents");
+});
 
 test("booking history groups ongoing, completed, and cancelled states", () => {
   assert.equal(getBookingHistoryGroup("pending"), "ongoing");

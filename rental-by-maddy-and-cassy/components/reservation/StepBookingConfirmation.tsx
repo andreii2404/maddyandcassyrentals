@@ -2,6 +2,7 @@ import Link from "next/link";
 import formStyles from "@/components/ui/Form.module.css";
 import sharedStyles from "./StepShared.module.css";
 import styles from "./StepPaymentSubmission.module.css";
+import { bookingTrackingPath } from "@/src/lib/bookingAccess";
 
 export default function StepBookingConfirmation({
   bookingId,
@@ -28,19 +29,29 @@ export default function StepBookingConfirmation({
         proof of payment, and booking invoice are available in your account.
       </p>
       {isGuest ? (
-        <p className={styles.reference}>
-          Guest access is saved only in this browser. Keep your booking reference and avoid signing out or clearing browser data until the rental is complete.
-        </p>
+        <div className={styles.guestConfirmation}>
+          <strong>No account is required to finish this booking.</strong>
+          <p>
+            Track payment, document review, agreement, confirmation, and fulfillment from this
+            browser. Keep reference <b>{bookingNumber}</b>, and do not clear this site&apos;s browser
+            data until the rental is complete.
+          </p>
+          <small>
+            Customer accounts are optional. Create one for future rentals to receive the
+            birthday-month discount and 11th-rental loyalty reward; guest bookings do not earn
+            those account perks.
+          </small>
+        </div>
       ) : null}
       <div className={sharedStyles.footer}>
-        <Link href="/account/payments" className={formStyles.secondaryButton}>
-          Payment History
+        <Link href={isGuest ? "/catalog" : "/account/payments"} className={formStyles.secondaryButton}>
+          {isGuest ? "Browse Rentals" : "Payment History"}
         </Link>
         <Link
-          href={`/account/bookings/${bookingId}?justSubmitted=1`}
+          href={`${bookingTrackingPath(bookingId, isGuest)}?justSubmitted=1`}
           className={formStyles.primaryButton}
         >
-          View Booking &amp; Documents
+          {isGuest ? "Track Guest Booking" : "View Booking & Documents"}
         </Link>
       </div>
     </div>

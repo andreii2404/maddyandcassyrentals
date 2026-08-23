@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Tables } from "@/src/lib/supabase/database.types";
 import { toJson } from "@/src/lib/supabase/types";
 import { getBookingById } from "@/src/services/bookingService";
+import { bookingTrackingPath } from "@/src/lib/bookingAccess";
 import {
   generateAndSaveFinalAgreement,
   generateAndSaveReceipt,
@@ -126,7 +127,7 @@ export async function fulfillVerifiedPayment(
     notification_type: "payment_verified",
     title: "Payment confirmed",
     message: `Your payment for ${booking.bookingRef} was verified. Your receipt is ready.`,
-    action_url: `/account/bookings/${booking.id}`,
+    action_url: bookingTrackingPath(booking.id, booking.isGuestCheckout),
   });
 
   let bookingConfirmed = false;

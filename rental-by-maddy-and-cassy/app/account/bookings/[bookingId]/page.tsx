@@ -89,8 +89,8 @@ export default function BookingDetailPage() {
   );
 }
 
-function BookingDetailContent() {
-  const { user } = useAuth();
+export function BookingDetailContent({ guestMode = false }: { guestMode?: boolean }) {
+  const { user, loading: authLoading } = useAuth();
   const params = useParams<{ bookingId: string }>();
   const searchParams = useSearchParams();
   const justSubmitted = searchParams.get("justSubmitted") === "1";
@@ -120,9 +120,10 @@ function BookingDetailContent() {
   }
 
   useEffect(() => {
+    if (!user) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadDetails();
-  }, [loadDetails]);
+  }, [loadDetails, user]);
 
   const liveStatus = useBookingRealtime({
     bookingId: params.bookingId,
@@ -130,7 +131,7 @@ function BookingDetailContent() {
     onChange: loadDetails,
   });
 
-  if (!user || details === null) {
+  if (authLoading) {
     return (
       <div className={styles.loading}>
         <Spinner label="Loading booking" />
@@ -138,7 +139,38 @@ function BookingDetailContent() {
     );
   }
 
-  if (details === "error" || details.booking.customerId !== user.id) {
+  if (!user) {
+    return guestMode ? (
+      <section className={styles.guestSessionCard}>
+        <p className={styles.sectionEyebrow}>GUEST BOOKING ACCESS</p>
+        <h1>Open this booking from the checkout browser.</h1>
+        <p>
+          Guest tracking is protected by the temporary session created during checkout. Return
+          to the same browser and device without clearing site data, then open your tracking link
+          again. Your booking has not been cancelled or removed.
+        </p>
+        <p>
+          If that browser is no longer available, contact Rental by Maddy &amp; Cassy and provide
+          your booking reference and the email used at checkout so the team can verify you.
+        </p>
+        <Link href="/contact" className={formStyles.primaryButton}>Contact Support</Link>
+      </section>
+    ) : null;
+  }
+
+  if (details === null) {
+    return (
+      <div className={styles.loading}>
+        <Spinner label="Loading booking" />
+      </div>
+    );
+  }
+
+  if (
+    details === "error" ||
+    details.booking.customerId !== user.id ||
+    (guestMode && !details.booking.isGuestCheckout)
+  ) {
     return <p className={formStyles.errorText}>We couldn&apos;t find that booking.</p>;
   }
 
@@ -198,8 +230,8 @@ function BookingDetailContent() {
 
   return (
     <div className={styles.wrapper}>
-      <Link href="/account/bookings" className={styles.backLink}>
-        <span aria-hidden="true">←</span> Back to My Bookings
+      <Link href={guestMode ? "/catalog" : "/account/bookings"} className={styles.backLink}>
+        <span aria-hidden="true">←</span> {guestMode ? "Browse Rentals" : "Back to My Bookings"}
       </Link>
 
       {justSubmitted ? (
@@ -212,10 +244,37 @@ function BookingDetailContent() {
           </p>
           <p className={styles.paymentNote}>
             Your invoice, official receipt, verified proof of payment, and signed rental agreement
-            are available under Documents. If you selected the 50% option, you can pay the
-            remaining balance from this page.
+            are available under Documents below. If you selected the 50% option, you can pay the
+            remaining balance from this tracking page.
           </p>
         </div>
+      ) : null}
+
+      {guestMode ? (
+        <section className={styles.guestAccessBanner} aria-labelledby="guest-access-heading">
+          <div className={styles.guestAccessIcon} aria-hidden="true">G</div>
+          <div>
+            <p className={styles.sectionEyebrow}>GUEST TRACKING</p>
+            <h2 id="guest-access-heading">No customer account is required.</h2>
+            <p>
+              This secure page remains available in the browser used for checkout through payment,
+              review, confirmation, pickup or delivery, and completion. Keep <strong>{booking.bookingRef}</strong>
+              and do not clear this site&apos;s data until the rental is finished.
+            </p>
+          </div>
+          <div className={styles.guestPerksNote}>
+            <strong>Want perks on future rentals?</strong>
+            <span>
+              Customer accounts receive birthday-month and 11th-rental rewards. Guest bookings do
+              not earn either perk, and creating an account is completely optional.
+            </span>
+            {booking.status === "returned" ? (
+              <Link href="/sign-up">Create an Account</Link>
+            ) : (
+              <small>Create one after this rental is complete so this guest tracking session stays uninterrupted.</small>
+            )}
+          </div>
+        </section>
       ) : null}
 
       <header className={styles.bookingHeader}>

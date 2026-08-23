@@ -355,7 +355,7 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
       let activeBookingNumber = bookingNumber;
       if (!activeBookingId) {
         const supabase = createClient();
-        const reservation = await createMultiItemBookingReservation(supabase, lines, draft);
+        const reservation = await createMultiItemBookingReservation(supabase, lines, draft, isGuest);
         activeBookingId = reservation.bookingId;
         activeBookingNumber = reservation.bookingNumber ?? reservation.bookingId;
         setBookingId(activeBookingId);
