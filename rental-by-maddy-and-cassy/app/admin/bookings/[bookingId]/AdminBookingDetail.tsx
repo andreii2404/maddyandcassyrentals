@@ -92,10 +92,8 @@ interface DetailState {
 type AdminReviewWorkspace =
   | "decision"
   | "booking"
-  | "payment"
-  | "documents"
-  | "agreement"
-  | "activity";
+  | "review"
+  | "agreement";
 
 export default function AdminBookingDetail({ bookingId }: { bookingId: string }) {
   const { showToast } = useToast();
@@ -564,24 +562,14 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
         </div>
         <div className={styles.checklistChips}>
           {reviewChecks.map((check) => (
-            <button
+            <div
               key={check.label}
-              type="button"
               className={check.ready ? styles.checkChipReady : styles.checkChipPending}
-              onClick={() => setActiveWorkspace(
-                check.label === "Payment"
-                  ? "payment"
-                  : check.label === "Verification"
-                    ? "documents"
-                    : check.label === "Agreement"
-                      ? "agreement"
-                      : "booking",
-              )}
               title={check.detail}
             >
               <span aria-hidden="true">{check.ready ? "✓" : "!"}</span>
               <div><small>{check.label}</small><strong>{check.value}</strong><em>{check.detail}</em></div>
-            </button>
+            </div>
           ))}
         </div>
       </section>
@@ -590,20 +578,14 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
         <button type="button" role="tab" aria-selected={activeWorkspace === "decision"} onClick={() => setActiveWorkspace("decision")}>
           <span>01</span><strong>Decision</strong><small>{primaryAction?.label ?? "Closed"}</small>
         </button>
-        <button type="button" role="tab" aria-selected={activeWorkspace === "booking"} onClick={() => setActiveWorkspace("booking")}>
-          <span>02</span><strong>Booking</strong><small>Customer &amp; rental</small>
-        </button>
-        <button type="button" role="tab" aria-selected={activeWorkspace === "payment"} onClick={() => setActiveWorkspace("payment")}>
-          <span>03</span><strong>Payment</strong><small>{paymentStatusLabel}</small>
-        </button>
-        <button type="button" role="tab" aria-selected={activeWorkspace === "documents"} onClick={() => setActiveWorkspace("documents")}>
-          <span>04</span><strong>Documents</strong><small>{REQUIREMENTS_STATUS_LABELS[booking.requirementsStatus] ?? formatStatus(booking.requirementsStatus)}</small>
+        <button type="button" role="tab" aria-selected={activeWorkspace === "review"} onClick={() => setActiveWorkspace("review")}>
+          <span>02</span><strong>Review</strong><small>Payment &amp; documents</small>
         </button>
         <button type="button" role="tab" aria-selected={activeWorkspace === "agreement"} onClick={() => setActiveWorkspace("agreement")}>
-          <span>05</span><strong>Agreement</strong><small>{AGREEMENT_STATUS_LABELS[booking.agreementStatus] ?? formatStatus(booking.agreementStatus)}</small>
+          <span>03</span><strong>Agreement</strong><small>{AGREEMENT_STATUS_LABELS[booking.agreementStatus] ?? formatStatus(booking.agreementStatus)}</small>
         </button>
-        <button type="button" role="tab" aria-selected={activeWorkspace === "activity"} onClick={() => setActiveWorkspace("activity")}>
-          <span>06</span><strong>Activity</strong><small>{statusHistory.length} updates</small>
+        <button type="button" role="tab" aria-selected={activeWorkspace === "booking"} onClick={() => setActiveWorkspace("booking")}>
+          <span>04</span><strong>Booking</strong><small>Customer, rental &amp; activity</small>
         </button>
       </nav>
 
@@ -759,7 +741,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
           </div>
         </section>
 
-        <section className={styles.detailSection} role="tabpanel" hidden={activeWorkspace !== "payment"}>
+        <section className={styles.detailSection} role="tabpanel" hidden={activeWorkspace !== "review"}>
           <div className={styles.detailSectionHeader}>
             <span className={styles.sectionNumber}>03</span>
             <div><strong>Payment Status</strong><small>{paymentStatusLabel} · {payments.length} attempt{payments.length === 1 ? "" : "s"}</small></div>
@@ -835,7 +817,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
           </div>
         </section>
 
-        <section className={styles.detailSection} role="tabpanel" hidden={activeWorkspace !== "documents"}>
+        <section className={styles.detailSection} role="tabpanel" hidden={activeWorkspace !== "review"}>
           <div className={styles.detailSectionHeader}>
             <span className={styles.sectionNumber}>04</span>
             <div><strong>Verification Documents</strong><small>{REQUIREMENTS_STATUS_LABELS[booking.requirementsStatus] ?? formatStatus(booking.requirementsStatus)} · {documents.length} file{documents.length === 1 ? "" : "s"}</small></div>
@@ -955,7 +937,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
           </div>
         </section>
 
-        <section className={styles.detailSection} role="tabpanel" hidden={activeWorkspace !== "activity"}>
+        <section className={styles.detailSection} role="tabpanel" hidden={activeWorkspace !== "booking"}>
           <div className={styles.detailSectionHeader}>
             <span className={styles.sectionNumber}>06</span>
             <div><strong>Status Activity</strong><small>{statusHistory.length} recorded update{statusHistory.length === 1 ? "" : "s"}</small></div>
