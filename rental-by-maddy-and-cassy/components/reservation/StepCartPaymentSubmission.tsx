@@ -232,7 +232,7 @@ export default function StepCartPaymentSubmission({
           <dd>{money(currency, pricing.depositAmount)}</dd>
         </div>
         <div>
-          <dt>{pricing.fees > 0 ? "Outside-hours pickup fee" : "Online fees"}</dt>
+          <dt>{pricing.fees > 0 ? "Outside-hours service fee" : "Online fees"}</dt>
           <dd>{pricing.fees > 0 ? money(currency, pricing.fees) : "Free"}</dd>
         </div>
         <div className={styles.finalAmount}>
