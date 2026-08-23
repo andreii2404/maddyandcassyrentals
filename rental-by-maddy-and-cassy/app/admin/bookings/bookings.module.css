@@ -1,3 +1,10 @@
+.customerNameRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
 .page {
   width: 100%;
   max-width: 1400px;

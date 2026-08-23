@@ -7,6 +7,7 @@ import { createClient } from "@/src/lib/supabase/client";
 import { getBookingFileUrl } from "@/src/services/bookingDetailService";
 import type { StorageBucket } from "@/src/lib/supabase/storage";
 import type { AdminPaymentRecord } from "@/src/types/payment";
+import GuestBadge from "@/components/status-badge/GuestBadge";
 import styles from "./PaymentProofModal.module.css";
 
 export type PaymentWithProof = AdminPaymentRecord & {
@@ -79,7 +80,10 @@ export default function PaymentProofModal({
         <dl className={styles.details}>
           <div>
             <dt>Customer</dt>
-            <dd>{payment.customerName}</dd>
+            <dd className={styles.customerNameRow}>
+              {payment.customerName}
+              {payment.isGuestCheckout ? <GuestBadge /> : null}
+            </dd>
           </div>
           <div>
             <dt>Booking</dt>

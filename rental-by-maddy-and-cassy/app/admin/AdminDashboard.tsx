@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import Spinner from "@/components/ui/Spinner";
 import StatusBadge from "@/components/status-badge/StatusBadge";
+import GuestBadge from "@/components/status-badge/GuestBadge";
 import {
   getAdminDashboard,
   type AdminDashboardData,
@@ -254,7 +255,12 @@ export default function AdminDashboard() {
                               {booking.bookingRef}
                             </Link>
                           </td>
-                          <td data-label="Customer">{booking.customerName}</td>
+                          <td data-label="Customer">
+                            <span className={styles.customerNameRow}>
+                              {booking.customerName}
+                              {booking.isGuestCheckout ? <GuestBadge /> : null}
+                            </span>
+                          </td>
                           <td data-label="Product">{booking.productName}</td>
                           <td data-label="Status">
                             <span className={styles.statusCell}>

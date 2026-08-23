@@ -73,6 +73,7 @@ export async function GET(request: Request): Promise<NextResponse> {
           displayName: booking.customerSnapshot.fullName,
           email: booking.customerSnapshot.email,
         }),
+        isGuestCheckout: booking.isGuestCheckout,
         productName: bookingHeadline(booking.items),
         status: booking.status,
         requirementsStatus: booking.requirementsStatus,

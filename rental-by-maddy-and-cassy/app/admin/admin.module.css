@@ -4,6 +4,13 @@
   margin: 0 auto;
 }
 
+.customerNameRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
 .pageHeader {
   display: flex;
   align-items: flex-end;

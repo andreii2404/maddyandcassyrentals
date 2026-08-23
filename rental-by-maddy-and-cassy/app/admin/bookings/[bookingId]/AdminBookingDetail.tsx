@@ -22,6 +22,7 @@ import type { BookingDocument, RequirementReviewStatus, RequirementsStatus } fro
 import type { PaymentRecord, BookingReceipt } from "@/src/types/payment";
 import Spinner from "@/components/ui/Spinner";
 import StatusBadge from "@/components/status-badge/StatusBadge";
+import GuestBadge from "@/components/status-badge/GuestBadge";
 import { useToast } from "@/components/ui/ToastProvider";
 import {
   getBookingLiveStatusLabel,
@@ -380,7 +381,12 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   const { booking, emergencyContact, agreement, statusHistory, documents } = state.details;
   const { profile, payments, receipts } = state;
   const customer = booking.customerSnapshot;
-  const fullName = customer?.fullName || profile?.displayName || "Customer";
+  // customerSnapshot is assembled straight from the customer's profile row
+  // (see assembleBooking in bookingService.ts) -- for a guest checkout that's
+  // the anonymous session's profile, updated with the guest's own entered
+  // name/email/phone by save_guest_checkout_contact. Only fall back to the
+  // "Guest" placeholder if that profile truly has no name on file.
+  const fullName = customer?.fullName || profile?.displayName || "Guest";
   const email = customer?.email || profile?.email || "-";
   const phone = customer?.phone || profile?.phoneNumber || "-";
   const address = customer?.address || profile?.fullAddress || "-";
@@ -514,7 +520,13 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
             <span>{booking.dayCount} day{booking.dayCount === 1 ? "" : "s"} · {totalUnits} unit{totalUnits === 1 ? "" : "s"}</span>
           </p>
           <dl className={styles.snapshotFacts}>
-            <div><dt>Customer</dt><dd>{fullName}</dd></div>
+            <div>
+              <dt>Customer</dt>
+              <dd className={styles.customerNameRow}>
+                {fullName}
+                {booking.isGuestCheckout ? <GuestBadge /> : null}
+              </dd>
+            </div>
             <div><dt>Contact</dt><dd>{phone}<small>{email}</small></dd></div>
             <div><dt>Fulfillment</dt><dd>{formatStatus(booking.fulfillmentMethod)}<small>{getFulfillmentProgressLabel(booking.status, booking.fulfillmentMethod)}</small></dd></div>
             <div><dt>Total</dt><dd>{totalAmount}<small>{paymentStatusLabel}</small></dd></div>
@@ -653,7 +665,10 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
             <span className={styles.expandLabel}>View details</span>
           </summary>
           <div className={styles.detailBody}>
-            <div className={styles.subsectionHeading}><h3>Customer</h3><Link href={`/admin/users/${booking.customerId}`}>Open full customer profile</Link></div>
+            <div className={styles.subsectionHeading}>
+              <h3 className={styles.customerNameRow}>Customer{booking.isGuestCheckout ? <GuestBadge /> : null}</h3>
+              <Link href={`/admin/users/${booking.customerId}`}>Open full customer profile</Link>
+            </div>
             <dl className={styles.detailGrid}>
               <div><dt>Full name</dt><dd>{fullName}</dd></div>
               <div><dt>Email address</dt><dd>{email}</dd></div>

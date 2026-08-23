@@ -12,7 +12,7 @@ export interface PaymentRecordsPage {
 
 type PaymentSubmissionWithContextRow = Tables<"booking_payment_submissions"> & {
   customer_documents: { storage_bucket: string; storage_path: string; original_filename: string | null } | null;
-  bookings: { booking_reference: string; customer_id: string } | null;
+  bookings: { booking_reference: string; customer_id: string; is_guest_checkout: boolean } | null;
 };
 
 export interface PaymentMetricsSummary {
@@ -40,7 +40,7 @@ export async function getPaymentRecordsPage(
   let query = supabase
     .from("booking_payment_submissions")
     .select(
-      "*, customer_documents(storage_bucket, storage_path, original_filename), bookings(booking_reference, customer_id)",
+      "*, customer_documents(storage_bucket, storage_path, original_filename), bookings(booking_reference, customer_id, is_guest_checkout)",
       { count: "exact" },
     )
     .is("paymongo_payment_id", null)
@@ -77,6 +77,7 @@ export async function getPaymentRecordsPage(
       ...mapPaymentSubmission(row),
       bookingRef: row.bookings?.booking_reference ?? "Unknown booking",
       customerName: resolveAccountName({ displayName: profile?.display_name, email: profile?.contact_email }),
+      isGuestCheckout: row.bookings?.is_guest_checkout ?? false,
     };
   });
 

@@ -20,6 +20,7 @@ export interface AdminDashboardData {
     id: string;
     bookingRef: string;
     customerName: string;
+    isGuestCheckout: boolean;
     productName: string;
     status: BookingStatus;
     requirementsStatus: RequirementsStatus;

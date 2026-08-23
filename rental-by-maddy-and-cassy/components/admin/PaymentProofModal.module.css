@@ -1,4 +1,5 @@
 .layout { display:grid; gap:1.25rem; }
+.customerNameRow { display:inline-flex; align-items:center; gap:.4rem; flex-wrap:wrap; }
 .preview { display:grid; min-height:200px; place-items:center; padding:1rem; border:1px solid var(--color-border); border-radius:14px; background:var(--color-background); }
 .previewImage { max-width:100%; max-height:60vh; border-radius:10px; object-fit:contain; }
 .previewMessage { display:grid; gap:.6rem; place-items:center; color:var(--color-charcoal); font-size:.8rem; text-align:center; }

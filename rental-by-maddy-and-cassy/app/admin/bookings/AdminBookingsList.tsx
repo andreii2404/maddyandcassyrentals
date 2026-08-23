@@ -21,6 +21,7 @@ import {
 } from "@/src/lib/bookingManagement";
 import { bookingHeadline } from "@/src/lib/bookingDisplay";
 import { resolveAccountName } from "@/src/lib/accountDisplay";
+import GuestBadge from "@/components/status-badge/GuestBadge";
 import styles from "./bookings.module.css";
 
 const STATUS_OPTIONS: Array<{ value: "" | BookingStatus; label: string }> = [
@@ -237,7 +238,10 @@ export default function AdminBookingsList() {
                         </Link>
                       </td>
                       <td data-label="Customer">
-                        <strong>{customerName(booking, user)}</strong>
+                        <strong className={styles.customerNameRow}>
+                          {customerName(booking, user)}
+                          {booking.isGuestCheckout ? <GuestBadge /> : null}
+                        </strong>
                         <small>{booking.customerSnapshot?.email || user?.email || "-"}</small>
                       </td>
                       <td data-label="Rental Item">{bookingHeadline(booking.items)}</td>

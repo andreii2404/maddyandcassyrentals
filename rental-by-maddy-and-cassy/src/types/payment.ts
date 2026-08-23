@@ -48,6 +48,7 @@ export interface PaymentRecord {
 export interface AdminPaymentRecord extends PaymentRecord {
   bookingRef: string;
   customerName: string;
+  isGuestCheckout: boolean;
 }
 
 /** One row of public.booking_receipts. */

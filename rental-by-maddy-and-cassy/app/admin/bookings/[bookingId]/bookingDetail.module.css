@@ -428,6 +428,13 @@
   gap: 1rem;
 }
 
+.customerNameRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
 .snapshotTopline > span,
 .actionIntro > span {
   color: var(--color-primary);
