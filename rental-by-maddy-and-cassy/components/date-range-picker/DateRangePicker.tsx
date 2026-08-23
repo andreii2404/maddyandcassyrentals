@@ -237,13 +237,23 @@ export default function DateRangePicker({
         </p>
       ) : null}
 
-      <p className={styles.legend}>
-        <span className={styles.legendSwatch} data-variant="available" /> Available
-        <span className={styles.legendSwatch} data-variant="booked" /> Pending review
-        <span className={styles.legendSwatch} data-variant="confirmed" /> Confirmed
-        <span className={styles.legendSwatch} data-variant="selected" /> Selected
-        <span className={styles.legendSwatch} data-variant="disabled" /> Past
-      </p>
+      <div className={styles.legend} aria-label="Calendar legend">
+        <span className={styles.legendItem}>
+          <span className={styles.legendSwatch} data-variant="available" /> Available
+        </span>
+        <span className={styles.legendItem}>
+          <span className={styles.legendSwatch} data-variant="booked" /> Booked · pending review
+        </span>
+        <span className={styles.legendItem}>
+          <span className={styles.legendSwatch} data-variant="confirmed" /> Booked · confirmed
+        </span>
+        <span className={styles.legendItem}>
+          <span className={styles.legendSwatch} data-variant="selected" /> Selected
+        </span>
+        <span className={styles.legendItem}>
+          <span className={styles.legendSwatch} data-variant="disabled" /> Past
+        </span>
+      </div>
     </div>
   );
 }

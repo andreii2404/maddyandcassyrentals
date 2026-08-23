@@ -10,6 +10,7 @@ import {
 import LineItemsTable from "./LineItemsTable";
 import FileUploadField from "@/components/file-upload/FileUploadField";
 import GcashRecipientCard from "@/components/payment/GcashRecipientCard";
+import { isValidPhoneNumber, normalizePhoneInput, PHONE_DIGIT_COUNT } from "@/src/lib/authValidation";
 import formStyles from "@/components/ui/Form.module.css";
 import sharedStyles from "./StepShared.module.css";
 import styles from "./StepPaymentSubmission.module.css";
@@ -72,8 +73,8 @@ export default function StepCartPaymentSubmission({
     if (!draft.manualPayment.accountName.trim()) {
       nextErrors.push("Enter the name of the account used to pay.");
     }
-    if (!draft.manualPayment.accountNumber.trim()) {
-      nextErrors.push("Enter the mobile number or account number used to pay.");
+    if (!isValidPhoneNumber(draft.manualPayment.accountNumber)) {
+      nextErrors.push(`The GCash mobile number must contain exactly ${PHONE_DIGIT_COUNT} digits.`);
     }
     if (!draft.manualPayment.proofFile) {
       nextErrors.push("Upload a screenshot or proof of payment.");
@@ -263,13 +264,16 @@ export default function StepCartPaymentSubmission({
 
       <div className={formStyles.field}>
         <label className={formStyles.label} htmlFor="cart-pay-account-number">
-          Mobile number / account number used<span className={formStyles.required}>*</span>
+          11-digit GCash mobile number used<span className={formStyles.required}>*</span>
         </label>
         <input
           id="cart-pay-account-number"
           className={formStyles.input}
+          inputMode="numeric"
+          autoComplete="tel"
+          maxLength={PHONE_DIGIT_COUNT}
           value={draft.manualPayment.accountNumber}
-          onChange={(event) => onManualPaymentUpdate({ accountNumber: event.target.value })}
+          onChange={(event) => onManualPaymentUpdate({ accountNumber: normalizePhoneInput(event.target.value) })}
           disabled={opening}
         />
       </div>
