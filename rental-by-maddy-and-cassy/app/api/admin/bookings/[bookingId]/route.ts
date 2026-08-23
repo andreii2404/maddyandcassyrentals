@@ -5,6 +5,7 @@ import { enforceRateLimit, requireActiveAdmin, RequestSecurityError } from "@/sr
 import { createAdminClient } from "@/src/lib/supabase/admin";
 import type { BookingStatus } from "@/src/types/booking";
 import { bookingHeadline } from "@/src/lib/bookingDisplay";
+import { bookingTrackingPath } from "@/src/lib/bookingAccess";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -104,7 +105,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
 
     if (isEmailBookingStatus(targetStatus)) {
       const admin = createAdminClient();
-      const [{ data: profile }, { data: items }] = await Promise.all([
+      const [{ data: profile }, { data: items }, { data: bookingAccess }] = await Promise.all([
         admin
           .from("profiles")
           .select("display_name, contact_email")
@@ -115,6 +116,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
           .select("product_name_snapshot")
           .eq("booking_id", bookingId)
           .order("created_at", { ascending: true }),
+        admin
+          .from("bookings")
+          .select("is_guest_checkout")
+          .eq("id", bookingId)
+          .maybeSingle(),
       ]);
 
       let customerEmail = profile?.contact_email?.trim() ?? "";
@@ -134,7 +140,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
         ),
         status: targetStatus,
         statusChangedAt: changedAt || data.updated_at,
-        bookingUrl: `${new URL(request.url).origin}/account/bookings/${encodeURIComponent(bookingId)}`,
+        bookingUrl: `${new URL(request.url).origin}${bookingTrackingPath(bookingId, bookingAccess?.is_guest_checkout === true)}`,
+        isGuest: bookingAccess?.is_guest_checkout === true,
       });
       customerEmailSent = emailResult.sent;
       customerEmailReason = emailResult.reason ?? null;

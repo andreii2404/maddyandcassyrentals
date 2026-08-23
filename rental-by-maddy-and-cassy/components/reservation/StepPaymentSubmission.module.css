@@ -273,6 +273,20 @@
   text-underline-offset: 3px;
 }
 
+.guestConfirmation {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(154, 89, 101, 0.22);
+  border-radius: 14px;
+  background: var(--color-background-soft);
+  color: var(--color-text-primary);
+}
+
+.guestConfirmation > strong { color: var(--color-primary); font-size: 0.86rem; }
+.guestConfirmation p { margin: 0; font-size: 0.76rem; line-height: 1.5; }
+.guestConfirmation small { color: var(--color-charcoal); font-size: 0.68rem; line-height: 1.5; }
+
 @media (max-width: 640px) {
   .perks {
     grid-template-columns: 1fr;

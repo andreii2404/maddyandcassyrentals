@@ -822,6 +822,7 @@ export type Database = {
           customer_id: string
           customer_notes: string | null
           id: string
+          is_guest_checkout: boolean
           loyalty_completed_rentals_snapshot: number
           loyalty_discount_amount: number
           loyalty_discount_status: string
@@ -856,6 +857,7 @@ export type Database = {
           customer_id: string
           customer_notes?: string | null
           id?: string
+          is_guest_checkout?: boolean
           loyalty_completed_rentals_snapshot?: number
           loyalty_discount_amount?: number
           loyalty_discount_status?: string
@@ -890,6 +892,7 @@ export type Database = {
           customer_id?: string
           customer_notes?: string | null
           id?: string
+          is_guest_checkout?: boolean
           loyalty_completed_rentals_snapshot?: number
           loyalty_discount_amount?: number
           loyalty_discount_status?: string
@@ -1877,6 +1880,10 @@ export type Database = {
           p_rental_days: number
         }
         Returns: Database["public"]["Tables"]["bookings"]["Row"]
+      }
+      save_guest_checkout_contact: {
+        Args: { p_customer_snapshot: Json }
+        Returns: undefined
       }
       get_booking_unit_assignments: {
         Args: { p_booking_id: string }

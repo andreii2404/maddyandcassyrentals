@@ -46,6 +46,7 @@ export async function createBookingReservation(
   supabase: SupabaseClient<Database>,
   product: Product,
   draft: ReservationDraft,
+  isGuest = false,
 ): Promise<SubmitBookingResult> {
   validateReservationDetails(draft);
   const { customerInfo } = draft;
@@ -86,6 +87,7 @@ export async function createBookingReservation(
       facebookLink: customerInfo.facebookLink.trim(),
       instagramLink: customerInfo.instagramLink.trim(),
     },
+    isGuest,
   });
 
   return { bookingId: result.bookingId, bookingNumber: result.bookingRef };
@@ -102,6 +104,7 @@ export async function createMultiItemBookingReservation(
   supabase: SupabaseClient<Database>,
   lines: { product: Product; quantity: number }[],
   draft: ReservationDraft,
+  isGuest = false,
 ): Promise<SubmitBookingResult> {
   if (lines.length === 0) {
     throw new Error("Your cart is empty.");
@@ -129,6 +132,7 @@ export async function createMultiItemBookingReservation(
       facebookLink: customerInfo.facebookLink.trim(),
       instagramLink: customerInfo.instagramLink.trim(),
     },
+    isGuest,
   });
 
   return { bookingId: result.bookingId, bookingNumber: result.bookingRef };

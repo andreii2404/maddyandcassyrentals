@@ -80,3 +80,21 @@ test("checkout includes only the server-calculated pickup convenience fee", () =
   assert.equal(pricing.fees, 100);
   assert.equal(pricing.finalAmount, 1_100);
 });
+
+test("guest checkout never receives birthday or loyalty account perks", () => {
+  const pricing = calculateReservationPricing(
+    { id: "product-1", name: "Test Product", listPricePerDay: 1_000, pricePerDay: 1_000, refundableDeposit: 0 },
+    {
+      quantity: 1,
+      startDate: new Date("2026-08-11T00:00:00.000Z"),
+      endDate: new Date("2026-08-11T22:00:00.000Z"),
+      customerInfo: { birthDate: "2000-08-24" },
+    },
+    { completedRentals: 10, loyaltyRewardUsed: false },
+    true,
+  );
+
+  assert.equal(pricing.birthdayDiscountAmount, 0);
+  assert.equal(pricing.loyaltyDiscountAmount, 0);
+  assert.equal(pricing.finalAmount, 1_000);
+});

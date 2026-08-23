@@ -358,7 +358,7 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
       let activeBookingNumber = bookingNumber;
       if (!activeBookingId) {
         const supabase = createClient();
-        const reservation = await createBookingReservation(supabase, product, draft);
+        const reservation = await createBookingReservation(supabase, product, draft, isGuest);
         activeBookingId = reservation.bookingId;
         activeBookingNumber = reservation.bookingNumber ?? reservation.bookingId;
         setBookingId(activeBookingId);

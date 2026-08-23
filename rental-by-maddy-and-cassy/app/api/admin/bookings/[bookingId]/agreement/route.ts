@@ -8,6 +8,7 @@ import {
 import { createAdminClient } from "@/src/lib/supabase/admin";
 import { generateAndSaveFinalAgreement } from "@/src/lib/server/customerDocuments";
 import { getBookingById } from "@/src/services/bookingService";
+import { bookingTrackingPath } from "@/src/lib/bookingAccess";
 import type { AgreementDoc, AgreementSignature } from "@/src/types/booking";
 
 export const runtime = "nodejs";
@@ -182,7 +183,7 @@ export async function POST(
         notification_type: "agreement_completed",
         title: "Rental agreement completed",
         message: `Your agreement for ${booking.bookingRef} was countersigned by the business. The final PDF is ready.`,
-        action_url: `/account/bookings/${booking.id}#booking-documents`,
+        action_url: bookingTrackingPath(booking.id, booking.isGuestCheckout, "#booking-documents"),
       }),
       admin.rpc("log_audit_event", {
         p_action: "agreement.business_countersigned",
