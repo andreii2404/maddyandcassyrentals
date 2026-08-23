@@ -18,6 +18,7 @@ import {
 import { getUserProfile } from "@/src/services/userService";
 import { getBookingPayments, getBookingReceipts, sendBookingReceiptEmail } from "@/src/services/paymentService";
 import type { BookingStatus, UserProfile } from "@/src/types/database";
+import type { BookingDocument, RequirementReviewStatus, RequirementsStatus } from "@/src/types/booking";
 import type { PaymentRecord, BookingReceipt } from "@/src/types/payment";
 import Spinner from "@/components/ui/Spinner";
 import StatusBadge from "@/components/status-badge/StatusBadge";
@@ -177,6 +178,26 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
       previewWindow?.close();
       showToast("This private document could not be opened.", "error");
     }
+  }
+
+  function handleDocumentReviewed(
+    documentId: string,
+    patch: { reviewStatus: Exclude<RequirementReviewStatus, "pending">; reviewNotes?: string },
+    requirementsStatus: RequirementsStatus,
+  ) {
+    setState((previous) => {
+      if (!previous) return previous;
+      return {
+        ...previous,
+        details: {
+          ...previous.details,
+          booking: { ...previous.details.booking, requirementsStatus },
+          documents: previous.details.documents.map((document): BookingDocument =>
+            document.id === documentId ? { ...document, ...patch } : document,
+          ),
+        },
+      };
+    });
   }
 
   async function handleSendReceiptEmail(receipt: BookingReceipt) {
@@ -743,7 +764,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                   document.storageBucket as Parameters<typeof getBookingFileUrl>[1],
                   document.storagePath,
                 )}
-                onUpdated={loadDetails}
+                onReviewed={handleDocumentReviewed}
               />
             </> : <p className={styles.empty}>Requirements have not been submitted for this booking.</p>}
           </div>

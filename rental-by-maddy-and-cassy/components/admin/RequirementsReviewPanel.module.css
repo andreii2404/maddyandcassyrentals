@@ -27,7 +27,7 @@
 .previousNote strong { color:var(--color-status-red); font-size:.58rem; text-transform:uppercase; }
 .previousNote p { margin:.2rem 0 0; color:var(--color-text-primary); font-size:.62rem; line-height:1.5; }
 .actions { display:flex; margin-top:.8rem; flex-wrap:wrap; gap:.4rem; }
-.actions button,.rejectEditor button { min-height:34px; padding:.45rem .62rem; border:1px solid var(--color-light-gray); border-radius:9px; background:#fff; color:var(--color-charcoal); font:inherit; font-size:.6rem; font-weight:800; cursor:pointer; }
+.actions button,.rejectEditor button { display:inline-flex; align-items:center; justify-content:center; gap:.35rem; min-height:34px; padding:.45rem .62rem; border:1px solid var(--color-light-gray); border-radius:9px; background:#fff; color:var(--color-charcoal); font:inherit; font-size:.6rem; font-weight:800; cursor:pointer; }
 .actions .openButton { margin-right:auto; color:var(--color-primary); }
 .actions .approveButton { border-color:var(--color-status-green-border); background:var(--color-status-green-bg); color:var(--color-status-green); }
 .actions .rejectButton { border-color:var(--color-status-red-border); background:var(--color-status-red-bg); color:var(--color-status-red); }

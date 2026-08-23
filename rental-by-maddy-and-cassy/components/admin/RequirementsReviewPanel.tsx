@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useToast } from "@/components/ui/ToastProvider";
-import type { BookingDocument, RequirementReviewStatus } from "@/src/types/booking";
+import Spinner from "@/components/ui/Spinner";
+import type { BookingDocument, RequirementReviewStatus, RequirementsStatus } from "@/src/types/booking";
 import styles from "./RequirementsReviewPanel.module.css";
 
 function formatDocumentType(value: string): string {
@@ -13,20 +14,35 @@ export default function RequirementsReviewPanel({
   bookingId,
   documents,
   onOpenDocument,
-  onUpdated,
+  onReviewed,
 }: {
   bookingId: string;
   documents: BookingDocument[];
-  onOpenDocument(document: BookingDocument): void;
-  onUpdated(): Promise<void>;
+  onOpenDocument(document: BookingDocument): Promise<void>;
+  onReviewed(
+    documentId: string,
+    patch: { reviewStatus: Exclude<RequirementReviewStatus, "pending">; reviewNotes?: string },
+    requirementsStatus: RequirementsStatus,
+  ): void;
 }) {
   const { showToast } = useToast();
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeAction, setActiveAction] = useState<"approved" | "rejected" | null>(null);
+  const [openingId, setOpeningId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const reviewedCount = documents.filter((document) => document.reviewStatus !== "pending").length;
   const approvedCount = documents.filter((document) => document.reviewStatus === "approved").length;
   const progress = documents.length ? Math.round((reviewedCount / documents.length) * 100) : 0;
+
+  async function handleOpen(document: BookingDocument) {
+    setOpeningId(document.id);
+    try {
+      await onOpenDocument(document);
+    } finally {
+      setOpeningId(null);
+    }
+  }
 
   async function saveReview(
     documentId: string,
@@ -39,6 +55,7 @@ export default function RequirementsReviewPanel({
     }
 
     setActiveId(documentId);
+    setActiveAction(status);
     try {
       const response = await fetch(`/api/admin/bookings/${encodeURIComponent(bookingId)}/requirements`, {
         method: "PATCH",
@@ -46,13 +63,19 @@ export default function RequirementsReviewPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ documentId, status, reason: rejectionReason }),
       });
-      const body = (await response.json().catch(() => null)) as { error?: unknown } | null;
+      const body = (await response.json().catch(() => null)) as
+        | { error?: unknown; requirementsStatus?: unknown }
+        | null;
       if (!response.ok) {
         throw new Error(typeof body?.error === "string" ? body.error : "The review could not be saved.");
       }
       setReason("");
       setRejectingId(null);
-      await onUpdated();
+      onReviewed(
+        documentId,
+        { reviewStatus: status, reviewNotes: rejectionReason || undefined },
+        (typeof body?.requirementsStatus === "string" ? body.requirementsStatus : "pending_review") as RequirementsStatus,
+      );
       showToast(
         status === "approved" ? "Document approved." : "Correction request sent to the customer.",
         "success",
@@ -61,6 +84,7 @@ export default function RequirementsReviewPanel({
       showToast(error instanceof Error ? error.message : "The review could not be saved.", "error");
     } finally {
       setActiveId(null);
+      setActiveAction(null);
     }
   }
 
@@ -90,6 +114,9 @@ export default function RequirementsReviewPanel({
       <div className={styles.list}>
         {documents.map((document, index) => {
           const isSaving = activeId === document.id;
+          const isApproving = isSaving && activeAction === "approved";
+          const isRejectingSave = isSaving && activeAction === "rejected";
+          const isOpening = openingId === document.id;
           const isRejecting = rejectingId === document.id;
           return (
             <article key={document.id} className={`${styles.documentCard} ${styles[document.reviewStatus]}`}>
@@ -97,13 +124,14 @@ export default function RequirementsReviewPanel({
                 <button
                   type="button"
                   className={styles.fileButton}
-                  onClick={() => onOpenDocument(document)}
-                  disabled={activeId !== null}
+                  onClick={() => handleOpen(document)}
+                  disabled={isOpening}
+                  aria-busy={isOpening}
                 >
                   <span className={styles.fileIcon} aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
                   <span className={styles.fileInfo}>
                     <strong>{formatDocumentType(document.documentType)}</strong>
-                    <small>{document.originalFilename || "Open secure customer file"}</small>
+                    <small>{isOpening ? "Opening..." : (document.originalFilename || "Open secure customer file")}</small>
                   </span>
                 </button>
                 <span className={`${styles.statusPill} ${styles[document.reviewStatus]}`}>
@@ -122,24 +150,26 @@ export default function RequirementsReviewPanel({
                 <button
                   type="button"
                   className={styles.openButton}
-                  onClick={() => onOpenDocument(document)}
-                  disabled={activeId !== null}
+                  onClick={() => handleOpen(document)}
+                  disabled={isOpening}
+                  aria-busy={isOpening}
                 >
-                  Open file
+                  {isOpening ? <><Spinner size={11} label="Opening file" /> Opening...</> : "Open file"}
                 </button>
                 <button
                   type="button"
                   className={styles.approveButton}
                   onClick={() => saveReview(document.id, "approved")}
-                  disabled={activeId !== null || document.reviewStatus === "approved"}
+                  disabled={isSaving || document.reviewStatus === "approved"}
+                  aria-busy={isApproving}
                 >
-                  {isSaving ? "Saving..." : document.reviewStatus === "approved" ? "Approved" : "Approve document"}
+                  {isApproving ? <><Spinner size={11} label="Saving approval" /> Saving...</> : document.reviewStatus === "approved" ? "Approved" : "Approve document"}
                 </button>
                 <button
                   type="button"
                   className={styles.rejectButton}
                   onClick={() => openCorrectionEditor(document)}
-                  disabled={activeId !== null}
+                  disabled={isSaving}
                 >
                   {document.reviewStatus === "rejected" ? "Edit correction" : "Request correction"}
                 </button>
@@ -171,8 +201,9 @@ export default function RequirementsReviewPanel({
                       className={styles.sendButton}
                       onClick={() => saveReview(document.id, "rejected")}
                       disabled={isSaving || !reason.trim()}
+                      aria-busy={isRejectingSave}
                     >
-                      {isSaving ? "Sending..." : "Send correction request"}
+                      {isRejectingSave ? <><Spinner size={11} label="Sending correction request" /> Sending...</> : "Send correction request"}
                     </button>
                   </div>
                 </div>
