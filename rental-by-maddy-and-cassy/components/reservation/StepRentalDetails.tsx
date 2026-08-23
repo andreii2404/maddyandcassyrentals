@@ -19,19 +19,14 @@ import {
   formatManilaPickupTime,
   isOutsideNormalPickupWindow,
   isValidPickupTime,
-  manilaTimeInputValue,
+  PICKUP_CONVENIENCE_FEE,
   pickupDateKey,
 } from "@/src/lib/rentalTiming";
 import DateRangePicker from "@/components/date-range-picker/DateRangePicker";
+import PickupTimeSelector from "@/components/reservation/PickupTimeSelector";
 import formStyles from "@/components/ui/Form.module.css";
 import styles from "./StepRentalDetails.module.css";
 import { PHILIPPINE_PROVINCES } from "@/src/data/philippineLocations";
-
-function isPickupTimeInPast(date: Date | null, time: string): boolean {
-  if (!date || !isValidPickupTime(time)) return false;
-  const candidate = combineManilaPickupDateTime(pickupDateKey(date), time);
-  return !Number.isNaN(candidate.getTime()) && candidate.getTime() <= Date.now();
-}
 
 interface StepRentalDetailsProps {
   product: Product;
@@ -57,9 +52,6 @@ export default function StepRentalDetails({
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [timeAvailability, setTimeAvailability] = useState<TimeAvailability | null>(null);
-  const [pastTimeNotice, setPastTimeNotice] = useState(() =>
-    isPickupTimeInPast(draft.startDate, draft.pickupTime),
-  );
   const [nowTick, setNowTick] = useState(() => Date.now());
 
   useEffect(() => {
@@ -100,8 +92,6 @@ export default function StepRentalDetails({
     return Number.isNaN(value.getTime()) ? null : value;
   }, [draft.pickupTime, draft.startDate]);
 
-  const isPickupToday = !!draft.startDate && pickupDateKey(draft.startDate) === pickupDateKey(new Date(nowTick));
-  const earliestPickupTimeToday = manilaTimeInputValue(new Date(nowTick));
   const isPickupTimePast = !!pickupAt && pickupAt.getTime() <= nowTick;
 
   const selectedRentalEndDate = draft.rentalEndDate ?? draft.startDate;
@@ -118,7 +108,9 @@ export default function StepRentalDetails({
         .then((result) => {
           if (cancelled) return;
           setTimeAvailability(result);
-          const fee = draft.fulfillmentMethod === "pickup" ? result.pickupConvenienceFee : 0;
+          const fee = isOutsideNormalPickupWindow(draft.pickupTime)
+            ? PICKUP_CONVENIENCE_FEE
+            : 0;
           if (draft.pickupConvenienceFee !== fee) {
             onUpdate({ pickupConvenienceFee: fee });
           }
@@ -131,7 +123,7 @@ export default function StepRentalDetails({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [draft.fulfillmentMethod, draft.pickupConvenienceFee, draft.quantity, onUpdate, pickupAt, product.id, rentalDays]);
+  }, [draft.fulfillmentMethod, draft.pickupConvenienceFee, draft.pickupTime, draft.quantity, onUpdate, pickupAt, product.id, rentalDays]);
 
   const isDelivery = draft.fulfillmentMethod === "delivery";
   const hasValidLocation =
@@ -156,9 +148,9 @@ export default function StepRentalDetails({
     missingItems.push("Choose your rental dates.");
   }
   if (draft.startDate && !isValidPickupTime(draft.pickupTime)) {
-    missingItems.push("Choose a pickup time.");
+    missingItems.push("Choose a pickup or delivery time.");
   } else if (isPickupTimePast) {
-    missingItems.push("Pick a pickup time that hasn't passed yet.");
+    missingItems.push("Choose a pickup or delivery time that hasn't passed yet.");
   }
   if (!draft.fulfillmentMethod) {
     missingItems.push("Choose pickup or delivery.");
@@ -167,7 +159,7 @@ export default function StepRentalDetails({
   }
   if (pickupAt && !isPickupTimePast && draft.fulfillmentMethod && hasValidLocation) {
     if (!timeAvailability) {
-      missingItems.push("Checking availability for this pickup time…");
+      missingItems.push("Checking availability for this time…");
     } else if (draft.quantity > timeAvailability.availableUnits) {
       missingItems.push(`Only ${timeAvailability.availableUnits} unit${timeAvailability.availableUnits === 1 ? "" : "s"} available at this time — lower the quantity.`);
     }
@@ -185,36 +177,39 @@ export default function StepRentalDetails({
     rentalEndDate: Date | null = date,
     pickupTime = draft.pickupTime,
   ) {
-    // A time that's already past for today's date is never accepted -- drop
-    // it back to unset rather than let a stale selection sit in the field.
-    const rejectPastTime = isValidPickupTime(pickupTime) && isPickupTimeInPast(date, pickupTime);
-    const effectiveTime = rejectPastTime ? "" : pickupTime;
-    setPastTimeNotice(rejectPastTime);
-
-    if (!date || !rentalEndDate || !isValidPickupTime(effectiveTime)) {
+    // Keep an earlier time visible so the form can explain what needs fixing
+    // instead of appearing to lose the customer's selection.
+    if (!date || !rentalEndDate || !isValidPickupTime(pickupTime)) {
       onUpdate({
         startDate: date,
         endDate: null,
         rentalEndDate,
-        pickupTime: effectiveTime,
-        pickupConvenienceFee: 0,
+        pickupTime,
+        pickupConvenienceFee: isOutsideNormalPickupWindow(pickupTime)
+          ? PICKUP_CONVENIENCE_FEE
+          : 0,
       });
       setTimeAvailability(null);
       return;
     }
-    const nextPickupAt = combineManilaPickupDateTime(pickupDateKey(date), effectiveTime);
+    const nextPickupAt = combineManilaPickupDateTime(pickupDateKey(date), pickupTime);
     const nextRentalDays = Math.max(1, differenceInCalendarDays(rentalEndDate, date) + 1);
     onUpdate({
       startDate: nextPickupAt,
       endDate: calculateReturnDateTime(nextPickupAt, nextRentalDays),
       rentalEndDate,
-      pickupTime: effectiveTime,
-      pickupConvenienceFee: 0,
+      pickupTime,
+      pickupConvenienceFee: isOutsideNormalPickupWindow(pickupTime)
+        ? PICKUP_CONVENIENCE_FEE
+        : 0,
     });
     setTimeAvailability(null);
   }
 
   function handleFulfillmentChange(method: FulfillmentMethod) {
+    const scheduleFee = isOutsideNormalPickupWindow(draft.pickupTime)
+      ? PICKUP_CONVENIENCE_FEE
+      : 0;
     if (method === "pickup") {
       // Pickup never carries a delivery address -- clear any address the
       // customer may have typed while "delivery" was selected so a
@@ -224,10 +219,13 @@ export default function StepRentalDetails({
         customerLocation: "",
         cityMunicipality: "",
         province: "",
-        pickupConvenienceFee: timeAvailability?.pickupConvenienceFee ?? 0,
+        pickupConvenienceFee: scheduleFee,
       });
     } else {
-      onUpdate({ fulfillmentMethod: method, pickupConvenienceFee: 0 });
+      onUpdate({
+        fulfillmentMethod: method,
+        pickupConvenienceFee: scheduleFee,
+      });
     }
   }
 
@@ -235,11 +233,11 @@ export default function StepRentalDetails({
     setError(null);
 
     if (!pickupAt || !returnAt) {
-      setError("Please select a pickup date and pickup time.");
+      setError("Please select a rental date and pickup or delivery time.");
       return;
     }
     if (pickupAt.getTime() <= Date.now()) {
-      setError("Please select a future pickup time.");
+      setError("Please select a future pickup or delivery time.");
       return;
     }
     if (!draft.fulfillmentMethod) {
@@ -262,7 +260,9 @@ export default function StepRentalDetails({
     }
     setChecking(false);
     setTimeAvailability(latestAvailability);
-    const fee = draft.fulfillmentMethod === "pickup" ? latestAvailability.pickupConvenienceFee : 0;
+    const fee = isOutsideNormalPickupWindow(draft.pickupTime)
+      ? PICKUP_CONVENIENCE_FEE
+      : 0;
     if (draft.pickupConvenienceFee !== fee) {
       onUpdate({ pickupConvenienceFee: fee });
     }
@@ -286,7 +286,7 @@ export default function StepRentalDetails({
       <div>
         <h2 className={styles.flowHeading}>Reservation</h2>
         <p className={styles.flowSubheading}>
-          Pick your dates, choose a pickup time, and let us know how you&apos;d like to get your rental.
+          Pick your dates, choose a time, and let us know how you&apos;d like to get your rental.
         </p>
       </div>
 
@@ -303,42 +303,55 @@ export default function StepRentalDetails({
               onChange={({ startDate, endDate }) => updatePickupSchedule(startDate, endDate)}
               disabledDateKeys={disabledDateKeys}
               confirmedDateKeys={confirmedDateKeys}
-              hideSelectionSummary
               compact
             />
           </section>
 
           <section className={`${styles.stepSection} ${styles.timeSection}`}>
-            <h3 className={styles.sectionHeading}>2. Choose a pickup time</h3>
-            <div className={styles.pickupTimeField}>
-              <label htmlFor="pickupTime">Pickup time</label>
-              <input
-                id="pickupTime"
-                type="time"
-                step={900}
-                min={isPickupToday ? earliestPickupTimeToday : undefined}
-                value={draft.pickupTime}
-                onChange={(event) => updatePickupSchedule(
-                  draft.startDate,
-                  selectedRentalEndDate,
-                  event.target.value,
-                )}
-              />
-              <span>Normal window: 9:00 AM–7:00 PM</span>
-              {pastTimeNotice || isPickupTimePast ? (
-                <p className={formStyles.errorText} role="alert">
-                  Please select a future pickup time.
-                </p>
-              ) : null}
-            </div>
+            <h3 className={styles.sectionHeading}>2. Choose pickup or delivery time</h3>
+            <PickupTimeSelector
+              idPrefix="pickup-time"
+              value={draft.pickupTime}
+              invalid={isPickupTimePast}
+              onChange={(value) => updatePickupSchedule(
+                draft.startDate,
+                selectedRentalEndDate,
+                value,
+              )}
+            />
 
-            <p className={styles.availabilityStatus} role="status">
-              {pickupAt && !timeAvailability
-                ? "Checking this exact pickup time..."
-                : timeAvailability
-                  ? `${timeAvailability.availableUnits} of ${timeAvailability.totalUnits} unit${timeAvailability.totalUnits === 1 ? "" : "s"} available.`
-                  : "Select a date and time to check this unit."}
-            </p>
+            {isPickupTimePast ? (
+              <p className={formStyles.errorText} role="alert">
+                This time has already passed for the selected date. Your choice is saved—pick a
+                future time or choose a later date.
+              </p>
+            ) : null}
+
+            <div
+              className={styles.scheduleConfirmation}
+              data-state={!pickupAt || isPickupTimePast ? "waiting" : timeAvailability ? "ready" : "checking"}
+              role="status"
+            >
+              <span className={styles.scheduleConfirmationIcon} aria-hidden="true">
+                {pickupAt && !isPickupTimePast ? "✓" : "i"}
+              </span>
+              <span>
+                <strong>
+                  {!pickupAt
+                    ? "Select both a date and time"
+                    : isPickupTimePast
+                      ? "Choose a future schedule"
+                      : timeAvailability
+                        ? "Date and time saved"
+                        : "Time saved—checking availability"}
+                </strong>
+                <small>
+                  {pickupAt && !isPickupTimePast
+                    ? `${selectedDatesLabel} · ${formatManilaPickupTime(pickupAt)}${timeAvailability ? ` · ${timeAvailability.availableUnits} of ${timeAvailability.totalUnits} available` : ""}`
+                    : "Your exact pickup or delivery schedule will appear here before you continue."}
+                </small>
+              </span>
+            </div>
 
             {timeAvailability && draft.quantity > timeAvailability.availableUnits ? (
               <p className={formStyles.errorText} role="status">
@@ -348,11 +361,9 @@ export default function StepRentalDetails({
               </p>
             ) : null}
 
-            {draft.fulfillmentMethod === "pickup" && pickupAt && isOutsideNormalPickupWindow(draft.pickupTime) && timeAvailability ? (
+            {draft.fulfillmentMethod && pickupAt && isOutsideNormalPickupWindow(draft.pickupTime) ? (
               <p className={styles.convenienceNotice}>
-                {timeAvailability.pickupConvenienceFee > 0
-                  ? "A ₱100 convenience fee applies because you chose a pickup outside 9:00 AM–7:00 PM."
-                  : "No convenience fee applies because availability requires this later pickup time."}
+                A ₱100 convenience fee applies because you chose {draft.fulfillmentMethod === "delivery" ? "delivery" : "pickup"} before 9:00 AM or after 7:00 PM.
               </p>
             ) : null}
           </section>
@@ -486,7 +497,7 @@ export default function StepRentalDetails({
                 <dd>{selectedDatesLabel}</dd>
               </div>
               <div>
-                <dt>Pickup time</dt>
+                <dt>Pickup/delivery time</dt>
                 <dd>{pickupAt ? formatManilaPickupTime(pickupAt) : "Not selected yet"}</dd>
               </div>
               <div>

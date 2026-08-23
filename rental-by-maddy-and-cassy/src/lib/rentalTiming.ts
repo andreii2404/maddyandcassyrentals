@@ -7,6 +7,14 @@ const MANILA_OFFSET = "+08:00";
 const NORMAL_PICKUP_START_MINUTES = 9 * 60;
 const NORMAL_PICKUP_END_MINUTES = 19 * 60;
 
+export type PickupPeriod = "AM" | "PM";
+
+export interface PickupTimeParts {
+  hour: string;
+  minute: string;
+  period: PickupPeriod;
+}
+
 function minutesFromTime(value: string): number | null {
   const match = value.match(/^(\d{2}):(\d{2})$/);
   if (!match) return null;
@@ -18,6 +26,38 @@ function minutesFromTime(value: string): number | null {
 
 export function isValidPickupTime(value: string): boolean {
   return minutesFromTime(value) !== null;
+}
+
+export function pickupTimeParts(value: string): PickupTimeParts | null {
+  const totalMinutes = minutesFromTime(value);
+  if (totalMinutes === null) return null;
+  const hour24 = Math.floor(totalMinutes / 60);
+  return {
+    hour: String(hour24 % 12 || 12),
+    minute: String(totalMinutes % 60).padStart(2, "0"),
+    period: hour24 >= 12 ? "PM" : "AM",
+  };
+}
+
+export function createPickupTimeValue(
+  hour: string,
+  minute: string,
+  period: PickupPeriod,
+): string {
+  const parsedHour = Number(hour);
+  const parsedMinute = Number(minute);
+  if (
+    !Number.isInteger(parsedHour) ||
+    parsedHour < 1 ||
+    parsedHour > 12 ||
+    !Number.isInteger(parsedMinute) ||
+    parsedMinute < 0 ||
+    parsedMinute > 59
+  ) {
+    return "";
+  }
+  const hour24 = (parsedHour % 12) + (period === "PM" ? 12 : 0);
+  return `${String(hour24).padStart(2, "0")}:${String(parsedMinute).padStart(2, "0")}`;
 }
 
 export function isOutsideNormalPickupWindow(value: string): boolean {

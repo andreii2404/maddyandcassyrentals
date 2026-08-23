@@ -62,9 +62,9 @@ export interface ReservationDraft {
   endDate: Date | null;
   /** Last calendar day selected for this rental period. */
   rentalEndDate: Date | null;
-  /** Customer-selected pickup time in Asia/Manila, HH:mm. */
+  /** Customer-selected pickup/delivery handover time in Asia/Manila, HH:mm. */
   pickupTime: string;
-  /** Server-calculated pickup convenience fee for the selected timestamp. */
+  /** Server-enforced outside-hours convenience fee for the selected timestamp. */
   pickupConvenienceFee: number;
   fulfillmentMethod: FulfillmentMethod | null;
   /** Street/barangay/landmark line. Only required (and only sent) when fulfillmentMethod is "delivery". */

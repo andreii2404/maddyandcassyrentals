@@ -64,7 +64,7 @@ test("birthday and 11th-rental perks stack and are capped by the rental subtotal
   assert.equal(pricing.finalAmount, 0);
 });
 
-test("checkout includes only the server-calculated pickup convenience fee", () => {
+test("checkout includes the server-enforced outside-hours convenience fee", () => {
   const pricing = calculateReservationPricing(
     { id: "product-1", name: "Test Product", listPricePerDay: 1_000, pricePerDay: 1_000, refundableDeposit: 0 },
     {

@@ -99,6 +99,228 @@
   color: var(--color-charcoal);
 }
 
+.timePicker {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.62rem;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: linear-gradient(145deg, var(--color-white), var(--color-background-soft));
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.timePicker:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 12%, transparent);
+}
+
+.timePicker[data-invalid="true"] {
+  border-color: var(--color-status-red, #b64242);
+}
+
+.timePickerHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.timePickerHeader > span:nth-child(2) {
+  display: grid;
+  min-width: 0;
+  gap: 0.02rem;
+}
+
+.timePickerHeader small {
+  color: var(--color-charcoal);
+  font-size: 0.61rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.timePickerHeader strong {
+  color: var(--color-text-primary);
+  font-size: 0.9rem;
+}
+
+.timePickerIcon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--color-blush);
+  color: var(--color-primary);
+}
+
+.clearTimeButton {
+  margin-left: auto;
+  padding: 0.3rem 0.45rem;
+  border: 0;
+  background: transparent;
+  color: var(--color-primary);
+  font: inherit;
+  font-size: 0.65rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.timeSelectRow {
+  display: grid;
+  grid-template-columns: minmax(58px, 1fr) auto minmax(58px, 1fr) minmax(68px, 1fr);
+  gap: 0.35rem;
+  align-items: end;
+}
+
+.timeSelectRow label {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.timeSelectRow label > span {
+  color: var(--color-charcoal);
+  font-size: 0.58rem;
+  font-weight: 600;
+}
+
+.timeSelectRow select {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  padding: 0.42rem 1.55rem 0.42rem 0.5rem;
+  border: 1px solid var(--color-light-gray);
+  border-radius: 10px;
+  background: var(--color-white);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.timeSelectRow select:disabled {
+  color: var(--color-light-gray);
+  background: var(--color-background-soft);
+}
+
+.timeSeparator {
+  align-self: end;
+  padding-bottom: 0.52rem;
+  color: var(--color-primary);
+  font-weight: 900;
+}
+
+.quickTimes {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.quickTimes > span {
+  color: var(--color-charcoal);
+  font-size: 0.6rem;
+  font-weight: 600;
+}
+
+.quickTimes > div {
+  display: flex;
+  gap: 0.28rem;
+  overflow-x: auto;
+  padding-bottom: 0.1rem;
+  scrollbar-width: thin;
+}
+
+.quickTimes button {
+  flex: 0 0 auto;
+  min-height: 30px;
+  padding: 0.35rem 0.48rem;
+  border: 1px solid var(--color-light-gray);
+  border-radius: 999px;
+  background: var(--color-white);
+  color: var(--color-charcoal);
+  font: inherit;
+  font-size: 0.61rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.quickTimes button:hover,
+.quickTimes button[aria-pressed="true"] {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-white);
+}
+
+.normalWindowNote {
+  margin: 0;
+  color: var(--color-charcoal);
+  font-size: 0.61rem;
+  line-height: 1.35;
+}
+
+.normalWindowNote strong {
+  color: var(--color-text-primary);
+}
+
+.scheduleConfirmation {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.48rem;
+  padding: 0.52rem 0.58rem;
+  border: 1px solid var(--color-light-gray);
+  border-radius: 12px;
+  background: var(--color-background-soft);
+}
+
+.scheduleConfirmation[data-state="ready"] {
+  border-color: color-mix(in srgb, var(--color-calendar-available) 42%, white);
+  background: color-mix(in srgb, var(--color-calendar-available-bg) 72%, white);
+}
+
+.scheduleConfirmation[data-state="checking"] {
+  border-color: var(--color-dusty-rose);
+  background: color-mix(in srgb, var(--color-blush) 55%, white);
+}
+
+.scheduleConfirmationIcon {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--color-white);
+  color: var(--color-primary);
+  font-size: 0.7rem;
+  font-weight: 900;
+  box-shadow: inset 0 0 0 1px var(--color-light-gray);
+}
+
+.scheduleConfirmation[data-state="ready"] .scheduleConfirmationIcon {
+  background: var(--color-calendar-available);
+  color: var(--color-white);
+  box-shadow: none;
+}
+
+.scheduleConfirmation > span:last-child {
+  display: grid;
+  min-width: 0;
+  gap: 0.05rem;
+}
+
+.scheduleConfirmation strong {
+  color: var(--color-text-primary);
+  font-size: 0.7rem;
+}
+
+.scheduleConfirmation small {
+  color: var(--color-charcoal);
+  font-size: 0.61rem;
+  line-height: 1.35;
+}
+
 .convenienceNotice {
   margin: 0.55rem 0 0;
   padding: 0.55rem 0.65rem;
@@ -357,6 +579,7 @@
   .pickupTimeField { grid-template-columns: 1fr; }
   .pickupTimeField label { grid-column: auto; }
   .quantityPanel { grid-template-columns: 1fr; }
+  .timeSelectRow { grid-template-columns: minmax(54px, 1fr) auto minmax(54px, 1fr) minmax(66px, 1fr); }
 }
 
 .flowHeading {
