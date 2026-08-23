@@ -54,6 +54,18 @@ export class DeliveryAddressRequiredError extends Error {
   }
 }
 
+function guestContactErrorMessage(message: string): string {
+  if (message.includes("INVALID_GUEST_NAME")) return "Please enter the guest's complete name.";
+  if (message.includes("INVALID_GUEST_EMAIL")) return "Please enter a valid guest email address.";
+  if (message.includes("INVALID_GUEST_PHONE")) return "The guest phone number must contain exactly 11 digits.";
+  if (message.includes("INVALID_GUEST_ADDRESS")) return "Please enter the guest's complete address.";
+  if (message.includes("INVALID_GUEST_SOCIAL_LINK")) return "The guest social profile link is too long.";
+  if (message.includes("CUSTOMER_PROFILE_REQUIRED")) {
+    return "Your secure guest checkout session could not be prepared. Please refresh and try again.";
+  }
+  return "We couldn't securely save your guest contact details. Please try again in a moment.";
+}
+
 export interface SubmitBookingInput {
   productId: string;
   quantity?: number;
@@ -99,7 +111,7 @@ export async function submitBookingWithDateGuard(
     });
     if (guestContactError) {
       console.error("submitBookingWithDateGuard: guest contact save failed", guestContactError);
-      throw new Error("We couldn't securely save your guest contact details. Please check them and try again.");
+      throw new Error(guestContactErrorMessage(guestContactError.message));
     }
   }
 
@@ -195,7 +207,7 @@ export async function submitMultiItemBookingWithDateGuard(
     });
     if (guestContactError) {
       console.error("submitMultiItemBookingWithDateGuard: guest contact save failed", guestContactError);
-      throw new Error("We couldn't securely save your guest contact details. Please check them and try again.");
+      throw new Error(guestContactErrorMessage(guestContactError.message));
     }
   }
 

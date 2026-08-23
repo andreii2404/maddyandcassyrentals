@@ -126,17 +126,11 @@ export async function checkBatchTimeAvailability(
   rentalDays: number,
 ): Promise<Map<string, TimeAvailability>> {
   const entries = await Promise.all(
-    items.map(async ({ productId, quantity }) => {
-      try {
-        return [productId, await getTimeAvailability(productId, pickupAt, quantity, rentalDays)] as const;
-      } catch {
-        return [productId, null] as const;
-      }
-    }),
+    items.map(async ({ productId, quantity }) =>
+      [productId, await getTimeAvailability(productId, pickupAt, quantity, rentalDays)] as const,
+    ),
   );
   const result = new Map<string, TimeAvailability>();
-  for (const [productId, availability] of entries) {
-    if (availability) result.set(productId, availability);
-  }
+  for (const [productId, availability] of entries) result.set(productId, availability);
   return result;
 }

@@ -11,6 +11,7 @@ import {
 import FileUploadField from "@/components/file-upload/FileUploadField";
 import GcashRecipientCard from "@/components/payment/GcashRecipientCard";
 import { scrollToFirstError } from "@/src/lib/formScroll";
+import { isValidPhoneNumber, normalizePhoneInput, PHONE_DIGIT_COUNT } from "@/src/lib/authValidation";
 import formStyles from "@/components/ui/Form.module.css";
 import sharedStyles from "./StepShared.module.css";
 import styles from "./StepPaymentSubmission.module.css";
@@ -93,8 +94,8 @@ export default function StepPaymentSubmission({
     if (!draft.manualPayment.accountName.trim()) {
       nextErrors["pay-account-name"] = "Enter the name of the account used to pay.";
     }
-    if (!draft.manualPayment.accountNumber.trim()) {
-      nextErrors["pay-account-number"] = "Enter the mobile number or account number used to pay.";
+    if (!isValidPhoneNumber(draft.manualPayment.accountNumber)) {
+      nextErrors["pay-account-number"] = `The GCash mobile number must contain exactly ${PHONE_DIGIT_COUNT} digits.`;
     }
     if (!draft.manualPayment.proofFile) {
       nextErrors["pay-proof"] = "Upload a screenshot or proof of payment.";
@@ -294,16 +295,19 @@ export default function StepPaymentSubmission({
 
       <div className={formStyles.field}>
         <label className={formStyles.label} htmlFor="pay-account-number">
-          Mobile number / account number used<span className={formStyles.required}>*</span>
+          11-digit GCash mobile number used<span className={formStyles.required}>*</span>
         </label>
         <input
           id="pay-account-number"
           className={`${formStyles.input} ${errors["pay-account-number"] ? formStyles.inputError : ""}`}
+          inputMode="numeric"
+          autoComplete="tel"
+          maxLength={PHONE_DIGIT_COUNT}
           value={draft.manualPayment.accountNumber}
           onChange={(event) => {
-            const value = event.target.value;
+            const value = normalizePhoneInput(event.target.value);
             onManualPaymentUpdate({ accountNumber: value });
-            if (value.trim()) clearFieldError("pay-account-number");
+            if (isValidPhoneNumber(value)) clearFieldError("pay-account-number");
           }}
           disabled={opening}
         />
