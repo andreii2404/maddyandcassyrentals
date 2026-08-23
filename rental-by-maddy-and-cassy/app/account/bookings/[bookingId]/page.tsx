@@ -230,8 +230,8 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
 
   return (
     <div className={styles.wrapper}>
-      <Link href={guestMode ? "/catalog" : "/account/bookings"} className={styles.backLink}>
-        <span aria-hidden="true">←</span> {guestMode ? "Browse Rentals" : "Back to My Bookings"}
+      <Link href={guestMode ? "/guest/bookings" : "/account/bookings"} className={styles.backLink}>
+        <span aria-hidden="true">←</span> {guestMode ? "Back to Guest Bookings" : "Back to My Bookings"}
       </Link>
 
       {justSubmitted ? (

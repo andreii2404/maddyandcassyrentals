@@ -3,7 +3,7 @@
   border-radius: 12px;
   padding: 0.7rem;
   background: var(--color-background);
-  max-height: 420px;
+  max-height: 310px;
   overflow-y: auto;
 }
 
