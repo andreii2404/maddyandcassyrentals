@@ -1,16 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import type { ManualPaymentDraft, ReservationDraft } from "@/src/types/reservationDraft";
 import type { MultiItemReservationPricing } from "@/src/lib/reservationPricing";
-import { GCASH_RECIPIENT } from "@/src/lib/gcashPayment";
 import {
   COMPLETED_RENTALS_BEFORE_REWARD,
   type RewardProgress,
 } from "@/src/lib/promotions";
 import LineItemsTable from "./LineItemsTable";
 import FileUploadField from "@/components/file-upload/FileUploadField";
+import GcashRecipientCard from "@/components/payment/GcashRecipientCard";
 import formStyles from "@/components/ui/Form.module.css";
 import sharedStyles from "./StepShared.module.css";
 import styles from "./StepPaymentSubmission.module.css";
@@ -21,8 +20,6 @@ function money(currency: string, value: number): string {
     maximumFractionDigits: 2,
   })}`;
 }
-
-const GCASH_PAYMENT_TYPES = ["GCash", "GCash to GCash", "GCash to Bank"];
 
 export type BookingPaymentState = "unpaid" | "pending" | "partially_paid" | "paid";
 
@@ -165,36 +162,9 @@ export default function StepCartPaymentSubmission({
       </fieldset>
 
       <h3 className={sharedStyles.sectionHeading}>Pay via GCash</h3>
-      <div className={styles.gcash}>
-        <div className={styles.qrCard}>
-          <div className={styles.qrImageWrapper}>
-            <Image src={GCASH_RECIPIENT.qrImagePath} alt="GCash payment QR code" fill sizes="180px" />
-          </div>
-          <span className={styles.qrHint}>Scan with your GCash app</span>
-        </div>
-        <div className={styles.gcashDetails}>
-          <div>
-            <span className={styles.detailLabel}>Account name</span>
-            <strong className={styles.accountName}>{GCASH_RECIPIENT.accountName}</strong>
-          </div>
-          <div>
-            <span className={styles.detailLabel}>Mobile number</span>
-            <strong className={styles.accountName}>{GCASH_RECIPIENT.maskedMobileNumber}</strong>
-          </div>
-          <div>
-            <span className={styles.detailLabel}>Accepted payment options</span>
-            <div className={styles.paymentTypes}>
-              {GCASH_PAYMENT_TYPES.map((type) => (
-                <span key={type} className={styles.paymentType}>{type}</span>
-              ))}
-            </div>
-          </div>
-          <p className={styles.gcashNote}>
-            Send your <strong>{money(currency, dueNow)}</strong> amount due now to the GCash account above,
-            then fill out your proof of payment below so we can verify your reservation.
-          </p>
-        </div>
-      </div>
+      <GcashRecipientCard
+        instruction={<>Send your <strong>{money(currency, dueNow)}</strong> amount due now to the GCash account above, then fill out your proof of payment below so we can verify your reservation.</>}
+      />
 
       <h3 className={sharedStyles.sectionHeading}>Items in this booking</h3>
       <LineItemsTable lines={pricing.lines} currency={currency} />
