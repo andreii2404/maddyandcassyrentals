@@ -133,41 +133,51 @@ export default function PaymentsReviewPanel({
             <span className={styles.balanceDue}>Due before handover</span>
           </div>
 
-          <details className={styles.collectionPanel} open={booking.balancePaymentPreference === "in_person"}>
-            <summary>Record payment received in person</summary>
-            <div className={styles.collectionForm}>
-              <label>
-                <span>Payment received through</span>
-                <select value={recordMethod} onChange={(event) => setRecordMethod(event.target.value as "cash" | "gcash_in_person")} disabled={recording}>
-                  <option value="cash">Cash</option>
-                  <option value="gcash_in_person">GCash shown/paid in person</option>
-                </select>
-              </label>
-              <label>
-                <span>Reference number (optional)</span>
-                <input value={recordReference} onChange={(event) => setRecordReference(event.target.value)} maxLength={120} disabled={recording} />
-              </label>
-              <label className={styles.fullField}>
-                <span>Collection note (optional)</span>
-                <textarea value={recordNotes} onChange={(event) => setRecordNotes(event.target.value)} rows={2} maxLength={1000} disabled={recording} placeholder="Who received it, where, or any useful handover note" />
-              </label>
-              <button type="button" className={styles.recordButton} onClick={() => void saveInPersonPayment()} disabled={recording || needsReview.length > 0}>
-                {recording ? "Recording…" : `Record ${money(balanceDue)} as paid`}
-              </button>
-              {needsReview.length > 0 ? <small className={styles.collectionWarning}>Review the pending online proof before recording another payment.</small> : null}
-            </div>
-          </details>
+          <div className={styles.optionsGrid}>
+            <details className={`${styles.optionCard} ${styles.collectionPanel}`} open={booking.balancePaymentPreference === "in_person"}>
+              <summary className={styles.optionSummary}>
+                <span className={styles.optionTitle}>Mark as Paid in Person</span>
+                <span className={styles.optionDesc}>Record cash or GCash collected face-to-face and clear the balance right away.</span>
+              </summary>
+              <div className={styles.collectionForm}>
+                <label>
+                  <span>Payment received through</span>
+                  <select value={recordMethod} onChange={(event) => setRecordMethod(event.target.value as "cash" | "gcash_in_person")} disabled={recording}>
+                    <option value="cash">Cash</option>
+                    <option value="gcash_in_person">GCash shown/paid in person</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Reference number (optional)</span>
+                  <input value={recordReference} onChange={(event) => setRecordReference(event.target.value)} maxLength={120} disabled={recording} />
+                </label>
+                <label className={styles.fullField}>
+                  <span>Collection note (optional)</span>
+                  <textarea value={recordNotes} onChange={(event) => setRecordNotes(event.target.value)} rows={2} maxLength={1000} disabled={recording} placeholder="Who received it, where, or any useful handover note" />
+                </label>
+                <button type="button" className={styles.recordButton} onClick={() => void saveInPersonPayment()} disabled={recording || needsReview.length > 0}>
+                  {recording ? "Recording…" : `Record ${money(balanceDue)} as paid`}
+                </button>
+                {needsReview.length > 0 ? <small className={styles.collectionWarning}>Review the pending online proof before recording another payment.</small> : null}
+              </div>
+            </details>
 
-          <details className={styles.exceptionPanel} open={booking.payLaterAllowed}>
-            <summary>Exceptional pay-later arrangement</summary>
-            <div className={styles.exceptionBody}>
-              <p>Handover is blocked until the balance is fully paid. Only enable this when the business explicitly approves collection after handover.</p>
-              <textarea value={exceptionNote} onChange={(event) => setExceptionNote(event.target.value)} rows={2} maxLength={1000} placeholder="Required: explain the approved arrangement" disabled={recording} />
-              <button type="button" onClick={() => void savePayLater(!booking.payLaterAllowed)} disabled={recording || (!booking.payLaterAllowed && !exceptionNote.trim())}>
-                {booking.payLaterAllowed ? "Remove pay-later exception" : "Allow handover with balance"}
-              </button>
-            </div>
-          </details>
+            <details className={`${styles.optionCard} ${styles.exceptionPanel}`} open={booking.payLaterAllowed}>
+              <summary className={styles.optionSummary}>
+                <span className={styles.optionTitle}>
+                  Allow Pay Later <span className={styles.exceptionTag}>Exception</span>
+                </span>
+                <span className={styles.optionDesc}>Not a normal payment method — only for approved cases where handover happens before the balance is paid.</span>
+              </summary>
+              <div className={styles.exceptionBody}>
+                <p>Handover is blocked until the balance is fully paid. Only enable this when the business explicitly approves collection after handover.</p>
+                <textarea value={exceptionNote} onChange={(event) => setExceptionNote(event.target.value)} rows={2} maxLength={1000} placeholder="Required: explain the approved arrangement" disabled={recording} />
+                <button type="button" onClick={() => void savePayLater(!booking.payLaterAllowed)} disabled={recording || (!booking.payLaterAllowed && !exceptionNote.trim())}>
+                  {booking.payLaterAllowed ? "Remove pay-later exception" : "Allow handover with balance"}
+                </button>
+              </div>
+            </details>
+          </div>
         </div>
       ) : (
         <p className={styles.fullyPaid}>✓ Fully paid — handover payment requirement complete.</p>
