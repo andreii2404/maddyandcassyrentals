@@ -101,8 +101,10 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   const [countersignAcknowledged, setCountersignAcknowledged] = useState(false);
   const [countersigning, setCountersigning] = useState(false);
   const [statusConfirmationOpen, setStatusConfirmationOpen] = useState(false);
+  const [countersignConfirmationOpen, setCountersignConfirmationOpen] = useState(false);
   const [sendingReceiptId, setSendingReceiptId] = useState<string | null>(null);
   const confirmationDialogRef = useRef<HTMLDivElement>(null);
+  const countersignDialogRef = useRef<HTMLDivElement>(null);
 
   const loadDetails = useCallback(async () => {
     try {
@@ -158,6 +160,25 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
       previousFocus?.focus();
     };
   }, [statusConfirmationOpen, updating]);
+
+  useEffect(() => {
+    if (!countersignConfirmationOpen) return;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    countersignDialogRef.current?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape" && !countersigning) setCountersignConfirmationOpen(false);
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus();
+    };
+  }, [countersignConfirmationOpen, countersigning]);
 
   async function openPrivateFile(bucket: Parameters<typeof getBookingFileUrl>[1], path: string) {
     const previewWindow = window.open("", "_blank");
@@ -307,7 +328,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
     }
   }
 
-  async function handleCountersignAgreement() {
+  function requestCountersignAgreement() {
     if (!businessSignerName.trim()) {
       showToast("Enter the authorized business signer's complete name.", "error");
       return;
@@ -316,13 +337,16 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
       showToast("Confirm that you are authorized to countersign for the business.", "error");
       return;
     }
-    if (!window.confirm(`Countersign and finalize the agreement as ${businessSignerName.trim()}?`)) return;
+    setCountersignConfirmationOpen(true);
+  }
 
+  async function confirmCountersignAgreement() {
     setCountersigning(true);
     try {
       await countersignBookingAgreement(bookingId, businessSignerName.trim());
       await loadDetails();
       setCountersignAcknowledged(false);
+      setCountersignConfirmationOpen(false);
       showToast("Agreement countersigned. The final PDF is ready for the customer.", "success");
     } catch (countersignError) {
       showToast(
@@ -838,7 +862,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                       <button
                         type="button"
                         className={styles.countersignButton}
-                        onClick={handleCountersignAgreement}
+                        onClick={requestCountersignAgreement}
                         disabled={!canCountersignAgreement || !businessSignerName.trim() || !countersignAcknowledged || countersigning}
                       >
                         {countersigning ? "Finalizing agreement..." : "Countersign & Finalize Agreement"}
@@ -915,6 +939,46 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
               <button type="button" className={styles.dialogCancelButton} onClick={() => setStatusConfirmationOpen(false)} disabled={updating}>Not yet</button>
               <button type="button" className={`${styles.dialogConfirmButton} ${selectedAction.tone === "danger" ? styles.dialogDangerButton : ""}`} onClick={() => void confirmStatusAction()} disabled={updating}>
                 {updating ? "Updating booking..." : `Yes, ${selectedAction.label}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {countersignConfirmationOpen ? (
+        <div
+          className={styles.confirmationOverlay}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !countersigning) setCountersignConfirmationOpen(false);
+          }}
+        >
+          <div
+            ref={countersignDialogRef}
+            className={`${styles.confirmationDialog} ${styles.confirmationDialogDanger}`}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="countersign-confirmation-title"
+            aria-describedby="countersign-confirmation-description"
+            tabIndex={-1}
+          >
+            <div className={styles.confirmationBrand}>
+              <Image src="/images/maddy-cassy-rentals-logo.png" alt="" width={48} height={48} />
+              <div><span>RENTAL BY</span><strong>Maddy &amp; Cassy</strong></div>
+            </div>
+            <div className={styles.confirmationIcon} aria-hidden="true">!</div>
+            <div className={styles.confirmationCopy}>
+              <span>Confirm agreement finalization</span>
+              <h2 id="countersign-confirmation-title">Countersign &amp; Finalize Agreement</h2>
+              <p id="countersign-confirmation-description">Are you sure you want to countersign and finalize this rental agreement?</p>
+              <div className={styles.confirmationSummary}>
+                <strong>Signing as {businessSignerName.trim()}</strong>
+                <span>This action is permanent and cannot be undone. The final PDF will be generated and made available to the customer immediately.</span>
+              </div>
+            </div>
+            <div className={styles.dialogActions}>
+              <button type="button" className={styles.dialogCancelButton} onClick={() => setCountersignConfirmationOpen(false)} disabled={countersigning}>Cancel</button>
+              <button type="button" className={`${styles.dialogConfirmButton} ${styles.dialogDangerButton}`} onClick={() => void confirmCountersignAgreement()} disabled={countersigning}>
+                {countersigning ? "Finalizing agreement..." : "Yes, Finalize Agreement"}
               </button>
             </div>
           </div>
