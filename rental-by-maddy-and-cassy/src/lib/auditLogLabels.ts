@@ -17,6 +17,7 @@ const ACTION_LABELS: Record<string, string> = {
   "payment.proof_submitted": "Payment proof submitted",
   "payment.reviewed": "Payment reviewed",
   "payment.verified": "Payment verified",
+  "payment.receipt_emailed": "Receipt emailed",
   "verification.document_reviewed": "Verification document reviewed",
   "agreement.business_countersigned": "Rental agreement signed",
   "account.updated": "Account updated",
@@ -43,6 +44,7 @@ const ACTOR_LABELS: Record<string, string> = {
 const ENTITY_LABELS: Record<string, string> = {
   booking: "Booking",
   payment_submission: "Payment proof",
+  booking_receipt: "Official receipt",
   booking_agreement: "Rental agreement",
   requirement_submission: "Verification document",
   product: "Product",
@@ -198,6 +200,8 @@ export function formatWhatHappened(log: AdminAuditLog, actorName: string): strin
       return `${actorName} reviewed a payment submission.`;
     case "payment.verified":
       return `${actorName} verified a payment.`;
+    case "payment.receipt_emailed":
+      return `${actorName} emailed the official receipt to the customer.`;
     case "verification.document_reviewed":
       return `${actorName} reviewed a verification document.`;
     case "agreement.business_countersigned":

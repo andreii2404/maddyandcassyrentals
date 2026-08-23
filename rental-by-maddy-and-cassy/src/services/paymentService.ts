@@ -229,7 +229,28 @@ export async function getBookingReceipts(
       issuedAt: row.issued_at,
       documentPath: row.document_path ?? undefined,
       issuedBy: row.issued_by ?? undefined,
+      emailedAt: row.emailed_at ?? undefined,
+      emailedTo: row.emailed_to ?? undefined,
       createdAt: row.created_at,
     }),
   );
+}
+
+export async function sendBookingReceiptEmail(
+  bookingId: string,
+  receiptId: string,
+): Promise<{ emailedAt: string; emailedTo: string }> {
+  const response = await fetch(`/api/admin/bookings/${encodeURIComponent(bookingId)}/payments/receipt`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ receiptId }),
+  });
+  const body = (await response.json().catch(() => null)) as
+    | { emailedAt?: unknown; emailedTo?: unknown; error?: unknown }
+    | null;
+  if (!response.ok || typeof body?.emailedAt !== "string" || typeof body?.emailedTo !== "string") {
+    throw new Error(typeof body?.error === "string" ? body.error : "The receipt email could not be sent.");
+  }
+  return { emailedAt: body.emailedAt, emailedTo: body.emailedTo };
 }

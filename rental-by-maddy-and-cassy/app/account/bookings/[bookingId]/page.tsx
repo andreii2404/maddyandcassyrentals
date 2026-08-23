@@ -248,6 +248,17 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
             remaining balance from this tracking page.
           </p>
         </div>
+      ) : hasVerifiedPayment ? (
+        <div className={styles.confirmationBanner}>
+          <h2>Payment verified — your dates are reserved.</h2>
+          <p>
+            Your payment for booking <strong>{booking.bookingRef}</strong> has been verified.{" "}
+            {formatManilaDateTime(new Date(booking.startDate))} to {formatManilaDateTime(new Date(booking.endDate))} is reserved for you.
+          </p>
+          <p className={styles.paymentNote}>
+            Your official receipt is available under Documents below.
+          </p>
+        </div>
       ) : null}
 
       {guestMode ? (

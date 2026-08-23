@@ -242,6 +242,8 @@ export async function getBookingDetails(
         issuedAt: row.issued_at,
         documentPath: row.document_path ?? undefined,
         issuedBy: row.issued_by ?? undefined,
+        emailedAt: row.emailed_at ?? undefined,
+        emailedTo: row.emailed_to ?? undefined,
         createdAt: row.created_at,
       }),
     ),

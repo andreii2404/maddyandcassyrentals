@@ -60,6 +60,8 @@ export interface BookingReceipt {
   issuedAt: string;
   documentPath?: string;
   issuedBy?: string;
+  emailedAt?: string;
+  emailedTo?: string;
   createdAt: string;
 }
 

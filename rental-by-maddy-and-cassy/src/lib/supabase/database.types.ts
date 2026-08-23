@@ -587,6 +587,8 @@ export type Database = {
           booking_id: string
           created_at: string
           document_path: string
+          emailed_at: string | null
+          emailed_to: string | null
           id: string
           issued_at: string
           issued_by: string | null
@@ -598,6 +600,8 @@ export type Database = {
           booking_id: string
           created_at?: string
           document_path: string
+          emailed_at?: string | null
+          emailed_to?: string | null
           id?: string
           issued_at?: string
           issued_by?: string | null
@@ -609,6 +613,8 @@ export type Database = {
           booking_id?: string
           created_at?: string
           document_path?: string
+          emailed_at?: string | null
+          emailed_to?: string | null
           id?: string
           issued_at?: string
           issued_by?: string | null

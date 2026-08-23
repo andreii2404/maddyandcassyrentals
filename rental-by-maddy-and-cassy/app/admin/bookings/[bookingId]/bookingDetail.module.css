@@ -1024,6 +1024,12 @@
 .receiptList small { margin-top: 0.12rem; color: var(--color-charcoal); font-size: 0.52rem; }
 .receiptList button > span:last-child { color: var(--color-primary); font-weight: 800; }
 .emptyRecord { margin: 1rem 0 0; padding: 0.8rem; border: 1px dashed var(--color-dusty-rose); border-radius: 10px; color: var(--color-charcoal); font-size: 0.64rem; line-height: 1.5; }
+.receiptRow { display: grid; gap: 0.4rem; }
+.receiptEmailAction { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.sendReceiptButton { min-height: 36px; padding: 0.5rem 0.7rem; border: 1px solid var(--color-primary); border-radius: 9px; background: #fff; color: var(--color-primary); font: inherit; font-size: 0.62rem; font-weight: 800; cursor: pointer; }
+.sendReceiptButton:hover:not(:disabled) { background: var(--color-primary); color: #fff; }
+.sendReceiptButton:disabled { border-color: var(--color-light-gray); background: var(--color-light-gray); color: var(--color-charcoal); cursor: not-allowed; }
+.receiptSentBadge { padding: 0.32rem 0.55rem; border-radius: 999px; background: var(--color-status-green-bg); color: var(--color-status-green); font-size: 0.56rem; font-weight: 800; }
 
 .timeline {
   margin: 0;
