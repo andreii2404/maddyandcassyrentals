@@ -19,7 +19,7 @@
 .optionSummary::-webkit-details-marker { display:none; }
 .optionSummary::after { content:"\25BE"; position:absolute; top:.75rem; right:.75rem; color:var(--color-charcoal); font-size:.65rem; transition:transform .15s ease; }
 .optionCard[open] .optionSummary::after { transform:rotate(180deg); }
-.optionTitle { display:flex; min-width:0; align-items:center; flex-wrap:wrap; gap:.35rem; color:var(--color-text-primary); font-size:.68rem; font-weight:800; line-height:1.35; overflow-wrap:normal; word-break:normal; }
+.optionTitle { display:flex; min-width:0; align-items:center; flex-wrap:nowrap; gap:.35rem; color:var(--color-text-primary); font-size:.68rem; font-weight:800; line-height:1.35; overflow-wrap:normal; white-space:nowrap; word-break:normal; }
 .optionDesc { display:block; min-width:0; grid-column:1/-1; color:var(--color-charcoal); font-size:.58rem; font-weight:500; line-height:1.5; overflow-wrap:anywhere; }
 .optionCard[open] .optionSummary { border-bottom:1px solid var(--color-light-gray); background:var(--color-background-soft); }
 .exceptionPanel { border-color:var(--color-status-yellow-border); }

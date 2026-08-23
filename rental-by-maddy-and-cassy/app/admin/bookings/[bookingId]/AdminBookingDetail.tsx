@@ -34,7 +34,6 @@ import PaymentsReviewPanel from "@/components/admin/PaymentsReviewPanel";
 import {
   DECLINE_REASON_OPTIONS,
   formatDeclineNote,
-  getBookingMilestones,
   getFulfillmentProgressLabel,
 } from "@/src/lib/bookingManagement";
 import BookingItemsSummary from "@/components/booking-summary/BookingItemsSummary";
@@ -92,8 +91,7 @@ interface DetailState {
 type AdminReviewWorkspace =
   | "decision"
   | "booking"
-  | "review"
-  | "agreement";
+  | "review";
 
 export default function AdminBookingDetail({ bookingId }: { bookingId: string }) {
   const { showToast } = useToast();
@@ -452,8 +450,8 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
     },
   ];
   const remainingChecks = reviewChecks.filter((check) => !check.ready).length;
-  const bookingMilestones = getBookingMilestones(booking);
   const primaryAction = actions.find((action) => action.tone !== "danger") ?? null;
+  const alternativeActions = actions.filter((action) => action.status !== primaryAction?.status);
 
   function jumpToNextStep() {
     setActiveWorkspace("decision");
@@ -464,6 +462,29 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
     window.setTimeout(() => {
       document.getElementById("admin-workspace-nav")?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 0);
+  }
+
+  function renderActionChoice(action: (typeof actions)[number]) {
+    const selected = action.status === selectedStatus;
+    const blockedByBalance = action.status === "released" && !handoverPaymentReady;
+    return (
+      <button
+        key={action.status}
+        type="button"
+        className={`${styles.actionChoice} ${action.tone === "danger" ? styles.dangerChoice : ""} ${selected ? styles.actionChoiceSelected : ""}`}
+        onClick={() => { setSelectedStatus(action.status); setNote(""); setDeclineReason(""); }}
+        aria-pressed={selected}
+        disabled={updating || blockedByBalance}
+      >
+        <span className={styles.actionChoiceIcon} aria-hidden="true">{action.tone === "danger" ? "!" : "→"}</span>
+        <span className={styles.actionChoiceCopy}>
+          <small>{action.tone === "danger" ? "Close booking" : action.status === primaryAction?.status ? "Recommended next step" : "Alternative action"}</small>
+          <strong>{action.label}</strong>
+          <span>{blockedByBalance ? "Record the remaining balance or approve a pay-later exception in Requirements first." : action.description}</span>
+        </span>
+        <span className={styles.actionChoiceState}>{selected ? "Selected" : "Select"}</span>
+      </button>
+    );
   }
 
   return (
@@ -553,8 +574,8 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
       <section className={styles.reviewReadiness} aria-labelledby="review-readiness-heading">
         <div className={styles.reviewReadinessHeading}>
           <div>
-            <span>REVIEW READINESS</span>
-            <h2 id="review-readiness-heading">What is ready and what needs attention</h2>
+            <span>AT A GLANCE</span>
+            <h2 id="review-readiness-heading">Booking checklist</h2>
           </div>
           <span className={remainingChecks === 0 ? styles.readyPill : styles.pendingPill}>
             {remainingChecks === 0 ? "Ready for the next action" : `${remainingChecks} check${remainingChecks === 1 ? "" : "s"} remaining`}
@@ -568,7 +589,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
               title={check.detail}
             >
               <span aria-hidden="true">{check.ready ? "✓" : "!"}</span>
-              <div><small>{check.label}</small><strong>{check.value}</strong><em>{check.detail}</em></div>
+              <div><small>{check.label}</small><strong>{check.value}</strong></div>
             </div>
           ))}
         </div>
@@ -576,63 +597,38 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
 
       <nav id="admin-workspace-nav" className={styles.workspaceNav} aria-label="Admin booking review sections" role="tablist">
         <button type="button" role="tab" aria-selected={activeWorkspace === "decision"} onClick={() => setActiveWorkspace("decision")}>
-          <span>01</span><strong>Decision</strong><small>{primaryAction?.label ?? "Closed"}</small>
+          <span>01</span><strong>Next Action</strong><small>{primaryAction?.label ?? "No action needed"}</small>
         </button>
         <button type="button" role="tab" aria-selected={activeWorkspace === "review"} onClick={() => setActiveWorkspace("review")}>
-          <span>02</span><strong>Review</strong><small>Payment &amp; documents</small>
-        </button>
-        <button type="button" role="tab" aria-selected={activeWorkspace === "agreement"} onClick={() => setActiveWorkspace("agreement")}>
-          <span>03</span><strong>Agreement</strong><small>{AGREEMENT_STATUS_LABELS[booking.agreementStatus] ?? formatStatus(booking.agreementStatus)}</small>
+          <span>02</span><strong>Requirements</strong><small>Payment, documents &amp; agreement</small>
         </button>
         <button type="button" role="tab" aria-selected={activeWorkspace === "booking"} onClick={() => setActiveWorkspace("booking")}>
-          <span>04</span><strong>Booking</strong><small>Customer, rental &amp; activity</small>
+          <span>03</span><strong>Booking Record</strong><small>Customer, rental &amp; activity</small>
         </button>
       </nav>
 
       <section id="admin-actions" className={styles.actionPanel} aria-labelledby="booking-action-heading" hidden={activeWorkspace !== "decision"}>
         <div className={styles.actionIntro}>
-          <span>ADMIN DECISION</span>
-          <h2 id="booking-action-heading">Review and apply the next action</h2>
-          <p>Choose one valid action for the booking&apos;s current stage. Every change is recorded in the audit trail, reflected on the customer tracker, and eligible updates notify the customer automatically.</p>
+          <span>NEXT ACTION</span>
+          <h2 id="booking-action-heading">What should happen now</h2>
+          <p>Use the recommended action below. Open other actions only when the booking needs a different outcome.</p>
         </div>
-
-        <ol className={styles.statusJourney} aria-label="Booking status journey">
-          {bookingMilestones.map((milestone, index) => (
-            <li
-              key={milestone.key}
-              className={milestone.current ? styles.journeyCurrent : milestone.completed ? styles.journeyComplete : styles.journeyUpcoming}
-            >
-              <span aria-hidden="true">{milestone.completed && !milestone.current ? "✓" : index + 1}</span>
-              <div><strong>{milestone.label}</strong><small>{milestone.current ? "Current status" : milestone.completed ? "Completed" : "Upcoming"}</small></div>
-            </li>
-          ))}
-        </ol>
         {actions.length ? (
           <div className={styles.actionControls}>
             <div className={styles.actionChoiceGrid} aria-label="Available booking actions">
-              {actions.map((action) => {
-                const selected = action.status === selectedStatus;
-                const blockedByBalance = action.status === "released" && !handoverPaymentReady;
-                return (
-                  <button
-                    key={action.status}
-                    type="button"
-                    className={`${styles.actionChoice} ${action.tone === "danger" ? styles.dangerChoice : ""} ${selected ? styles.actionChoiceSelected : ""}`}
-                    onClick={() => { setSelectedStatus(action.status); setNote(""); setDeclineReason(""); }}
-                    aria-pressed={selected}
-                    disabled={updating || blockedByBalance}
-                  >
-                    <span className={styles.actionChoiceIcon} aria-hidden="true">{action.tone === "danger" ? "!" : "→"}</span>
-                    <span className={styles.actionChoiceCopy}>
-                      <small>{action.tone === "danger" ? "Close booking" : action.status === primaryAction?.status ? "Recommended next step" : "Alternative action"}</small>
-                      <strong>{action.label}</strong>
-                      <span>{blockedByBalance ? "Record the remaining balance or approve a pay-later exception in Agreement & Payment first." : action.description}</span>
-                    </span>
-                    <span className={styles.actionChoiceState}>{selected ? "Selected" : "Choose"}</span>
-                  </button>
-                );
-            })}
-          </div>
+              {primaryAction ? renderActionChoice(primaryAction) : null}
+            </div>
+            {alternativeActions.length ? (
+              <details className={styles.secondaryActions}>
+                <summary>
+                  <span>Other available actions</span>
+                  <small>{alternativeActions.length}</small>
+                </summary>
+                <div className={styles.actionChoiceGrid}>
+                  {alternativeActions.map(renderActionChoice)}
+                </div>
+              </details>
+            ) : null}
             {actions.some((action) => action.status === "released") && !handoverPaymentReady ? (
               <p className={styles.choosePrompt}>Handover is protected: the remaining balance must be recorded before “Released to Customer” becomes available.</p>
             ) : null}
@@ -844,7 +840,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
           </div>
         </section>
 
-        <section className={styles.detailSection} role="tabpanel" hidden={activeWorkspace !== "agreement"}>
+        <section className={styles.detailSection} role="tabpanel" hidden={activeWorkspace !== "review"}>
           <div className={styles.detailSectionHeader}>
             <span className={styles.sectionNumber}>05</span>
             <div><strong>Rental Agreement</strong><small>{AGREEMENT_STATUS_LABELS[booking.agreementStatus] ?? formatStatus(booking.agreementStatus)}</small></div>
