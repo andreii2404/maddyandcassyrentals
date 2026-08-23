@@ -26,6 +26,7 @@ import {
 } from "@/hooks/useBookingRealtime";
 import { bookingHeadline, bookingItemsSummaryData } from "@/src/lib/bookingDisplay";
 import { formatManilaDateTime } from "@/src/lib/rentalTiming";
+import GuestBookingRecoveryForm from "@/components/guest-booking/GuestBookingRecoveryForm";
 
 const REQUIREMENTS_STATUS_LABEL: Record<string, string> = {
   not_submitted: "Not Submitted",
@@ -103,6 +104,7 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
   const params = useParams<{ bookingId: string }>();
   const searchParams = useSearchParams();
   const justSubmitted = searchParams.get("justSubmitted") === "1";
+  const justRecovered = searchParams.get("recovered") === "1";
 
   const [details, setDetails] = useState<BookingDetails | null | "error">(null);
   const [activePanel, setActivePanel] = useState<BookingPanel>("overview");
@@ -169,21 +171,22 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
 
   if (!user) {
     return guestMode ? (
-      <section className={styles.guestSessionCard}>
-        <p className={styles.sectionEyebrow}>GUEST BOOKING ACCESS</p>
-        <h1>Open this booking from the checkout browser.</h1>
-        <p>
-          Guest tracking is protected by the temporary session created during checkout. Return
-          to the same browser and device without clearing site data, then open your tracking link
-          again. Your booking has not been cancelled or removed.
-        </p>
-        <p>
-          If that browser is no longer available, contact Rental by Maddy &amp; Cassy and provide
-          your booking reference and the email used at checkout so the team can verify you.
-        </p>
-        <Link href="/contact" className={formStyles.primaryButton}>Contact Support</Link>
-      </section>
+      <GuestBookingRecoveryForm />
     ) : null;
+  }
+
+  if (guestMode && !user.is_anonymous) {
+    return (
+      <section className={styles.guestSessionCard}>
+        <p className={styles.sectionEyebrow}>CUSTOMER ACCOUNT ACTIVE</p>
+        <h1>This link is for a guest booking.</h1>
+        <p>
+          Your signed-in rentals are available under My Bookings. To recover a separate guest
+          checkout, sign out first, then reopen Track Guest Booking and verify its checkout details.
+        </p>
+        <Link href="/account/bookings" className={formStyles.primaryButton}>Open My Bookings</Link>
+      </section>
+    );
   }
 
   if (details === null) {
@@ -199,7 +202,9 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
     details.booking.customerId !== user.id ||
     (guestMode && !details.booking.isGuestCheckout)
   ) {
-    return <p className={formStyles.errorText}>We couldn&apos;t find that booking.</p>;
+    return guestMode ? (
+      <GuestBookingRecoveryForm hasGuestSession />
+    ) : <p className={formStyles.errorText}>We couldn&apos;t find that booking.</p>;
   }
 
   const { booking, agreement, documents, payments, receipts, statusHistory } = details;
@@ -262,7 +267,15 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
         <span aria-hidden="true">←</span> {guestMode ? "Back to Guest Bookings" : "Back to My Bookings"}
       </Link>
 
-      {justSubmitted ? (
+      {justRecovered ? (
+        <div className={styles.confirmationBanner} role="status">
+          <h2>Guest booking access restored.</h2>
+          <p>
+            This browser can now securely track <strong>{booking.bookingRef}</strong>. Save your
+            reference, checkout email, and mobile number in case you need to restore access again.
+          </p>
+        </div>
+      ) : justSubmitted ? (
         <div className={styles.confirmationBanner}>
           <h2>Your reservation is secured and submitted successfully.</h2>
           <p>

@@ -1693,6 +1693,15 @@ export type Database = {
       }
     }
     Functions: {
+      recover_guest_booking_access: {
+        Args: {
+          p_target_user_id: string
+          p_booking_reference: string
+          p_email: string
+          p_phone_number: string
+        }
+        Returns: string
+      }
       admin_set_booking_status: {
         Args: { p_booking_id: string; p_new_status: string; p_note?: string }
         Returns: {

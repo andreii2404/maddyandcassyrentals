@@ -19,6 +19,7 @@ const primaryLinks = [
 
 const guideLinks = [
   { href: "/how-to-book", label: "How to Book", description: "Booking steps" },
+  { href: "/guest/bookings", label: "Track Booking", description: "Guest booking lookup" },
   { href: "/rental-requirements", label: "Requirements", description: "What to prepare" },
   { href: "/terms", label: "Terms & Conditions", description: "Rental policies" },
   { href: "/faq", label: "FAQs", description: "Quick answers" },

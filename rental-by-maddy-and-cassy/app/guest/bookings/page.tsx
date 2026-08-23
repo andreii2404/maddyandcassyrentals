@@ -12,6 +12,7 @@ import { getBookingLiveStatusLabel, useBookingRealtime } from "@/hooks/useBookin
 import BookingSummaryCard from "@/components/booking-summary/BookingSummaryCard";
 import StatusBadge from "@/components/status-badge/StatusBadge";
 import Spinner from "@/components/ui/Spinner";
+import GuestBookingRecoveryForm from "@/components/guest-booking/GuestBookingRecoveryForm";
 import styles from "./guestBookings.module.css";
 
 export default function GuestBookingsPage() {
@@ -47,24 +48,28 @@ export default function GuestBookingsPage() {
     return <div className={styles.loading}><Spinner label="Loading guest bookings" /></div>;
   }
 
-  if (!user?.is_anonymous) {
+  if (!user) {
+    return (
+      <div className={styles.wrapper}>
+        <GuestBookingRecoveryForm />
+      </div>
+    );
+  }
+
+  if (!user.is_anonymous) {
     return (
       <section className={styles.sessionCard}>
-        <span className={styles.sessionIcon} aria-hidden="true">G</span>
+        <span className={styles.sessionIcon} aria-hidden="true">✓</span>
         <div>
-          <p className={styles.eyebrow}>GUEST BOOKING ACCESS</p>
-          <h1>No guest checkout is saved in this browser.</h1>
+          <p className={styles.eyebrow}>CUSTOMER ACCOUNT ACTIVE</p>
+          <h1>You&apos;re currently signed in.</h1>
           <p>
-            Guest bookings are protected by the temporary session created during checkout. Open
-            this page on the same browser and device used to book, without clearing site data.
-          </p>
-          <p>
-            If that session is no longer available, contact the team with your booking reference
-            and checkout email so your identity can be verified.
+            Rentals made with this account are already saved in My Bookings. To recover a separate
+            guest checkout, sign out first and return to Track Guest Booking.
           </p>
           <div className={styles.sessionActions}>
+            <Link href="/account/bookings">Open My Bookings</Link>
             <Link href="/catalog">Browse Rentals</Link>
-            <Link href="/contact">Contact Support</Link>
           </div>
         </div>
       </section>
@@ -75,7 +80,7 @@ export default function GuestBookingsPage() {
     <div className={styles.wrapper}>
       <header className={styles.header}>
         <div>
-          <p className={styles.eyebrow}>SAME-BROWSER GUEST TRACKING</p>
+          <p className={styles.eyebrow}>GUEST BOOKING TRACKING</p>
           <h1>Guest Bookings</h1>
           <p>Review every reservation made during this guest session and open its live tracker.</p>
         </div>
@@ -90,9 +95,10 @@ export default function GuestBookingsPage() {
       <aside className={styles.accessNote}>
         <strong>Keep access until your rental is complete.</strong>
         <span>
-          Use this same browser and device and do not clear this site&apos;s data. Save each booking
-          reference as a backup. An optional customer account provides cross-session history and
-          birthday and loyalty perks; guest bookings do not earn those perks.
+          Save each booking reference, checkout email, and mobile number. If this browser loses the
+          temporary guest session, Track Guest Booking can securely restore access. An optional
+          customer account provides automatic history plus birthday and loyalty perks; guest
+          bookings do not earn those perks.
         </span>
       </aside>
 
@@ -153,6 +159,10 @@ export default function GuestBookingsPage() {
           </ul>
         )}
       </section>
+
+      {bookings !== null && bookings.length === 0 ? (
+        <GuestBookingRecoveryForm hasGuestSession />
+      ) : null}
     </div>
   );
 }

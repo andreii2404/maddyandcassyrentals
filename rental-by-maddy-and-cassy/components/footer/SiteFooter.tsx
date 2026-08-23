@@ -13,6 +13,7 @@ const footerGroups = [
       { href: "/favorites", label: "Favorites" },
       { href: "/cart", label: "Rental Cart" },
       { href: "/account/bookings", label: "My Bookings" },
+      { href: "/guest/bookings", label: "Track Guest Booking" },
     ],
   },
   {
