@@ -5,6 +5,7 @@ import { useToast } from "@/components/ui/ToastProvider";
 import { submitManualPayment, updateBalancePaymentPreference } from "@/src/services/paymentService";
 import FileUploadField from "@/components/file-upload/FileUploadField";
 import GcashRecipientCard from "@/components/payment/GcashRecipientCard";
+import { isValidPhoneNumber, normalizePhoneInput, PHONE_DIGIT_COUNT } from "@/src/lib/authValidation";
 import formStyles from "@/components/ui/Form.module.css";
 import type { Booking } from "@/src/types/booking";
 import type { PaymentRecord } from "@/src/types/payment";
@@ -91,7 +92,9 @@ export default function BookingPaymentPanel({
     const nextErrors: string[] = [];
     if (!referenceNumber.trim()) nextErrors.push("Enter the GCash reference number for your payment.");
     if (!accountName.trim()) nextErrors.push("Enter the name of the account used to pay.");
-    if (!accountNumber.trim()) nextErrors.push("Enter the mobile number or account number used to pay.");
+    if (!isValidPhoneNumber(accountNumber)) {
+      nextErrors.push(`The GCash mobile number must contain exactly ${PHONE_DIGIT_COUNT} digits.`);
+    }
     if (!proofFile) nextErrors.push("Upload a screenshot or proof of payment.");
     setErrors(nextErrors);
     return nextErrors.length === 0;
@@ -261,13 +264,16 @@ export default function BookingPaymentPanel({
           </div>
           <div className={formStyles.field}>
             <label className={formStyles.label} htmlFor="panel-pay-account-number">
-              Mobile number / account number used<span className={formStyles.required}>*</span>
+              11-digit GCash mobile number used<span className={formStyles.required}>*</span>
             </label>
             <input
               id="panel-pay-account-number"
               className={formStyles.input}
+              inputMode="numeric"
+              autoComplete="tel"
+              maxLength={PHONE_DIGIT_COUNT}
               value={accountNumber}
-              onChange={(event) => setAccountNumber(event.target.value)}
+              onChange={(event) => setAccountNumber(normalizePhoneInput(event.target.value))}
               disabled={submitting}
             />
           </div>

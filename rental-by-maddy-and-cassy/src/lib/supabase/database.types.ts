@@ -1433,6 +1433,7 @@ export type Database = {
           full_address: string | null
           id: string
           instagram_url: string | null
+          is_guest_contact: boolean
           last_name: string | null
           phone_number: string | null
           photo_path: string | null
@@ -1451,6 +1452,7 @@ export type Database = {
           full_address?: string | null
           id: string
           instagram_url?: string | null
+          is_guest_contact?: boolean
           last_name?: string | null
           phone_number?: string | null
           photo_path?: string | null
@@ -1469,6 +1471,7 @@ export type Database = {
           full_address?: string | null
           id?: string
           instagram_url?: string | null
+          is_guest_contact?: boolean
           last_name?: string | null
           phone_number?: string | null
           photo_path?: string | null

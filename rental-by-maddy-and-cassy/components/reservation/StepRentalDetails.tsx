@@ -51,6 +51,7 @@ export default function StepRentalDetails({
   const [confirmedDateKeys, setConfirmedDateKeys] = useState<Set<string>>(new Set());
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [availabilityError, setAvailabilityError] = useState(false);
   const [timeAvailability, setTimeAvailability] = useState<TimeAvailability | null>(null);
   const [nowTick, setNowTick] = useState(() => Date.now());
 
@@ -104,6 +105,7 @@ export default function StepRentalDetails({
     if (!pickupAt || pickupAt.getTime() <= Date.now()) return;
     let cancelled = false;
     const timer = window.setTimeout(() => {
+      setAvailabilityError(false);
       getTimeAvailability(product.id, pickupAt, draft.quantity, rentalDays)
         .then((result) => {
           if (cancelled) return;
@@ -116,7 +118,10 @@ export default function StepRentalDetails({
           }
         })
         .catch(() => {
-          if (!cancelled) setTimeAvailability(null);
+          if (!cancelled) {
+            setTimeAvailability(null);
+            setAvailabilityError(true);
+          }
         });
     }, 200);
     return () => {
@@ -158,7 +163,9 @@ export default function StepRentalDetails({
     missingItems.push("Add your complete delivery address.");
   }
   if (pickupAt && !isPickupTimePast && draft.fulfillmentMethod && hasValidLocation) {
-    if (!timeAvailability) {
+    if (availabilityError) {
+      missingItems.push("Availability could not be checked. Select the time again or try again.");
+    } else if (!timeAvailability) {
       missingItems.push("Checking availability for this time…");
     } else if (draft.quantity > timeAvailability.availableUnits) {
       missingItems.push(`Only ${timeAvailability.availableUnits} unit${timeAvailability.availableUnits === 1 ? "" : "s"} available at this time — lower the quantity.`);
@@ -190,6 +197,7 @@ export default function StepRentalDetails({
           : 0,
       });
       setTimeAvailability(null);
+      setAvailabilityError(false);
       return;
     }
     const nextPickupAt = combineManilaPickupDateTime(pickupDateKey(date), pickupTime);
@@ -204,6 +212,7 @@ export default function StepRentalDetails({
         : 0,
     });
     setTimeAvailability(null);
+    setAvailabilityError(false);
   }
 
   function handleFulfillmentChange(method: FulfillmentMethod) {
@@ -250,11 +259,13 @@ export default function StepRentalDetails({
     }
 
     setChecking(true);
+    setAvailabilityError(false);
     let latestAvailability: TimeAvailability;
     try {
       latestAvailability = await getTimeAvailability(product.id, pickupAt, draft.quantity, rentalDays);
     } catch {
       setChecking(false);
+      setAvailabilityError(true);
       setError("The exact pickup-time availability could not be checked. Please try again.");
       return;
     }
@@ -329,7 +340,7 @@ export default function StepRentalDetails({
 
             <div
               className={styles.scheduleConfirmation}
-              data-state={!pickupAt || isPickupTimePast ? "waiting" : timeAvailability ? "ready" : "checking"}
+              data-state={!pickupAt || isPickupTimePast ? "waiting" : timeAvailability ? "ready" : availabilityError ? "waiting" : "checking"}
               role="status"
             >
               <span className={styles.scheduleConfirmationIcon} aria-hidden="true">
@@ -343,6 +354,8 @@ export default function StepRentalDetails({
                       ? "Choose a future schedule"
                       : timeAvailability
                         ? "Date and time saved"
+                        : availabilityError
+                          ? "Availability check needs another try"
                         : "Time saved—checking availability"}
                 </strong>
                 <small>
