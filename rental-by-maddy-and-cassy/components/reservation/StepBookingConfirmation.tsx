@@ -32,9 +32,9 @@ export default function StepBookingConfirmation({
         <div className={styles.guestConfirmation}>
           <strong>No account is required to finish this booking.</strong>
           <p>
-            Track payment, document review, agreement, confirmation, and fulfillment from this
-            browser. Keep reference <b>{bookingNumber}</b>, and do not clear this site&apos;s browser
-            data until the rental is complete.
+            Track payment, document review, agreement, confirmation, and fulfillment from
+            <b> Guest Bookings</b> in the website header. Keep reference <b>{bookingNumber}</b>, and
+            use this same browser and device without clearing site data until the rental is complete.
           </p>
           <small>
             Customer accounts are optional. Create one for future rentals to receive the
@@ -44,8 +44,8 @@ export default function StepBookingConfirmation({
         </div>
       ) : null}
       <div className={sharedStyles.footer}>
-        <Link href={isGuest ? "/catalog" : "/account/payments"} className={formStyles.secondaryButton}>
-          {isGuest ? "Browse Rentals" : "Payment History"}
+        <Link href={isGuest ? "/guest/bookings" : "/account/payments"} className={formStyles.secondaryButton}>
+          {isGuest ? "All Guest Bookings" : "Payment History"}
         </Link>
         <Link
           href={`${bookingTrackingPath(bookingId, isGuest)}?justSubmitted=1`}

@@ -58,11 +58,35 @@
 .confirmationsList {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.4rem;
-  padding: 0.6rem;
+  gap: 0.45rem;
+  padding: 0.5rem;
   border: 1px solid var(--color-border);
   border-radius: 12px;
   background: var(--color-background);
+}
+
+.confirmationGroup {
+  align-items: flex-start;
+  padding: 0.65rem;
+  border: 1px solid rgba(154, 89, 101, 0.12);
+  border-radius: 10px;
+  background: white;
+}
+
+.confirmationGroup > span {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.confirmationGroup strong {
+  color: var(--color-text-primary);
+  font-size: 0.76rem;
+}
+
+.confirmationGroup small {
+  color: var(--color-charcoal);
+  font-size: 0.69rem;
+  line-height: 1.42;
 }
 
 .inlineLink,
@@ -146,8 +170,17 @@
 
 .viewerToolbar {
   display: flex;
-  justify-content: flex-end;
-  margin-bottom: 0.4rem;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.1rem;
+}
+
+.viewerHint {
+  margin: 0.15rem 0 0;
+  color: var(--color-charcoal);
+  font-size: 0.69rem;
+  line-height: 1.35;
 }
 
 .expandButton {
@@ -239,6 +272,14 @@
 }
 
 @media (max-width: 640px) {
+  .viewerToolbar {
+    align-items: flex-start;
+  }
+
+  .expandButton {
+    flex: 0 0 auto;
+  }
+
   .expandOverlay {
     padding: 0;
   }

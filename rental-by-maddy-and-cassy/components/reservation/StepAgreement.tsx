@@ -25,29 +25,18 @@ interface StepAgreementProps {
   unitsCheckError?: string | null;
 }
 
-const CONFIRMATIONS: Array<{ key: keyof AgreementDraft; label: ReactNode }> = [
+const CONFIRMATION_GROUPS: Array<{
+  title: string;
+  keys: Array<keyof AgreementDraft>;
+  label: ReactNode;
+}> = [
   {
-    key: "infoAccurate",
-    label: "I confirm that the information and documents I submitted are accurate.",
-  },
-  {
-    key: "agreedToTerms",
-    label: "I have read and agree to the Rental Terms and Conditions.",
-  },
-  {
-    key: "understoodRentalRules",
-    label:
-      "I understand the rules regarding the rental period, item care, late returns, damage, loss, and missing accessories.",
-  },
-  {
-    key: "authorizedESignature",
-    label: "I authorize the use of my electronic signature for this Rental Agreement.",
-  },
-  {
-    key: "readPrivacyNotice",
+    title: "Information & privacy",
+    keys: ["infoAccurate", "readPrivacyNotice", "emergencyContactAuthorized"],
     label: (
       <>
-        I have read and understood the{" "}
+        I confirm that my information and documents are accurate, my emergency contact authorized
+        their details, and I have read the{" "}
         <Link
           href="/privacy"
           target="_blank"
@@ -61,9 +50,10 @@ const CONFIRMATIONS: Array<{ key: keyof AgreementDraft; label: ReactNode }> = [
     ),
   },
   {
-    key: "emergencyContactAuthorized",
+    title: "Rental terms & signature",
+    keys: ["agreedToTerms", "understoodRentalRules", "authorizedESignature"],
     label:
-      "I confirm that my emergency contact authorized me to provide their information and ID for this rental request.",
+      "I agree to the Rental Terms, understand the return, care, damage, loss, and late-return rules, and authorize my electronic signature.",
   },
 ];
 
@@ -95,7 +85,9 @@ export default function StepAgreement({
     };
   }, [isExpanded]);
 
-  const allChecked = CONFIRMATIONS.every((item) => Boolean(agreement[item.key]));
+  const allChecked = CONFIRMATION_GROUPS.every((group) =>
+    group.keys.every((key) => Boolean(agreement[key])),
+  );
   const hasSignature =
     agreement.signatureMethod === "drawn"
       ? !!agreement.signatureDataUrl
@@ -105,12 +97,11 @@ export default function StepAgreement({
 
   return (
     <div className={styles.wrapper}>
-      <h2 className={styles.heading}>Rental Agreement &amp; Terms</h2>
-      <p className={styles.subheading}>
-        Please review the agreement below carefully before signing.
-      </p>
-
       <div className={styles.viewerToolbar}>
+        <div>
+          <h2 className={styles.heading}>Rental Agreement &amp; Terms</h2>
+          <p className={styles.viewerHint}>Review the agreement, confirm both statements, then sign.</p>
+        </div>
         <button
           type="button"
           className={styles.expandButton}
@@ -154,16 +145,27 @@ export default function StepAgreement({
         <section>
           <h3 className={styles.sectionHeading}>Your Confirmations</h3>
           <div className={styles.confirmationsList}>
-            {CONFIRMATIONS.map((item) => (
-              <label key={item.key} className={formStyles.checkboxField}>
+            {CONFIRMATION_GROUPS.map((group) => {
+              const checked = group.keys.every((key) => Boolean(agreement[key]));
+              return (
+              <label key={group.title} className={`${formStyles.checkboxField} ${styles.confirmationGroup}`}>
                 <input
                   type="checkbox"
-                  checked={Boolean(agreement[item.key])}
-                  onChange={(event) => onUpdate({ [item.key]: event.target.checked } as Partial<AgreementDraft>)}
+                  checked={checked}
+                  onChange={(event) => {
+                    const patch = Object.fromEntries(
+                      group.keys.map((key) => [key, event.target.checked]),
+                    ) as Partial<AgreementDraft>;
+                    onUpdate(patch);
+                  }}
                 />
-                {item.label}
+                <span>
+                  <strong>{group.title}</strong>
+                  <small>{group.label}</small>
+                </span>
               </label>
-            ))}
+              );
+            })}
           </div>
         </section>
 
