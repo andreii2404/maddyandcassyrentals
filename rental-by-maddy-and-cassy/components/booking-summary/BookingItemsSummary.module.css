@@ -78,36 +78,61 @@
 }
 
 .totals {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.4rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
   margin: 0;
   padding: 0.65rem 0.8rem;
   background: var(--color-background-soft);
   border-radius: 8px;
 }
 
-.totals dt {
-  font-size: 0.68rem;
+.totalsRow {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.4rem 1.5rem;
+}
+
+.totalItem {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.totalItem dt,
+.grandTotal dt {
+  margin: 0;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: var(--color-charcoal);
+  white-space: nowrap;
 }
 
-.totals dd {
+.totalItem dd,
+.grandTotal dd {
   margin: 0;
-  font-size: 0.8rem;
-  font-weight: 600;
   text-align: right;
   color: var(--color-text-primary);
+  white-space: nowrap;
+}
+
+.totalItem dt {
+  font-size: 0.68rem;
+}
+
+.totalItem dd {
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .grandTotal {
-  grid-column: 1 / -1;
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
   border-top: 1px solid var(--color-border);
-  padding-top: 0.4rem;
+  padding-top: 0.5rem;
   margin-top: 0.1rem;
 }
 
@@ -115,11 +140,10 @@
 .grandTotal dd {
   font-size: 0.9rem;
   font-weight: 700;
-  color: var(--color-text-primary);
 }
 
 @media (max-width: 560px) {
-  .totals {
+  .totalsRow {
     grid-template-columns: 1fr;
   }
 }

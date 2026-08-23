@@ -88,26 +88,26 @@ export default function BookingItemsSummary({
         </table>
       </div>
       <dl className={styles.totals}>
-        <div>
-          <dt>Subtotal</dt>
-          <dd>{money(currency, subtotal)}</dd>
-        </div>
-        {discountAmount > 0 ? (
-          <div>
-            <dt>Discounts</dt>
-            <dd>-{money(currency, discountAmount)}</dd>
+        <div className={styles.totalsRow}>
+          <div className={styles.totalItem}>
+            <dt>Subtotal</dt>
+            <dd>{money(currency, subtotal)}</dd>
           </div>
-        ) : null}
-        <div>
-          <dt>Deposit</dt>
-          <dd>{money(currency, depositAmount)}</dd>
+          <div className={styles.totalItem}>
+            <dt>Deposit</dt>
+            <dd>{money(currency, depositAmount)}</dd>
+          </div>
         </div>
-        {fees > 0 ? (
-          <div>
+        <div className={styles.totalsRow}>
+          <div className={styles.totalItem}>
+            <dt>Discounts</dt>
+            <dd>{discountAmount > 0 ? `-${money(currency, discountAmount)}` : money(currency, 0)}</dd>
+          </div>
+          <div className={styles.totalItem}>
             <dt>Fees</dt>
             <dd>{money(currency, fees)}</dd>
           </div>
-        ) : null}
+        </div>
         <div className={styles.grandTotal}>
           <dt>Grand total</dt>
           <dd>{money(currency, grandTotal)}</dd>
