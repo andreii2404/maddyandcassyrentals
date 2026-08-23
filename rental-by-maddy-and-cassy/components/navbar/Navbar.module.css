@@ -307,7 +307,8 @@
 }
 
 .customerLink,
-.adminLink {
+.adminLink,
+.guestBookingsLink {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -319,6 +320,17 @@
   text-decoration: none;
   white-space: nowrap;
   transition: background 180ms ease, color 180ms ease, border-color 180ms ease;
+}
+
+.guestBookingsLink {
+  border: 1px solid rgba(35, 111, 70, 0.22);
+  background: rgba(35, 111, 70, 0.07);
+  color: #236f46;
+}
+
+.guestBookingsLink:hover {
+  border-color: rgba(35, 111, 70, 0.42);
+  background: rgba(35, 111, 70, 0.12);
 }
 
 .customerLink {
@@ -683,6 +695,12 @@
   .mobileAccountLinks button:hover { background: var(--color-background-soft); color: var(--color-primary); }
   .mobileLoginActions a:first-child { background: var(--color-primary); color: white; text-align: center; }
   .mobileLoginActions a:last-child { border: 1px solid rgba(154, 89, 101, 0.2); text-align: center; }
+  .mobileLoginActions a { text-align: center; }
+  .mobileLoginActions a:first-child:nth-last-child(3) {
+    border: 1px solid rgba(35, 111, 70, 0.22);
+    background: rgba(35, 111, 70, 0.08);
+    color: #236f46;
+  }
 }
 
 @media (max-width: 700px) {
