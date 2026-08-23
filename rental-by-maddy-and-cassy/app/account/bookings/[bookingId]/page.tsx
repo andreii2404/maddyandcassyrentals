@@ -49,6 +49,15 @@ const COMPLETED_BOOKING_STATUSES = new Set([
   "returned",
 ]);
 
+type BookingPanel = "overview" | "progress" | "documents" | "updates";
+
+const PANEL_HASHES: Record<BookingPanel, string> = {
+  overview: "#booking-overview",
+  progress: "#process-completion",
+  documents: "#booking-documents",
+  updates: "#booking-notifications",
+};
+
 function getRequirementGuidance(status: string): string {
   switch (status) {
     case "approved":
@@ -96,7 +105,26 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
   const justSubmitted = searchParams.get("justSubmitted") === "1";
 
   const [details, setDetails] = useState<BookingDetails | null | "error">(null);
+  const [activePanel, setActivePanel] = useState<BookingPanel>("overview");
   const { showToast } = useToast();
+
+  useEffect(() => {
+    function syncPanelFromHash() {
+      const matched = (Object.entries(PANEL_HASHES) as Array<[BookingPanel, string]>).find(
+        ([, hash]) => hash === window.location.hash,
+      );
+      if (matched) setActivePanel(matched[0]);
+    }
+
+    syncPanelFromHash();
+    window.addEventListener("hashchange", syncPanelFromHash);
+    return () => window.removeEventListener("hashchange", syncPanelFromHash);
+  }, []);
+
+  function selectPanel(panel: BookingPanel) {
+    setActivePanel(panel);
+    window.history.replaceState(null, "", PANEL_HASHES[panel]);
+  }
 
   const loadDetails = useCallback(async () => {
     try {
@@ -303,26 +331,52 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
           </div>
         </div>
 
-        <nav className={styles.sectionNav} aria-label="Booking detail sections">
-          <a href="#booking-overview"><span>01</span> Overview</a>
-          <a href="#secure-payment"><span>02</span> Payment</a>
-          <a href="#process-completion"><span>03</span> Progress</a>
-          <a href="#booking-documents"><span>04</span> Documents</a>
-          <a href="#booking-notifications"><span>05</span> Updates</a>
-        </nav>
       </header>
 
-      <CustomerBookingManagement
-        booking={booking}
-        payments={payments}
-        documents={documents}
-        agreement={agreement}
-        statusHistory={statusHistory}
-        onUpdated={loadDetails}
-      />
+        <nav className={styles.sectionNav} aria-label="Booking detail sections" role="tablist">
+          <button type="button" role="tab" aria-selected={activePanel === "overview"} onClick={() => selectPanel("overview")}>
+            <span>01</span><strong>Overview</strong><small>Rental &amp; payment</small>
+          </button>
+          <button type="button" role="tab" aria-selected={activePanel === "progress"} onClick={() => selectPanel("progress")}>
+            <span>02</span><strong>Progress</strong><small>{completedSteps} of {processSteps.length} steps</small>
+          </button>
+          <button type="button" role="tab" aria-selected={activePanel === "documents"} onClick={() => selectPanel("documents")}>
+            <span>03</span><strong>Documents</strong><small>{documentCount} available</small>
+          </button>
+          <button type="button" role="tab" aria-selected={activePanel === "updates"} onClick={() => selectPanel("updates")}>
+            <span>04</span><strong>Updates</strong><small>Live notifications</small>
+          </button>
+        </nav>
 
+      <section className={styles.quickTracker} aria-label="Booking process summary">
+        <div className={styles.quickTrackerHeading}>
+          <div>
+            <p>BOOKING PROGRESS</p>
+            <strong>{completionPercentage}% complete</strong>
+          </div>
+          <div className={styles.quickProgressTrack} aria-label={`${completionPercentage}% complete`}>
+            <span style={{ width: `${completionPercentage}%` }} />
+          </div>
+          <button type="button" onClick={() => selectPanel("progress")}>View full tracker →</button>
+        </div>
+        <ol>
+          {processSteps.map((step, index) => (
+            <li key={step.label} className={styles[step.state]}>
+              <span aria-hidden="true">{step.state === "complete" ? "✓" : index + 1}</span>
+              <div><strong>{step.label}</strong><small>{step.value}</small></div>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <div
+        id="booking-overview"
+        role="tabpanel"
+        className={styles.panelContent}
+        hidden={activePanel !== "overview"}
+      >
       <div className={styles.bookingWorkspace}>
-        <div className={styles.overviewColumn} id="booking-overview">
+        <div className={styles.overviewColumn}>
           <div className={styles.contentHeading}>
             <div>
               <p>RENTAL OVERVIEW</p>
@@ -384,7 +438,7 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
           ) : null}
         </div>
 
-        <aside className={styles.paymentColumn} id="secure-payment">
+        <aside className={styles.paymentColumn}>
           <BookingPaymentPanel booking={booking} payments={payments} onPaymentUpdated={loadDetails} />
         </aside>
       </div>
@@ -401,8 +455,15 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
           />
         </section>
       ) : null}
+      </div>
 
-      <section className={styles.processSection} id="process-completion">
+      <div
+        id="process-completion"
+        role="tabpanel"
+        className={styles.panelContent}
+        hidden={activePanel !== "progress"}
+      >
+      <section className={styles.processSection}>
         <div className={styles.processHeader}>
           <div>
             <p className={styles.sectionEyebrow}>PROCESS COMPLETION</p>
@@ -433,6 +494,15 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
         </ol>
       </section>
 
+      <CustomerBookingManagement
+        booking={booking}
+        payments={payments}
+        documents={documents}
+        agreement={agreement}
+        statusHistory={statusHistory}
+        onUpdated={loadDetails}
+      />
+
       {rejectedDocuments.length ? (
         <section className={styles.correctionSection}>
           <h3>Document Correction Needed</h3>
@@ -444,9 +514,15 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
           ))}
         </section>
       ) : null}
+      </div>
 
-      <div className={styles.resourceGrid}>
-      <section className={styles.resourceSection} id="booking-documents">
+      <div
+        id="booking-documents"
+        role="tabpanel"
+        className={styles.panelContent}
+        hidden={activePanel !== "documents"}
+      >
+      <section className={styles.resourceSection}>
         <div className={styles.resourceHeading}>
           <div>
             <p className={styles.sectionEyebrow}>DOCUMENT CENTER</p>
@@ -511,8 +587,15 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
           </ul>
         )}
       </section>
+      </div>
 
-      <section className={styles.resourceSection} id="booking-notifications">
+      <div
+        id="booking-notifications"
+        role="tabpanel"
+        className={styles.panelContent}
+        hidden={activePanel !== "updates"}
+      >
+      <section className={styles.resourceSection}>
         <div className={styles.resourceHeading}>
           <div>
             <p className={styles.sectionEyebrow}>BOOKING UPDATES</p>
