@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { useToast } from "@/components/ui/ToastProvider";
 import { submitManualPayment, updateBalancePaymentPreference } from "@/src/services/paymentService";
-import { GCASH_RECIPIENT } from "@/src/lib/gcashPayment";
 import FileUploadField from "@/components/file-upload/FileUploadField";
+import GcashRecipientCard from "@/components/payment/GcashRecipientCard";
 import formStyles from "@/components/ui/Form.module.css";
 import type { Booking } from "@/src/types/booking";
 import type { PaymentRecord } from "@/src/types/payment";
@@ -234,17 +233,7 @@ export default function BookingPaymentPanel({
             </div>
           ) : null}
 
-          {showGcashForm ? <><div className={styles.gcash}>
-            <div className={styles.qrImageWrapper}>
-              <Image src={GCASH_RECIPIENT.qrImagePath} alt="GCash payment QR code" fill sizes="140px" />
-            </div>
-            <div>
-              <span>Account name</span>
-              <strong>{GCASH_RECIPIENT.accountName}</strong>
-              <span>Mobile number</span>
-              <strong>{GCASH_RECIPIENT.maskedMobileNumber}</strong>
-            </div>
-          </div>
+          {showGcashForm ? <><GcashRecipientCard compact />
 
           <div className={formStyles.field}>
             <label className={formStyles.label} htmlFor="panel-pay-reference">
@@ -297,7 +286,7 @@ export default function BookingPaymentPanel({
             </ul>
           ) : null}
 
-          <button type="button" onClick={() => void handleSubmit()} disabled={submitting}>
+          <button className={styles.submitButton} type="button" onClick={() => void handleSubmit()} disabled={submitting}>
             {submitting ? "Submitting payment…" : "Submit Payment Proof"}
           </button>
           </> : null}

@@ -1,0 +1,181 @@
+.card {
+  display: grid;
+  grid-template-columns: minmax(140px, 180px) minmax(0, 1fr);
+  gap: 0.9rem;
+  padding: 0.85rem;
+  border: 1px solid var(--color-dusty-rose);
+  border-radius: 14px;
+  background: var(--color-background-soft);
+}
+
+.qrColumn {
+  display: grid;
+  gap: 0.4rem;
+  justify-items: center;
+  align-content: start;
+}
+
+.qrImageWrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border: 1px solid var(--color-light-gray);
+  border-radius: 12px;
+  background: var(--color-white);
+}
+
+.qrImageWrapper img {
+  object-fit: contain;
+  padding: 0.25rem;
+}
+
+.qrHint {
+  color: var(--color-charcoal);
+  font-size: 0.66rem;
+  text-align: center;
+}
+
+.downloadButton,
+.copyButton {
+  min-height: 34px;
+  border: 1px solid var(--color-primary);
+  border-radius: 9px;
+  color: var(--color-primary);
+  background: var(--color-white);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.downloadButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0.45rem 0.65rem;
+  text-decoration: none;
+}
+
+.copyButton {
+  flex: 0 0 auto;
+  padding: 0.35rem 0.6rem;
+}
+
+.downloadButton:hover,
+.copyButton:hover {
+  color: var(--color-white);
+  background: var(--color-primary);
+}
+
+.downloadButton:focus-visible,
+.copyButton:focus-visible {
+  outline: 3px solid rgba(154, 89, 101, 0.22);
+  outline-offset: 2px;
+}
+
+.details {
+  display: grid;
+  gap: 0.65rem;
+  min-width: 0;
+  align-content: start;
+}
+
+.detailLabel {
+  display: block;
+  margin-bottom: 0.2rem;
+  color: var(--color-charcoal);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.accountValue {
+  color: var(--color-text-primary);
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  overflow-wrap: anywhere;
+}
+
+.mobileRow {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.copyStatus {
+  display: block;
+  min-height: 1em;
+  margin-top: 0.2rem;
+  color: var(--color-charcoal);
+  font-size: 0.62rem;
+}
+
+.paymentTypes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.paymentType {
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  background: var(--color-blush);
+  color: var(--color-primary-hover);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.instruction {
+  margin: 0;
+  color: var(--color-charcoal);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.instruction strong {
+  color: var(--color-text-primary);
+}
+
+.compact {
+  grid-template-columns: minmax(96px, 120px) minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.75rem;
+  border-radius: 13px;
+}
+
+.compact .accountValue {
+  font-size: 0.88rem;
+}
+
+.compact .downloadButton,
+.compact .copyButton {
+  min-height: 30px;
+  font-size: 0.62rem;
+}
+
+@media (max-width: 640px) {
+  .card,
+  .compact {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .qrColumn {
+    width: min(65%, 220px);
+  }
+
+  .details {
+    width: 100%;
+  }
+
+  .mobileRow,
+  .paymentTypes {
+    justify-content: center;
+  }
+}
