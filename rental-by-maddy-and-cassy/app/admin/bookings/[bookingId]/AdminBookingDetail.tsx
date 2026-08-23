@@ -89,6 +89,14 @@ interface DetailState {
   receipts: BookingReceipt[];
 }
 
+type AdminReviewWorkspace =
+  | "decision"
+  | "booking"
+  | "payment"
+  | "documents"
+  | "agreement"
+  | "activity";
+
 export default function AdminBookingDetail({ bookingId }: { bookingId: string }) {
   const { showToast } = useToast();
   const [state, setState] = useState<DetailState | null>(null);
@@ -104,6 +112,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   const [statusConfirmationOpen, setStatusConfirmationOpen] = useState(false);
   const [countersignConfirmationOpen, setCountersignConfirmationOpen] = useState(false);
   const [sendingReceiptId, setSendingReceiptId] = useState<string | null>(null);
+  const [activeWorkspace, setActiveWorkspace] = useState<AdminReviewWorkspace>("decision");
   const confirmationDialogRef = useRef<HTMLDivElement>(null);
   const countersignDialogRef = useRef<HTMLDivElement>(null);
 
@@ -449,11 +458,14 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   const primaryAction = actions.find((action) => action.tone !== "danger") ?? null;
 
   function jumpToNextStep() {
+    setActiveWorkspace("decision");
     if (primaryAction) {
       setSelectedStatus(primaryAction.status);
       setNote("");
     }
-    document.getElementById("admin-actions")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.setTimeout(() => {
+      document.getElementById("admin-workspace-nav")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
   }
 
   return (
@@ -482,6 +494,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
         </div>
       </header>
 
+      <div className={styles.reviewOverview}>
       <section className={styles.statusHero} aria-label="Current status and recommended next step">
         <div className={styles.statusHeroBlock}>
           <span>Current status</span>
@@ -537,29 +550,68 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
           </div>
         </article>
       </section>
+      </div>
 
-      <section id="admin-actions" className={styles.actionPanel} aria-labelledby="booking-action-heading">
-        <div className={styles.actionIntro}>
-          <span>Admin actions</span>
-          <h2 id="booking-action-heading">Next Step</h2>
-          <p>Select a clear action card below. Every change is recorded, sent to the customer, and reflected automatically on their account.</p>
+      <section className={styles.reviewReadiness} aria-labelledby="review-readiness-heading">
+        <div className={styles.reviewReadinessHeading}>
+          <div>
+            <span>REVIEW READINESS</span>
+            <h2 id="review-readiness-heading">What is ready and what needs attention</h2>
+          </div>
+          <span className={remainingChecks === 0 ? styles.readyPill : styles.pendingPill}>
+            {remainingChecks === 0 ? "Ready for the next action" : `${remainingChecks} check${remainingChecks === 1 ? "" : "s"} remaining`}
+          </span>
         </div>
+        <div className={styles.checklistChips}>
+          {reviewChecks.map((check) => (
+            <button
+              key={check.label}
+              type="button"
+              className={check.ready ? styles.checkChipReady : styles.checkChipPending}
+              onClick={() => setActiveWorkspace(
+                check.label === "Payment"
+                  ? "payment"
+                  : check.label === "Verification"
+                    ? "documents"
+                    : check.label === "Agreement"
+                      ? "agreement"
+                      : "booking",
+              )}
+              title={check.detail}
+            >
+              <span aria-hidden="true">{check.ready ? "✓" : "!"}</span>
+              <div><small>{check.label}</small><strong>{check.value}</strong><em>{check.detail}</em></div>
+            </button>
+          ))}
+        </div>
+      </section>
 
-        <div className={styles.checklistCompact}>
-          <div className={styles.checklistCompactHeader}>
-            <span>Approval checklist</span>
-            <span className={remainingChecks === 0 ? styles.readyPill : styles.pendingPill}>
-              {remainingChecks === 0 ? "Ready" : `${remainingChecks} item${remainingChecks === 1 ? "" : "s"} need attention`}
-            </span>
-          </div>
-          <div className={styles.checklistChips}>
-            {reviewChecks.map((check) => (
-              <div key={check.label} className={check.ready ? styles.checkChipReady : styles.checkChipPending} title={check.detail}>
-                <span aria-hidden="true">{check.ready ? "✓" : "!"}</span>
-                <div><small>{check.label}</small><strong>{check.value}</strong></div>
-              </div>
-            ))}
-          </div>
+      <nav id="admin-workspace-nav" className={styles.workspaceNav} aria-label="Admin booking review sections" role="tablist">
+        <button type="button" role="tab" aria-selected={activeWorkspace === "decision"} onClick={() => setActiveWorkspace("decision")}>
+          <span>01</span><strong>Decision</strong><small>{primaryAction?.label ?? "Closed"}</small>
+        </button>
+        <button type="button" role="tab" aria-selected={activeWorkspace === "booking"} onClick={() => setActiveWorkspace("booking")}>
+          <span>02</span><strong>Booking</strong><small>Customer &amp; rental</small>
+        </button>
+        <button type="button" role="tab" aria-selected={activeWorkspace === "payment"} onClick={() => setActiveWorkspace("payment")}>
+          <span>03</span><strong>Payment</strong><small>{paymentStatusLabel}</small>
+        </button>
+        <button type="button" role="tab" aria-selected={activeWorkspace === "documents"} onClick={() => setActiveWorkspace("documents")}>
+          <span>04</span><strong>Documents</strong><small>{REQUIREMENTS_STATUS_LABELS[booking.requirementsStatus] ?? formatStatus(booking.requirementsStatus)}</small>
+        </button>
+        <button type="button" role="tab" aria-selected={activeWorkspace === "agreement"} onClick={() => setActiveWorkspace("agreement")}>
+          <span>05</span><strong>Agreement</strong><small>{AGREEMENT_STATUS_LABELS[booking.agreementStatus] ?? formatStatus(booking.agreementStatus)}</small>
+        </button>
+        <button type="button" role="tab" aria-selected={activeWorkspace === "activity"} onClick={() => setActiveWorkspace("activity")}>
+          <span>06</span><strong>Activity</strong><small>{statusHistory.length} updates</small>
+        </button>
+      </nav>
+
+      <section id="admin-actions" className={styles.actionPanel} aria-labelledby="booking-action-heading" hidden={activeWorkspace !== "decision"}>
+        <div className={styles.actionIntro}>
+          <span>ADMIN DECISION</span>
+          <h2 id="booking-action-heading">Review and apply the next action</h2>
+          <p>Choose one valid action for the booking&apos;s current stage. Every change is recorded in the audit trail, reflected on the customer tracker, and eligible updates notify the customer automatically.</p>
         </div>
 
         <ol className={styles.statusJourney} aria-label="Booking status journey">
@@ -590,7 +642,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                   >
                     <span className={styles.actionChoiceIcon} aria-hidden="true">{action.tone === "danger" ? "!" : "→"}</span>
                     <span className={styles.actionChoiceCopy}>
-                      <small>{action.tone === "danger" ? "Close booking" : "Recommended next step"}</small>
+                      <small>{action.tone === "danger" ? "Close booking" : action.status === primaryAction?.status ? "Recommended next step" : "Alternative action"}</small>
                       <strong>{action.label}</strong>
                       <span>{blockedByBalance ? "Record the remaining balance or approve a pay-later exception in Agreement & Payment first." : action.description}</span>
                     </span>
@@ -658,16 +710,17 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
       </section>
 
       <div className={styles.detailSections}>
-        <details className={styles.detailSection}>
-          <summary>
+        <section className={styles.detailSection} role="tabpanel" hidden={activeWorkspace !== "booking"}>
+          <div className={styles.detailSectionHeader}>
             <span className={styles.sectionNumber}>01</span>
             <div><strong>Customer Details</strong><small>Contact information and social links</small></div>
-            <span className={styles.expandLabel}>View details</span>
-          </summary>
+            <Link href={`/admin/users/${booking.customerId}`} className={styles.sectionHeaderAction}>Open customer profile</Link>
+          </div>
           <div className={styles.detailBody}>
             <div className={styles.subsectionHeading}>
-              <h3 className={styles.customerNameRow}>Customer{booking.isGuestCheckout ? <GuestBadge /> : null}</h3>
-              <Link href={`/admin/users/${booking.customerId}`}>Open full customer profile</Link>
+              <h3 className={styles.customerNameRow}>
+                Customer contact record{booking.isGuestCheckout ? <GuestBadge /> : null}
+              </h3>
             </div>
             <dl className={styles.detailGrid}>
               <div><dt>Full name</dt><dd>{fullName}</dd></div>
@@ -678,14 +731,14 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
               <div><dt>Instagram</dt><dd>{instagram ? <a href={instagram} target="_blank" rel="noopener noreferrer">Open profile</a> : "-"}</dd></div>
             </dl>
           </div>
-        </details>
+        </section>
 
-        <details className={styles.detailSection}>
-          <summary>
+        <section className={styles.detailSection} role="tabpanel" hidden={activeWorkspace !== "booking"}>
+          <div className={styles.detailSectionHeader}>
             <span className={styles.sectionNumber}>02</span>
             <div><strong>Rental Details</strong><small>Dates, handover, items and pricing</small></div>
-            <span className={styles.expandLabel}>View details</span>
-          </summary>
+            <span className={styles.sectionHeaderStatus}>{totalUnits} unit{totalUnits === 1 ? "" : "s"}</span>
+          </div>
           <div className={styles.detailBody}>
             <dl className={styles.detailGrid}>
               <div><dt>Rental period</dt><dd>{formatDate(booking.startDate)} — {formatDate(booking.endDate)}</dd></div>
@@ -704,14 +757,14 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
               grandTotal={booking.totalAmount}
             />
           </div>
-        </details>
+        </section>
 
-        <details className={styles.detailSection}>
-          <summary>
+        <section className={styles.detailSection} role="tabpanel" hidden={activeWorkspace !== "payment"}>
+          <div className={styles.detailSectionHeader}>
             <span className={styles.sectionNumber}>03</span>
             <div><strong>Payment Status</strong><small>{paymentStatusLabel} · {payments.length} attempt{payments.length === 1 ? "" : "s"}</small></div>
-            <span className={styles.expandLabel}>View records</span>
-          </summary>
+            <span className={`${styles.sectionHeaderStatus} ${amountPaid > 0 ? styles.sectionHeaderReady : ""}`}>{paymentStatusLabel}</span>
+          </div>
           <div className={styles.detailBody}>
             <article className={styles.recordCard}>
               <div className={styles.recordHeader}>
@@ -780,14 +833,14 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
               />
             </article>
           </div>
-        </details>
+        </section>
 
-        <details className={styles.detailSection} open={booking.requirementsStatus === "pending_review" || booking.requirementsStatus === "rejected"}>
-          <summary>
+        <section className={styles.detailSection} role="tabpanel" hidden={activeWorkspace !== "documents"}>
+          <div className={styles.detailSectionHeader}>
             <span className={styles.sectionNumber}>04</span>
             <div><strong>Verification Documents</strong><small>{REQUIREMENTS_STATUS_LABELS[booking.requirementsStatus] ?? formatStatus(booking.requirementsStatus)} · {documents.length} file{documents.length === 1 ? "" : "s"}</small></div>
-            <span className={styles.expandLabel}>Review files</span>
-          </summary>
+            <span className={`${styles.sectionHeaderStatus} ${booking.requirementsStatus === "approved" ? styles.sectionHeaderReady : ""}`}>{REQUIREMENTS_STATUS_LABELS[booking.requirementsStatus] ?? formatStatus(booking.requirementsStatus)}</span>
+          </div>
           <div className={styles.detailBody}>
             {emergencyContact || documents.length ? <>
               {emergencyContact ? <dl className={`${styles.detailGrid} ${styles.emergencyGrid}`}>
@@ -807,14 +860,14 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
               />
             </> : <p className={styles.empty}>Requirements have not been submitted for this booking.</p>}
           </div>
-        </details>
+        </section>
 
-        <details className={styles.detailSection} open={agreement?.status === "awaiting_business_signature"}>
-          <summary>
+        <section className={styles.detailSection} role="tabpanel" hidden={activeWorkspace !== "agreement"}>
+          <div className={styles.detailSectionHeader}>
             <span className={styles.sectionNumber}>05</span>
             <div><strong>Rental Agreement</strong><small>{AGREEMENT_STATUS_LABELS[booking.agreementStatus] ?? formatStatus(booking.agreementStatus)}</small></div>
-            <span className={styles.expandLabel}>{agreement?.status === "awaiting_business_signature" ? "Action required" : "View records"}</span>
-          </summary>
+            <span className={`${styles.sectionHeaderStatus} ${agreement?.status === "completed" ? styles.sectionHeaderReady : ""}`}>{agreement?.status === "awaiting_business_signature" ? "Action required" : AGREEMENT_STATUS_LABELS[booking.agreementStatus] ?? formatStatus(booking.agreementStatus)}</span>
+          </div>
           <div className={styles.detailBody}>
               <article className={styles.recordCard}>
                 <div className={styles.recordHeader}>
@@ -900,18 +953,18 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                 </> : <p className={styles.emptyRecord}>The customer has not submitted a rental agreement yet.</p>}
               </article>
           </div>
-        </details>
+        </section>
 
-        <details className={styles.detailSection}>
-          <summary>
+        <section className={styles.detailSection} role="tabpanel" hidden={activeWorkspace !== "activity"}>
+          <div className={styles.detailSectionHeader}>
             <span className={styles.sectionNumber}>06</span>
             <div><strong>Status Activity</strong><small>{statusHistory.length} recorded update{statusHistory.length === 1 ? "" : "s"}</small></div>
-            <span className={styles.expandLabel}>View timeline</span>
-          </summary>
+            <span className={styles.sectionHeaderStatus}>Audit trail</span>
+          </div>
           <div className={styles.detailBody}>
             {statusHistory.length ? <ol className={styles.timeline}>{statusHistory.map((entry) => <li key={entry.id}><span aria-hidden="true" /><div><strong>{entry.fromStatus ? `${formatStatus(entry.fromStatus)} to ` : ""}{formatStatus(entry.toStatus)}</strong><p>{entry.note || "Status updated."}</p><small>{formatDate(entry.createdAt, true)}</small></div></li>)}</ol> : <p className={styles.empty}>No status history is available.</p>}
           </div>
-        </details>
+        </section>
       </div>
 
       {statusConfirmationOpen && selectedAction ? (
