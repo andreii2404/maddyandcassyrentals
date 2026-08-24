@@ -219,7 +219,16 @@
   white-space: normal;
 }
 
-.table td[data-label="Customer"] small,
+.table td[data-label="Customer"] {
+  min-width: 220px;
+}
+
+.table td[data-label="Customer"] small {
+  max-width: 280px;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
 .table td[data-label="Rental Item"] {
   max-width: 220px;
   overflow: hidden;
