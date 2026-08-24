@@ -278,19 +278,34 @@ export default function AdminCatalogManager() {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <div>
-          <p>CATALOG &amp; INVENTORY</p>
-          <h1>Rental Inventory</h1>
-          <span>Manage listings, categories, pricing, discounts, and every physical rental unit.</span>
-        </div>
-        <button type="button" onClick={() => openEditor()}>Add Product</button>
+        <p>CATALOG &amp; INVENTORY</p>
+        <h1>Rental Inventory</h1>
+        <span>Manage listings, categories, pricing, discounts, and every physical rental unit.</span>
       </header>
 
-      <section className={styles.summaryGrid} aria-label="Inventory summary">
-        <div><span>All listings</span><strong>{summary.listings}</strong></div>
-        <div><span>Publicly active</span><strong>{summary.activeListings}</strong></div>
-        <div><span>Rental-ready units</span><strong>{summary.activeUnits}</strong></div>
-        <div><span>Under maintenance</span><strong>{summary.maintenanceUnits}</strong></div>
+      <section className={styles.controlPanel} aria-label="Catalog overview and controls">
+        <div className={styles.statsStrip} aria-label="Inventory summary">
+          <div><strong>{summary.listings}</strong><span>All listings</span></div>
+          <div><strong>{summary.activeListings}</strong><span>Publicly active</span></div>
+          <div><strong>{summary.activeUnits}</strong><span>Rental-ready units</span></div>
+          <div><strong>{summary.maintenanceUnits}</strong><span>Under maintenance</span></div>
+        </div>
+
+        <div className={styles.controlsRow}>
+          <label className={styles.searchField}>
+            <span className={styles.srOnly}>Search products</span>
+            <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by name, brand, description, or specification" />
+          </label>
+          <label className={styles.filterField}>
+            <span className={styles.srOnly}>Category</span>
+            <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}><option>All categories</option>{categories.map((category) => <option key={category.id}>{category.name}</option>)}</select>
+          </label>
+          <label className={styles.filterField}>
+            <span className={styles.srOnly}>Status</span>
+            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}><option value="all">All statuses</option><option value="active">Active</option><option value="draft">Draft</option><option value="inactive">Inactive</option><option value="archived">Archived</option></select>
+          </label>
+          <button type="button" className={styles.addButton} onClick={() => openEditor()}>+ Add Product</button>
+        </div>
       </section>
 
       {error ? <div className={styles.error} role="alert">{error}<button type="button" onClick={() => void load()}>Try again</button></div> : null}
@@ -299,11 +314,6 @@ export default function AdminCatalogManager() {
         <div className={styles.sectionHeading}>
           <div><p>PRODUCTS</p><h2 id="products-heading">Complete Catalog</h2></div>
           <span>{filteredProducts.length} shown · auto-updates</span>
-        </div>
-        <div className={styles.toolbar}>
-          <label className={styles.searchField}><span>Search products</span><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Name, brand, description, or specification" /></label>
-          <label><span>Category</span><select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}><option>All</option>{categories.map((category) => <option key={category.id}>{category.name}</option>)}</select></label>
-          <label><span>Status</span><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}><option value="all">All statuses</option><option value="active">Active</option><option value="draft">Draft</option><option value="inactive">Inactive</option><option value="archived">Archived</option></select></label>
         </div>
 
         {!products && !error ? <div className={styles.loading}><Spinner size={28} label="Loading catalog" /></div> : null}
@@ -315,12 +325,18 @@ export default function AdminCatalogManager() {
               const maintenanceCount = productUnits.filter((unit) => unit.lifecycleStatus === "maintenance").length;
               return (
                 <article key={product.id} className={styles.card}>
-                  <div className={styles.imageWrap}><Image src={product.image || "/images/product-placeholder.png"} alt={`${product.name} catalog preview`} fill sizes="240px" className={styles.image} /></div>
+                  <div className={styles.imageWrap}>
+                    <Image src={product.image || "/images/product-placeholder.png"} alt={`${product.name} catalog preview`} fill sizes="240px" className={styles.image} />
+                    <span className={styles.categoryTag}>{product.category}</span>
+                    <i className={styles.statusTag} data-status={product.status}>{product.status}</i>
+                  </div>
                   <div className={styles.cardBody}>
-                    <div className={styles.cardTop}><span>{product.category}</span><i data-status={product.status}>{product.status}</i></div>
-                    <h3>{product.name}</h3><p>{product.brand || "No brand"}</p>
+                    <div className={styles.cardHeading}>
+                      <h3>{product.name}</h3>
+                      <p>{product.brand || "No brand"}</p>
+                    </div>
                     <div className={styles.priceLine}>
-                      <strong>{formatMoney(product.pricePerDay)} / day</strong>
+                      <strong>{formatMoney(product.pricePerDay)}<small>/day</small></strong>
                       {product.discountPercent > 0 ? <span>{product.discountPercent}% off</span> : null}
                     </div>
                     <dl className={styles.inventoryFacts}>
