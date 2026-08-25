@@ -125,9 +125,10 @@ export default function AdminUserDetail({ uid }: { uid: string }) {
           <h1>{accountName}</h1>
           <p>{account.email || "No email on file"}</p>
         </div>
-        <span className={`${styles.status} ${styles[account.accountStatus]}`}>
-          {account.accountStatus}
-        </span>
+        <StatusBadge
+          label={account.accountStatus.charAt(0).toUpperCase() + account.accountStatus.slice(1)}
+          tone={account.accountStatus === "active" ? "green" : "red"}
+        />
       </header>
 
       <section className={styles.details} aria-labelledby="customer-details-heading">
@@ -208,14 +209,35 @@ export default function AdminUserDetail({ uid }: { uid: string }) {
               </thead>
               <tbody>
                 {bookings.map((booking) => (
-                  <tr key={booking.id}>
-                    <td>{booking.bookingRef}</td>
-                    <td>{bookingHeadline(booking.items)}</td>
-                    <td>
+                  <tr
+                    key={booking.id}
+                    className={styles.historyRow}
+                    tabIndex={0}
+                    role="link"
+                    aria-label={`Open booking ${booking.bookingRef}`}
+                    onClick={() => router.push(`/admin/bookings/${booking.id}`)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        router.push(`/admin/bookings/${booking.id}`);
+                      }
+                    }}
+                  >
+                    <td data-label="Booking">
+                      <Link
+                        href={`/admin/bookings/${booking.id}`}
+                        className={styles.bookingLink}
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        {booking.bookingRef}
+                      </Link>
+                    </td>
+                    <td data-label="Product">{bookingHeadline(booking.items)}</td>
+                    <td data-label="Dates">
                       {formatDate(booking.startDate)} – {formatDate(booking.endDate)}
                     </td>
-                    <td className={styles.capitalize}>{booking.fulfillmentMethod}</td>
-                    <td>
+                    <td data-label="Fulfillment" className={styles.capitalize}>{booking.fulfillmentMethod}</td>
+                    <td data-label="Status">
                       <StatusBadge status={booking.status} />
                     </td>
                   </tr>

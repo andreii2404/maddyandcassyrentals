@@ -1,6 +1,8 @@
 import type { BookingStatus } from "@/src/types/booking";
 import styles from "./StatusBadge.module.css";
 
+export type StatusTone = "green" | "yellow" | "red" | "neutral";
+
 const STATUS_LABELS: Record<BookingStatus, string> = {
   draft: "Draft",
   pending: "Pending Review",
@@ -13,7 +15,7 @@ const STATUS_LABELS: Record<BookingStatus, string> = {
   rejected: "Rejected",
 };
 
-const STATUS_TONE: Record<BookingStatus, "green" | "yellow" | "red" | "neutral"> = {
+const STATUS_TONE: Record<BookingStatus, StatusTone> = {
   draft: "neutral",
   pending: "yellow",
   approved: "green",
@@ -25,10 +27,24 @@ const STATUS_TONE: Record<BookingStatus, "green" | "yellow" | "red" | "neutral">
   rejected: "red",
 };
 
-export default function StatusBadge({ status }: { status: BookingStatus }) {
+interface StatusBadgeProps {
+  status?: BookingStatus;
+  /**
+   * Custom label for non-booking statuses (account status, payment status).
+   * Pair with `tone` when the status is not a BookingStatus.
+   */
+  label?: string;
+  tone?: StatusTone;
+}
+
+export default function StatusBadge({ status, label, tone }: StatusBadgeProps) {
+  const resolvedLabel = label ?? (status ? STATUS_LABELS[status] : undefined);
+  const resolvedTone = tone ?? (status ? STATUS_TONE[status] : "neutral");
+  if (!resolvedLabel) return null;
+
   return (
-    <span className={`${styles.badge} ${styles[STATUS_TONE[status]]}`}>
-      {STATUS_LABELS[status]}
+    <span className={`${styles.badge} ${styles[resolvedTone]}`}>
+      {resolvedLabel}
     </span>
   );
 }

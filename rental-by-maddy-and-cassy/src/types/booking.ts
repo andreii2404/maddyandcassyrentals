@@ -22,6 +22,8 @@ export interface BookingProductSnapshot {
   pricePerDay: number;
   currency: string;
   included: string[];
+  /** Color variant the customer selected, when the product offers colors. */
+  color?: string;
 }
 
 export interface BookingCustomerSnapshot {

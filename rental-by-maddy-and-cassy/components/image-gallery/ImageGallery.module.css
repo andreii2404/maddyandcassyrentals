@@ -13,14 +13,41 @@
   border: 1px solid var(--color-light-gray);
   box-shadow: 0 20px 45px rgba(36, 36, 36, 0.08);
   background: var(--color-light-gray);
+  touch-action: pan-y;
 }
 
-.mainImage {
+.track {
+  display: flex;
+  height: 100%;
+  transform: translateX(0);
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+.trackDragging {
+  transition: none;
+  cursor: grabbing;
+}
+
+.slide {
+  position: relative;
+  flex: 0 0 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.track:not(.trackDragging) {
+  cursor: grab;
+}
+
+.slideImage {
   object-fit: cover;
-  transition: transform 0.6s ease;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
 }
 
-.spinMode .mainImage {
+.spinMode .slideImage {
   animation: gallerySpin 6s linear infinite;
 }
 
@@ -72,6 +99,44 @@
   background: var(--color-primary);
   color: var(--color-white);
   border-color: var(--color-primary);
+}
+
+.arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2.4rem;
+  height: 2.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid var(--color-light-gray);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--color-text-primary);
+  font-size: 1.35rem;
+  line-height: 1;
+  padding-bottom: 0.15rem;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: background 0.2s ease, opacity 0.2s ease;
+}
+
+.arrow:hover:not(:disabled) {
+  background: var(--color-white);
+}
+
+.arrow:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.arrowPrev {
+  left: 1rem;
+}
+
+.arrowNext {
+  right: 1rem;
 }
 
 .thumbnailRow {

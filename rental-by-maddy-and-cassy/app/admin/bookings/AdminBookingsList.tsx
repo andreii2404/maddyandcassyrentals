@@ -190,7 +190,12 @@ export default function AdminBookingsList() {
           </div>
         </div>
 
-        {error ? <div className={styles.error}>{error}</div> : null}
+        {error ? (
+          <div className={styles.error} role="alert">
+            {error}
+            <button type="button" onClick={() => void loadBookings()}>Try again</button>
+          </div>
+        ) : null}
 
         {!bookings && !error ? (
           <div className={styles.loading}>
@@ -266,7 +271,11 @@ export default function AdminBookingsList() {
             </table>
           </div>
         ) : (
-          <p className={styles.empty}>No bookings match the selected filters.</p>
+          <p className={styles.empty}>
+            {bookings && bookings.length === 0
+              ? "No bookings have been submitted yet."
+              : "No bookings match the selected filters."}
+          </p>
         )}
       </section>
     </div>

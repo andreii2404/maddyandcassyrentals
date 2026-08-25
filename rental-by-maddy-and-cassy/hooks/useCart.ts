@@ -5,6 +5,8 @@ import { useCallback, useMemo, useSyncExternalStore } from "react";
 export interface CartItem {
   productId: string;
   quantity: number;
+  /** Color variant chosen on the product page, when the product has colors. */
+  color?: string;
 }
 
 const STORAGE_KEY = "maddy-cassy-rental-cart";
@@ -16,17 +18,27 @@ let cachedItems: CartItem[] = EMPTY_CART;
 
 function normalizeCart(value: unknown): CartItem[] {
   if (!Array.isArray(value)) return EMPTY_CART;
-  const quantities = new Map<string, number>();
+  const items = new Map<string, { quantity: number; color?: string }>();
   for (const item of value) {
     if (!item || typeof item !== "object") continue;
     const productId = "productId" in item && typeof item.productId === "string"
       ? item.productId.trim()
       : "";
     const rawQuantity = "quantity" in item ? Number(item.quantity) : 1;
+    const color = "color" in item && typeof item.color === "string" && item.color.trim()
+      ? item.color.trim()
+      : undefined;
     if (!productId) continue;
-    quantities.set(productId, Math.min(10, Math.max(1, Math.floor(rawQuantity || 1))));
+    items.set(productId, {
+      quantity: Math.min(10, Math.max(1, Math.floor(rawQuantity || 1))),
+      color,
+    });
   }
-  return [...quantities].map(([productId, quantity]) => ({ productId, quantity }));
+  return [...items].map(([productId, entry]) => ({
+    productId,
+    quantity: entry.quantity,
+    ...(entry.color ? { color: entry.color } : {}),
+  }));
 }
 
 function readCart(): CartItem[] {
@@ -73,14 +85,27 @@ function getServerSnapshot(): CartItem[] {
 export function useCart() {
   const items = useSyncExternalStore(subscribe, readCart, getServerSnapshot);
 
-  const addItem = useCallback((productId: string, quantity = 1) => {
+  const addItem = useCallback((productId: string, quantity = 1, color?: string) => {
     const current = readCart();
     const existing = current.find((item) => item.productId === productId);
     const nextQuantity = Math.min(10, (existing?.quantity ?? 0) + Math.max(1, quantity));
+    // The cart stays keyed by product: re-adding the same product updates the
+    // quantity and adopts the most recently chosen color.
+    const nextColor = color?.trim() || existing?.color;
     writeCart(
       existing
-        ? current.map((item) => item.productId === productId ? { ...item, quantity: nextQuantity } : item)
-        : [...current, { productId, quantity: Math.min(10, Math.max(1, quantity)) }],
+        ? current.map((item) => item.productId === productId
+          ? {
+              ...item,
+              quantity: nextQuantity,
+              ...(nextColor ? { color: nextColor } : {}),
+            }
+          : item)
+        : [...current, {
+            productId,
+            quantity: Math.min(10, Math.max(1, quantity)),
+            ...(nextColor ? { color: nextColor } : {}),
+          }],
     );
   }, []);
 

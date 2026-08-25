@@ -47,6 +47,7 @@ export async function createBookingReservation(
   product: Product,
   draft: ReservationDraft,
   isGuest = false,
+  selectedColor?: string,
 ): Promise<SubmitBookingResult> {
   validateReservationDetails(draft);
   const { customerInfo } = draft;
@@ -78,6 +79,7 @@ export async function createBookingReservation(
       pricePerDay: product.pricePerDay,
       currency: product.currency,
       included: product.included,
+      ...(selectedColor?.trim() ? { color: selectedColor.trim() } : {}),
     },
     customerSnapshot: {
       fullName: customerInfo.fullName.trim(),
@@ -98,11 +100,13 @@ export async function createBookingReservation(
  * period. `draft.quantity` is ignored -- each line carries its own quantity
  * from the cart. Unlike createBookingReservation, no product name/price/
  * discount/deposit is ever sent to the server -- create_multi_item_booking()
- * derives all of that itself from `products`.
+ * derives all of that itself from `products`. Per-line color choices have no
+ * dedicated storage on the multi-item RPC, so they are recorded in the
+ * booking's customer notes where admins already review requests.
  */
 export async function createMultiItemBookingReservation(
   supabase: SupabaseClient<Database>,
-  lines: { product: Product; quantity: number }[],
+  lines: { product: Product; quantity: number; color?: string }[],
   draft: ReservationDraft,
   isGuest = false,
 ): Promise<SubmitBookingResult> {
@@ -116,6 +120,12 @@ export async function createMultiItemBookingReservation(
   const fulfillmentMethod = draft.fulfillmentMethod!;
   const rentalDays = getDayCount(startDate, endDate);
 
+  const colorNotes = lines
+    .filter((line) => line.color?.trim())
+    .map((line) => `${line.product.name}: ${line.color!.trim()}`)
+    .join("; ");
+  const customerNotes = colorNotes ? `Color choice — ${colorNotes}` : undefined;
+
   const result = await submitMultiItemBookingWithDateGuard(supabase, {
     items: lines.map((line) => ({ productId: line.product.id, quantity: line.quantity })),
     pickupAt: startDate.toISOString(),
@@ -124,6 +134,7 @@ export async function createMultiItemBookingReservation(
     location: fulfillmentMethod === "delivery" ? draft.customerLocation.trim() : undefined,
     cityMunicipality: fulfillmentMethod === "delivery" ? draft.cityMunicipality.trim() : undefined,
     province: fulfillmentMethod === "delivery" ? draft.province.trim() : undefined,
+    customerNotes,
     customerSnapshot: {
       fullName: customerInfo.fullName.trim(),
       email: customerInfo.email.trim(),
@@ -221,9 +232,9 @@ export async function submitBookingDocuments(bookingId: string, draft: Reservati
   // requirements and agreement data below.
   const { requirements } = draft;
   if (
-    !requirements.idOneFile ||
-    !requirements.idTwoFile ||
-    !requirements.selfieFile ||
+    (!requirements.idOneFile && !requirements.reusedDocumentIds.idOne) ||
+    (!requirements.idTwoFile && !requirements.reusedDocumentIds.idTwo) ||
+    (!requirements.selfieFile && !requirements.reusedDocumentIds.selfie) ||
     !requirements.facebookLink.trim() ||
     !requirements.instagramLink.trim() ||
     !requirements.emergencyContact.fullName.trim() ||
@@ -302,20 +313,36 @@ export async function submitBookingDocuments(bookingId: string, draft: Reservati
   }
 
   try {
-    // These four ID/selfie uploads and the signature upload are independent of
-    // one another (distinct storage paths), so running them in parallel instead
-    // of one-by-one turns the wait into max(latency) instead of sum(latency) --
-    // this was the single biggest contributor to the "Submitting..." delay.
-    // overallController bounds the whole batch (see OVERALL_SUBMIT_TIMEOUT_MS)
-    // so one stalled upload can never hang the submission indefinitely.
+    // Reused verified documents skip the upload entirely; fresh uploads run in
+    // parallel (distinct storage paths) so the wait is max(latency) instead of
+    // sum(latency). overallController bounds the whole batch
+    // (see OVERALL_SUBMIT_TIMEOUT_MS) so one stalled upload can never hang
+    // the submission indefinitely.
     const [idOne, idTwo, selfie, emergencyId, signature] = await Promise.all([
-      uploadDocument("idOne", requirements.idOneFile, "First valid ID"),
-      uploadDocument("idTwo", requirements.idTwoFile, "Second valid ID"),
-      uploadDocument("selfie", requirements.selfieFile, "Selfie with ID"),
+      requirements.idOneFile
+        ? uploadDocument("idOne", requirements.idOneFile, "First valid ID")
+        : Promise.resolve(null),
+      requirements.idTwoFile
+        ? uploadDocument("idTwo", requirements.idTwoFile, "Second valid ID")
+        : Promise.resolve(null),
+      requirements.selfieFile
+        ? uploadDocument("selfie", requirements.selfieFile, "Selfie with ID")
+        : Promise.resolve(null),
       uploadDocument("emergencyId", requirements.emergencyContact.idFile, "Emergency contact ID"),
       uploadDocument("signature", signatureFile, "Electronic signature"),
     ]);
-    const uploadedFiles = { idOne, idTwo, selfie, emergencyId, signature };
+    const uploadedFiles = {
+      ...(idOne ? { idOne } : {}),
+      ...(idTwo ? { idTwo } : {}),
+      ...(selfie ? { selfie } : {}),
+      emergencyId,
+      signature,
+    };
+    const reusedDocuments = {
+      ...(requirements.reusedDocumentIds.idOne ? { idOne: requirements.reusedDocumentIds.idOne } : {}),
+      ...(requirements.reusedDocumentIds.idTwo ? { idTwo: requirements.reusedDocumentIds.idTwo } : {}),
+      ...(requirements.reusedDocumentIds.selfie ? { selfie: requirements.reusedDocumentIds.selfie } : {}),
+    };
 
     const submitResponse = await fetchWithTimeout(
       `/api/bookings/${encodeURIComponent(bookingId)}/documents/submit`,
@@ -326,6 +353,7 @@ export async function submitBookingDocuments(bookingId: string, draft: Reservati
         body: JSON.stringify({
           submissionId,
           files: uploadedFiles,
+          reusedDocuments,
           facebookLink: requirements.facebookLink.trim(),
           instagramLink: requirements.instagramLink.trim(),
           emergencyContact: {

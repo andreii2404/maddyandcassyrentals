@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { Product } from "@/types/product";
@@ -24,6 +25,9 @@ const LEVEL_CLASS = {
   full: "availableLevelFull",
 } as const;
 
+const HOVER_SLIDESHOW_INTERVAL_MS = 1800;
+const CAN_HOVER_QUERY = "(hover: hover) and (pointer: fine)";
+
 export default function CatalogProductCard({
   product,
   units,
@@ -38,8 +42,40 @@ export default function CatalogProductCard({
   const level = getAvailabilityLevel(units.availableUnits, units.totalUnits);
   const availabilityText = unavailable ? "Fully booked" : `${units.availableUnits} available`;
 
+  const galleryImages = useMemo(() => {
+    const urls = Array.from(new Set(product.images.map((image) => image.url).filter(Boolean)));
+    return urls.length > 0 ? urls : [product.image || "/images/product-placeholder.png"];
+  }, [product.images, product.image]);
+
+  const [hoverIndex, setHoverIndex] = useState(0);
+  const [hasHovered, setHasHovered] = useState(false);
+  const intervalRef = useRef<number | null>(null);
+
+  const stopSlideshow = useCallback(() => {
+    if (intervalRef.current !== null) {
+      window.clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    setHoverIndex(0);
+  }, []);
+
+  useEffect(() => stopSlideshow, [stopSlideshow]);
+
+  const startSlideshow = useCallback(() => {
+    if (galleryImages.length < 2 || !window.matchMedia(CAN_HOVER_QUERY).matches) return;
+    setHasHovered(true);
+    if (intervalRef.current !== null) return;
+    intervalRef.current = window.setInterval(() => {
+      setHoverIndex((index) => (index + 1) % galleryImages.length);
+    }, HOVER_SLIDESHOW_INTERVAL_MS);
+  }, [galleryImages.length]);
+
   return (
-    <article className={`${styles.card} ${unavailable ? styles.cardUnavailable : ""}`}>
+    <article
+      className={`${styles.card} ${unavailable ? styles.cardUnavailable : ""}`}
+      onMouseEnter={startSlideshow}
+      onMouseLeave={stopSlideshow}
+    >
       <Link
         href={detailsHref}
         className={styles.cardLink}
@@ -48,13 +84,34 @@ export default function CatalogProductCard({
       />
 
       <div className={styles.imageWrapper}>
-        <Image
-          src={product.image || "/images/product-placeholder.png"}
-          alt={`${product.name} available for rent`}
-          fill
-          sizes="(max-width: 640px) 92vw, (max-width: 1024px) 45vw, 23vw"
-          className={styles.image}
-        />
+        <div className={styles.slides}>
+          <div
+            className={styles.track}
+            style={{ transform: `translateX(${hoverIndex * -100}%)` }}
+          >
+            {(hasHovered ? galleryImages : galleryImages.slice(0, 1)).map((image, index) => (
+              <div key={image} className={styles.slide}>
+                <Image
+                  src={image}
+                  alt={`${product.name} photo ${index + 1}`}
+                  fill
+                  sizes="(max-width: 640px) 92vw, (max-width: 1024px) 45vw, 23vw"
+                  className={styles.slideImage}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+        {galleryImages.length > 1 ? (
+          <div className={styles.dots} aria-hidden="true">
+            {galleryImages.map((image, index) => (
+              <span
+                key={`dot-${image}`}
+                className={`${styles.dot} ${index === hoverIndex ? styles.dotActive : ""}`}
+              />
+            ))}
+          </div>
+        ) : null}
         {product.badge ? <span className={styles.productBadge}>{product.badge}</span> : null}
         {unavailable ? <span className={styles.unavailableRibbon}>Unavailable</span> : null}
       </div>

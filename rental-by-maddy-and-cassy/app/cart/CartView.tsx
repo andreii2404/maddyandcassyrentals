@@ -77,17 +77,20 @@ export default function CartView({ products }: { products: Product[] }) {
               <h2>{cartLines.length} {cartLines.length === 1 ? "rental item" : "rental items"}</h2>
               <span>{totalQuantity} {totalQuantity === 1 ? "unit" : "units"}</span>
             </div>
-            {cartLines.map(({ product, quantity }) => {
+            {cartLines.map(({ product, quantity, color }) => {
               const units = unitsByProductId.get(product.id) ?? defaultsById[product.id];
               const maxQuantity = Math.max(1, Math.min(10, units.totalUnits));
               const lineRental = product.pricePerDay * quantity;
               const lineDiscount = Math.max(0, product.listPricePerDay - product.pricePerDay) * quantity;
+              const lineImage = color
+                ? product.images.find((image) => image.color === color)?.url
+                : undefined;
               return (
                 <article key={product.id} className={styles.item}>
                   <Link href={`/catalog/${product.id}`} className={styles.imageWrap}>
                     <Image
-                      src={product.image || "/images/product-placeholder.png"}
-                      alt={product.name}
+                      src={lineImage || product.image || "/images/product-placeholder.png"}
+                      alt={color ? `${product.name} in ${color}` : product.name}
                       fill
                       sizes="120px"
                       className={styles.image}
@@ -96,6 +99,7 @@ export default function CartView({ products }: { products: Product[] }) {
                   <div className={styles.itemInfo}>
                     <p className={styles.meta}>{product.brand} · {product.category}</p>
                     <Link href={`/catalog/${product.id}`}><h2>{product.name}</h2></Link>
+                    {color ? <p className={styles.meta}>Color: <strong>{color}</strong></p> : null}
                     <p className={styles.rate}>{money(product.pricePerDay)} <span>per unit / day</span></p>
                     {lineDiscount > 0 ? <p className={styles.discount}>You save {money(lineDiscount)} per rental day</p> : null}
                     <p className={styles.stock}>{units.totalUnits} active {units.totalUnits === 1 ? "unit" : "units"}; dates are checked during checkout.</p>

@@ -45,6 +45,7 @@ export default function AdminDashboard() {
   const { user, profile } = useAuth();
   const [data, setData] = useState<AdminDashboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -52,7 +53,10 @@ export default function AdminDashboard() {
 
     getAdminDashboard()
       .then((dashboard) => {
-        if (active) setData(dashboard);
+        if (active) {
+          setData(dashboard);
+          setError(null);
+        }
       })
       .catch((loadError: unknown) => {
         if (active) {
@@ -67,7 +71,7 @@ export default function AdminDashboard() {
     return () => {
       active = false;
     };
-  }, [user]);
+  }, [user, retryCount]);
 
   const displayName = profile?.displayName ?? (user?.user_metadata?.display_name as string | undefined) ?? "Administrator";
 
@@ -160,7 +164,12 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      {error ? <div className={styles.error}>{error}</div> : null}
+      {error ? (
+        <div className={styles.error} role="alert">
+          {error}
+          <button type="button" onClick={() => setRetryCount((count) => count + 1)}>Try again</button>
+        </div>
+      ) : null}
 
       {!data && !error ? (
         <div className={styles.loading}>

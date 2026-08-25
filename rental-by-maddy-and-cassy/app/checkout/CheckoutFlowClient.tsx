@@ -67,7 +67,7 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
     () =>
       cartItems.flatMap((item) => {
         const product = productsById.get(item.productId);
-        return product ? [{ product, quantity: item.quantity }] : [];
+        return product ? [{ product, quantity: item.quantity, color: item.color }] : [];
       }),
     [cartItems, productsById],
   );
@@ -420,9 +420,10 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
     bookingRef: bookingNumber ?? "Created before payment",
     customerName: draft.customerInfo.fullName || "-",
     items: pricing.lines.map((line) => {
-      const product = lines.find((cartLine) => cartLine.product.id === line.productId)?.product;
+      const cartLine = lines.find((cartLine) => cartLine.product.id === line.productId);
+      const product = cartLine?.product;
       return {
-        productName: line.productName,
+        productName: cartLine?.color ? `${line.productName} — ${cartLine.color}` : line.productName,
         brand: product?.brand ?? "",
         quantity: line.quantity,
         pricePerDay: line.pricePerDay,
@@ -505,7 +506,7 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
           <dl className={styles.summaryFacts}>
             {lines.map((line) => (
               <div key={line.product.id}>
-                <dt>{line.product.name}</dt>
+                <dt>{line.product.name}{line.color ? ` — ${line.color}` : ""}</dt>
                 <dd>{line.quantity} {line.quantity === 1 ? "unit" : "units"}</dd>
               </div>
             ))}

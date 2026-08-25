@@ -13,6 +13,8 @@ export interface ProductImage {
   storagePath: string;
   url: string;
   altText?: string;
+  /** Color variant this photo belongs to, parsed from the "[Color]" alt-text tag. */
+  color?: string;
   sortOrder: number;
   isPrimary: boolean;
 }
@@ -46,6 +48,8 @@ export interface Product {
   isFeatured: boolean;
   specifications: Record<string, string>;
   images: ProductImage[];
+  /** Selectable color variants (from specifications.colors), empty when single-color. */
+  colorOptions: string[];
   totalUnits: number;
   availableUnits: number;
   reservedUnits: number;

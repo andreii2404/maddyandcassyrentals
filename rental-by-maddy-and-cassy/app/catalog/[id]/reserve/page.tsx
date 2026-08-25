@@ -26,7 +26,7 @@ export default async function ReservePage({ params, searchParams }: ReservePageP
   }
 
   const returnParams = new URLSearchParams();
-  for (const key of ["bookingId", "payment", "cartItem"]) {
+  for (const key of ["bookingId", "payment", "cartItem", "color"]) {
     const value = query[key];
     if (typeof value === "string" && value) returnParams.set(key, value);
   }

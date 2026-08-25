@@ -11,17 +11,24 @@ import styles from "./ReserveAction.module.css";
 interface ReserveActionProps {
   product: Product;
   units: UnitCounts;
+  /** Color variant currently selected on the product page, when one applies. */
+  selectedColor?: string | null;
+  /** True while a multi-color product still needs an explicit color choice. */
+  awaitingColor?: boolean;
 }
 
-export default function ReserveAction({ product, units }: ReserveActionProps) {
+export default function ReserveAction({ product, units, selectedColor, awaitingColor = false }: ReserveActionProps) {
   const router = useRouter();
   const { addItem } = useCart();
   const { showToast } = useToast();
   const unavailable = units.totalUnits <= 0;
+  const locked = unavailable || awaitingColor;
+  const color = selectedColor?.trim() || undefined;
 
   function handleReserve() {
-    const reservePath = `/catalog/${product.id}/reserve`;
-    router.push(reservePath);
+    if (locked) return;
+    const colorParam = color ? `?color=${encodeURIComponent(color)}` : "";
+    router.push(`/catalog/${product.id}/reserve${colorParam}`);
   }
 
   return (
@@ -30,7 +37,7 @@ export default function ReserveAction({ product, units }: ReserveActionProps) {
         <button
           type="button"
           className={styles.reserveButton}
-          disabled={unavailable}
+          disabled={locked}
           onClick={handleReserve}
         >
           {unavailable ? "Unavailable" : "Reserve Now"}
@@ -38,10 +45,13 @@ export default function ReserveAction({ product, units }: ReserveActionProps) {
         <button
           type="button"
           className={styles.cartButton}
-          disabled={unavailable}
+          disabled={locked}
           onClick={() => {
-            addItem(product.id);
-            showToast(`${product.name} added to your rental cart.`, "success");
+            addItem(product.id, 1, color);
+            showToast(
+              `${product.name}${color ? ` (${color})` : ""} added to your rental cart.`,
+              "success",
+            );
           }}
         >
           Add to Cart
@@ -52,6 +62,10 @@ export default function ReserveAction({ product, units }: ReserveActionProps) {
       {unavailable ? (
         <p className={styles.error} role="status">
           This item does not currently have an active rental unit.
+        </p>
+      ) : awaitingColor ? (
+        <p className={styles.hint} role="status">
+          Choose a color above — Reserve Now and Add to Cart unlock once a color is selected.
         </p>
       ) : (
         <p className={styles.hint}>

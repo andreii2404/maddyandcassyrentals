@@ -82,3 +82,8 @@ img {
   max-width: 100%;
   display: block;
 }
+
+button:focus-visible {
+  outline: 3px solid rgba(154, 89, 101, 0.55);
+  outline-offset: 2px;
+}

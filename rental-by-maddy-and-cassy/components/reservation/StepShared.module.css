@@ -290,3 +290,118 @@
     border-radius: 0;
   }
 }
+
+.reuseNotice {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--color-status-green-border);
+  border-radius: 12px;
+  background: var(--color-status-green-bg);
+  color: var(--color-status-green);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.reuseNotice strong {
+  display: block;
+  margin-bottom: 0.15rem;
+}
+
+.reuseNotice p {
+  margin: 0;
+  color: var(--color-charcoal);
+}
+
+.savedDocCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.85rem;
+  border: 1px solid var(--color-status-green-border);
+  border-radius: 14px;
+  background: var(--color-status-green-bg);
+}
+
+.savedDocPreview {
+  display: grid;
+  width: 100%;
+  height: 110px;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--color-white);
+  font-size: 1.8rem;
+}
+
+.savedDocPreview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.savedDocInfo {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.savedDocLabel {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.savedDocMeta {
+  margin: 0;
+  overflow: hidden;
+  color: var(--color-charcoal);
+  font-size: 0.68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.verifiedBadge {
+  justify-self: start;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: var(--color-status-green-bg);
+  color: var(--color-status-green);
+  border: 1px solid var(--color-status-green-border);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.replaceButton {
+  margin-top: auto;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--color-dusty-rose);
+  border-radius: 999px;
+  background: var(--color-white);
+  color: var(--color-primary);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 140ms ease;
+}
+
+.replaceButton:hover {
+  background: var(--color-background-soft);
+}
+
+.cancelReplaceButton {
+  margin-top: 0.4rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-primary);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+}

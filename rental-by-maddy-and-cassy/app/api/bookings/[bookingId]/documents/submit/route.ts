@@ -18,12 +18,21 @@ export const dynamic = "force-dynamic";
 const metadataSchema = z.object({
   submissionId: z.string().uuid(),
   files: z.object({
-    idOne: z.string().min(1),
-    idTwo: z.string().min(1),
-    selfie: z.string().min(1),
+    // idOne/idTwo/selfie are optional: returning customers may reuse a
+    // previously verified document instead of re-uploading (see reusedDocuments).
+    idOne: z.string().min(1).optional(),
+    idTwo: z.string().min(1).optional(),
+    selfie: z.string().min(1).optional(),
     emergencyId: z.string().min(1),
     signature: z.string().min(1),
   }),
+  reusedDocuments: z
+    .object({
+      idOne: z.string().uuid().optional(),
+      idTwo: z.string().uuid().optional(),
+      selfie: z.string().uuid().optional(),
+    })
+    .default({}),
   facebookLink: z.string().url().max(1000),
   instagramLink: z.string().url().max(1000),
   emergencyContact: z.object({
@@ -43,6 +52,14 @@ const metadataSchema = z.object({
   signatureMethod: z.enum(["drawn", "uploaded"]),
   typedFullName: z.string().trim().min(2).max(160),
 });
+
+const REUSED_SLOT_TYPES = {
+  idOne: "government_id",
+  idTwo: "secondary_id",
+  selfie: "selfie_with_id",
+} as const;
+
+type ReusedSlot = keyof typeof REUSED_SLOT_TYPES;
 
 function errorResponse(message: string, status: number) {
   return NextResponse.json({ success: false, error: message }, { status });
@@ -71,6 +88,12 @@ function expectedPrefix(userId: string, bookingId: string, fileName: string, sub
   return `${userId}/${bookingId}/${fileName}-${submissionId}.`;
 }
 
+function slotToFileName(slot: "idOne" | "idTwo" | "selfie"): string {
+  if (slot === "idOne") return "id-one";
+  if (slot === "idTwo") return "id-two";
+  return "selfie";
+}
+
 async function verifyUploadedFile(
   admin: ReturnType<typeof createAdminClient>,
   bucket: "booking-documents" | "customer-documents",
@@ -97,13 +120,93 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
     const input = metadataSchema.parse(await request.json());
     const admin = createAdminClient();
 
+    // Each reusable slot (first ID, second ID, selfie) must be satisfied by
+    // exactly one source: a fresh upload or a reused verified document.
+    for (const slot of Object.keys(REUSED_SLOT_TYPES) as ReusedSlot[]) {
+      if (Boolean(input.files[slot]) === Boolean(input.reusedDocuments[slot])) {
+        return errorResponse(
+          "Each verification document must be either freshly uploaded or reused from your verified records.",
+          400,
+        );
+      }
+    }
+
+    const freshUploads = (Object.keys(REUSED_SLOT_TYPES) as ReusedSlot[])
+      .filter((slot) => input.files[slot])
+      .map((slot) => ({
+        slot,
+        bucket: "booking-documents" as const,
+        path: input.files[slot]!,
+        prefix: expectedPrefix(user.id, bookingId, slotToFileName(slot), input.submissionId),
+      }));
+    freshUploads.push({
+      slot: "emergencyId" as const,
+      bucket: "booking-documents" as const,
+      path: input.files.emergencyId,
+      prefix: expectedPrefix(user.id, bookingId, "emergency-contact-id", input.submissionId),
+    });
+
     await Promise.all([
-      verifyUploadedFile(admin, "booking-documents", input.files.idOne, expectedPrefix(user.id, bookingId, "id-one", input.submissionId)),
-      verifyUploadedFile(admin, "booking-documents", input.files.idTwo, expectedPrefix(user.id, bookingId, "id-two", input.submissionId)),
-      verifyUploadedFile(admin, "booking-documents", input.files.selfie, expectedPrefix(user.id, bookingId, "selfie", input.submissionId)),
-      verifyUploadedFile(admin, "booking-documents", input.files.emergencyId, expectedPrefix(user.id, bookingId, "emergency-contact-id", input.submissionId)),
-      verifyUploadedFile(admin, "customer-documents", input.files.signature, expectedPrefix(user.id, bookingId, "signature", input.submissionId)),
+      ...freshUploads.map((upload) =>
+        verifyUploadedFile(admin, upload.bucket, upload.path, upload.prefix),
+      ),
+      verifyUploadedFile(
+        admin,
+        "customer-documents",
+        input.files.signature,
+        expectedPrefix(user.id, bookingId, "signature", input.submissionId),
+      ),
     ]);
+
+    // Validate every reused document: it must belong to this customer, still
+    // be active, match the expected document type, be unexpired, and have at
+    // least one admin-approved verification on a previous booking.
+    const reusedSlots = (Object.keys(REUSED_SLOT_TYPES) as ReusedSlot[]).filter(
+      (slot) => input.reusedDocuments[slot],
+    );
+    const reusedDocumentIds = [
+      ...new Set(reusedSlots.map((slot) => input.reusedDocuments[slot]!)),
+    ];
+    if (reusedDocumentIds.length) {
+      const nowIso = new Date().toISOString();
+      const [{ data: reusedDocs, error: reusedDocsError }, { data: approvedSubmissions, error: approvedError }] =
+        await Promise.all([
+          admin
+            .from("customer_documents")
+            .select("id, document_type, status, expires_at")
+            .in("id", reusedDocumentIds)
+            .eq("owner_user_id", user.id)
+            .eq("status", "active"),
+          admin
+            .from("booking_requirement_submissions")
+            .select("customer_document_id")
+            .eq("review_status", "approved")
+            .in("customer_document_id", reusedDocumentIds),
+        ]);
+      if (reusedDocsError) throwSupabaseFailure("Loading reused verification documents", reusedDocsError);
+      if (approvedError) throwSupabaseFailure("Loading reused verification approvals", approvedError);
+
+      const approvedIds = new Set(
+        (approvedSubmissions ?? []).map((submission) => submission.customer_document_id),
+      );
+      const docById = new Map((reusedDocs ?? []).map((doc) => [doc.id, doc]));
+
+      for (const slot of reusedSlots) {
+        const documentId = input.reusedDocuments[slot]!;
+        const doc = docById.get(documentId);
+        const failure =
+          !doc
+            ? "A reused verification document could not be found on your account."
+            : doc.document_type !== REUSED_SLOT_TYPES[slot]
+              ? "A reused verification document no longer matches its slot."
+              : doc.expires_at && doc.expires_at <= nowIso
+                ? "A reused verification document has expired. Please upload a new copy."
+                : !approvedIds.has(documentId)
+                  ? "A reused verification document was never approved. Please upload a new copy."
+                  : null;
+        if (failure) return errorResponse(failure, 400);
+      }
+    }
 
     const booking = await getBookingById(admin, bookingId);
     if (!booking) return errorResponse("The booking could not be found.", 404);
@@ -159,59 +262,79 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
     // row (ad hoc — there's no seeded product_requirements/requirement_definitions
     // data for these four fixed document types yet) and a
     // booking_requirement_submissions row that ties the two together.
-    const documentRows = [
-      { type: "government_id" as const, path: input.files.idOne, name: "id-one", label: "Primary Government ID" },
-      { type: "secondary_id" as const, path: input.files.idTwo, name: "id-two", label: "Secondary ID" },
-      { type: "selfie_with_id" as const, path: input.files.selfie, name: "selfie", label: "Selfie with ID" },
-      {
-        type: "authorization_letter" as const,
-        path: input.files.emergencyId,
-        name: "emergency-contact-id",
-        label: "Emergency Contact ID",
-      },
+    //
+    // Reused documents skip the storage upload and the new customer_documents
+    // row entirely: the new booking's requirement submission points at the
+    // SAME customer_documents row that was already verified on a previous
+    // booking, so the file stays stored once and is simply linked again.
+    const documentSlots = [
+      { slot: "idOne" as const, type: "government_id" as const, label: "Primary Government ID" },
+      { slot: "idTwo" as const, type: "secondary_id" as const, label: "Secondary ID" },
+      { slot: "selfie" as const, type: "selfie_with_id" as const, label: "Selfie with ID" },
+      { slot: "emergencyId" as const, type: "authorization_letter" as const, label: "Emergency Contact ID" },
     ];
 
-    // The four documents are independent of one another, so recording them as
+    const freshSlots = documentSlots.filter((def) => {
+      if (def.slot === "emergencyId") return true;
+      return Boolean(input.files[def.slot]);
+    });
+    const freshPaths = new Map<string, string>(
+      freshSlots.map((def) => [
+        def.slot,
+        def.slot === "emergencyId"
+          ? input.files.emergencyId
+          : input.files[def.slot]!,
+      ]),
+    );
+
+    // The fresh documents are independent of one another, so recording them as
     // two bulk inserts (instead of a per-document loop doing three sequential
-    // round trips each) cuts 12 sequential DB calls down to 3. Postgres
-    // preserves input order in RETURNING for a single multi-row INSERT, so
-    // documentRows[i] <-> customerDocuments[i] <-> requirements[i] line up.
-    const [{ data: customerDocuments, error: customerDocumentsError }, { data: requirements, error: requirementsError }] =
-      await Promise.all([
-        admin
-          .from("customer_documents")
-          .insert(
-            documentRows.map((doc) => ({
-              owner_user_id: user.id,
-              document_type: doc.type,
-              storage_bucket: "booking-documents" as const,
-              storage_path: doc.path,
-              original_filename: doc.name,
-              status: "active" as const,
-            })),
-          )
-          .select("id"),
-        admin
-          .from("booking_requirements")
-          .insert(
-            documentRows.map((doc) => ({
-              booking_id: bookingId,
-              document_type_snapshot: doc.type,
-              requirement_key_snapshot: doc.type,
-              requirement_name_snapshot: doc.label,
-              is_required: true,
-              status: "pending_review" as const,
-            })),
-          )
-          .select("id"),
-      ]);
-    if (customerDocumentsError || !customerDocuments || customerDocuments.length !== documentRows.length) {
+    // round trips each) cuts sequential DB calls down. Postgres preserves
+    // input order in RETURNING for a single multi-row INSERT, so
+    // freshSlots[i] <-> customerDocuments[i] line up.
+    const { data: freshDocuments, error: customerDocumentsError } = await admin
+      .from("customer_documents")
+      .insert(
+        freshSlots.map((def) => ({
+          owner_user_id: user.id,
+          document_type: def.type,
+          storage_bucket: "booking-documents" as const,
+          storage_path: freshPaths.get(def.slot)!,
+          original_filename: def.slot === "emergencyId" ? "emergency-contact-id" : slotToFileName(def.slot as "idOne" | "idTwo" | "selfie"),
+          status: "active" as const,
+        })),
+      )
+      .select("id");
+    if (customerDocumentsError || !freshDocuments || freshDocuments.length !== freshSlots.length) {
       if (customerDocumentsError) {
         throwSupabaseFailure("Recording verification documents", customerDocumentsError);
       }
       throw new Error("Recording verification documents returned an incomplete result.");
     }
-    if (requirementsError || !requirements || requirements.length !== documentRows.length) {
+
+    // Resolve the single customer_documents id per slot (fresh insert or reused row).
+    const documentIdBySlot = new Map<string, string>();
+    freshSlots.forEach((def, index) => {
+      documentIdBySlot.set(def.slot, freshDocuments[index].id);
+    });
+    for (const slot of reusedSlots) {
+      documentIdBySlot.set(slot, input.reusedDocuments[slot]!);
+    }
+
+    const { data: requirements, error: requirementsError } = await admin
+      .from("booking_requirements")
+      .insert(
+        documentSlots.map((def) => ({
+          booking_id: bookingId,
+          document_type_snapshot: def.type,
+          requirement_key_snapshot: def.type,
+          requirement_name_snapshot: def.label,
+          is_required: true,
+          status: "pending_review" as const,
+        })),
+      )
+      .select("id");
+    if (requirementsError || !requirements || requirements.length !== documentSlots.length) {
       if (requirementsError) {
         throwSupabaseFailure("Recording booking requirements", requirementsError);
       }
@@ -219,9 +342,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
     }
 
     const { error: submissionsError } = await admin.from("booking_requirement_submissions").insert(
-      documentRows.map((_doc, index) => ({
+      documentSlots.map((_def, index) => ({
         booking_requirement_id: requirements[index].id,
-        customer_document_id: customerDocuments[index].id,
+        customer_document_id: documentIdBySlot.get(documentSlots[index].slot)!,
         review_status: "pending" as const,
         submitted_at: now,
       })),

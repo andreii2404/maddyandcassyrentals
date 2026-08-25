@@ -46,6 +46,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const { user, profile } = useAuth();
   const displayName = profile?.displayName ?? user?.user_metadata?.display_name ?? "Administrator";
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
     // The shell persists across admin routes; close the mobile drawer after navigation.
@@ -70,8 +71,14 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   }, [sidebarOpen]);
 
   async function handleSignOut() {
-    await logout();
-    router.replace("/admin/sign-in");
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await logout();
+      router.replace("/admin/sign-in");
+    } catch {
+      setSigningOut(false);
+    }
   }
 
   return (
@@ -167,8 +174,8 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             <Link href="/" className={styles.siteLink}>
               View Public Website
             </Link>
-            <button type="button" className={styles.signOut} onClick={handleSignOut}>
-              Sign Out
+            <button type="button" className={styles.signOut} onClick={handleSignOut} disabled={signingOut}>
+              {signingOut ? "Signing out..." : "Sign Out"}
             </button>
           </div>
         </aside>

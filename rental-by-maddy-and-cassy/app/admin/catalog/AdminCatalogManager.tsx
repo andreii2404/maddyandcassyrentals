@@ -85,6 +85,14 @@ export default function AdminCatalogManager() {
   const [unitEditing, setUnitEditing] = useState<AdminInventoryUnit | null>(null);
   const [unitForm, setUnitForm] = useState<InventoryUnitEditorInput | null>(null);
   const [saving, setSaving] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    message: string;
+    confirmLabel: string;
+    successMessage: string;
+    action: () => Promise<void>;
+  } | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -167,6 +175,18 @@ export default function AdminCatalogManager() {
 
   async function saveProduct() {
     if (!editing) return;
+    if (!form.name.trim()) {
+      showToast("Product name is required.", "error");
+      return;
+    }
+    if (!form.category) {
+      showToast("Choose a category for this product.", "error");
+      return;
+    }
+    if (!(form.dailyRate > 0)) {
+      showToast("Enter a regular daily price greater than zero.", "error");
+      return;
+    }
     setSaving(true);
     try {
       const editorInput: CatalogEditorInput = {
@@ -191,15 +211,16 @@ export default function AdminCatalogManager() {
     }
   }
 
-  async function deactivate(product: Product) {
-    if (!window.confirm(`Remove ${product.name} from the public catalog? Historical bookings and unit records will remain.`)) return;
-    try {
-      await deactivateCatalogProductAsAdmin(product.id);
-      await load();
-      showToast("Product removed from the public catalog.", "success");
-    } catch (deactivateError) {
-      showToast(deactivateError instanceof Error ? deactivateError.message : "The product could not be removed.", "error");
-    }
+  function requestDeactivate(product: Product) {
+    setConfirmDialog({
+      title: `Remove ${product.name}?`,
+      message: "This hides the product from the public catalog. Historical bookings and unit records will remain.",
+      confirmLabel: "Remove Product",
+      successMessage: "Product removed from the public catalog.",
+      action: async () => {
+        await deactivateCatalogProductAsAdmin(product.id);
+      },
+    });
   }
 
   function openCategoryEditor(category?: AdminCatalogCategory) {
@@ -213,6 +234,10 @@ export default function AdminCatalogManager() {
 
   async function saveCategory() {
     if (!categoryEditing) return;
+    if (!categoryForm.name.trim()) {
+      showToast("Category name is required.", "error");
+      return;
+    }
     setSaving(true);
     try {
       if (categoryEditing === "new") await createCatalogCategoryAsAdmin(categoryForm);
@@ -227,15 +252,16 @@ export default function AdminCatalogManager() {
     }
   }
 
-  async function removeCategory(category: AdminCatalogCategory) {
-    if (!window.confirm(`Delete the ${category.name} category?`)) return;
-    try {
-      await deleteCatalogCategoryAsAdmin(category.id);
-      await load();
-      showToast("Category deleted.", "success");
-    } catch (categoryError) {
-      showToast(categoryError instanceof Error ? categoryError.message : "The category could not be deleted.", "error");
-    }
+  function requestRemoveCategory(category: AdminCatalogCategory) {
+    setConfirmDialog({
+      title: `Delete ${category.name}?`,
+      message: "This permanently deletes the category. Products in it must be reassigned first.",
+      confirmLabel: "Delete Category",
+      successMessage: "Category deleted.",
+      action: async () => {
+        await deleteCatalogCategoryAsAdmin(category.id);
+      },
+    });
   }
 
   function openUnitEditor(unit: AdminInventoryUnit) {
@@ -251,6 +277,10 @@ export default function AdminCatalogManager() {
 
   async function saveUnit() {
     if (!unitEditing || !unitForm) return;
+    if (!unitForm.unitCode.trim()) {
+      showToast("Unit code is required.", "error");
+      return;
+    }
     setSaving(true);
     try {
       await updateInventoryUnitAsAdmin(unitEditing.id, unitForm);
@@ -272,6 +302,21 @@ export default function AdminCatalogManager() {
       showToast(`Review ${status}.`, "success");
     } catch (reviewError) {
       showToast(reviewError instanceof Error ? reviewError.message : "The review decision could not be saved.", "error");
+    }
+  }
+
+  async function runConfirmedAction() {
+    if (!confirmDialog || confirmBusy) return;
+    setConfirmBusy(true);
+    try {
+      await confirmDialog.action();
+      await load();
+      setConfirmDialog(null);
+      showToast(confirmDialog.successMessage, "success");
+    } catch (actionError) {
+      showToast(actionError instanceof Error ? actionError.message : "The action could not be completed.", "error");
+    } finally {
+      setConfirmBusy(false);
     }
   }
 
@@ -348,7 +393,7 @@ export default function AdminCatalogManager() {
                     <div className={styles.actions}>
                       <button type="button" onClick={() => openEditor(product)}>View / Edit</button>
                       {product.isActive ? <Link href={`/catalog/${product.id}`} target="_blank">Public page</Link> : null}
-                      {product.isActive ? <button type="button" className={styles.danger} onClick={() => void deactivate(product)}>Remove</button> : null}
+                      {product.isActive ? <button type="button" className={styles.danger} onClick={() => requestDeactivate(product)}>Remove</button> : null}
                     </div>
                   </div>
                 </article>
@@ -364,12 +409,14 @@ export default function AdminCatalogManager() {
           <button type="button" onClick={() => openCategoryEditor()}>Add Category</button>
         </div>
         <div className={styles.tableWrap}>
+          {categories.length === 0 ? <div className={styles.emptySmall}>No categories yet. Add one to organize the catalog.</div> : (
           <table><thead><tr><th>Name</th><th>Description</th><th>Products</th><th>Order</th><th>Actions</th></tr></thead>
             <tbody>{categories.map((category) => <tr key={category.id}>
-              <td><strong>{category.name}</strong></td><td>{category.description || "No description"}</td><td>{category.productCount}</td><td>{category.sortOrder}</td>
-              <td><div className={styles.tableActions}><button type="button" onClick={() => openCategoryEditor(category)}>Edit</button><button type="button" className={styles.dangerText} onClick={() => void removeCategory(category)}>Delete</button></div></td>
+              <td data-label="Name"><strong>{category.name}</strong></td><td data-label="Description">{category.description || "No description"}</td><td data-label="Products">{category.productCount}</td><td data-label="Order">{category.sortOrder}</td>
+              <td data-label="Actions"><div className={styles.tableActions}><button type="button" onClick={() => openCategoryEditor(category)}>Edit</button><button type="button" className={styles.dangerText} onClick={() => requestRemoveCategory(category)}>Delete</button></div></td>
             </tr>)}</tbody>
           </table>
+          )}
         </div>
       </section>
 
@@ -380,13 +427,15 @@ export default function AdminCatalogManager() {
         </div>
         <p className={styles.sectionCopy}>Availability updates automatically when units move between active, maintenance, and retired states. Units with active reservations are protected.</p>
         <div className={styles.tableWrap}>
+          {visibleInventoryUnits.length === 0 ? <div className={styles.emptySmall}>{inventoryProductFilter === "all" ? "No physical units have been added yet." : "No units belong to the selected product."}</div> : (
           <table><thead><tr><th>Unit code</th><th>Product</th><th>Serial number</th><th>Status</th><th>Reservation</th><th>Action</th></tr></thead>
             <tbody>{visibleInventoryUnits.map((unit) => <tr key={unit.id}>
-              <td><strong>{unit.unitCode}</strong></td><td>{products?.find((product) => product.id === unit.productId)?.name ?? "Product"}</td><td>{unit.serialNumber || "Not recorded"}</td>
-              <td><span className={styles.unitStatus} data-status={unit.lifecycleStatus}>{unit.lifecycleStatus}</span></td><td>{unit.hasActiveReservation ? "Reserved / in use" : "Clear"}</td>
-              <td><button type="button" className={styles.tableButton} onClick={() => openUnitEditor(unit)}>Manage</button></td>
+              <td data-label="Unit code"><strong>{unit.unitCode}</strong></td><td data-label="Product">{products?.find((product) => product.id === unit.productId)?.name ?? "Product"}</td><td data-label="Serial number">{unit.serialNumber || "Not recorded"}</td>
+              <td data-label="Status"><span className={styles.unitStatus} data-status={unit.lifecycleStatus}>{unit.lifecycleStatus}</span></td><td data-label="Reservation">{unit.hasActiveReservation ? "Reserved / in use" : "Clear"}</td>
+              <td data-label="Action"><button type="button" className={styles.tableButton} onClick={() => openUnitEditor(unit)}>Manage</button></td>
             </tr>)}</tbody>
           </table>
+          )}
         </div>
       </section>
 
@@ -408,10 +457,13 @@ export default function AdminCatalogManager() {
 
       <section className={styles.history}>
         <div><p>PRICE CHANGE HISTORY</p><h2>Recent Pricing Updates</h2></div>
-        <div className={styles.tableWrap}><table><thead><tr><th>Product</th><th>Previous</th><th>New price</th><th>Reason</th><th>Date</th></tr></thead>
+        <div className={styles.tableWrap}>
+          {priceHistory.length === 0 ? <div className={styles.emptySmall}>No price changes have been recorded yet.</div> : (
+          <table><thead><tr><th>Product</th><th>Previous</th><th>New price</th><th>Reason</th><th>Date</th></tr></thead>
           <tbody>{[...priceHistory].sort((a, b) => Date.parse(b.createdAt || "") - Date.parse(a.createdAt || "")).slice(0, 20).map((entry) => <tr key={`${entry.productId}-${entry.id}`}>
-            <td>{products?.find((product) => product.id === entry.productId)?.name ?? entry.productId}</td><td>{entry.previousPrice === null ? "Initial" : formatMoney(entry.previousPrice)}</td><td>{formatMoney(entry.newPrice)}</td><td>{entry.reason || "Catalog pricing update"}</td><td>{entry.createdAt ? new Date(entry.createdAt).toLocaleString("en-PH") : "—"}</td>
-          </tr>)}</tbody></table></div>
+            <td data-label="Product">{products?.find((product) => product.id === entry.productId)?.name ?? entry.productId}</td><td data-label="Previous">{entry.previousPrice === null ? "Initial" : formatMoney(entry.previousPrice)}</td><td data-label="New price">{formatMoney(entry.newPrice)}</td><td data-label="Reason">{entry.reason || "Catalog pricing update"}</td><td data-label="Date">{entry.createdAt ? new Date(entry.createdAt).toLocaleString("en-PH") : "—"}</td>
+          </tr>)}</tbody></table>
+          )}</div>
       </section>
 
       {editing ? (
@@ -463,6 +515,18 @@ export default function AdminCatalogManager() {
               <label className={styles.wide}><span>Condition notes</span><textarea rows={4} value={unitForm.conditionNotes} onChange={(event) => setUnitForm({ ...unitForm, conditionNotes: event.target.value })} /></label>
             </div>
             <div className={styles.editorActions}><button type="button" onClick={() => setUnitEditing(null)} disabled={saving}>Cancel</button><button type="button" onClick={() => void saveUnit()} disabled={saving}>{saving ? "Saving..." : "Save Unit"}</button></div>
+          </section>
+        </div>
+      ) : null}
+      {confirmDialog ? (
+        <div className={styles.overlay} role="presentation" onMouseDown={() => !confirmBusy && setConfirmDialog(null)}>
+          <section className={styles.smallEditor} role="alertdialog" aria-modal="true" aria-labelledby="confirm-dialog-title" aria-describedby="confirm-dialog-message" onMouseDown={(event) => event.stopPropagation()}>
+            <div className={styles.editorHeader}><div><p>PLEASE CONFIRM</p><h2 id="confirm-dialog-title">{confirmDialog.title}</h2></div><button type="button" onClick={() => setConfirmDialog(null)} disabled={confirmBusy}>Close</button></div>
+            <p id="confirm-dialog-message" className={styles.protectedNotice}>{confirmDialog.message}</p>
+            <div className={styles.editorActions}>
+              <button type="button" onClick={() => setConfirmDialog(null)} disabled={confirmBusy}>Cancel</button>
+              <button type="button" className={styles.danger} onClick={() => void runConfirmedAction()} disabled={confirmBusy}>{confirmBusy ? "Working..." : confirmDialog.confirmLabel}</button>
+            </div>
           </section>
         </div>
       ) : null}

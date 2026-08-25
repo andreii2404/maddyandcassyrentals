@@ -47,6 +47,7 @@ export default function AdminAuditPage() {
   const [logs, setLogs] = useState<AdminAuditLog[] | null>(null);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   const [search, setSearch] = useState("");
   const [activityType, setActivityType] = useState<ActivityCategory | "">("");
@@ -63,7 +64,10 @@ export default function AdminAuditPage() {
 
     getAdminAuditLogs()
       .then((records) => {
-        if (active) setLogs(records);
+        if (active) {
+          setLogs(records);
+          setError(null);
+        }
       })
       .catch((loadError: unknown) => {
         if (active) {
@@ -84,7 +88,7 @@ export default function AdminAuditPage() {
     return () => {
       active = false;
     };
-  }, [user]);
+  }, [user, retryCount]);
 
   const actorNamesById = useMemo(() => {
     const map = new Map<string, string>();
@@ -244,7 +248,12 @@ export default function AdminAuditPage() {
             </button>
           </div>
 
-          {error ? <div className={styles.error}>{error}</div> : null}
+          {error ? (
+            <div className={styles.error} role="alert">
+              {error}
+              <button type="button" onClick={() => setRetryCount((count) => count + 1)}>Try again</button>
+            </div>
+          ) : null}
 
           {!logs && !error ? (
             <div className={styles.loading}>

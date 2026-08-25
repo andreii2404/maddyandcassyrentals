@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import AdminShell from "@/components/admin/AdminShell";
 import Spinner from "@/components/ui/Spinner";
+import StatusBadge, { type StatusTone } from "@/components/status-badge/StatusBadge";
 import PaymentProofModal, { type PaymentWithProof } from "@/components/admin/PaymentProofModal";
 import { useAuth } from "@/hooks/useAuth";
 import { getAdminPayments, type AdminPaymentsData } from "@/src/services/operationsService";
@@ -13,6 +14,14 @@ import styles from "../operations.module.css";
 const PAGE_SIZE_OPTIONS = [10, 25, 50] as const;
 const DEFAULT_PAGE_SIZE = 10;
 const SEARCH_DEBOUNCE_MS = 300;
+
+const PAYMENT_STATUS_TONES: Record<AdminPaymentRecord["status"], StatusTone> = {
+  submitted: "yellow",
+  under_review: "yellow",
+  verified: "green",
+  rejected: "red",
+  void: "neutral",
+};
 
 function money(value: number) {
   return `PHP ${value.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`;
@@ -117,6 +126,8 @@ export default function AdminPaymentsPage() {
   const [paymentsData, setPaymentsData] = useState<AdminPaymentsData | null>(null);
   const [paymentsError, setPaymentsError] = useState<string | null>(null);
   const [proofPayment, setProofPayment] = useState<PaymentWithProof | null>(null);
+  const [refreshing, setRefreshing] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -130,6 +141,7 @@ export default function AdminPaymentsPage() {
     let active = true;
     if (!user) return;
 
+    setRefreshing(true);
     getAdminPayments({ page: paymentsPage, pageSize: paymentsPageSize, search: debouncedSearch || undefined })
       .then((result) => {
         if (active) {
@@ -143,12 +155,15 @@ export default function AdminPaymentsPage() {
             loadError instanceof Error ? loadError.message : "Payment activity could not be loaded.",
           );
         }
+      })
+      .finally(() => {
+        if (active) setRefreshing(false);
       });
 
     return () => {
       active = false;
     };
-  }, [user, paymentsPage, paymentsPageSize, debouncedSearch]);
+  }, [user, paymentsPage, paymentsPageSize, debouncedSearch, retryCount]);
 
   const loading = !paymentsData && !paymentsError;
 
@@ -162,7 +177,12 @@ export default function AdminPaymentsPage() {
             <span>Review manually submitted GCash payments.</span>
           </div>
         </header>
-        {paymentsError ? <div className={styles.error}>{paymentsError}</div> : null}
+        {paymentsError ? (
+          <div className={styles.error} role="alert">
+            {paymentsError}
+            <button type="button" onClick={() => setRetryCount((count) => count + 1)}>Try again</button>
+          </div>
+        ) : null}
         {loading ? (
           <div className={styles.loading}>
             <Spinner size={28} label="Loading payments" />
@@ -190,6 +210,7 @@ export default function AdminPaymentsPage() {
                   <h2>Payment Records</h2>
                   <p>Manual GCash submissions and their review status.</p>
                 </div>
+                {refreshing && paymentsData ? <span className={styles.refreshNote} role="status">Updating…</span> : null}
                 <input
                   type="search"
                   className={styles.searchInput}
@@ -216,23 +237,22 @@ export default function AdminPaymentsPage() {
                     <tbody>
                       {paymentsData.payments.map((payment) => (
                         <tr key={payment.id}>
-                          <td>
+                          <td data-label="Booking">
                             <Link href={`/admin/bookings/${payment.bookingId}`}>
-                              {payment.bookingId.slice(0, 8)}
+                              {payment.bookingRef}
                             </Link>
                           </td>
-                          <td>{payment.externalReference || "—"}</td>
-                          <td>{money(payment.amount)}</td>
-                          <td>
-                            <span
-                              className={`${styles.pill} ${styles[payment.status] ?? ""}`}
-                            >
-                              {formatLabel(payment.status)}
-                            </span>
+                          <td data-label="GCash Reference Number">{payment.externalReference || "—"}</td>
+                          <td data-label="Amount">{money(payment.amount)}</td>
+                          <td data-label="Status">
+                            <StatusBadge
+                              label={formatLabel(payment.status)}
+                              tone={PAYMENT_STATUS_TONES[payment.status] ?? "neutral"}
+                            />
                           </td>
-                          <td>{formatLabel(payment.stage)}</td>
-                          <td>{formatDate(payment.createdAt)}</td>
-                          <td>
+                          <td data-label="Payment Type">{formatLabel(payment.stage)}</td>
+                          <td data-label="Date">{formatDate(payment.createdAt)}</td>
+                          <td data-label="Proof">
                             {hasProof(payment) ? (
                               <button
                                 type="button"

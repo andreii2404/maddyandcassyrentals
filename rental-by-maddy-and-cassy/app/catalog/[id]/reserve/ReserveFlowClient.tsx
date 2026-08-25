@@ -91,6 +91,15 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
 
   const progressKey = reservationProgressKey(user!.id, product.id);
 
+  // The color variant chosen on the product page travels through the ?color=
+  // query param. It is validated against the product's own color options so a
+  // hand-edited URL can never attach an arbitrary color to the booking.
+  const [bookingColor] = useState(() => {
+    if (typeof window === "undefined") return undefined;
+    const requested = new URLSearchParams(window.location.search).get("color") ?? "";
+    return product.colorOptions.includes(requested) ? requested : undefined;
+  });
+
   useEffect(() => {
     let rawProgress: string | null = null;
     try {
@@ -358,7 +367,7 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
       let activeBookingNumber = bookingNumber;
       if (!activeBookingId) {
         const supabase = createClient();
-        const reservation = await createBookingReservation(supabase, product, draft, isGuest);
+        const reservation = await createBookingReservation(supabase, product, draft, isGuest, bookingColor);
         activeBookingId = reservation.bookingId;
         activeBookingNumber = reservation.bookingNumber ?? reservation.bookingId;
         setBookingId(activeBookingId);
@@ -425,7 +434,7 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
     customerName: draft.customerInfo.fullName || "-",
     items: [
       {
-        productName: product.name,
+        productName: bookingColor ? `${product.name} — ${bookingColor}` : product.name,
         brand: product.brand ?? "",
         quantity: draft.quantity,
         pricePerDay: product.pricePerDay,
@@ -484,6 +493,9 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
         <aside className={styles.bookingSummary} aria-label="Selected rental summary">
           <p className={styles.summaryEyebrow}>YOUR SELECTED RENTAL</p>
           <h2>{product.name}</h2>
+          {bookingColor ? (
+            <p className={styles.summaryEyebrow}>COLOR: {bookingColor.toUpperCase()}</p>
+          ) : null}
           {Object.keys(product.specs).length > 0 ? (
             <dl className={styles.summarySpecs}>
               {Object.entries(product.specs).map(([label, value]) => (

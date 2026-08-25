@@ -9,10 +9,21 @@ export interface EmergencyContactDraft {
   idFile: File | null;
 }
 
+/**
+ * customer_documents ids of previously verified IDs the customer chose to
+ * reuse instead of re-uploading. A slot with a reused id needs no new file.
+ */
+export interface ReusedDocumentIds {
+  idOne: string | null;
+  idTwo: string | null;
+  selfie: string | null;
+}
+
 export interface RequirementsDraft {
   idOneFile: File | null;
   idTwoFile: File | null;
   selfieFile: File | null;
+  reusedDocumentIds: ReusedDocumentIds;
   facebookLink: string;
   instagramLink: string;
   emergencyContact: EmergencyContactDraft;
@@ -115,6 +126,7 @@ export function createEmptyDraft(): ReservationDraft {
       idOneFile: null,
       idTwoFile: null,
       selfieFile: null,
+      reusedDocumentIds: { idOne: null, idTwo: null, selfie: null },
       facebookLink: "",
       instagramLink: "",
       emergencyContact: {

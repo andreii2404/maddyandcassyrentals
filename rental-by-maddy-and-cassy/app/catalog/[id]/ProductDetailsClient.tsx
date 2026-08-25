@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import type { Product } from "@/types/product";
 import type { UnitCounts } from "@/lib/availability";
@@ -42,7 +43,25 @@ export default function ProductDetailsClient({
   const unitsByProductId = useInventoryMap(defaultsById);
   const units = unitsByProductId.get(product.id) ?? defaultsById[product.id];
 
-  const images = product.images.length ? product.images.map((image) => image.url) : [product.image];
+  // Multi-color products require an explicit color choice before the customer
+  // can reserve or add to cart. Until a swatch is clicked, only the primary
+  // catalog photo is shown as a teaser -- never a mix of color variants.
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const needsColorChoice = product.colorOptions.length > 1;
+  const hasChosenColor = !needsColorChoice || selectedColor !== null;
+  const activeColor =
+    selectedColor && product.images.some((image) => image.color === selectedColor)
+      ? selectedColor
+      : null;
+  const colorImages = activeColor
+    ? product.images.filter((image) => image.color === activeColor)
+    : [];
+  const allImageUrls = product.images.map((image) => image.url);
+  const galleryImages = !needsColorChoice
+    ? allImageUrls.length ? allImageUrls : [product.image]
+    : colorImages.length
+      ? colorImages.map((image) => image.url)
+      : [product.image];
   const specificationEntries = Object.entries(product.specs);
   const rentalName = product.brand && !product.name.toLowerCase().startsWith(product.brand.toLowerCase())
     ? `${product.brand} ${product.name}`
@@ -66,12 +85,42 @@ export default function ProductDetailsClient({
 
       <div className={styles.layout}>
         <div className={styles.left}>
-          <ImageGallery images={images} productName={product.name} badge={product.badge} />
+          <ImageGallery images={galleryImages} productName={product.name} badge={product.badge} />
         </div>
 
         <div className={styles.info}>
           <p className={styles.category}>{[product.brand, product.category].filter(Boolean).join(" · ")}</p>
           <h1 className={styles.name}>{product.name}</h1>
+          {needsColorChoice ? (
+            <div className={styles.colorPicker} role="group" aria-label={`Choose a color for ${product.name}`}>
+              <span className={styles.colorPickerLabel}>Color</span>
+              {product.colorOptions.map((color) => {
+                const hasPhotos = product.images.some((image) => image.color === color);
+                return (
+                  <button
+                    key={color}
+                    type="button"
+                    aria-pressed={activeColor === color}
+                    disabled={!hasPhotos}
+                    title={hasPhotos ? `Show ${color} photos` : `${color} photos coming soon`}
+                    className={[
+                      styles.colorButton,
+                      activeColor === color ? styles.colorButtonActive : "",
+                      hasPhotos ? "" : styles.colorButtonSoon,
+                    ].filter(Boolean).join(" ")}
+                    onClick={() => setSelectedColor(color)}
+                  >
+                    {color}{hasPhotos ? "" : " · soon"}
+                  </button>
+                );
+              })}
+              <span className={styles.colorHint} role="status">
+                {hasChosenColor
+                  ? `Showing ${activeColor ?? selectedColor} photos`
+                  : "Select a color to see its photos before reserving."}
+              </span>
+            </div>
+          ) : null}
           {specificationEntries.length > 0 ? (
             <dl className={styles.specificationPills} aria-label="Product specifications">
               {specificationEntries.map(([label, value]) => (
@@ -150,7 +199,12 @@ export default function ProductDetailsClient({
               <p className={styles.reserveCopy}>
                 Choose exact dates, pickup or delivery, then pay 50% or the full amount.
               </p>
-              <ReserveAction product={product} units={units} />
+              <ReserveAction
+                product={product}
+                units={units}
+                selectedColor={activeColor}
+                awaitingColor={needsColorChoice && !hasChosenColor}
+              />
             </section>
           </div>
         </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { RequirementsDraft } from "@/src/types/reservationDraft";
 import FileUploadField from "@/components/file-upload/FileUploadField";
@@ -17,6 +17,34 @@ interface StepRequirementsProps {
 }
 
 const ACCEPTED_ID_EXAMPLES = "Passport, National ID, Driver's License, or School ID";
+
+interface SavedDocument {
+  documentId: string;
+  documentType: string;
+  filename: string | null;
+  mimeType: string | null;
+  verifiedAt: string;
+}
+
+type ReusableSlot = "idOne" | "idTwo" | "selfie";
+
+const REUSABLE_FIELDS: Array<{
+  slot: ReusableSlot;
+  fileKey: "idOneFile" | "idTwoFile" | "selfieFile";
+  documentType: string;
+  label: string;
+  helpText?: string;
+}> = [
+  { slot: "idOne", fileKey: "idOneFile", documentType: "government_id", label: "First valid ID" },
+  {
+    slot: "idTwo",
+    fileKey: "idTwoFile",
+    documentType: "secondary_id",
+    label: "Second valid ID",
+    helpText: "At least one of your two IDs must show your current address and signature.",
+  },
+  { slot: "selfie", fileKey: "selfieFile", documentType: "selfie_with_id", label: "Selfie holding a valid ID" },
+];
 
 type RequirementsErrors = Partial<Record<string, string>>;
 
@@ -48,6 +76,14 @@ function isPlatformUrl(value: string, domains: string[]): boolean {
   }
 }
 
+function formatDate(value: string): string {
+  return new Date(value).toLocaleDateString("en-PH", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 export default function StepRequirements({
   requirements,
   onUpdate,
@@ -55,6 +91,70 @@ export default function StepRequirements({
   onContinue,
 }: StepRequirementsProps) {
   const [errors, setErrors] = useState<RequirementsErrors>({});
+  const [savedDocuments, setSavedDocuments] = useState<SavedDocument[] | null>(null);
+  const [replacing, setReplacing] = useState<Partial<Record<ReusableSlot, boolean>>>({});
+  const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
+
+  // Latest draft values for the one-time prefill that runs when the saved
+  // document lookup finishes, without re-running that effect on every keystroke.
+  const requirementsRef = useRef(requirements);
+  requirementsRef.current = requirements;
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/account/verification-documents", { credentials: "same-origin" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body: { documents?: SavedDocument[] } | null) => {
+        if (!active) return;
+        const documents = body?.documents ?? [];
+        setSavedDocuments(documents);
+
+        // Auto-reuse every verified document the customer has on file, unless
+        // they already picked a replacement file for that slot in this session.
+        const current = requirementsRef.current;
+        const reused = { ...current.reusedDocumentIds };
+        let changed = false;
+        for (const field of REUSABLE_FIELDS) {
+          const saved = documents.find((doc) => doc.documentType === field.documentType);
+          if (saved && !current[field.fileKey] && !reused[field.slot]) {
+            reused[field.slot] = saved.documentId;
+            changed = true;
+          }
+        }
+        if (changed) {
+          onUpdate({ reusedDocumentIds: reused });
+        }
+
+        // Load small previews for image documents so customers can confirm
+        // which ID is which before reusing it.
+        for (const doc of documents) {
+          if (doc.mimeType && !doc.mimeType.startsWith("image/")) continue;
+          fetch(`/api/account/verification-documents/preview?documentId=${encodeURIComponent(doc.documentId)}`, {
+            credentials: "same-origin",
+          })
+            .then((response) => (response.ok ? response.json() : null))
+            .then((preview: { url?: string } | null) => {
+              if (active && preview?.url) {
+                setPreviewUrls((prev) => ({ ...prev, [doc.documentId]: preview.url! }));
+              }
+            })
+            .catch(() => {
+              // A missing preview never blocks the flow; the filename stays visible.
+            });
+        }
+      })
+      .catch(() => {
+        if (active) setSavedDocuments([]);
+      });
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function updateRequirements(patch: Partial<RequirementsDraft>) {
+    onUpdate(patch);
+  }
 
   function updateEmergencyContact(patch: Partial<RequirementsDraft["emergencyContact"]>) {
     onUpdate({ emergencyContact: { ...requirements.emergencyContact, ...patch } });
@@ -69,11 +169,36 @@ export default function StepRequirements({
     });
   }
 
+  function startReplacement(slot: ReusableSlot, fileKey: "idOneFile" | "idTwoFile" | "selfieFile") {
+    setReplacing((prev) => ({ ...prev, [slot]: true }));
+    onUpdate({
+      [fileKey]: null,
+      reusedDocumentIds: { ...requirements.reusedDocumentIds, [slot]: null },
+    } as Partial<RequirementsDraft>);
+    clearFieldError(fileKey);
+  }
+
+  function cancelReplacement(slot: ReusableSlot, fileKey: "idOneFile" | "idTwoFile" | "selfieFile") {
+    const saved = savedDocuments?.find((doc) => doc.documentType === REUSABLE_FIELDS.find((f) => f.slot === slot)?.documentType);
+    setReplacing((prev) => ({ ...prev, [slot]: false }));
+    onUpdate({
+      [fileKey]: null,
+      reusedDocumentIds: { ...requirements.reusedDocumentIds, [slot]: saved?.documentId ?? null },
+    } as Partial<RequirementsDraft>);
+    clearFieldError(fileKey);
+  }
+
   function validate(): boolean {
     const nextErrors: RequirementsErrors = {};
-    if (!requirements.idOneFile) nextErrors.idOneFile = "Please upload your first valid ID.";
-    if (!requirements.idTwoFile) nextErrors.idTwoFile = "Please upload your second valid ID.";
-    if (!requirements.selfieFile) nextErrors.selfieFile = "Please upload a selfie holding a valid ID.";
+    if (!requirements.idOneFile && !requirements.reusedDocumentIds.idOne) {
+      nextErrors.idOneFile = "Please upload your first valid ID.";
+    }
+    if (!requirements.idTwoFile && !requirements.reusedDocumentIds.idTwo) {
+      nextErrors.idTwoFile = "Please upload your second valid ID.";
+    }
+    if (!requirements.selfieFile && !requirements.reusedDocumentIds.selfie) {
+      nextErrors.selfieFile = "Please upload a selfie holding a valid ID.";
+    }
     if (!isPlatformUrl(requirements.facebookLink.trim(), ["facebook.com", "fb.com"])) {
       nextErrors["req-facebook"] = "Enter a valid active Facebook profile link.";
     }
@@ -112,6 +237,10 @@ export default function StepRequirements({
     if (validate()) onContinue();
   }
 
+  const reusedCount = REUSABLE_FIELDS.filter(
+    (field) => !requirements[field.fileKey] && requirements.reusedDocumentIds[field.slot],
+  ).length;
+
   return (
     <div className={styles.wrapper}>
       <h2 className={styles.heading}>Verification Document Submission</h2>
@@ -121,32 +250,84 @@ export default function StepRequirements({
         At least one ID must show your current address and signature.
       </p>
 
+      {reusedCount > 0 ? (
+        <div className={styles.reuseNotice} role="status">
+          <strong>Verified documents found</strong>
+          <p>
+            We found {reusedCount === 1 ? "a verified ID" : "verified IDs"} from your previous
+            booking. They&apos;ll be reused automatically — choose “Replace” on any document if you
+            want to upload a new copy instead. Replacing one never affects the others.
+          </p>
+        </div>
+      ) : null}
+
       <div className={styles.documentGrid}>
-        <FileUploadField
-          id="idOneFile"
-          label="First valid ID"
-          required
-          errorMessage={errors.idOneFile}
-          value={requirements.idOneFile}
-          onChange={(file) => onUpdate({ idOneFile: file })}
-        />
-        <FileUploadField
-          id="idTwoFile"
-          label="Second valid ID"
-          required
-          helpText="At least one of your two IDs must show your current address and signature."
-          errorMessage={errors.idTwoFile}
-          value={requirements.idTwoFile}
-          onChange={(file) => onUpdate({ idTwoFile: file })}
-        />
-        <FileUploadField
-          id="selfieFile"
-          label="Selfie holding a valid ID"
-          required
-          errorMessage={errors.selfieFile}
-          value={requirements.selfieFile}
-          onChange={(file) => onUpdate({ selfieFile: file })}
-        />
+        {REUSABLE_FIELDS.map((field) => {
+          const file = requirements[field.fileKey];
+          const reusedId = requirements.reusedDocumentIds[field.slot];
+          const saved = savedDocuments?.find((doc) => doc.documentType === field.documentType) ?? null;
+          const showSavedCard = Boolean(saved && reusedId && !file && !replacing[field.slot]);
+          const previewUrl = saved ? previewUrls[saved.documentId] : undefined;
+
+          if (showSavedCard && saved) {
+            return (
+              <div key={field.fileKey} id={field.fileKey} className={styles.savedDocCard}>
+                <div className={styles.savedDocPreview}>
+                  {previewUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={previewUrl} alt={`${field.label} on file`} />
+                  ) : (
+                    <span aria-hidden="true">🪪</span>
+                  )}
+                </div>
+                <div className={styles.savedDocInfo}>
+                  <p className={styles.savedDocLabel}>{field.label}</p>
+                  <p className={styles.savedDocMeta}>
+                    {saved.filename || "Previously uploaded"}
+                  </p>
+                  <span className={styles.verifiedBadge}>✓ Verified</span>
+                  <p className={styles.savedDocMeta}>Verified {formatDate(saved.verifiedAt)}</p>
+                </div>
+                <button
+                  type="button"
+                  className={styles.replaceButton}
+                  onClick={() => startReplacement(field.slot, field.fileKey)}
+                >
+                  Replace ID
+                </button>
+              </div>
+            );
+          }
+
+          return (
+            <div key={field.fileKey}>
+              <FileUploadField
+                id={field.fileKey}
+                label={field.label}
+                required
+                helpText={field.helpText}
+                errorMessage={errors[field.fileKey]}
+                value={file}
+                onChange={(nextFile) => {
+                  updateRequirements({
+                    [field.fileKey]: nextFile,
+                    reusedDocumentIds: { ...requirements.reusedDocumentIds, [field.slot]: null },
+                  } as Partial<RequirementsDraft>);
+                  if (nextFile) clearFieldError(field.fileKey);
+                }}
+              />
+              {saved ? (
+                <button
+                  type="button"
+                  className={styles.cancelReplaceButton}
+                  onClick={() => cancelReplacement(field.slot, field.fileKey)}
+                >
+                  Cancel replacement — keep verified ID
+                </button>
+              ) : null}
+            </div>
+          );
+        })}
       </div>
 
       <div className={formStyles.row}>

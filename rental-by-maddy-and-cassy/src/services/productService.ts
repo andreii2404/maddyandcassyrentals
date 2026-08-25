@@ -75,14 +75,18 @@ async function mapProduct(
   const images = (row.product_images ?? [])
     .slice()
     .sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.sort_order - b.sort_order)
-    .map((image) => ({
-      id: image.id,
-      storagePath: image.storage_path,
-      url: supabase.storage.from("product-images").getPublicUrl(image.storage_path).data.publicUrl,
-      altText: image.alt_text ?? undefined,
-      sortOrder: image.sort_order,
-      isPrimary: image.is_primary,
-    }));
+    .map((image) => {
+      const colorTag = /^\[([^\]]+)\]\s*/.exec(image.alt_text ?? "");
+      return {
+        id: image.id,
+        storagePath: image.storage_path,
+        url: supabase.storage.from("product-images").getPublicUrl(image.storage_path).data.publicUrl,
+        altText: image.alt_text?.replace(/^\[[^\]]+\]\s*/, "") || undefined,
+        color: colorTag?.[1],
+        sortOrder: image.sort_order,
+        isPrimary: image.is_primary,
+      };
+    });
 
   const rating = reviews.length
     ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
@@ -93,8 +97,13 @@ async function mapProduct(
     included: includedText,
     discountPercent: discountPercentText,
     discountLabel,
+    colors: colorsText,
     ...displaySpecifications
   } = specifications;
+  const colorOptions = (colorsText ?? "")
+    .split(",")
+    .map((color) => color.trim())
+    .filter(Boolean);
   const included = includedText
     ? includedText.split(",").map((item) => item.trim()).filter(Boolean)
     : [];
@@ -122,6 +131,7 @@ async function mapProduct(
     isFeatured: row.is_featured,
     specifications,
     images,
+    colorOptions,
     totalUnits,
     availableUnits,
     reservedUnits: Math.max(totalUnits - availableUnits, 0),
