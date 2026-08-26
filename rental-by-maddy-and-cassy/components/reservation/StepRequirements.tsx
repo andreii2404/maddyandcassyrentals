@@ -98,7 +98,10 @@ export default function StepRequirements({
   // Latest draft values for the one-time prefill that runs when the saved
   // document lookup finishes, without re-running that effect on every keystroke.
   const requirementsRef = useRef(requirements);
-  requirementsRef.current = requirements;
+
+  useEffect(() => {
+    requirementsRef.current = requirements;
+  }, [requirements]);
 
   useEffect(() => {
     let active = true;
