@@ -141,27 +141,31 @@ export default function AdminPaymentsPage() {
     let active = true;
     if (!user) return;
 
-    setRefreshing(true);
-    getAdminPayments({ page: paymentsPage, pageSize: paymentsPageSize, search: debouncedSearch || undefined })
-      .then((result) => {
-        if (active) {
-          setPaymentsData(result);
-          setPaymentsError(null);
-        }
-      })
-      .catch((loadError: unknown) => {
-        if (active) {
-          setPaymentsError(
-            loadError instanceof Error ? loadError.message : "Payment activity could not be loaded.",
-          );
-        }
-      })
-      .finally(() => {
-        if (active) setRefreshing(false);
-      });
+    const timeoutId = window.setTimeout(() => {
+      if (!active) return;
+      setRefreshing(true);
+      getAdminPayments({ page: paymentsPage, pageSize: paymentsPageSize, search: debouncedSearch || undefined })
+        .then((result) => {
+          if (active) {
+            setPaymentsData(result);
+            setPaymentsError(null);
+          }
+        })
+        .catch((loadError: unknown) => {
+          if (active) {
+            setPaymentsError(
+              loadError instanceof Error ? loadError.message : "Payment activity could not be loaded.",
+            );
+          }
+        })
+        .finally(() => {
+          if (active) setRefreshing(false);
+        });
+    }, 0);
 
     return () => {
       active = false;
+      window.clearTimeout(timeoutId);
     };
   }, [user, paymentsPage, paymentsPageSize, debouncedSearch, retryCount]);
 

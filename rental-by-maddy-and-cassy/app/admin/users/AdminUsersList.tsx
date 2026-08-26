@@ -51,7 +51,16 @@ export default function AdminUsersList() {
     };
   }, []);
 
-  useEffect(() => loadAccounts(), [loadAccounts, retryCount]);
+  useEffect(() => {
+    let stopLoading: (() => void) | undefined;
+    const timeoutId = window.setTimeout(() => {
+      stopLoading = loadAccounts();
+    }, 0);
+    return () => {
+      window.clearTimeout(timeoutId);
+      stopLoading?.();
+    };
+  }, [loadAccounts, retryCount]);
 
   const adminIds = useMemo(
     () => new Set((data?.admins ?? []).map((admin) => admin.userId)),

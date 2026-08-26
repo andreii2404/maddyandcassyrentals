@@ -134,13 +134,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
     const freshUploads = (Object.keys(REUSED_SLOT_TYPES) as ReusedSlot[])
       .filter((slot) => input.files[slot])
       .map((slot) => ({
-        slot,
         bucket: "booking-documents" as const,
         path: input.files[slot]!,
         prefix: expectedPrefix(user.id, bookingId, slotToFileName(slot), input.submissionId),
       }));
     freshUploads.push({
-      slot: "emergencyId" as const,
       bucket: "booking-documents" as const,
       path: input.files.emergencyId,
       prefix: expectedPrefix(user.id, bookingId, "emergency-contact-id", input.submissionId),
