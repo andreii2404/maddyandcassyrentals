@@ -255,7 +255,7 @@
   opacity: 0.45;
 }
 
-.pageActive {
+.pagination button.pageActive {
   border-color: var(--color-primary);
   background: var(--color-primary);
   color: var(--color-white);
