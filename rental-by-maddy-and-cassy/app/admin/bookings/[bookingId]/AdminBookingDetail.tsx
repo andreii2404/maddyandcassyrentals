@@ -88,10 +88,32 @@ interface DetailState {
   receipts: BookingReceipt[];
 }
 
-type AdminReviewWorkspace =
-  | "decision"
-  | "booking"
-  | "review";
+type AdminReviewStep =
+  | "customer"
+  | "rental"
+  | "requirements"
+  | "payment"
+  | "agreement"
+  | "final"
+  | "history";
+
+const REVIEW_STEPS: { id: AdminReviewStep; label: string }[] = [
+  { id: "customer", label: "Customer Information" },
+  { id: "rental", label: "Rental Details" },
+  { id: "requirements", label: "Requirements" },
+  { id: "payment", label: "Payment & Documents" },
+  { id: "agreement", label: "Rental Agreement" },
+  { id: "final", label: "Final Review" },
+  { id: "history", label: "Status History" },
+];
+
+// Booking statuses where the admin review has reached its final decision stage.
+const FINAL_REVIEW_STATUSES: BookingStatus[] = [
+  "confirmed",
+  "ready_for_release",
+  "released",
+  "returned",
+];
 
 export default function AdminBookingDetail({ bookingId }: { bookingId: string }) {
   const { showToast } = useToast();
@@ -108,7 +130,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   const [statusConfirmationOpen, setStatusConfirmationOpen] = useState(false);
   const [countersignConfirmationOpen, setCountersignConfirmationOpen] = useState(false);
   const [sendingReceiptId, setSendingReceiptId] = useState<string | null>(null);
-  const [activeWorkspace, setActiveWorkspace] = useState<AdminReviewWorkspace>("decision");
+  const [activeStep, setActiveStep] = useState<AdminReviewStep>("customer");
   const confirmationDialogRef = useRef<HTMLDivElement>(null);
   const countersignDialogRef = useRef<HTMLDivElement>(null);
 
@@ -453,8 +475,18 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   const primaryAction = actions.find((action) => action.tone !== "danger") ?? null;
   const alternativeActions = actions.filter((action) => action.status !== primaryAction?.status);
 
+  const stepCompletion: Record<AdminReviewStep, boolean> = {
+    customer: email !== "-" && phone !== "-",
+    rental: booking.items.length > 0,
+    requirements: booking.requirementsStatus === "approved",
+    payment: amountPaid > 0,
+    agreement: booking.agreementStatus === "completed",
+    final: FINAL_REVIEW_STATUSES.includes(booking.status),
+    history: statusHistory.length > 0,
+  };
+
   function jumpToNextStep() {
-    setActiveWorkspace("decision");
+    setActiveStep("final");
     if (primaryAction) {
       setSelectedStatus(primaryAction.status);
       setNote("");
@@ -595,19 +627,34 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
         </div>
       </section>
 
-      <nav id="admin-workspace-nav" className={styles.workspaceNav} aria-label="Admin booking review sections" role="tablist">
-        <button type="button" role="tab" aria-selected={activeWorkspace === "decision"} onClick={() => setActiveWorkspace("decision")}>
-          <span>01</span><strong>Next Action</strong><small>{primaryAction?.label ?? "No action needed"}</small>
-        </button>
-        <button type="button" role="tab" aria-selected={activeWorkspace === "review"} onClick={() => setActiveWorkspace("review")}>
-          <span>02</span><strong>Requirements</strong><small>Payment, documents &amp; agreement</small>
-        </button>
-        <button type="button" role="tab" aria-selected={activeWorkspace === "booking"} onClick={() => setActiveWorkspace("booking")}>
-          <span>03</span><strong>Booking Record</strong><small>Customer, rental &amp; activity</small>
-        </button>
+      <nav id="admin-workspace-nav" className={styles.stepNav} aria-label="Booking review steps" role="tablist">
+        {REVIEW_STEPS.map((step, index) => {
+          const done = stepCompletion[step.id];
+          const current = activeStep === step.id;
+          const stateClass = current
+            ? styles.stepCurrent
+            : done
+              ? styles.stepDone
+              : styles.stepUpcoming;
+          return (
+            <button
+              key={step.id}
+              type="button"
+              role="tab"
+              aria-selected={current}
+              className={`${styles.step} ${stateClass}`}
+              onClick={() => setActiveStep(step.id)}
+            >
+              <span className={styles.stepMarker} aria-hidden="true">
+                {done && !current ? "✓" : index + 1}
+              </span>
+              <span className={styles.stepLabel}>{step.label}</span>
+            </button>
+          );
+        })}
       </nav>
 
-      <section id="admin-actions" className={styles.actionPanel} aria-labelledby="booking-action-heading" hidden={activeWorkspace !== "decision"}>
+      <section id="admin-actions" className={styles.actionPanel} aria-labelledby="booking-action-heading" hidden={activeStep !== "final"}>
         <div className={styles.actionIntro}>
           <span>NEXT ACTION</span>
           <h2 id="booking-action-heading">What should happen now</h2>
@@ -688,7 +735,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
       </section>
 
       <div className={styles.detailSections}>
-        <section className={styles.detailSection} role="tabpanel" hidden={activeWorkspace !== "booking"}>
+        <section className={styles.detailSection} role="tabpanel" hidden={activeStep !== "customer"}>
           <div className={styles.detailSectionHeader}>
             <span className={styles.sectionNumber}>01</span>
             <div><strong>Customer Details</strong><small>Contact information and social links</small></div>
@@ -711,7 +758,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
           </div>
         </section>
 
-        <section className={styles.detailSection} role="tabpanel" hidden={activeWorkspace !== "booking"}>
+        <section className={styles.detailSection} role="tabpanel" hidden={activeStep !== "rental"}>
           <div className={styles.detailSectionHeader}>
             <span className={styles.sectionNumber}>02</span>
             <div><strong>Rental Details</strong><small>Dates, handover, items and pricing</small></div>
@@ -737,7 +784,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
           </div>
         </section>
 
-        <section className={styles.detailSection} role="tabpanel" hidden={activeWorkspace !== "review"}>
+        <section className={styles.detailSection} role="tabpanel" hidden={activeStep !== "payment"}>
           <div className={styles.detailSectionHeader}>
             <span className={styles.sectionNumber}>03</span>
             <div><strong>Payment Status</strong><small>{paymentStatusLabel} · {payments.length} attempt{payments.length === 1 ? "" : "s"}</small></div>
@@ -813,7 +860,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
           </div>
         </section>
 
-        <section className={styles.detailSection} role="tabpanel" hidden={activeWorkspace !== "review"}>
+        <section className={styles.detailSection} role="tabpanel" hidden={activeStep !== "requirements"}>
           <div className={styles.detailSectionHeader}>
             <span className={styles.sectionNumber}>04</span>
             <div><strong>Verification Documents</strong><small>{REQUIREMENTS_STATUS_LABELS[booking.requirementsStatus] ?? formatStatus(booking.requirementsStatus)} · {documents.length} file{documents.length === 1 ? "" : "s"}</small></div>
@@ -840,7 +887,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
           </div>
         </section>
 
-        <section className={styles.detailSection} role="tabpanel" hidden={activeWorkspace !== "review"}>
+        <section className={styles.detailSection} role="tabpanel" hidden={activeStep !== "agreement"}>
           <div className={styles.detailSectionHeader}>
             <span className={styles.sectionNumber}>05</span>
             <div><strong>Rental Agreement</strong><small>{AGREEMENT_STATUS_LABELS[booking.agreementStatus] ?? formatStatus(booking.agreementStatus)}</small></div>
@@ -933,7 +980,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
           </div>
         </section>
 
-        <section className={styles.detailSection} role="tabpanel" hidden={activeWorkspace !== "booking"}>
+        <section className={styles.detailSection} role="tabpanel" hidden={activeStep !== "history"}>
           <div className={styles.detailSectionHeader}>
             <span className={styles.sectionNumber}>06</span>
             <div><strong>Status Activity</strong><small>{statusHistory.length} recorded update{statusHistory.length === 1 ? "" : "s"}</small></div>

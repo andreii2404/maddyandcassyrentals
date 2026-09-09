@@ -247,7 +247,7 @@ export default function AdminDashboard() {
                       return (
                         <tr
                           key={booking.id}
-                          className={`${styles.row} ${isPendingReview ? styles.rowPending : ""}`}
+                          className={styles.row}
                           tabIndex={0}
                           role="link"
                           aria-label={`Open booking ${booking.bookingRef}`}
@@ -265,19 +265,20 @@ export default function AdminDashboard() {
                             </Link>
                           </td>
                           <td data-label="Customer">
-                            <span className={styles.customerNameRow}>
-                              {booking.customerName}
-                              {booking.isGuestCheckout ? <GuestBadge /> : null}
+                            <span className={styles.customerCell}>
+                              <span className={styles.customerNameRow}>{booking.customerName}</span>
+                              <span className={styles.accountTypeRow}>
+                                {booking.isGuestCheckout ? (
+                                  <GuestBadge />
+                                ) : (
+                                  <StatusBadge label="Account" tone="green" />
+                                )}
+                              </span>
                             </span>
                           </td>
                           <td data-label="Product">{booking.productName}</td>
                           <td data-label="Status">
-                            <span className={styles.statusCell}>
-                              <StatusBadge status={booking.status} />
-                              {isPendingReview ? (
-                                <span className={styles.reviewFlag}>Needs review</span>
-                              ) : null}
-                            </span>
+                            <StatusBadge status={booking.status} />
                           </td>
                           <td data-label="Submitted">{formatDate(booking.createdAt)}</td>
                           <td data-label="Action" className={styles.actionCell}>

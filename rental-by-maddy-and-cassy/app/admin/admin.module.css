@@ -7,8 +7,18 @@
 .customerNameRow {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
   flex-wrap: wrap;
+}
+
+.customerCell {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.28rem;
+}
+
+.accountTypeRow {
+  display: inline-flex;
 }
 
 .pageHeader {
@@ -279,34 +289,6 @@ a.secondaryCard:focus-visible {
   outline-offset: -2px;
 }
 
-.table tbody tr.rowPending td {
-  background: var(--color-status-yellow-bg);
-}
-
-.table tbody tr.rowPending:hover td {
-  background: #f7dfab;
-}
-
-.statusCell {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  flex-wrap: wrap;
-}
-
-.reviewFlag {
-  padding: 0.18rem 0.5rem;
-  border: 1px solid var(--color-status-yellow-border);
-  border-radius: 999px;
-  background: var(--color-status-yellow-bg);
-  color: var(--color-status-yellow);
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
 .bookingLink {
   color: var(--color-primary);
   font-weight: 700;
@@ -328,14 +310,6 @@ a.secondaryCard:focus-visible {
 
 .table tbody tr.row:hover .actionCell {
   background: #fbf2f1;
-}
-
-.table tbody tr.rowPending .actionCell {
-  background: var(--color-status-yellow-bg);
-}
-
-.table tbody tr.rowPending:hover td.actionCell {
-  background: #f7dfab;
 }
 
 .openLink {
@@ -439,10 +413,6 @@ a.secondaryCard:focus-visible {
     border-radius: 14px;
   }
 
-  .table tbody tr.rowPending {
-    border-color: var(--color-status-yellow-border);
-  }
-
   .table td {
     padding: 0.35rem 0;
     border-bottom: none;
@@ -468,8 +438,7 @@ a.secondaryCard:focus-visible {
     margin-top: 0.5rem;
   }
 
-  .table tbody tr.row:hover .actionCell,
-  .table tbody tr.rowPending .actionCell {
+  .table tbody tr.row:hover .actionCell {
     background: transparent;
   }
 
