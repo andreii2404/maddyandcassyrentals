@@ -383,6 +383,7 @@ export async function requestCancellationAsCustomer(
     p_additional_details: additionalDetails?.trim() || undefined,
   });
   if (error || !data) {
+    const code = error?.code ?? "";
     const message = error?.message ?? "";
     if (message.includes("CANCELLATION_REQUEST_EXISTS")) {
       throw new Error("A cancellation request is already waiting for administrator review.");
@@ -390,10 +391,23 @@ export async function requestCancellationAsCustomer(
     if (message.includes("BOOKING_NOT_CANCELLABLE")) {
       throw new Error("This booking can no longer receive an online cancellation request. Please contact the business for assistance.");
     }
+    if (message.includes("INVALID_CANCELLATION_REASON")) {
+      throw new Error("Choose one of the available cancellation reasons.");
+    }
     if (message.includes("ADDITIONAL_DETAILS_TOO_LONG")) {
       throw new Error("Additional details must be 1,000 characters or fewer.");
     }
-    throw new Error(message || "The cancellation request could not be submitted.");
+    if (message.includes("NOT_AUTHENTICATED") || code === "401") {
+      throw new Error("Please sign in again before submitting a cancellation request.");
+    }
+    if (message.includes("BOOKING_NOT_FOUND")) {
+      throw new Error("This booking could not be found. Refresh the page and try again.");
+    }
+    if (message.includes("permission denied for function cancel_own_booking")
+      || message.includes("permission denied for function request_booking_cancellation")) {
+      throw new Error("Cancellation requests are temporarily unavailable. Please contact the business for assistance.");
+    }
+    throw new Error("The cancellation request could not be submitted. Please try again.");
   }
 
   const refreshed = await getBookingById(supabase, (data as Tables<"booking_cancellation_requests">).booking_id);

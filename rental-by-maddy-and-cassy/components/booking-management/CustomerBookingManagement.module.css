@@ -53,6 +53,7 @@
 .cancelIcon { background: var(--color-status-red-bg); color: var(--color-status-red); }
 .actionAvailability { padding: 0.28rem 0.5rem; border-radius: 999px; font-size: 0.53rem; font-weight: 800; }
 .available { background: var(--color-status-green-bg); color: var(--color-status-green); }
+.pending { background: var(--color-status-yellow-bg); color: var(--color-status-yellow); }
 .locked { background: var(--color-light-gray); color: var(--color-charcoal); }
 .managementGrid h3 { margin: 0.35rem 0 0; font-size: 0.86rem; }
 .managementGrid p { flex: 1; min-height: 42px; margin: 0.4rem 0 0.8rem; color: var(--color-charcoal); font-size: 0.66rem; line-height: 1.55; }

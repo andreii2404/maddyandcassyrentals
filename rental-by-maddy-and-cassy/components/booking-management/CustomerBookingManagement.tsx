@@ -136,7 +136,7 @@ export default function CustomerBookingManagement({
       setCancelAdditionalDetails("");
       showToast("Your cancellation request has been submitted and is waiting for business approval.", "success");
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "The booking could not be cancelled.", "error");
+      showToast(error instanceof Error ? error.message : "The cancellation request could not be submitted.", "error");
     } finally {
       setCancelling(false);
     }
@@ -249,7 +249,9 @@ export default function CustomerBookingManagement({
           <article>
             <div className={styles.actionHeader}>
               <span className={`${styles.actionIcon} ${styles.cancelIcon}`} aria-hidden="true">CANCEL</span>
-              <span className={`${styles.actionAvailability} ${canCancel ? styles.available : styles.locked}`}>{canCancel ? "Available" : "Locked"}</span>
+              <span className={`${styles.actionAvailability} ${pendingCancellationRequest ? styles.pending : canCancel ? styles.available : styles.locked}`}>
+                {pendingCancellationRequest ? "Pending approval" : canCancel ? "Available" : "Locked"}
+              </span>
             </div>
             <h3>Cancel booking</h3>
             <p>
@@ -260,7 +262,7 @@ export default function CustomerBookingManagement({
                   : "Online cancellation requests are unavailable at this stage. Contact the business for assistance."}
             </p>
             <button type="button" className={styles.cancelButton} disabled={!canCancel} onClick={() => { setCancelOpen((open) => !open); setEditOpen(false); }}>
-              {cancelOpen ? "Keep booking" : "Request cancellation"}
+              {pendingCancellationRequest ? "Cancellation requested" : cancelOpen ? "Keep booking" : "Request cancellation"}
             </button>
           </article>
         </div>
@@ -286,19 +288,19 @@ export default function CustomerBookingManagement({
         ) : null}
 
         {cancelOpen && canCancel ? (
-          <form className={styles.cancelPanel} onSubmit={(event) => void handleCancel(event)}>
+          <form className={styles.cancelPanel} aria-describedby="cancellation-warning" onSubmit={(event) => void handleCancel(event)}>
             <strong>Request cancellation review</strong>
-            <p>The booking stays active while the business reviews your request. Reserved dates are released only if the request is approved. Payments and the required deposit remain subject to the rental terms.</p>
-            <label>
+            <p id="cancellation-warning">The booking stays active while the business reviews your request. Reserved dates are released only if the request is approved. Payments and the required deposit remain subject to the rental terms.</p>
+            <label htmlFor="cancel-reason">
               <span>Reason to Cancel</span>
-              <select value={cancelReason} onChange={(event) => setCancelReason(event.target.value)} required disabled={cancelling}>
+              <select id="cancel-reason" aria-describedby="cancellation-warning" value={cancelReason} onChange={(event) => setCancelReason(event.target.value)} required disabled={cancelling}>
                 <option value="">Select a reason</option>
                 {CANCELLATION_REASON_OPTIONS.map((reason) => <option key={reason} value={reason}>{reason}</option>)}
               </select>
             </label>
-            <label>
+            <label htmlFor="cancel-additional-details">
               <span>Additional Details <em>(optional)</em></span>
-              <textarea value={cancelAdditionalDetails} onChange={(event) => setCancelAdditionalDetails(event.target.value)} maxLength={1000} rows={3} placeholder="Add any extra explanation, if helpful" disabled={cancelling} />
+              <textarea id="cancel-additional-details" aria-describedby="cancellation-warning" value={cancelAdditionalDetails} onChange={(event) => setCancelAdditionalDetails(event.target.value)} maxLength={1000} rows={3} placeholder="Add any extra explanation, if helpful" disabled={cancelling} />
             </label>
             <button type="submit" disabled={cancelling}>{cancelling ? "Submitting…" : "Submit cancellation request"}</button>
           </form>
