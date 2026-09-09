@@ -6,14 +6,16 @@
 .header span { display:block; max-width:720px; margin-top:.3rem; color:var(--color-charcoal); font-size:.86rem; line-height:1.55; }
 .sectionHeading>button,.editorActions button:last-child { padding:.7rem 1rem; border:0; border-radius:999px; background:var(--color-primary); color:#fff; font-weight:750; cursor:pointer; }
 
-/* Section tab navigation: one pill row below the page header so each management area
-   (catalog, categories, units, reviews) shows on its own tab instead of one long page. */
-.tabNav { display:flex; flex-wrap:wrap; gap:.2rem; margin-bottom:1rem; padding:.25rem; border:1px solid var(--color-border); border-radius:999px; background:var(--color-background-soft); }
+/* Section tab navigation: one centered pill row that stays pinned below the page header
+   (catalog, categories, units, reviews) so only the content under it scrolls. */
+.tabBar { position:sticky; top:0; z-index:30; display:flex; justify-content:center; margin-bottom:1rem; padding:.6rem 0; background:var(--color-background); }
+.tabNav { display:flex; flex-wrap:wrap; justify-content:center; gap:.2rem; width:fit-content; max-width:100%; padding:.25rem; border:1px solid var(--color-border); border-radius:999px; background:var(--color-background-soft); }
 .tabNav button { flex:0 0 auto; padding:.55rem 1.05rem; border:0; border-radius:999px; background:transparent; color:var(--color-charcoal); font:inherit; font-size:.74rem; font-weight:750; cursor:pointer; transition:background 140ms ease, color 140ms ease; }
 .tabNav button:hover:not(.activeTab) { background:var(--color-white); color:var(--color-text-primary); }
 .tabNav button:focus-visible { outline:2px solid color-mix(in srgb,var(--color-primary) 40%,transparent); outline-offset:1px; }
 .tabNav .activeTab { background:var(--color-primary); color:#fff; }
-@media(max-width:650px){ .tabNav button { flex:1 1 auto; text-align:center; } }
+@media(max-width:1024px){ .tabBar { top:calc(38px + 1.4rem); } }
+@media(max-width:650px){ .tabNav { width:100%; } .tabNav button { flex:1 1 auto; text-align:center; } }
 
 /* Combined overview + controls panel: stats strip and the search/filter/add row live together
    in one compact card so the page title isn't fighting three separate blocks for space. */

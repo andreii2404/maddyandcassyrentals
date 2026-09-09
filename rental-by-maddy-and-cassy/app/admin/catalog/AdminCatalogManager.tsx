@@ -47,13 +47,14 @@ const blankForm: CatalogEditorInput = {
 
 const blankCategory: CatalogCategoryInput = { name: "", description: "", sortOrder: 0 };
 
-type CatalogTab = "catalog" | "categories" | "units" | "reviews";
+type CatalogTab = "catalog" | "categories" | "units" | "reviews" | "pricing";
 
 const catalogTabs: { value: CatalogTab; label: string }[] = [
   { value: "catalog", label: "Complete Catalog" },
   { value: "categories", label: "Product Categories" },
   { value: "units", label: "Inventory Units" },
   { value: "reviews", label: "Reviews & Pricing" },
+  { value: "pricing", label: "Recent Pricing Updates" },
 ];
 
 function formatMoney(value: number): string {
@@ -338,6 +339,7 @@ export default function AdminCatalogManager() {
         <span>Manage listings, categories, pricing, discounts, and every physical rental unit.</span>
       </header>
 
+      <div className={styles.tabBar}>
       <nav className={styles.tabNav} role="tablist" aria-label="Catalog sections">
         {catalogTabs.map((tab) => (
           <button
@@ -354,6 +356,7 @@ export default function AdminCatalogManager() {
           </button>
         ))}
       </nav>
+      </div>
 
       {error ? <div className={styles.error} role="alert">{error}<button type="button" onClick={() => void load()}>Try again</button></div> : null}
 
@@ -495,7 +498,11 @@ export default function AdminCatalogManager() {
           </article>)}</div>
         )}
       </section>
+      </div>
+      ) : null}
 
+      {activeTab === "pricing" ? (
+      <div id="catalog-panel-pricing" role="tabpanel" aria-labelledby="catalog-tab-pricing">
       <section className={styles.history}>
         <div><p>PRICE CHANGE HISTORY</p><h2>Recent Pricing Updates</h2></div>
         <div className={styles.tableWrap}>
