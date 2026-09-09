@@ -47,6 +47,8 @@ const blankForm: CatalogEditorInput = {
 
 const blankCategory: CatalogCategoryInput = { name: "", description: "", sortOrder: 0 };
 
+const UNITS_PAGE_SIZE = 10;
+
 type CatalogTab = "catalog" | "categories" | "units" | "reviews" | "pricing";
 
 const catalogTabs: { value: CatalogTab; label: string }[] = [
@@ -86,6 +88,7 @@ export default function AdminCatalogManager() {
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState<"all" | ProductStatus>("all");
   const [inventoryProductFilter, setInventoryProductFilter] = useState("all");
+  const [unitsPage, setUnitsPage] = useState(1);
   const [editing, setEditing] = useState<Product | "new" | null>(null);
   const [form, setForm] = useState<CatalogEditorInput>(blankForm);
   const [includedText, setIncludedText] = useState("");
@@ -146,6 +149,13 @@ export default function AdminCatalogManager() {
   const visibleInventoryUnits = useMemo(
     () => inventoryUnits.filter((unit) => inventoryProductFilter === "all" || unit.productId === inventoryProductFilter),
     [inventoryProductFilter, inventoryUnits],
+  );
+
+  const unitsPageCount = Math.max(1, Math.ceil(visibleInventoryUnits.length / UNITS_PAGE_SIZE));
+  const unitsCurrentPage = Math.min(unitsPage, unitsPageCount);
+  const pagedInventoryUnits = visibleInventoryUnits.slice(
+    (unitsCurrentPage - 1) * UNITS_PAGE_SIZE,
+    unitsCurrentPage * UNITS_PAGE_SIZE,
   );
 
   const summary = useMemo(() => ({
@@ -463,13 +473,13 @@ export default function AdminCatalogManager() {
       <section className={styles.section} aria-labelledby="units-heading">
         <div className={styles.sectionHeading}>
           <div><p>PHYSICAL UNITS</p><h2 id="units-heading">Inventory Management</h2></div>
-          <label className={styles.compactFilter}><span>Product</span><select value={inventoryProductFilter} onChange={(event) => setInventoryProductFilter(event.target.value)}><option value="all">All products</option>{(products ?? []).map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}</select></label>
+          <label className={styles.compactFilter}><span>Product</span><select value={inventoryProductFilter} onChange={(event) => { setInventoryProductFilter(event.target.value); setUnitsPage(1); }}><option value="all">All products</option>{(products ?? []).map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}</select></label>
         </div>
         <p className={styles.sectionCopy}>Availability updates automatically when units move between active, maintenance, and retired states. Units with active reservations are protected.</p>
         <div className={styles.tableWrap}>
           {visibleInventoryUnits.length === 0 ? <div className={styles.emptySmall}>{inventoryProductFilter === "all" ? "No physical units have been added yet." : "No units belong to the selected product."}</div> : (
           <table><thead><tr><th>Unit code</th><th>Product</th><th>Serial number</th><th>Status</th><th>Reservation</th><th>Action</th></tr></thead>
-            <tbody>{visibleInventoryUnits.map((unit) => <tr key={unit.id}>
+            <tbody>{pagedInventoryUnits.map((unit) => <tr key={unit.id}>
               <td data-label="Unit code"><strong>{unit.unitCode}</strong></td><td data-label="Product">{products?.find((product) => product.id === unit.productId)?.name ?? "Product"}</td><td data-label="Serial number">{unit.serialNumber || "Not recorded"}</td>
               <td data-label="Status"><span className={styles.unitStatus} data-status={unit.lifecycleStatus}>{unit.lifecycleStatus}</span></td><td data-label="Reservation">{unit.hasActiveReservation ? "Reserved / in use" : "Clear"}</td>
               <td data-label="Action"><button type="button" className={styles.tableButton} onClick={() => openUnitEditor(unit)}>Manage</button></td>
@@ -477,6 +487,28 @@ export default function AdminCatalogManager() {
           </table>
           )}
         </div>
+        {visibleInventoryUnits.length > UNITS_PAGE_SIZE ? (
+          <nav className={styles.pagination} aria-label="Inventory units pagination">
+            <span>
+              Showing {(unitsCurrentPage - 1) * UNITS_PAGE_SIZE + 1}&ndash;{Math.min(unitsCurrentPage * UNITS_PAGE_SIZE, visibleInventoryUnits.length)} of {visibleInventoryUnits.length}
+            </span>
+            <div>
+              <button type="button" disabled={unitsCurrentPage === 1} onClick={() => setUnitsPage(unitsCurrentPage - 1)}>Previous</button>
+              {Array.from({ length: unitsPageCount }, (_, index) => index + 1).map((pageNumber) => (
+                <button
+                  key={pageNumber}
+                  type="button"
+                  className={pageNumber === unitsCurrentPage ? styles.pageActive : undefined}
+                  aria-current={pageNumber === unitsCurrentPage ? "page" : undefined}
+                  onClick={() => setUnitsPage(pageNumber)}
+                >
+                  {pageNumber}
+                </button>
+              ))}
+              <button type="button" disabled={unitsCurrentPage === unitsPageCount} onClick={() => setUnitsPage(unitsCurrentPage + 1)}>Next</button>
+            </div>
+          </nav>
+        ) : null}
       </section>
       </div>
       ) : null}
