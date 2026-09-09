@@ -249,6 +249,7 @@ export default function AdminBookingsList() {
                 <tr>
                   <th>Booking</th>
                   <th>Customer</th>
+                  <th>Account Type</th>
                   <th>Rental Item</th>
                   <th>Dates</th>
                   <th>Status</th>
@@ -286,17 +287,20 @@ export default function AdminBookingsList() {
                       <td data-label="Customer">
                         <strong className={styles.customerNameRow}>
                           {customerName(booking, user)}
-                          {booking.isGuestCheckout ? (
-                            <GuestBadge />
-                          ) : (
-                            <StatusBadge label="With Account" tone="green" />
-                          )}
                         </strong>
                         <small>{booking.customerSnapshot?.email || user?.email || "-"}</small>
                       </td>
+                      <td data-label="Account Type">
+                        {booking.isGuestCheckout ? (
+                          <GuestBadge />
+                        ) : (
+                          <StatusBadge label="Account" tone="green" />
+                        )}
+                      </td>
                       <td data-label="Rental Item">{bookingHeadline(booking.items)}</td>
                       <td data-label="Dates">
-                        {formatDate(booking.startDate)} - {formatDate(booking.endDate)}
+                        <strong>{formatDate(booking.startDate)}</strong>
+                        <strong>{formatDate(booking.endDate)}</strong>
                       </td>
                       <td data-label="Status"><StatusBadge status={booking.status} /></td>
                       <td data-label="Fulfillment Update">

@@ -231,6 +231,7 @@ export default function AdminDashboard() {
                     <tr>
                       <th>Booking</th>
                       <th>Customer</th>
+                      <th>Account Type</th>
                       <th>Product</th>
                       <th>Status</th>
                       <th>Submitted</th>
@@ -267,13 +268,15 @@ export default function AdminDashboard() {
                           <td data-label="Customer">
                             <span className={styles.customerCell}>
                               <span className={styles.customerNameRow}>{booking.customerName}</span>
-                              <span className={styles.accountTypeRow}>
-                                {booking.isGuestCheckout ? (
-                                  <GuestBadge />
-                                ) : (
-                                  <StatusBadge label="Account" tone="green" />
-                                )}
-                              </span>
+                            </span>
+                          </td>
+                          <td data-label="Account Type">
+                            <span className={styles.accountTypeRow}>
+                              {booking.isGuestCheckout ? (
+                                <GuestBadge />
+                              ) : (
+                                <StatusBadge label="Account" tone="green" />
+                              )}
                             </span>
                           </td>
                           <td data-label="Product">{booking.productName}</td>
