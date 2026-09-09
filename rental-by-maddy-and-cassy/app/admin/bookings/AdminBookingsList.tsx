@@ -33,9 +33,22 @@ const STATUS_OPTIONS: Array<{ value: "" | BookingStatus; label: string }> = [
   { value: "confirmed", label: "Confirmed" },
   { value: "ready_for_release", label: "Ready for Handover" },
   { value: "released", label: "Released" },
-  { value: "returned", label: "Returned / Completed" },
+  { value: "returned", label: "Returned" },
   { value: "cancelled", label: "Cancelled" },
 ];
+
+type AccountTypeFilter = "all" | "account" | "guest";
+
+const ACCOUNT_TYPE_OPTIONS: Array<{ value: AccountTypeFilter; label: string }> = [
+  { value: "all", label: "All account types" },
+  { value: "account", label: "With Account" },
+  { value: "guest", label: "Guest" },
+];
+
+/** A booking is treated as "With Account" unless it was placed through a guest checkout. */
+function isAccountBooking(booking: Booking): boolean {
+  return !booking.isGuestCheckout;
+}
 
 function formatDate(value: string | undefined | null): string {
   if (!value) return "-";
@@ -61,6 +74,7 @@ export default function AdminBookingsList() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<"" | BookingStatus>("");
+  const [accountType, setAccountType] = useState<AccountTypeFilter>("all");
   const [historyFilter, setHistoryFilter] = useState<BookingHistoryFilter>("all");
   const [page, setPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
@@ -101,6 +115,8 @@ export default function AdminBookingsList() {
     return (bookings ?? []).filter((booking) => {
       if (!bookingMatchesHistoryFilter(booking, historyFilter)) return false;
       if (status && booking.status !== status) return false;
+      if (accountType === "account" && !isAccountBooking(booking)) return false;
+      if (accountType === "guest" && isAccountBooking(booking)) return false;
       if (!query) return true;
 
       const user = usersById.get(booking.customerId);
@@ -112,7 +128,7 @@ export default function AdminBookingsList() {
         user?.email,
       ].some((value) => value?.toLowerCase().includes(query));
     });
-  }, [bookings, historyFilter, search, status, usersById]);
+  }, [accountType, bookings, historyFilter, search, status, usersById]);
 
   const pageCount = Math.max(1, Math.ceil(filteredBookings.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
@@ -199,6 +215,19 @@ export default function AdminBookingsList() {
                 ))}
               </select>
             </label>
+            <label>
+              <span className={styles.visuallyHidden}>Filter bookings by account type</span>
+              <select
+                value={accountType}
+                onChange={(event) => { setAccountType(event.target.value as AccountTypeFilter); resetToFirstPage(); }}
+              >
+                {ACCOUNT_TYPE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
         </div>
 
@@ -257,7 +286,11 @@ export default function AdminBookingsList() {
                       <td data-label="Customer">
                         <strong className={styles.customerNameRow}>
                           {customerName(booking, user)}
-                          {booking.isGuestCheckout ? <GuestBadge /> : null}
+                          {booking.isGuestCheckout ? (
+                            <GuestBadge />
+                          ) : (
+                            <StatusBadge label="With Account" tone="green" />
+                          )}
                         </strong>
                         <small>{booking.customerSnapshot?.email || user?.email || "-"}</small>
                       </td>

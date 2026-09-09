@@ -10,7 +10,7 @@ const STATUS_LABELS: Record<BookingStatus, string> = {
   confirmed: "Confirmed",
   ready_for_release: "Ready for Release",
   released: "Released to Customer",
-  returned: "Returned / Completed",
+  returned: "Returned",
   cancelled: "Cancelled",
   rejected: "Rejected",
 };

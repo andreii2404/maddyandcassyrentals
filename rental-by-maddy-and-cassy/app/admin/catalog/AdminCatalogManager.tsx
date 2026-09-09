@@ -47,6 +47,15 @@ const blankForm: CatalogEditorInput = {
 
 const blankCategory: CatalogCategoryInput = { name: "", description: "", sortOrder: 0 };
 
+type CatalogTab = "catalog" | "categories" | "units" | "reviews";
+
+const catalogTabs: { value: CatalogTab; label: string }[] = [
+  { value: "catalog", label: "Complete Catalog" },
+  { value: "categories", label: "Product Categories" },
+  { value: "units", label: "Inventory Units" },
+  { value: "reviews", label: "Reviews & Pricing" },
+];
+
 function formatMoney(value: number): string {
   return `PHP ${value.toLocaleString("en-PH", { maximumFractionDigits: 2 })}`;
 }
@@ -71,6 +80,7 @@ export default function AdminCatalogManager() {
   const [priceHistory, setPriceHistory] = useState<AdminPriceHistoryEntry[]>([]);
   const [reviews, setReviews] = useState<AdminProductReview[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<CatalogTab>("catalog");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState<"all" | ProductStatus>("all");
@@ -328,6 +338,27 @@ export default function AdminCatalogManager() {
         <span>Manage listings, categories, pricing, discounts, and every physical rental unit.</span>
       </header>
 
+      <nav className={styles.tabNav} role="tablist" aria-label="Catalog sections">
+        {catalogTabs.map((tab) => (
+          <button
+            key={tab.value}
+            type="button"
+            role="tab"
+            id={`catalog-tab-${tab.value}`}
+            aria-selected={activeTab === tab.value}
+            aria-controls={`catalog-panel-${tab.value}`}
+            className={activeTab === tab.value ? styles.activeTab : undefined}
+            onClick={() => setActiveTab(tab.value)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </nav>
+
+      {error ? <div className={styles.error} role="alert">{error}<button type="button" onClick={() => void load()}>Try again</button></div> : null}
+
+      {activeTab === "catalog" ? (
+      <div id="catalog-panel-catalog" role="tabpanel" aria-labelledby="catalog-tab-catalog">
       <section className={styles.controlPanel} aria-label="Catalog overview and controls">
         <div className={styles.statsStrip} aria-label="Inventory summary">
           <div><strong>{summary.listings}</strong><span>All listings</span></div>
@@ -352,8 +383,6 @@ export default function AdminCatalogManager() {
           <button type="button" className={styles.addButton} onClick={() => openEditor()}>+ Add Product</button>
         </div>
       </section>
-
-      {error ? <div className={styles.error} role="alert">{error}<button type="button" onClick={() => void load()}>Try again</button></div> : null}
 
       <section className={styles.section} aria-labelledby="products-heading">
         <div className={styles.sectionHeading}>
@@ -402,7 +431,11 @@ export default function AdminCatalogManager() {
           </div>
         ) : null}
       </section>
+      </div>
+      ) : null}
 
+      {activeTab === "categories" ? (
+      <div id="catalog-panel-categories" role="tabpanel" aria-labelledby="catalog-tab-categories">
       <section className={styles.section} aria-labelledby="categories-heading">
         <div className={styles.sectionHeading}>
           <div><p>CATEGORIES</p><h2 id="categories-heading">Product Categories</h2></div>
@@ -419,7 +452,11 @@ export default function AdminCatalogManager() {
           )}
         </div>
       </section>
+      </div>
+      ) : null}
 
+      {activeTab === "units" ? (
+      <div id="catalog-panel-units" role="tabpanel" aria-labelledby="catalog-tab-units">
       <section className={styles.section} aria-labelledby="units-heading">
         <div className={styles.sectionHeading}>
           <div><p>PHYSICAL UNITS</p><h2 id="units-heading">Inventory Management</h2></div>
@@ -438,7 +475,11 @@ export default function AdminCatalogManager() {
           )}
         </div>
       </section>
+      </div>
+      ) : null}
 
+      {activeTab === "reviews" ? (
+      <div id="catalog-panel-reviews" role="tabpanel" aria-labelledby="catalog-tab-reviews">
       <section className={styles.history}>
         <div className={styles.sectionHeading}>
           <div><p>CUSTOMER FEEDBACK</p><h2>Ratings &amp; Reviews</h2></div>
@@ -465,6 +506,8 @@ export default function AdminCatalogManager() {
           </tr>)}</tbody></table>
           )}</div>
       </section>
+      </div>
+      ) : null}
 
       {editing ? (
         <div className={styles.overlay} role="presentation" onMouseDown={() => !saving && setEditing(null)}>
