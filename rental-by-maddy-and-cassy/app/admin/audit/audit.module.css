@@ -156,18 +156,8 @@
   text-decoration: underline;
 }
 
-.row {
-  cursor: pointer;
-  transition: background 120ms ease;
-}
-
 .row:hover {
   background: rgba(242, 210, 207, 0.16);
-}
-
-.row:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: -2px;
 }
 
 .activityCell {
@@ -181,21 +171,6 @@
   white-space: nowrap;
 }
 
-.chevron,
-.chevronOpen {
-  flex-shrink: 0;
-  width: 7px;
-  height: 7px;
-  border-right: 1.6px solid var(--color-charcoal);
-  border-bottom: 1.6px solid var(--color-charcoal);
-  transform: rotate(-45deg);
-  transition: transform 140ms ease;
-}
-
-.chevronOpen {
-  transform: rotate(45deg);
-}
-
 .tableWrap td strong {
   display: block;
   color: var(--color-text-primary);
@@ -206,33 +181,6 @@
   margin-top: 0.15rem;
   color: var(--color-charcoal);
   font-size: 0.66rem;
-}
-
-.detailRow td {
-  padding: 0;
-  background: var(--color-background);
-}
-
-.detailPanel {
-  padding: 0.9rem 1.1rem;
-}
-
-.detailLabel {
-  display: block;
-  margin-bottom: 0.3rem;
-  color: var(--color-charcoal);
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.detailText {
-  margin: 0;
-  color: var(--color-text-primary);
-  font-size: 0.78rem;
-  line-height: 1.5;
-  word-break: break-word;
 }
 
 .loading {
@@ -343,13 +291,7 @@
     background: var(--color-white);
   }
 
-  .row:has(+ .detailRow) {
-    border-bottom: none;
-    border-radius: 14px 14px 0 0;
-  }
-
-  .tableWrap tbody tr:last-child.row,
-  .tableWrap tbody tr.detailRow:last-child {
+  .tableWrap tbody tr:last-child.row {
     margin-bottom: 0.75rem;
   }
 
@@ -376,17 +318,6 @@
 
   .activityCell strong {
     white-space: normal;
-  }
-
-  .detailRow {
-    margin: 0 0.75rem;
-  }
-
-  .detailRow td {
-    padding: 0;
-    border: 1px solid var(--color-border);
-    border-top: none;
-    border-radius: 0 0 14px 14px;
   }
 
   .pagination {

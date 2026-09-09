@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import AdminShell from "@/components/admin/AdminShell";
 import Spinner from "@/components/ui/Spinner";
@@ -19,7 +19,6 @@ import {
   formatAuditActor,
   formatAuditDetails,
   formatBookingReference,
-  formatWhatHappened,
   getActivityCategory,
   type ActivityCategory,
 } from "@/src/lib/auditLogLabels";
@@ -56,7 +55,6 @@ export default function AdminAuditPage() {
   const [bookingQuery, setBookingQuery] = useState("");
   const [pageSize, setPageSize] = useState<number>(10);
   const [page, setPage] = useState(1);
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let active = true;
@@ -164,15 +162,6 @@ export default function AdminAuditPage() {
     setBookingQuery("");
   }
 
-  function toggleExpanded(id: string) {
-    setExpandedIds((previous) => {
-      const next = new Set(previous);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
   return (
     <AdminShell>
       <div className={styles.page}>
@@ -276,66 +265,34 @@ export default function AdminAuditPage() {
                     <tbody>
                       {paginated.map((log) => {
                         const category = getActivityCategory(log.action);
-                        const expanded = expandedIds.has(log.id);
                         const actorName = formatAuditActor(log, actorNamesById);
                         const actorRole = formatActorRole(log.actorType);
                         const showActorRole = actorName !== actorRole;
 
                         return (
-                          <Fragment key={log.id}>
-                            <tr
-                              className={styles.row}
-                              tabIndex={0}
-                              role="button"
-                              aria-expanded={expanded}
-                              aria-label={`${expanded ? "Collapse" : "Expand"} details for ${formatAuditAction(log.action)}`}
-                              onClick={() => toggleExpanded(log.id)}
-                              onKeyDown={(event) => {
-                                if (event.key === "Enter" || event.key === " ") {
-                                  event.preventDefault();
-                                  toggleExpanded(log.id);
-                                }
-                              }}
-                            >
-                              <td data-label="Activity">
-                                <div className={styles.activityCell}>
-                                  <span className={expanded ? styles.chevronOpen : styles.chevron} aria-hidden="true" />
-                                  <ActivityBadge category={category} />
-                                  <strong>{formatAuditAction(log.action)}</strong>
-                                </div>
-                              </td>
-                              <td data-label="Performed by">
-                                <strong>{actorName}</strong>
-                                {showActorRole ? <small>{actorRole}</small> : null}
-                              </td>
-                              <td data-label="Details">{formatAuditDetails(log)}</td>
-                              <td data-label="Booking #">
-                                {log.bookingId ? (
-                                  <Link
-                                    href={`/admin/bookings/${log.bookingId}`}
-                                    onClick={(event) => event.stopPropagation()}
-                                  >
-                                    {formatBookingReference(log.bookingId)}
-                                  </Link>
-                                ) : (
-                                  "—"
-                                )}
-                              </td>
-                              <td data-label="Date & time">{formatTimestamp(log.createdAt)}</td>
-                            </tr>
-                            {expanded ? (
-                              <tr className={styles.detailRow}>
-                                <td colSpan={5}>
-                                  <div className={styles.detailPanel}>
-                                    <span className={styles.detailLabel}>What happened</span>
-                                    <p className={styles.detailText}>
-                                      {formatWhatHappened(log, actorName)}
-                                    </p>
-                                  </div>
-                                </td>
-                              </tr>
-                            ) : null}
-                          </Fragment>
+                          <tr key={log.id} className={styles.row}>
+                            <td data-label="Activity">
+                              <div className={styles.activityCell}>
+                                <ActivityBadge category={category} />
+                                <strong>{formatAuditAction(log.action)}</strong>
+                              </div>
+                            </td>
+                            <td data-label="Performed by">
+                              <strong>{actorName}</strong>
+                              {showActorRole ? <small>{actorRole}</small> : null}
+                            </td>
+                            <td data-label="Details">{formatAuditDetails(log)}</td>
+                            <td data-label="Booking #">
+                              {log.bookingId ? (
+                                <Link href={`/admin/bookings/${log.bookingId}`}>
+                                  {formatBookingReference(log.bookingId)}
+                                </Link>
+                              ) : (
+                                "—"
+                              )}
+                            </td>
+                            <td data-label="Date & time">{formatTimestamp(log.createdAt)}</td>
+                          </tr>
                         );
                       })}
                     </tbody>
