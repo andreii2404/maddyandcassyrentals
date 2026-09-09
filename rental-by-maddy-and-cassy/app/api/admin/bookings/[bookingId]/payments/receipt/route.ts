@@ -7,8 +7,13 @@ import { sendReceiptEmail, type ReceiptEmailAttachment } from "@/src/lib/server/
 
 export const runtime = "nodejs";
 
-function errorResponse(message: string, status: number) {
-  return NextResponse.json({ error: message }, { status });
+const isDev = process.env.NODE_ENV !== "production";
+
+function errorResponse(message: string, status: number, detail?: string) {
+  // In production the customer-facing message stays generic; outside production we
+  // append the underlying reason so the actual failure is visible while developing.
+  const body = isDev && detail ? { error: `${message} (dev detail: ${detail})` } : { error: message };
+  return NextResponse.json(body, { status });
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ bookingId: string }> }) {
@@ -49,6 +54,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
     }
 
     let customerEmail = booking.customerSnapshot.email?.trim() ?? "";
+    let emailSource = "booking snapshot";
     if (!customerEmail) {
       const { data: profile } = await admin
         .from("profiles")
@@ -56,20 +62,35 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
         .eq("id", booking.customerId)
         .maybeSingle();
       customerEmail = profile?.contact_email?.trim() ?? "";
+      emailSource = "profiles.contact_email";
       if (!customerEmail) {
         const { data: authUser } = await admin.auth.admin.getUserById(booking.customerId);
         customerEmail = authUser.user?.email?.trim() ?? "";
+        emailSource = "auth user record";
       }
     }
     if (!customerEmail) {
       return errorResponse("No email address is on file for this customer.", 400);
     }
+    if (isDev) {
+      console.info("Receipt email: resolved recipient", { bookingId, emailSource, customerEmail });
+    }
 
     let attachment: ReceiptEmailAttachment | null = null;
-    const { data: pdfBlob } = await admin.storage.from("receipts").download(receipt.document_path);
+    const { data: pdfBlob, error: pdfError } = await admin.storage
+      .from("receipts")
+      .download(receipt.document_path);
     if (pdfBlob) {
       const bytes = Buffer.from(await pdfBlob.arrayBuffer());
       attachment = { filename: `${receipt.receipt_number}.pdf`, content: bytes.toString("base64") };
+    } else {
+      // Not fatal: the email still links to the live receipt via bookingUrl. Log so the
+      // missing attachment is visible instead of silently shipping a link-only email.
+      console.error("Receipt email: could not download receipt PDF, sending link-only email", {
+        bookingId,
+        documentPath: receipt.document_path,
+        error: pdfError?.message ?? "unknown storage error",
+      });
     }
 
     const emailResult = await sendReceiptEmail(customerEmail, {
@@ -85,13 +106,27 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
     }, attachment);
 
     if (!emailResult.sent) {
+      console.error("Receipt email send failed", {
+        bookingId,
+        receiptId,
+        reason: emailResult.reason,
+        detail: emailResult.detail,
+      });
       if (emailResult.reason === "not_configured") {
-        return errorResponse("Add the booking email settings (RESEND_API_KEY, BOOKING_EMAIL_FROM) to send receipt emails.", 503);
+        return errorResponse(
+          "Add the booking email settings (RESEND_API_KEY, BOOKING_EMAIL_FROM) to send receipt emails.",
+          503,
+          emailResult.detail,
+        );
       }
       if (emailResult.reason === "invalid_recipient") {
-        return errorResponse("The customer's email address on file is not valid.", 400);
+        return errorResponse("The customer's email address on file is not valid.", 400, emailResult.detail);
       }
-      return errorResponse("The receipt email could not be delivered. Please try again.", 502);
+      return errorResponse(
+        "The receipt email could not be delivered. Please try again.",
+        502,
+        emailResult.detail,
+      );
     }
 
     const now = new Date().toISOString();
@@ -123,6 +158,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
       return errorResponse(error.message, error.status);
     }
     console.error("Receipt email action failed", error);
-    return errorResponse("The receipt email could not be sent.", 500);
+    return errorResponse(
+      "The receipt email could not be sent.",
+      500,
+      error instanceof Error ? error.message : String(error),
+    );
   }
 }

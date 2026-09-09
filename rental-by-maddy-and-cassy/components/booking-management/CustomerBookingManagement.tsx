@@ -13,7 +13,7 @@ import {
   parseDeclineNote,
 } from "@/src/lib/bookingManagement";
 import {
-  cancelBookingAsCustomer,
+  requestCancellationAsCustomer,
   updateBookingDetailsAsCustomer,
 } from "@/src/services/bookingService";
 import { createClient } from "@/src/lib/supabase/client";
@@ -75,8 +75,9 @@ export default function CustomerBookingManagement({
       || agreement !== null,
     [agreement, documents.length, payments],
   );
-  const canEdit = canCustomerEditBooking(booking, lockedProgress);
-  const canCancel = canCustomerCancelBooking(booking.status);
+  const pendingCancellationRequest = booking.cancellationRequest?.status === "pending";
+  const canEdit = canCustomerEditBooking(booking, lockedProgress) && !pendingCancellationRequest;
+  const canCancel = canCustomerCancelBooking(booking.status) && !pendingCancellationRequest;
   const milestones = getBookingMilestones(booking);
   const rejectionReason = booking.status === "rejected" ? getRejectionReason(statusHistory) : undefined;
   const parsedRejection = rejectionReason ? parseDeclineNote(rejectionReason) : undefined;
@@ -111,14 +112,14 @@ export default function CustomerBookingManagement({
       showToast("Please provide a short cancellation reason.", "error");
       return;
     }
-    if (!window.confirm(`Cancel booking ${booking.bookingRef}? Its reserved dates will be released.`)) return;
+    if (!window.confirm(`Submit a cancellation request for booking ${booking.bookingRef}? The booking will remain active until an administrator reviews it.`)) return;
 
     setCancelling(true);
     try {
-      await cancelBookingAsCustomer(createClient(), booking.id, cancelReason.trim());
+      await requestCancellationAsCustomer(createClient(), booking.id, cancelReason.trim());
       await onUpdated();
       setCancelOpen(false);
-      showToast("Booking cancelled and reserved dates released.", "success");
+      showToast("Cancellation request submitted for administrator review.", "success");
     } catch (error) {
       showToast(error instanceof Error ? error.message : "The booking could not be cancelled.", "error");
     } finally {
@@ -146,7 +147,11 @@ export default function CustomerBookingManagement({
             <StatusBadge status={booking.status} />
           )}
         </div>
-        <p className={styles.statusMessage}>{getBookingStatusMessage(booking.status, booking.fulfillmentMethod)}</p>
+        <p className={styles.statusMessage}>
+          {pendingCancellationRequest
+            ? "Your cancellation request is waiting for administrator review. The booking remains active until a decision is made."
+            : getBookingStatusMessage(booking.status, booking.fulfillmentMethod)}
+        </p>
         {rejectionReason ? (
           <button type="button" className={styles.viewReasonLink} onClick={() => setReasonModalOpen(true)}>
             View rejection reason
@@ -226,7 +231,13 @@ export default function CustomerBookingManagement({
               <span className={`${styles.actionAvailability} ${canCancel ? styles.available : styles.locked}`}>{canCancel ? "Available" : "Locked"}</span>
             </div>
             <h3>Cancel booking</h3>
-            <p>{canCancel ? "Cancel the request and release its reserved calendar dates." : "Online cancellation is unavailable at this stage. Contact the business for assistance."}</p>
+            <p>
+              {pendingCancellationRequest
+                ? "Your cancellation request is under review. Reserved dates remain held until the administrator decides."
+                : canCancel
+                  ? "Send a cancellation request for administrator review. Reserved dates remain held until it is approved."
+                  : "Online cancellation requests are unavailable at this stage. Contact the business for assistance."}
+            </p>
             <button type="button" className={styles.cancelButton} disabled={!canCancel} onClick={() => { setCancelOpen((open) => !open); setEditOpen(false); }}>
               {cancelOpen ? "Keep booking" : "Request cancellation"}
             </button>
@@ -255,10 +266,10 @@ export default function CustomerBookingManagement({
 
         {cancelOpen && canCancel ? (
           <div className={styles.cancelPanel}>
-            <strong>Before you cancel</strong>
-            <p>Reserved dates will become available again. Payments and the required deposit are non-refundable under the rental terms; contact the business about exceptional cases.</p>
+            <strong>Request cancellation review</strong>
+            <p>The booking will remain active while the administrator reviews this request. Reserved dates are released only if the request is approved. Payments and the required deposit are non-refundable under the rental terms; contact the business about exceptional cases.</p>
             <label><span>Cancellation reason</span><textarea value={cancelReason} onChange={(event) => setCancelReason(event.target.value)} maxLength={500} rows={3} placeholder="Tell us briefly why you need to cancel" /></label>
-            <button type="button" onClick={handleCancel} disabled={cancelling}>{cancelling ? "Cancelling…" : "Confirm cancellation"}</button>
+            <button type="button" onClick={handleCancel} disabled={cancelling}>{cancelling ? "Submitting…" : "Submit cancellation request"}</button>
           </div>
         ) : null}
       </section>

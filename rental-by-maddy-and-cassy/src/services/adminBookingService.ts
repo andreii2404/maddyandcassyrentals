@@ -114,6 +114,27 @@ export async function updateAdminBookingStatus(
   };
 }
 
+export async function reviewAdminCancellationRequest(
+  bookingId: string,
+  requestId: string,
+  decision: "approved" | "rejected",
+  note: string,
+): Promise<void> {
+  const response = await fetch(
+    `/api/admin/bookings/${encodeURIComponent(bookingId)}/cancellation`,
+    {
+      method: "PATCH",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ requestId, decision, note }),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "The cancellation request could not be reviewed."));
+  }
+}
+
 export async function countersignBookingAgreement(
   bookingId: string,
   signerName: string,

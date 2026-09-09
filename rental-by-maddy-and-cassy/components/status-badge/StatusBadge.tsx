@@ -5,7 +5,7 @@ export type StatusTone = "green" | "yellow" | "red" | "neutral";
 
 const STATUS_LABELS: Record<BookingStatus, string> = {
   draft: "Draft",
-  pending: "Pending Review",
+  pending: "Pending",
   approved: "Approved",
   confirmed: "Confirmed",
   ready_for_release: "Ready for Release",

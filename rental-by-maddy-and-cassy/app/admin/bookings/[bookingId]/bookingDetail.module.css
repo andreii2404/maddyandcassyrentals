@@ -612,6 +612,151 @@
   font-weight: 500;
 }
 
+.snapshotStatus {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.snapshotStatus small {
+  color: var(--color-charcoal);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.summaryChecklist {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-light-gray);
+}
+
+.summaryChecklistHead {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 0.55rem;
+}
+
+.summaryChecklistHead > span:first-child {
+  color: var(--color-primary);
+  font-size: 0.67rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.bookingSnapshot .statusHeroButton {
+  margin-top: 0.85rem;
+}
+
+.bookingSnapshot .snapshotTopline {
+  flex-wrap: wrap;
+}
+
+.cancellationRequestPanel {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--color-status-red-border);
+  border-radius: 16px;
+  background: var(--color-status-red-bg);
+}
+
+.cancellationRequestHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.cancellationRequestEyebrow {
+  color: var(--color-status-red);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.cancellationRequestHeader h2 {
+  margin: 0.22rem 0 0;
+  font-size: 1rem;
+}
+
+.cancellationRequestHeader p {
+  margin: 0.35rem 0 0;
+  color: var(--color-charcoal);
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+
+.cancellationRequestStatus {
+  flex: 0 0 auto;
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+
+.cancellationRequestStatusPending { background: #fff1d8; color: #8a5a00; }
+.cancellationRequestStatusApproved { background: var(--color-status-green-bg); color: var(--color-status-green); }
+.cancellationRequestStatusRejected { background: var(--color-light-gray); color: var(--color-charcoal); }
+
+.cancellationReason {
+  padding: 0.75rem;
+  border: 1px solid rgba(154, 89, 101, 0.14);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.cancellationReason span {
+  color: var(--color-charcoal);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cancellationReason p,
+.cancellationDecisionNote {
+  margin: 0.3rem 0 0;
+  color: var(--color-text-primary);
+  font-size: 0.74rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.cancellationDecisionControls {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.cancellationDecisionButtons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.55rem;
+}
+
+.cancellationDecisionButtons button {
+  min-height: 38px;
+  padding: 0.5rem 0.8rem;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.cancellationDecisionButtons button:disabled { cursor: wait; opacity: 0.65; }
+.cancellationRejectButton { border: 1px solid var(--color-status-red); background: white; color: var(--color-status-red); }
+.cancellationApproveButton { border: 1px solid var(--color-status-green); background: var(--color-status-green); color: white; }
+
 .snapshotFacts {
   display: grid;
   margin: 0.65rem 0;
@@ -1012,6 +1157,50 @@
   grid-column: span 2;
 }
 
+/* Rental Details: When -> How -> Location as one even four-across row. */
+.detailGrid.rentalFacts {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+@media (max-width: 900px) {
+  .detailGrid.rentalFacts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .detailGrid.rentalFacts {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .cancellationRequestHeader { flex-direction: column; }
+  .cancellationDecisionButtons { justify-content: stretch; }
+  .cancellationDecisionButtons button { flex: 1 1 100%; }
+}
+
+.fullDetail {
+  grid-column: 1 / -1;
+}
+
+.socialRow {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  padding: 0;
+  background: none;
+}
+
+.socialRow > div {
+  min-width: 0;
+  padding: 0.85rem;
+  border-radius: 12px;
+  background: var(--color-background);
+}
+
 .detailGrid dt {
   margin-bottom: 0.3rem;
   color: var(--color-charcoal);
@@ -1206,11 +1395,66 @@
 .agreementButtons button { min-height: 35px; padding: 0.48rem 0.65rem; border: 1px solid var(--color-status-green); border-radius: 9px; background: var(--color-status-green); color: #fff; font: inherit; font-size: 0.6rem; font-weight: 800; cursor: pointer; }
 .agreementButtons .secondaryRecordButton { background: #fff; color: var(--color-status-green); }
 
+/* Rental Agreement — flatten the nested card into the section body, tighten spacing,
+   and sharpen the completed / current / upcoming hierarchy of the signature workflow. */
+.agreementCard {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+.agreementCard .recordHeader {
+  align-items: center;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid var(--color-light-gray);
+}
+
+.agreementCard .signatureSteps {
+  margin-top: 0.85rem;
+}
+
+.agreementCard .signatureSteps .stepComplete strong { color: var(--color-status-green); }
+.agreementCard .signatureSteps .stepCurrent strong { color: var(--color-primary); }
+
+.agreementCard .countersignPanel,
+.agreementCard .completedAgreement {
+  margin-top: 0.85rem;
+}
+
+.agreementCard .countersignPanel {
+  gap: 0.65rem;
+  padding: 0.85rem;
+}
+
+.agreementCard .readinessChecks {
+  gap: 0.35rem;
+}
+
+.agreementCard .readinessChecks span {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.5rem;
+  text-align: center;
+}
+
+.agreementCard .countersignButton {
+  margin-top: 0.15rem;
+  font-size: 0.7rem;
+}
+
+.agreementCard .legalNote {
+  opacity: 0.75;
+}
+
 .paymentAmount { display: grid; margin-top: 1rem; padding: 0.9rem; border: 1px solid rgba(154,89,101,.1); border-radius: 12px; background: #fff; }
 .paymentAmount > span { color: var(--color-charcoal); font-size: 0.58rem; font-weight: 800; text-transform: uppercase; }
 .paymentAmount strong { margin-top: 0.18rem; font-size: 1.25rem; letter-spacing: -.03em; }
 .paymentAmount small { margin-top: 0.18rem; color: var(--color-charcoal); font-size: 0.56rem; }
-.paymentFacts { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 0.5rem; margin: 0.7rem 0 0; }
+.paymentFacts { display: grid; grid-template-columns: repeat(auto-fit,minmax(120px,1fr)); gap: 0.5rem; margin: 0; }
 .paymentFacts div { padding: 0.6rem; border-radius: 10px; background: var(--color-background); }
 .paymentFacts dt { color: var(--color-charcoal); font-size: 0.54rem; font-weight: 800; text-transform: uppercase; }
 .paymentFacts dd { margin: 0.18rem 0 0; overflow-wrap: anywhere; font-size: 0.68rem; font-weight: 800; }
@@ -1224,7 +1468,8 @@
 .receiptList small { margin-top: 0.12rem; color: var(--color-charcoal); font-size: 0.52rem; }
 .receiptList button > span:last-child { color: var(--color-primary); font-weight: 800; }
 .emptyRecord { margin: 1rem 0 0; padding: 0.8rem; border: 1px dashed var(--color-dusty-rose); border-radius: 10px; color: var(--color-charcoal); font-size: 0.64rem; line-height: 1.5; }
-.receiptRow { display: grid; gap: 0.4rem; }
+.receiptRow { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: stretch; gap: 0.45rem; }
+.receiptRow > button { height: 100%; }
 .receiptEmailAction { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
 .sendReceiptButton { min-height: 36px; padding: 0.5rem 0.7rem; border: 1px solid var(--color-primary); border-radius: 9px; background: #fff; color: var(--color-primary); font: inherit; font-size: 0.62rem; font-weight: 800; cursor: pointer; }
 .sendReceiptButton:hover:not(:disabled) { background: var(--color-primary); color: #fff; }
@@ -1428,6 +1673,8 @@
   .confirmationActions { flex-direction: column-reverse; }
   .confirmationActions button { width: 100%; }
 
+  .receiptRow { grid-template-columns: 1fr; }
+
   .signatureSteps { grid-template-columns: 1fr; gap: 0.65rem; }
   .signatureSteps li::before { top: -0.7rem; bottom: 50%; left: 13px; width: 2px; height: auto; }
   .signatureSteps li:first-child::before { display: none; }
@@ -1461,6 +1708,10 @@
 
   .wideDetail {
     grid-column: auto;
+  }
+
+  .socialRow {
+    grid-template-columns: 1fr;
   }
 }
 

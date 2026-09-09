@@ -25,7 +25,17 @@ export interface BookingItemsSummaryProps {
 }
 
 function money(currency: string, value: number): string {
-  return `${currency}${value.toLocaleString()}`;
+  return `${currency} ${value.toLocaleString("en-PH")}`;
+}
+
+/**
+ * Some product names already begin with the brand ("DJI Osmo Action 6"), so
+ * prefixing the brand again would read "DJI DJI Osmo Action 6". Only show the
+ * brand chip when the name does not already start with it.
+ */
+function shouldPrefixBrand(productName: string, brand?: string): boolean {
+  if (!brand?.trim()) return false;
+  return !productName.trim().toLowerCase().startsWith(brand.trim().toLowerCase());
 }
 
 /** Product | Price/Day | Quantity | Rental Days | Line Total -- the same detailed table used at checkout, reused for every booking output. A single-item booking renders exactly one row. */
@@ -58,7 +68,9 @@ export default function BookingItemsSummary({
                 <td>
                   <div className={styles.productCell}>
                     <span className={styles.productName}>
-                      {item.brand ? <span className={styles.brand}>{item.brand}</span> : null}
+                      {shouldPrefixBrand(item.productName, item.brand) ? (
+                        <span className={styles.brand}>{item.brand}</span>
+                      ) : null}
                       {item.productName}
                     </span>
                     {item.includedAccessories?.length ? (
@@ -88,28 +100,24 @@ export default function BookingItemsSummary({
         </table>
       </div>
       <dl className={styles.totals}>
-        <div className={styles.totalsRow}>
-          <div className={styles.totalItem}>
-            <dt>Subtotal</dt>
-            <dd>{money(currency, subtotal)}</dd>
-          </div>
-          <div className={styles.totalItem}>
-            <dt>Deposit</dt>
-            <dd>{money(currency, depositAmount)}</dd>
-          </div>
+        <div className={styles.totalItem}>
+          <dt>Subtotal</dt>
+          <dd>{money(currency, subtotal)}</dd>
         </div>
-        <div className={styles.totalsRow}>
-          <div className={styles.totalItem}>
-            <dt>Discounts</dt>
-            <dd>{discountAmount > 0 ? `-${money(currency, discountAmount)}` : money(currency, 0)}</dd>
-          </div>
-          <div className={styles.totalItem}>
-            <dt>Fees</dt>
-            <dd>{money(currency, fees)}</dd>
-          </div>
+        <div className={styles.totalItem}>
+          <dt>Discount</dt>
+          <dd>{discountAmount > 0 ? `-${money(currency, discountAmount)}` : money(currency, 0)}</dd>
+        </div>
+        <div className={styles.totalItem}>
+          <dt>Deposit</dt>
+          <dd>{money(currency, depositAmount)}</dd>
+        </div>
+        <div className={styles.totalItem}>
+          <dt>Fees</dt>
+          <dd>{money(currency, fees)}</dd>
         </div>
         <div className={styles.grandTotal}>
-          <dt>Grand total</dt>
+          <dt>Grand Total</dt>
           <dd>{money(currency, grandTotal)}</dd>
         </div>
       </dl>

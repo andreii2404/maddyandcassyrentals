@@ -51,6 +51,23 @@ export type RequirementsStatus =
  */
 export type AgreementStatus = Database["public"]["Enums"]["agreement_status"] | "not_created";
 
+export type CancellationRequestStatus = "pending" | "approved" | "rejected";
+
+export interface CancellationRequest {
+  id: string;
+  bookingId: string;
+  customerId: string;
+  requestedStatus: BookingStatus;
+  reason: string;
+  status: CancellationRequestStatus;
+  decisionNote?: string;
+  decidedBy?: string;
+  requestedAt: string;
+  decidedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /** One line item of a booking -- a booking may have one or many, one per distinct product. */
 export interface BookingItemLine {
   bookingItemId: string;
@@ -81,6 +98,8 @@ export interface Booking {
   inventoryUnitId: string | null;
   quantity: number;
   status: BookingStatus;
+  /** Latest customer cancellation request, when one exists for this booking. */
+  cancellationRequest?: CancellationRequest;
   fulfillmentMethod: FulfillmentMethod;
   startDate: string;
   endDate: string;

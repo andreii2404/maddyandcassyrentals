@@ -13,6 +13,7 @@ import {
   ADMIN_BOOKING_ACTIONS,
   countersignBookingAgreement,
   downloadAdminBookingPdf,
+  reviewAdminCancellationRequest,
   updateAdminBookingStatus,
 } from "@/src/services/adminBookingService";
 import { getUserProfile } from "@/src/services/userService";
@@ -123,6 +124,9 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   const [note, setNote] = useState("");
   const [declineReason, setDeclineReason] = useState("");
   const [updating, setUpdating] = useState(false);
+  const [cancellationDecision, setCancellationDecision] = useState<"approved" | "rejected" | "">("");
+  const [cancellationNote, setCancellationNote] = useState("");
+  const [reviewingCancellation, setReviewingCancellation] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [businessSignerName, setBusinessSignerName] = useState("");
   const [countersignAcknowledged, setCountersignAcknowledged] = useState(false);
@@ -254,7 +258,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
     try {
       const result = await sendBookingReceiptEmail(bookingId, receipt.id);
       await loadDetails();
-      showToast(`Receipt sent to ${result.emailedTo}.`, "success");
+      showToast(`Receipt sent successfully to ${result.emailedTo}.`, "success");
     } catch (sendError) {
       showToast(
         sendError instanceof Error ? sendError.message : "The receipt email could not be sent.",
@@ -340,6 +344,45 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
     }
   }
 
+  async function handleCancellationDecision(decision: "approved" | "rejected") {
+    const request = state?.details.booking.cancellationRequest;
+    if (!request || request.status !== "pending") return;
+    if (decision === "rejected" && cancellationNote.trim().length < 5) {
+      showToast("Add a short explanation when rejecting a cancellation request.", "error");
+      return;
+    }
+    const label = decision === "approved" ? "approve" : "reject";
+    if (!window.confirm(`Are you sure you want to ${label} this cancellation request?`)) return;
+
+    setReviewingCancellation(true);
+    setCancellationDecision(decision);
+    try {
+      await reviewAdminCancellationRequest(
+        bookingId,
+        request.id,
+        decision,
+        cancellationNote.trim(),
+      );
+      await loadDetails();
+      setCancellationNote("");
+      setCancellationDecision("");
+      showToast(
+        decision === "approved"
+          ? "Cancellation approved. The booking was cancelled and its reserved dates were released."
+          : "Cancellation request rejected. The booking remains active.",
+        "success",
+      );
+    } catch (reviewError) {
+      showToast(
+        reviewError instanceof Error ? reviewError.message : "The cancellation request could not be reviewed.",
+        "error",
+      );
+    } finally {
+      setReviewingCancellation(false);
+      setCancellationDecision("");
+    }
+  }
+
   async function handlePdfExport() {
     if (!state) return;
     setExporting(true);
@@ -406,6 +449,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   }
 
   const { booking, emergencyContact, agreement, statusHistory, documents } = state.details;
+  const cancellationRequest = booking.cancellationRequest;
   const { profile, payments, receipts } = state;
   const customer = booking.customerSnapshot;
   // customerSnapshot is assembled straight from the customer's profile row
@@ -527,7 +571,6 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
         <div>
           <p className={styles.eyebrow}>BOOKING REVIEW</p>
           <h1>{booking.bookingRef}</h1>
-          <p>{bookingHeadline(booking.items)} for {fullName}</p>
         </div>
         <div className={styles.headerActions}>
           <span className={`${styles.liveStatus} ${styles[liveStatus]}`}>
@@ -545,38 +588,14 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
         </div>
       </header>
 
-      <div className={styles.reviewOverview}>
-      <section className={styles.statusHero} aria-label="Current status and recommended next step">
-        <div className={styles.statusHeroBlock}>
-          <span>Current status</span>
-          <div className={styles.statusHeroBadge}><StatusBadge status={booking.status} /></div>
-        </div>
-        <div className={styles.statusHeroDivider} aria-hidden="true" />
-        <div className={`${styles.statusHeroBlock} ${styles.statusHeroBlockGrow}`}>
-          <span>Recommended next step</span>
-          {primaryAction ? (
-            <>
-              <strong>{primaryAction.label}</strong>
-              <p>{primaryAction.description}</p>
-            </>
-          ) : (
-            <>
-              <strong>No further action needed</strong>
-              <p>This booking is complete or closed.</p>
-            </>
-          )}
-        </div>
-        {primaryAction ? (
-          <button type="button" className={styles.statusHeroButton} onClick={jumpToNextStep}>
-            Review &amp; apply
-          </button>
-        ) : null}
-      </section>
-
       <section className={styles.bookingSummarySection} aria-label="Booking summary">
         <article className={styles.bookingSnapshot}>
           <div className={styles.snapshotTopline}>
             <span>Booking summary</span>
+            <div className={styles.snapshotStatus}>
+              <small>Current status</small>
+              <StatusBadge status={booking.status} />
+            </div>
           </div>
           <h2>{bookingHeadline(booking.items)}</h2>
           <p className={styles.rentalWindow}>
@@ -595,37 +614,95 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
             <div><dt>Fulfillment</dt><dd>{formatStatus(booking.fulfillmentMethod)}<small>{getFulfillmentProgressLabel(booking.status, booking.fulfillmentMethod)}</small></dd></div>
             <div><dt>Total</dt><dd>{totalAmount}<small>{paymentStatusLabel}</small></dd></div>
           </dl>
+          <div className={styles.summaryChecklist}>
+            <div className={styles.summaryChecklistHead}>
+              <span>Review checklist</span>
+              <span className={remainingChecks === 0 ? styles.readyPill : styles.pendingPill}>
+                {remainingChecks === 0 ? "Ready for the next action" : `${remainingChecks} check${remainingChecks === 1 ? "" : "s"} remaining`}
+              </span>
+            </div>
+            <div className={styles.checklistChips}>
+              {reviewChecks.map((check) => (
+                <div
+                  key={check.label}
+                  className={check.ready ? styles.checkChipReady : styles.checkChipPending}
+                  title={check.detail}
+                >
+                  <span aria-hidden="true">{check.ready ? "✓" : "!"}</span>
+                  <div><small>{check.label}</small><strong>{check.value}</strong></div>
+                </div>
+              ))}
+            </div>
+          </div>
+          {primaryAction ? (
+            <button type="button" className={styles.statusHeroButton} onClick={jumpToNextStep}>
+              Go to Final Review — {primaryAction.label}
+            </button>
+          ) : null}
           <div className={styles.snapshotFooter}>
             <span>Created {formatDate(booking.createdAt, true)}</span>
             <Link href={`/admin/users/${booking.customerId}`}>View customer account</Link>
           </div>
         </article>
       </section>
-      </div>
 
-      <section className={styles.reviewReadiness} aria-labelledby="review-readiness-heading">
-        <div className={styles.reviewReadinessHeading}>
-          <div>
-            <span>AT A GLANCE</span>
-            <h2 id="review-readiness-heading">Booking checklist</h2>
-          </div>
-          <span className={remainingChecks === 0 ? styles.readyPill : styles.pendingPill}>
-            {remainingChecks === 0 ? "Ready for the next action" : `${remainingChecks} check${remainingChecks === 1 ? "" : "s"} remaining`}
-          </span>
-        </div>
-        <div className={styles.checklistChips}>
-          {reviewChecks.map((check) => (
-            <div
-              key={check.label}
-              className={check.ready ? styles.checkChipReady : styles.checkChipPending}
-              title={check.detail}
-            >
-              <span aria-hidden="true">{check.ready ? "✓" : "!"}</span>
-              <div><small>{check.label}</small><strong>{check.value}</strong></div>
+      {cancellationRequest ? (
+        <section className={styles.cancellationRequestPanel} aria-labelledby="cancellation-request-heading">
+          <div className={styles.cancellationRequestHeader}>
+            <div>
+              <span className={styles.cancellationRequestEyebrow}>CUSTOMER CANCELLATION</span>
+              <h2 id="cancellation-request-heading">
+                {cancellationRequest.status === "pending" ? "Cancellation request needs a decision" : "Latest cancellation request"}
+              </h2>
+              <p>Requested {formatDate(cancellationRequest.requestedAt, true)} while the booking was <strong>{formatStatus(cancellationRequest.requestedStatus)}</strong>.</p>
             </div>
-          ))}
-        </div>
-      </section>
+            <span className={`${styles.cancellationRequestStatus} ${styles[`cancellationRequestStatus${cancellationRequest.status[0].toUpperCase()}${cancellationRequest.status.slice(1)}`]}`}>
+              {formatStatus(cancellationRequest.status)}
+            </span>
+          </div>
+          <div className={styles.cancellationReason}>
+            <span>Customer reason</span>
+            <p>{cancellationRequest.reason}</p>
+          </div>
+          {cancellationRequest.status === "pending" ? (
+            <div className={styles.cancellationDecisionControls}>
+              <label className={styles.noteField}>
+                <span>Response to customer{cancellationDecision === "rejected" ? " (required for rejection)" : " (optional)"}</span>
+                <textarea
+                  value={cancellationNote}
+                  onChange={(event) => setCancellationNote(event.target.value)}
+                  rows={3}
+                  maxLength={1000}
+                  placeholder="Explain the decision or any next steps"
+                  disabled={reviewingCancellation}
+                />
+              </label>
+              <div className={styles.cancellationDecisionButtons}>
+                <button
+                  type="button"
+                  className={styles.cancellationRejectButton}
+                  onClick={() => void handleCancellationDecision("rejected")}
+                  disabled={reviewingCancellation}
+                >
+                  {reviewingCancellation && cancellationDecision === "rejected" ? "Rejecting..." : "Reject request"}
+                </button>
+                <button
+                  type="button"
+                  className={styles.cancellationApproveButton}
+                  onClick={() => void handleCancellationDecision("approved")}
+                  disabled={reviewingCancellation}
+                >
+                  {reviewingCancellation && cancellationDecision === "approved" ? "Approving..." : "Approve cancellation"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <p className={styles.cancellationDecisionNote}>
+              {cancellationRequest.decisionNote || "No administrator response was recorded."}
+            </p>
+          )}
+        </section>
+      ) : null}
 
       <nav id="admin-workspace-nav" className={styles.stepNav} aria-label="Booking review steps" role="tablist">
         {REVIEW_STEPS.map((step, index) => {
@@ -751,9 +828,11 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
               <div><dt>Full Name</dt><dd>{fullName}</dd></div>
               <div><dt>Email Address</dt><dd>{email}</dd></div>
               <div><dt>Phone Number</dt><dd>{phone}</dd></div>
-              <div className={styles.wideDetail}><dt>Complete Address</dt><dd>{address}</dd></div>
-              <div><dt>Facebook</dt><dd>{facebook ? <a href={facebook} target="_blank" rel="noopener noreferrer">Open Profile</a> : "-"}</dd></div>
-              <div><dt>Instagram</dt><dd>{instagram ? <a href={instagram} target="_blank" rel="noopener noreferrer">Open Profile</a> : "-"}</dd></div>
+              <div className={styles.fullDetail}><dt>Complete Address</dt><dd>{address}</dd></div>
+              <div className={styles.socialRow}>
+                <div><dt>Facebook</dt><dd>{facebook ? <a href={facebook} target="_blank" rel="noopener noreferrer">Open Profile</a> : "-"}</dd></div>
+                <div><dt>Instagram</dt><dd>{instagram ? <a href={instagram} target="_blank" rel="noopener noreferrer">Open Profile</a> : "-"}</dd></div>
+              </div>
             </dl>
           </div>
         </section>
@@ -765,11 +844,11 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
             <span className={styles.sectionHeaderStatus}>{totalUnits} unit{totalUnits === 1 ? "" : "s"}</span>
           </div>
           <div className={styles.detailBody}>
-            <dl className={styles.detailGrid}>
-              <div><dt>Rental period</dt><dd>{formatDate(booking.startDate)} — {formatDate(booking.endDate)}</dd></div>
-              <div><dt>Duration</dt><dd>{booking.dayCount} day(s)</dd></div>
-              <div><dt>Handover</dt><dd>{formatStatus(booking.fulfillmentMethod)}</dd></div>
-              <div className={styles.wideDetail}><dt>{formatStatus(booking.fulfillmentMethod)} location</dt><dd>{booking.location || "-"}</dd></div>
+            <dl className={`${styles.detailGrid} ${styles.rentalFacts}`}>
+              <div><dt>Rental Period</dt><dd>{formatDate(booking.startDate)} — {formatDate(booking.endDate)}</dd></div>
+              <div><dt>Duration</dt><dd>{booking.dayCount} day{booking.dayCount === 1 ? "" : "s"}</dd></div>
+              <div><dt>Handover Method</dt><dd>{formatStatus(booking.fulfillmentMethod)}</dd></div>
+              <div><dt>Pickup/Delivery Location</dt><dd>{booking.location || "Not provided"}</dd></div>
             </dl>
             <BookingItemsSummary
               currency="PHP"
@@ -792,19 +871,12 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
           </div>
           <div className={styles.detailBody}>
             <article className={styles.recordCard}>
-              <div className={styles.recordHeader}>
-                <div><span>PAYMENT RECORDS</span><h3>Verified transactions</h3></div>
-                <span className={`${styles.recordStatus} ${amountPaid > 0 ? styles.recordComplete : styles.recordPending}`}>{paymentStatusLabel}</span>
-              </div>
-              <div className={styles.paymentAmount}>
-                <span>Verified amount</span>
-                <strong>PHP {amountPaid.toLocaleString("en-PH")}</strong>
-                <small>of PHP {booking.totalAmount.toLocaleString("en-PH")} booking total</small>
-              </div>
               <dl className={styles.paymentFacts}>
-                <div><dt>Attempts</dt><dd>{payments.length}</dd></div>
-                <div><dt>Receipts</dt><dd>{receipts.length}</dd></div>
+                <div><dt>Verified Amount</dt><dd>PHP {amountPaid.toLocaleString("en-PH")}</dd></div>
+                <div><dt>Booking Total</dt><dd>PHP {booking.totalAmount.toLocaleString("en-PH")}</dd></div>
                 <div><dt>Balance</dt><dd>PHP {Math.max(0, booking.totalAmount - amountPaid).toLocaleString("en-PH")}</dd></div>
+                <div><dt>Payment Attempts</dt><dd>{payments.length}</dd></div>
+                <div><dt>Receipts</dt><dd>{receipts.length}</dd></div>
               </dl>
               {receipts.some((receipt) => receipt.documentPath) ? (
                 <div className={styles.receiptList}>
@@ -818,7 +890,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                       <div key={receipt.id} className={styles.receiptRow}>
                         <button type="button" onClick={() => openPrivateFile("receipts", receipt.documentPath!)}>
                           <span className={styles.receiptIcon}>PDF</span>
-                          <span><strong>{receipt.receiptNumber ?? receipt.id.slice(0, 8)}</strong><small>Open official receipt</small></span>
+                          <span><strong>{receipt.receiptNumber ?? receipt.id.slice(0, 8)}</strong><small>Open Receipt</small></span>
                           <span aria-hidden="true">↗</span>
                         </button>
                         <div className={styles.receiptEmailAction}>
@@ -894,9 +966,9 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
             <span className={`${styles.sectionHeaderStatus} ${agreement?.status === "completed" ? styles.sectionHeaderReady : ""}`}>{agreement?.status === "awaiting_business_signature" ? "Action required" : AGREEMENT_STATUS_LABELS[booking.agreementStatus] ?? formatStatus(booking.agreementStatus)}</span>
           </div>
           <div className={styles.detailBody}>
-              <article className={styles.recordCard}>
+              <article className={`${styles.recordCard} ${styles.agreementCard}`}>
                 <div className={styles.recordHeader}>
-                  <div><span>RENTAL AGREEMENT</span><h3>Signature workflow</h3></div>
+                  <div><span>RENTAL AGREEMENT</span><h3>Signature Workflow</h3></div>
                   <span className={`${styles.recordStatus} ${agreement?.status === "completed" ? styles.recordComplete : styles.recordPending}`}>
                     {AGREEMENT_STATUS_LABELS[booking.agreementStatus] ?? formatStatus(booking.agreementStatus)}
                   </span>
@@ -906,15 +978,15 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                   <ol className={styles.signatureSteps}>
                     <li className={customerSignature ? styles.stepComplete : styles.stepCurrent}>
                       <span>{customerSignature ? "✓" : "1"}</span>
-                      <div><strong>Customer signature</strong><small>{customerSignature ? `${customerSignature.signerName} · ${formatDate(customerSignature.signedAt, true)}` : "Waiting for customer"}</small></div>
+                      <div><strong>Customer Signature</strong><small>{customerSignature ? `${customerSignature.signerName} · ${formatDate(customerSignature.signedAt, true)}` : "Waiting for customer"}</small></div>
                     </li>
                     <li className={businessSignature ? styles.stepComplete : customerSignature ? styles.stepCurrent : styles.stepUpcoming}>
                       <span>{businessSignature ? "✓" : "2"}</span>
-                      <div><strong>Business countersignature</strong><small>{businessSignature ? `${businessSignature.signerName} · ${formatDate(businessSignature.signedAt, true)}` : customerSignature ? "Admin reviews and countersigns" : "Available after customer signs"}</small></div>
+                      <div><strong>Business Countersignature</strong><small>{businessSignature ? `${businessSignature.signerName} · ${formatDate(businessSignature.signedAt, true)}` : customerSignature ? "Admin reviews and countersigns" : "Available after customer signs"}</small></div>
                     </li>
                     <li className={agreement.finalDocumentPath ? styles.stepComplete : styles.stepUpcoming}>
                       <span>{agreement.finalDocumentPath ? "✓" : "3"}</span>
-                      <div><strong>Final agreement PDF</strong><small>{agreement.finalDocumentPath ? "Ready for admin and customer" : "Created after both signatures"}</small></div>
+                      <div><strong>Final Agreement PDF</strong><small>{agreement.finalDocumentPath ? "Ready for admin and customer" : "Created after both signatures"}</small></div>
                     </li>
                   </ol>
 

@@ -201,9 +201,9 @@ export default function PaymentsReviewPanel({
               </div>
 
               <dl className={styles.facts}>
-                <div><dt>Reference</dt><dd>{payment.externalReference || "-"}</dd></div>
-                <div><dt>Paid from</dt><dd>{metadata.accountName || "-"}{metadata.accountNumber ? ` (${metadata.accountNumber})` : ""}</dd></div>
-                <div><dt>Submitted</dt><dd>{formatDate(payment.submittedAt)}</dd></div>
+                <div><dt>Reference Number</dt><dd>{payment.externalReference || "-"}</dd></div>
+                <div><dt>Paid From</dt><dd>{metadata.accountName || "-"}{metadata.accountNumber ? ` (${metadata.accountNumber})` : ""}</dd></div>
+                <div><dt>Submitted Date &amp; Time</dt><dd>{formatDate(payment.submittedAt)}</dd></div>
               </dl>
 
               {payment.reviewNotes ? (

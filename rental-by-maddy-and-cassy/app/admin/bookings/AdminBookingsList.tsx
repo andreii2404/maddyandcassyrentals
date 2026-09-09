@@ -28,7 +28,7 @@ const PAGE_SIZE = 10;
 
 const STATUS_OPTIONS: Array<{ value: "" | BookingStatus; label: string }> = [
   { value: "", label: "All statuses" },
-  { value: "pending", label: "Pending Review" },
+  { value: "pending", label: "Pending" },
   { value: "approved", label: "Approved" },
   { value: "confirmed", label: "Confirmed" },
   { value: "ready_for_release", label: "Ready for Handover" },
@@ -162,6 +162,11 @@ export default function AdminBookingsList() {
             <span aria-hidden="true" />{getBookingLiveStatusLabel(liveStatus)}
           </span>
           <span className={styles.count}>{bookings?.length ?? 0} bookings</span>
+          {bookings?.some((booking) => booking.cancellationRequest?.status === "pending") ? (
+            <span className={styles.cancellationRequestCount}>
+              {bookings.filter((booking) => booking.cancellationRequest?.status === "pending").length} cancellation request{bookings.filter((booking) => booking.cancellationRequest?.status === "pending").length === 1 ? "" : "s"}
+            </span>
+          ) : null}
         </div>
       </header>
 
@@ -302,7 +307,14 @@ export default function AdminBookingsList() {
                         <strong>{formatDate(booking.startDate)}</strong>
                         <strong>{formatDate(booking.endDate)}</strong>
                       </td>
-                      <td data-label="Status"><StatusBadge status={booking.status} /></td>
+                      <td data-label="Status">
+                        <div className={styles.statusCell}>
+                          <StatusBadge status={booking.status} />
+                          {booking.cancellationRequest?.status === "pending" ? (
+                            <span className={styles.cancellationRequestBadge}>Cancellation requested</span>
+                          ) : null}
+                        </div>
+                      </td>
                       <td data-label="Fulfillment Update">
                         <strong>{getFulfillmentProgressLabel(booking.status, booking.fulfillmentMethod)}</strong>
                         <small>{booking.fulfillmentMethod === "delivery" ? "Delivery" : "Pickup"}</small>

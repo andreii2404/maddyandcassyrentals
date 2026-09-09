@@ -20,6 +20,8 @@ export type {
   BookingDocumentType,
   RequirementDocumentReview,
   RequirementReviewStatus,
+  CancellationRequest,
+  CancellationRequestStatus,
 } from "@/src/types/booking";
 export type {
   PaymentSubmissionStatus,

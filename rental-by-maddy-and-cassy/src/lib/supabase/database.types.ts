@@ -811,6 +811,66 @@ export type Database = {
           },
         ]
       }
+      booking_cancellation_requests: {
+        Row: {
+          booking_id: string
+          created_at: string
+          customer_id: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          id: string
+          reason: string
+          requested_at: string
+          requested_status: Database["public"]["Enums"]["booking_status"]
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          customer_id: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          id?: string
+          reason: string
+          requested_at?: string
+          requested_status: Database["public"]["Enums"]["booking_status"]
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          customer_id?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          id?: string
+          reason?: string
+          requested_at?: string
+          requested_status?: Database["public"]["Enums"]["booking_status"]
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_cancellation_requests_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "booking_totals"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "booking_cancellation_requests_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
           admin_notes: string | null
@@ -1701,6 +1761,52 @@ export type Database = {
           p_phone_number: string
         }
         Returns: string
+      }
+      request_booking_cancellation: {
+        Args: { p_booking_id: string; p_reason: string }
+        Returns: {
+          booking_id: string
+          created_at: string
+          customer_id: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          id: string
+          reason: string
+          requested_at: string
+          requested_status: Database["public"]["Enums"]["booking_status"]
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "booking_cancellation_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      review_booking_cancellation: {
+        Args: { p_decision: string; p_decision_note?: string; p_request_id: string }
+        Returns: {
+          booking_id: string
+          created_at: string
+          customer_id: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          id: string
+          reason: string
+          requested_at: string
+          requested_status: Database["public"]["Enums"]["booking_status"]
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "booking_cancellation_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       admin_set_booking_status: {
         Args: { p_booking_id: string; p_new_status: string; p_note?: string }

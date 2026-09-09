@@ -4,6 +4,7 @@ import type {
   AgreementStatus,
   Booking,
   BookingItemLine,
+  CancellationRequest,
   FulfillmentMethod,
   RequirementsStatus,
 } from "@/src/types/booking";
@@ -135,6 +136,7 @@ function assembleBooking(
   row: JoinedBookingRow,
   totals: Tables<"booking_totals"> | undefined,
   profile: Tables<"profiles"> | undefined,
+  cancellationRequest: CancellationRequest | undefined,
 ): Booking {
   const item = row.booking_items?.[0];
   const fulfillment = row.booking_fulfillments;
@@ -164,6 +166,7 @@ function assembleBooking(
     inventoryUnitId,
     quantity,
     status: row.status,
+    cancellationRequest,
     fulfillmentMethod: (fulfillment?.method ?? "pickup") as FulfillmentMethod,
     startDate,
     endDate,
@@ -249,16 +252,57 @@ async function fetchProfilesById(
   return new Map((data ?? []).map((row) => [row.id, row]));
 }
 
+function mapCancellationRequest(row: Tables<"booking_cancellation_requests">): CancellationRequest {
+  return {
+    id: row.id,
+    bookingId: row.booking_id,
+    customerId: row.customer_id,
+    requestedStatus: row.requested_status,
+    reason: row.reason,
+    status: row.status as CancellationRequest["status"],
+    decisionNote: row.decision_note ?? undefined,
+    decidedBy: row.decided_by ?? undefined,
+    requestedAt: row.requested_at,
+    decidedAt: row.decided_at ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+async function fetchCancellationRequestsByBookingId(
+  supabase: SupabaseClient<Database>,
+  bookingIds: string[],
+): Promise<Map<string, CancellationRequest>> {
+  if (!bookingIds.length) return new Map();
+  const { data } = await supabase
+    .from("booking_cancellation_requests")
+    .select("*")
+    .in("booking_id", bookingIds)
+    .order("created_at", { ascending: false });
+  const map = new Map<string, CancellationRequest>();
+  for (const row of data ?? []) {
+    if (!map.has(row.booking_id)) map.set(row.booking_id, mapCancellationRequest(row));
+  }
+  return map;
+}
+
 async function assembleBookings(
   supabase: SupabaseClient<Database>,
   rows: JoinedBookingRow[],
 ): Promise<Booking[]> {
-  const [totalsById, profilesById] = await Promise.all([
+  const [totalsById, profilesById, cancellationRequestsById] = await Promise.all([
     fetchTotalsByBookingId(supabase, rows.map((row) => row.id)),
     fetchProfilesById(supabase, rows.map((row) => row.customer_id)),
+    fetchCancellationRequestsByBookingId(supabase, rows.map((row) => row.id)),
   ]);
   return rows.map((row) =>
-    assembleBooking(supabase, row, totalsById.get(row.id), profilesById.get(row.customer_id)),
+    assembleBooking(
+      supabase,
+      row,
+      totalsById.get(row.id),
+      profilesById.get(row.customer_id),
+      cancellationRequestsById.get(row.id),
+    ),
   );
 }
 
@@ -325,26 +369,29 @@ export async function getAllBookings(supabase: SupabaseClient<Database>): Promis
   return assembleBookings(supabase, (data ?? []) as unknown as JoinedBookingRow[]);
 }
 
-/** Renter self-service cancellation, only while still pending/approved — see public.cancel_own_booking(). */
-export async function cancelBookingAsCustomer(
+/** Renter cancellation request, only while still pending/approved. */
+export async function requestCancellationAsCustomer(
   supabase: SupabaseClient<Database>,
   bookingId: string,
   note?: string,
 ): Promise<Booking> {
-  const { data, error } = await supabase.rpc("cancel_own_booking", {
+  const { data, error } = await supabase.rpc("request_booking_cancellation", {
     p_booking_id: bookingId,
-    p_note: note,
+    p_reason: note ?? "",
   });
   if (error || !data) {
     const message = error?.message ?? "";
-    if (message.includes("BOOKING_NOT_CANCELLABLE")) {
-      throw new Error("This booking can no longer be cancelled online. Please contact the business for assistance.");
+    if (message.includes("CANCELLATION_REQUEST_EXISTS")) {
+      throw new Error("A cancellation request is already waiting for administrator review.");
     }
-    throw new Error(message || "The booking could not be cancelled.");
+    if (message.includes("BOOKING_NOT_CANCELLABLE")) {
+      throw new Error("This booking can no longer receive an online cancellation request. Please contact the business for assistance.");
+    }
+    throw new Error(message || "The cancellation request could not be submitted.");
   }
 
-  const refreshed = await getBookingById(supabase, (data as Tables<"bookings">).id);
-  if (!refreshed) throw new Error("The booking could not be reloaded after cancellation.");
+  const refreshed = await getBookingById(supabase, (data as Tables<"booking_cancellation_requests">).booking_id);
+  if (!refreshed) throw new Error("The booking could not be reloaded after submitting the request.");
   return refreshed;
 }
 

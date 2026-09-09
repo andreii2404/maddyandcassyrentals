@@ -14,6 +14,15 @@ export interface ReceiptEmailResult {
   sent: boolean;
   providerId?: string;
   reason?: "not_configured" | "invalid_recipient" | "provider_error";
+  /** Human-readable failure detail from the provider or thrown error. Safe to log; surfaced to admins only outside production. */
+  detail?: string;
+}
+
+/** Shape of a Resend POST /emails response: `{ id }` on success, `{ name, message }` on error. */
+interface ResendEmailResponse {
+  id?: unknown;
+  name?: unknown;
+  message?: unknown;
 }
 
 function isEmail(value: string): boolean {
@@ -33,8 +42,16 @@ export async function sendReceiptEmail(
   const from = process.env.BOOKING_EMAIL_FROM?.trim();
   const replyTo = process.env.BOOKING_EMAIL_REPLY_TO?.trim();
 
-  if (!apiKey || !from) return { sent: false, reason: "not_configured" };
-  if (!isEmail(customerEmail)) return { sent: false, reason: "invalid_recipient" };
+  if (!apiKey || !from) {
+    return {
+      sent: false,
+      reason: "not_configured",
+      detail: "RESEND_API_KEY and BOOKING_EMAIL_FROM must be set (see .env.example). For local development, use a Resend API key and a verified sender, or 'onboarding@resend.dev'.",
+    };
+  }
+  if (!isEmail(customerEmail)) {
+    return { sent: false, reason: "invalid_recipient", detail: `Recipient address is not a valid email: "${customerEmail}".` };
+  }
 
   const email = buildReceiptEmail(details);
 
@@ -60,21 +77,37 @@ export async function sendReceiptEmail(
       cache: "no-store",
     });
 
-    const payload = (await response.json().catch(() => null)) as { id?: unknown } | null;
+    const rawBody = await response.text();
+    let payload: ResendEmailResponse | null = null;
+    try {
+      payload = rawBody ? (JSON.parse(rawBody) as ResendEmailResponse) : null;
+    } catch {
+      payload = null;
+    }
+
     if (!response.ok || typeof payload?.id !== "string") {
+      const providerMessage =
+        typeof payload?.message === "string" && payload.message.trim()
+          ? payload.message.trim()
+          : rawBody.slice(0, 500) || `HTTP ${response.status}`;
+      const detail = `Resend responded ${response.status}${
+        typeof payload?.name === "string" ? ` (${payload.name})` : ""
+      }: ${providerMessage}`;
       console.error("Receipt email provider rejected the request", {
         bookingReference: details.bookingReference,
         providerStatus: response.status,
+        detail,
       });
-      return { sent: false, reason: "provider_error" };
+      return { sent: false, reason: "provider_error", detail };
     }
 
     return { sent: true, providerId: payload.id };
   } catch (error) {
+    const detail = error instanceof Error ? error.message : "Unknown provider error";
     console.error("Receipt email request failed", {
       bookingReference: details.bookingReference,
-      error: error instanceof Error ? error.message : "Unknown provider error",
+      error: detail,
     });
-    return { sent: false, reason: "provider_error" };
+    return { sent: false, reason: "provider_error", detail };
   }
 }
