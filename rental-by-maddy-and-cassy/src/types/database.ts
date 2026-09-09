@@ -61,6 +61,8 @@ export interface UserProfile {
   facebookLink?: string;
   instagramLink?: string;
   role: UserRole;
+  /** True when this row is a guest-checkout contact record, not a registered account. */
+  isGuestContact: boolean;
   accountStatus: AccountStatus;
   photoPath?: string;
   createdAt: string;

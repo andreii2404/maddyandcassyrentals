@@ -18,19 +18,33 @@ type ReviewSort = "newest" | "oldest" | "highest" | "lowest";
 const PAGE_SIZE = 12;
 
 function formatDate(value: string): string {
-  return new Date(value).toLocaleString("en-PH", {
+  return new Date(value).toLocaleDateString("en-PH", {
     year: "numeric",
     month: "short",
     day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
   });
 }
 
 function statusLabel(status: AdminReviewRecord["status"]): string {
   if (status === "approved") return "Published";
   if (status === "rejected") return "Hidden";
-  return "Needs review";
+  return "Needs Review";
+}
+
+const RENTAL_STATUS_LABELS: Record<string, string> = {
+  draft: "Draft",
+  pending: "Pending Review",
+  approved: "Approved",
+  confirmed: "Confirmed",
+  ready_for_release: "Ready for Handover",
+  released: "Released",
+  returned: "Returned / Completed",
+  cancelled: "Cancelled",
+  rejected: "Declined",
+};
+
+function rentalStatusLabel(status: string): string {
+  return RENTAL_STATUS_LABELS[status] ?? status.replaceAll("_", " ");
 }
 
 export default function AdminReviewsManager() {
@@ -180,22 +194,22 @@ export default function AdminReviewsManager() {
 
       <section className={styles.metrics} aria-label="Review summary">
         <article className={styles.priorityMetric}>
-          <span>Needs attention</span>
+          <span>Needs Review</span>
           <strong>{summary.pending}</strong>
-          <small>Waiting for an admin decision</small>
+          <small>Waiting for your decision</small>
         </article>
         <article>
-          <span>Published reviews</span>
+          <span>Published</span>
           <strong>{summary.published}</strong>
           <small>Visible on product pages</small>
         </article>
         <article>
-          <span>Published rating</span>
+          <span>Average Rating</span>
           <strong>{summary.average ? `${summary.average.toFixed(1)} / 5` : "—"}</strong>
-          <small>Average of approved feedback</small>
+          <small>Across published reviews</small>
         </article>
         <article>
-          <span>Total submissions</span>
+          <span>Total Reviews</span>
           <strong>{summary.total}</strong>
           <small>{summary.hidden} currently hidden</small>
         </article>
@@ -204,14 +218,14 @@ export default function AdminReviewsManager() {
       <section className={styles.workspace} aria-labelledby="review-queue-heading">
         <div className={styles.workspaceHeader}>
           <div>
-            <p>MODERATION WORKSPACE</p>
+            <p>MANAGE REVIEWS</p>
             <h2 id="review-queue-heading">Customer review queue</h2>
-            <span>Pending reviews are never shown publicly until approved.</span>
+            <span>Reviews stay private until you publish them.</span>
           </div>
           <div className={styles.statusTabs} aria-label="Filter by review status">
             {([
               ["all", "All", summary.total],
-              ["pending", "Needs review", summary.pending],
+              ["pending", "Needs Review", summary.pending],
               ["approved", "Published", summary.published],
               ["rejected", "Hidden", summary.hidden],
             ] as const).map(([value, label, count]) => (
@@ -230,12 +244,12 @@ export default function AdminReviewsManager() {
 
         <div className={styles.toolbar}>
           <label className={styles.searchField}>
-            <span>Search feedback</span>
+            <span>Search</span>
             <input
               type="search"
               value={search}
               onChange={(event) => changeSearch(event.target.value)}
-              placeholder="Customer, booking, product, or comment"
+              placeholder="Customer, booking, product, or review"
             />
           </label>
           <label>
@@ -298,9 +312,12 @@ export default function AdminReviewsManager() {
                     </span>
                   </div>
 
-                  <blockquote className={styles.reviewText}>
-                    {review.comment || "The customer submitted a rating without a written comment."}
-                  </blockquote>
+                  <div className={styles.reviewBody}>
+                    <span className={styles.metaCaption}>Review</span>
+                    <blockquote className={styles.reviewText}>
+                      {review.comment || "This customer left a rating without a written review."}
+                    </blockquote>
+                  </div>
 
                   <dl className={styles.reviewMeta}>
                     <div>
@@ -308,48 +325,51 @@ export default function AdminReviewsManager() {
                       <dd title={review.productName}>{review.productName}</dd>
                     </div>
                     <div>
-                      <dt>Booking ref</dt>
+                      <dt>Booking</dt>
                       <dd title={review.bookingRef}>{review.bookingRef}</dd>
                     </div>
                     <div>
-                      <dt>Rental status</dt>
-                      <dd>{review.bookingStatus.replaceAll("_", " ")}</dd>
+                      <dt>Rental Status</dt>
+                      <dd>{rentalStatusLabel(review.bookingStatus)}</dd>
+                    </div>
+                    <div>
+                      <dt>Submitted</dt>
+                      <dd>
+                        <time dateTime={review.createdAt}>{formatDate(review.createdAt)}</time>
+                      </dd>
                     </div>
                   </dl>
 
-                  <div className={styles.cardFootnote}>
-                    <time dateTime={review.createdAt}>Submitted {formatDate(review.createdAt)}</time>
-                    <span>
-                      {review.moderatedAt
-                        ? `Moderated by ${review.moderatorName || "Administrator"} · ${formatDate(review.moderatedAt)}`
-                        : "Not reviewed yet"}
-                    </span>
-                  </div>
-
                   <div className={styles.cardActions}>
-                    {review.bookingId ? <Link href={`/admin/bookings/${review.bookingId}`}>View booking details</Link> : null}
-                    <div>
-                      {review.status !== "rejected" ? (
-                        <button
-                          type="button"
-                          className={styles.hideButton}
-                          disabled={Boolean(activeReviewId)}
-                          onClick={() => void moderateReview(review, "rejected")}
-                        >
-                          {isSaving ? "Saving…" : "Hide from storefront"}
-                        </button>
-                      ) : null}
-                      {review.status !== "approved" ? (
-                        <button
-                          type="button"
-                          className={styles.publishButton}
-                          disabled={Boolean(activeReviewId)}
-                          onClick={() => void moderateReview(review, "approved")}
-                        >
-                          {isSaving ? "Saving…" : "Approve & publish"}
-                        </button>
-                      ) : null}
-                    </div>
+                    {review.bookingId ? (
+                      <Link className={styles.viewButton} href={`/admin/bookings/${review.bookingId}`}>
+                        View Booking
+                      </Link>
+                    ) : null}
+                    {review.status !== "rejected" ? (
+                      <button
+                        type="button"
+                        className={styles.hideButton}
+                        disabled={Boolean(activeReviewId)}
+                        onClick={() => void moderateReview(review, "rejected")}
+                      >
+                        {isSaving ? "Saving…" : "Hide Review"}
+                      </button>
+                    ) : null}
+                    {review.status !== "approved" ? (
+                      <button
+                        type="button"
+                        className={styles.publishButton}
+                        disabled={Boolean(activeReviewId)}
+                        onClick={() => void moderateReview(review, "approved")}
+                      >
+                        {isSaving
+                          ? "Saving…"
+                          : review.status === "pending"
+                            ? "Approve & Publish"
+                            : "Publish Review"}
+                      </button>
+                    ) : null}
                   </div>
                 </article>
               );

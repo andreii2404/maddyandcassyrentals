@@ -5,7 +5,7 @@ import Link from "next/link";
 import { getAllAdmins } from "@/src/services/adminService";
 import { getAllUsers } from "@/src/services/userService";
 import type { Admin, UserProfile } from "@/src/types/database";
-import { resolveAccountName } from "@/src/lib/accountDisplay";
+import { resolveAccountType, resolveCustomerName } from "@/src/lib/accountDisplay";
 import Spinner from "@/components/ui/Spinner";
 import StatusBadge from "@/components/status-badge/StatusBadge";
 import styles from "./users.module.css";
@@ -74,6 +74,7 @@ export default function AdminUsersList() {
 
     return users.filter(
       (account) =>
+        resolveCustomerName(account).toLowerCase().includes(query) ||
         account.displayName?.toLowerCase().includes(query) ||
         account.email?.toLowerCase().includes(query) ||
         account.phoneNumber?.toLowerCase().includes(query)
@@ -136,13 +137,14 @@ export default function AdminUsersList() {
                 </thead>
                 <tbody>
                   {filteredUsers.map((account) => {
-                    const name = resolveAccountName(account);
+                    const name = resolveCustomerName(account);
+                    const hasName = name !== "Not provided";
                     return (
                     <tr key={account.id}>
                       <td data-label="Name">
                         <Link href={`/admin/users/${account.id}`} className={styles.accountLink}>
                           <span className={styles.avatar} aria-hidden="true">
-                            {name.charAt(0).toUpperCase()}
+                            {hasName ? name.charAt(0).toUpperCase() : "?"}
                           </span>
                           <span>
                             <strong>{name}</strong>
@@ -150,9 +152,9 @@ export default function AdminUsersList() {
                           </span>
                         </Link>
                       </td>
-                      <td data-label="Account Type">{adminIds.has(account.id) ? "Administrator" : "Customer"}</td>
-                      <td data-label="Email">{account.email || "—"}</td>
-                      <td data-label="Phone">{account.phoneNumber || "—"}</td>
+                      <td data-label="Account Type">{resolveAccountType(account, adminIds.has(account.id))}</td>
+                      <td data-label="Email">{account.email || "Not provided"}</td>
+                      <td data-label="Phone">{account.phoneNumber || "Not provided"}</td>
                       <td data-label="Status">
                         <StatusBadge
                           label={formatStatusLabel(account.accountStatus)}

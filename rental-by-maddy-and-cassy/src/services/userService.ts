@@ -19,6 +19,7 @@ function mapProfile(row: Tables<"profiles">): UserProfile {
     facebookLink: row.facebook_url ?? undefined,
     instagramLink: row.instagram_url ?? undefined,
     role: "customer",
+    isGuestContact: row.is_guest_contact ?? false,
     accountStatus: row.account_status as UserProfile["accountStatus"],
     photoPath: row.photo_path ?? undefined,
     createdAt: row.created_at,
