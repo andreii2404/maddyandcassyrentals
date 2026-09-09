@@ -22,7 +22,7 @@ export function resolveAccountName(account: DisplayableAccount): string {
 }
 
 /** The three account categories shown on the User Accounts page. */
-export type AccountType = "Admin" | "With Account" | "Guest";
+export type AccountType = "Admin" | "Account" | "Guest";
 
 export interface ClassifiableAccount extends DisplayableAccount {
   firstName?: string | null;
@@ -67,5 +67,5 @@ export function resolveAccountType(
 ): AccountType {
   if (isAdmin) return "Admin";
   if (!account.email?.trim() || account.isGuestContact === true) return "Guest";
-  return "With Account";
+  return "Account";
 }

@@ -6,8 +6,10 @@ import { getAllAdmins } from "@/src/services/adminService";
 import { getAllUsers } from "@/src/services/userService";
 import type { Admin, UserProfile } from "@/src/types/database";
 import { resolveAccountType, resolveCustomerName } from "@/src/lib/accountDisplay";
+import type { AccountType } from "@/src/lib/accountDisplay";
 import Spinner from "@/components/ui/Spinner";
 import StatusBadge from "@/components/status-badge/StatusBadge";
+import type { StatusTone } from "@/components/status-badge/StatusBadge";
 import styles from "./users.module.css";
 
 const PAGE_SIZE = 10;
@@ -29,6 +31,13 @@ function formatDate(value: UserProfile["createdAt"]): string {
 function formatStatusLabel(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
+
+/** Badge colour for each account type, matching the Status column's tag style. */
+const ACCOUNT_TYPE_TONE: Record<AccountType, StatusTone> = {
+  Admin: "yellow",
+  Account: "green",
+  Guest: "neutral",
+};
 
 export default function AdminUsersList() {
   const [data, setData] = useState<AccountsData | null>(null);
@@ -153,6 +162,7 @@ export default function AdminUsersList() {
                   {visibleUsers.map((account) => {
                     const name = resolveCustomerName(account);
                     const hasName = name !== "Not provided";
+                    const accountType = resolveAccountType(account, adminIds.has(account.id));
                     return (
                     <tr key={account.id}>
                       <td data-label="Name">
@@ -166,7 +176,9 @@ export default function AdminUsersList() {
                           </span>
                         </Link>
                       </td>
-                      <td data-label="Account Type">{resolveAccountType(account, adminIds.has(account.id))}</td>
+                      <td data-label="Account Type">
+                        <StatusBadge label={accountType} tone={ACCOUNT_TYPE_TONE[accountType]} />
+                      </td>
                       <td data-label="Email">{account.email || "Not provided"}</td>
                       <td data-label="Phone">{account.phoneNumber || "Not provided"}</td>
                       <td data-label="Status">
