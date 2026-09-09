@@ -5,7 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import RequireAdmin from "@/components/route-guards/RequireAdmin";
-import { useAuth } from "@/hooks/useAuth";
 import { logout } from "@/src/services/authService";
 import styles from "./AdminShell.module.css";
 
@@ -43,8 +42,6 @@ function isActivePath(pathname: string, href: string): boolean {
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, profile } = useAuth();
-  const displayName = profile?.displayName ?? user?.user_metadata?.display_name ?? "Administrator";
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
@@ -138,16 +135,6 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             >
               ✕
             </button>
-          </div>
-
-          <div className={styles.account}>
-            <span className={styles.avatar} aria-hidden="true">
-              {displayName.charAt(0).toUpperCase()}
-            </span>
-            <div>
-              <strong>{displayName}</strong>
-              <span>Administrator</span>
-            </div>
           </div>
 
           <nav className={styles.navigation} aria-label="Administrator navigation">
