@@ -10,6 +10,8 @@ import Spinner from "@/components/ui/Spinner";
 import StatusBadge from "@/components/status-badge/StatusBadge";
 import styles from "./users.module.css";
 
+const PAGE_SIZE = 10;
+
 interface AccountsData {
   users: UserProfile[];
   admins: Admin[];
@@ -31,6 +33,7 @@ function formatStatusLabel(value: string): string {
 export default function AdminUsersList() {
   const [data, setData] = useState<AccountsData | null>(null);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
 
@@ -81,6 +84,13 @@ export default function AdminUsersList() {
     );
   }, [data, search]);
 
+  const pageCount = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const visibleUsers = filteredUsers.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
+
   return (
     <div className={styles.page}>
       <header className={styles.header}>
@@ -103,7 +113,10 @@ export default function AdminUsersList() {
             <input
               type="search"
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
+              }}
               placeholder="Search name, email, or phone"
               className={styles.search}
             />
@@ -123,6 +136,7 @@ export default function AdminUsersList() {
           </div>
         ) : data ? (
           filteredUsers.length ? (
+            <>
             <div className={styles.tableWrapper}>
               <table className={styles.table}>
                 <thead>
@@ -136,7 +150,7 @@ export default function AdminUsersList() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredUsers.map((account) => {
+                  {visibleUsers.map((account) => {
                     const name = resolveCustomerName(account);
                     const hasName = name !== "Not provided";
                     return (
@@ -168,6 +182,41 @@ export default function AdminUsersList() {
                 </tbody>
               </table>
             </div>
+            {filteredUsers.length > PAGE_SIZE ? (
+              <nav className={styles.pagination} aria-label="User accounts pagination">
+                <span>
+                  Showing {(currentPage - 1) * PAGE_SIZE + 1}&ndash;{Math.min(currentPage * PAGE_SIZE, filteredUsers.length)} of {filteredUsers.length}
+                </span>
+                <div>
+                  <button
+                    type="button"
+                    disabled={currentPage === 1}
+                    onClick={() => setPage(currentPage - 1)}
+                  >
+                    Previous
+                  </button>
+                  {Array.from({ length: pageCount }, (_, index) => index + 1).map((pageNumber) => (
+                    <button
+                      key={pageNumber}
+                      type="button"
+                      className={pageNumber === currentPage ? styles.pageActive : undefined}
+                      aria-current={pageNumber === currentPage ? "page" : undefined}
+                      onClick={() => setPage(pageNumber)}
+                    >
+                      {pageNumber}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    disabled={currentPage === pageCount}
+                    onClick={() => setPage(currentPage + 1)}
+                  >
+                    Next
+                  </button>
+                </div>
+              </nav>
+            ) : null}
+            </>
           ) : (
             <p className={styles.empty}>
               {data.users.length === 0
