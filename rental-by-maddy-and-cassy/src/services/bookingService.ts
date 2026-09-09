@@ -259,6 +259,7 @@ function mapCancellationRequest(row: Tables<"booking_cancellation_requests">): C
     customerId: row.customer_id,
     requestedStatus: row.requested_status,
     reason: row.reason,
+    additionalDetails: row.additional_details ?? undefined,
     status: row.status as CancellationRequest["status"],
     decisionNote: row.decision_note ?? undefined,
     decidedBy: row.decided_by ?? undefined,
@@ -373,11 +374,13 @@ export async function getAllBookings(supabase: SupabaseClient<Database>): Promis
 export async function requestCancellationAsCustomer(
   supabase: SupabaseClient<Database>,
   bookingId: string,
-  note?: string,
+  reason: string,
+  additionalDetails?: string,
 ): Promise<Booking> {
   const { data, error } = await supabase.rpc("request_booking_cancellation", {
     p_booking_id: bookingId,
-    p_reason: note ?? "",
+    p_reason: reason,
+    p_additional_details: additionalDetails?.trim() || undefined,
   });
   if (error || !data) {
     const message = error?.message ?? "";
@@ -386,6 +389,9 @@ export async function requestCancellationAsCustomer(
     }
     if (message.includes("BOOKING_NOT_CANCELLABLE")) {
       throw new Error("This booking can no longer receive an online cancellation request. Please contact the business for assistance.");
+    }
+    if (message.includes("ADDITIONAL_DETAILS_TOO_LONG")) {
+      throw new Error("Additional details must be 1,000 characters or fewer.");
     }
     throw new Error(message || "The cancellation request could not be submitted.");
   }

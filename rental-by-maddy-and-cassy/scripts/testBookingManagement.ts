@@ -7,7 +7,7 @@ import {
   getBookingMilestones,
   getFulfillmentProgressLabel,
 } from "../src/lib/bookingManagement";
-import type { Booking } from "../src/types/booking";
+import { CANCELLATION_REASON_OPTIONS, type Booking } from "../src/types/booking";
 import { createEmptyDraft } from "../src/types/reservationDraft";
 import {
   RESERVATION_PROGRESS_TTL_MS,
@@ -90,6 +90,17 @@ test("customer actions are limited to safe booking states", () => {
   assert.equal(canCustomerEditBooking(booking("pending"), false), true);
   assert.equal(canCustomerEditBooking(booking("pending"), true), false);
   assert.equal(canCustomerEditBooking(booking("approved"), false), false);
+});
+
+test("customer cancellation reasons use the structured options", () => {
+  assert.deepEqual(CANCELLATION_REASON_OPTIONS, [
+    "Change of plans",
+    "Wrong booking details",
+    "Schedule conflict",
+    "Budget issue",
+    "Found another option",
+    "Other",
+  ]);
 });
 
 test("pickup and delivery milestones expose handover and completion progress", () => {

@@ -701,6 +701,12 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
           <div className={styles.cancellationReason}>
             <span>Customer reason</span>
             <p>{cancellationRequest.reason}</p>
+            {cancellationRequest.additionalDetails ? (
+              <>
+                <span>Additional details</span>
+                <p>{cancellationRequest.additionalDetails}</p>
+              </>
+            ) : null}
           </div>
           {cancellationRequest.status === "pending" ? (
             <div className={styles.cancellationDecisionControls}>

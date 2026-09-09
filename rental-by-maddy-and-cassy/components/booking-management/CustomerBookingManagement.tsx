@@ -1,7 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { AgreementDoc, Booking, BookingDocument, StatusHistoryEntry } from "@/src/types/booking";
+import {
+  CANCELLATION_REASON_OPTIONS,
+  type AgreementDoc,
+  type Booking,
+  type BookingDocument,
+  type StatusHistoryEntry,
+} from "@/src/types/booking";
 import type { PaymentRecord } from "@/src/types/payment";
 import {
   canCustomerCancelBooking,
@@ -62,6 +68,7 @@ export default function CustomerBookingManagement({
   const [saving, setSaving] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const [cancelAdditionalDetails, setCancelAdditionalDetails] = useState("");
   const [reasonModalOpen, setReasonModalOpen] = useState(false);
   const [fulfillmentMethod, setFulfillmentMethod] = useState(booking.fulfillmentMethod);
   const [location, setLocation] = useState(booking.location ?? "");
@@ -107,19 +114,27 @@ export default function CustomerBookingManagement({
     }
   }
 
-  async function handleCancel() {
-    if (cancelReason.trim().length < 5) {
-      showToast("Please provide a short cancellation reason.", "error");
+  async function handleCancel(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!CANCELLATION_REASON_OPTIONS.includes(cancelReason as (typeof CANCELLATION_REASON_OPTIONS)[number])) {
+      showToast("Choose a reason for cancelling this booking.", "error");
       return;
     }
     if (!window.confirm(`Submit a cancellation request for booking ${booking.bookingRef}? The booking will remain active until an administrator reviews it.`)) return;
 
     setCancelling(true);
     try {
-      await requestCancellationAsCustomer(createClient(), booking.id, cancelReason.trim());
+      await requestCancellationAsCustomer(
+        createClient(),
+        booking.id,
+        cancelReason,
+        cancelAdditionalDetails,
+      );
       await onUpdated();
       setCancelOpen(false);
-      showToast("Cancellation request submitted for administrator review.", "success");
+      setCancelReason("");
+      setCancelAdditionalDetails("");
+      showToast("Your cancellation request has been submitted and is waiting for business approval.", "success");
     } catch (error) {
       showToast(error instanceof Error ? error.message : "The booking could not be cancelled.", "error");
     } finally {
@@ -152,6 +167,12 @@ export default function CustomerBookingManagement({
             ? "Your cancellation request is waiting for administrator review. The booking remains active until a decision is made."
             : getBookingStatusMessage(booking.status, booking.fulfillmentMethod)}
         </p>
+        {pendingCancellationRequest ? (
+          <div className={styles.cancellationPending} role="status" aria-live="polite">
+            <span>Cancellation Requested</span>
+            <strong>Waiting for Approval</strong>
+          </div>
+        ) : null}
         {rejectionReason ? (
           <button type="button" className={styles.viewReasonLink} onClick={() => setReasonModalOpen(true)}>
             View rejection reason
@@ -265,12 +286,22 @@ export default function CustomerBookingManagement({
         ) : null}
 
         {cancelOpen && canCancel ? (
-          <div className={styles.cancelPanel}>
+          <form className={styles.cancelPanel} onSubmit={(event) => void handleCancel(event)}>
             <strong>Request cancellation review</strong>
-            <p>The booking will remain active while the administrator reviews this request. Reserved dates are released only if the request is approved. Payments and the required deposit are non-refundable under the rental terms; contact the business about exceptional cases.</p>
-            <label><span>Cancellation reason</span><textarea value={cancelReason} onChange={(event) => setCancelReason(event.target.value)} maxLength={500} rows={3} placeholder="Tell us briefly why you need to cancel" /></label>
-            <button type="button" onClick={handleCancel} disabled={cancelling}>{cancelling ? "Submitting…" : "Submit cancellation request"}</button>
-          </div>
+            <p>The booking stays active while the business reviews your request. Reserved dates are released only if the request is approved. Payments and the required deposit remain subject to the rental terms.</p>
+            <label>
+              <span>Reason to Cancel</span>
+              <select value={cancelReason} onChange={(event) => setCancelReason(event.target.value)} required disabled={cancelling}>
+                <option value="">Select a reason</option>
+                {CANCELLATION_REASON_OPTIONS.map((reason) => <option key={reason} value={reason}>{reason}</option>)}
+              </select>
+            </label>
+            <label>
+              <span>Additional Details <em>(optional)</em></span>
+              <textarea value={cancelAdditionalDetails} onChange={(event) => setCancelAdditionalDetails(event.target.value)} maxLength={1000} rows={3} placeholder="Add any extra explanation, if helpful" disabled={cancelling} />
+            </label>
+            <button type="submit" disabled={cancelling}>{cancelling ? "Submitting…" : "Submit cancellation request"}</button>
+          </form>
         ) : null}
       </section>
 

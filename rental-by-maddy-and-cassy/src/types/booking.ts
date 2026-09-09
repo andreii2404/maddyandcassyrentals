@@ -53,12 +53,24 @@ export type AgreementStatus = Database["public"]["Enums"]["agreement_status"] | 
 
 export type CancellationRequestStatus = "pending" | "approved" | "rejected";
 
+export const CANCELLATION_REASON_OPTIONS = [
+  "Change of plans",
+  "Wrong booking details",
+  "Schedule conflict",
+  "Budget issue",
+  "Found another option",
+  "Other",
+] as const;
+
+export type CancellationReason = (typeof CANCELLATION_REASON_OPTIONS)[number];
+
 export interface CancellationRequest {
   id: string;
   bookingId: string;
   customerId: string;
   requestedStatus: BookingStatus;
   reason: string;
+  additionalDetails?: string;
   status: CancellationRequestStatus;
   decisionNote?: string;
   decidedBy?: string;

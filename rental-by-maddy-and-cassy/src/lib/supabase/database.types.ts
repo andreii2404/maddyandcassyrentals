@@ -813,6 +813,7 @@ export type Database = {
       }
       booking_cancellation_requests: {
         Row: {
+          additional_details: string | null
           booking_id: string
           created_at: string
           customer_id: string
@@ -827,6 +828,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          additional_details?: string | null
           booking_id: string
           created_at?: string
           customer_id: string
@@ -841,6 +843,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          additional_details?: string | null
           booking_id?: string
           created_at?: string
           customer_id?: string
@@ -1763,8 +1766,9 @@ export type Database = {
         Returns: string
       }
       request_booking_cancellation: {
-        Args: { p_booking_id: string; p_reason: string }
+        Args: { p_additional_details?: string; p_booking_id: string; p_reason: string }
         Returns: {
+          additional_details: string | null
           booking_id: string
           created_at: string
           customer_id: string
@@ -1788,6 +1792,7 @@ export type Database = {
       review_booking_cancellation: {
         Args: { p_decision: string; p_decision_note?: string; p_request_id: string }
         Returns: {
+          additional_details: string | null
           booking_id: string
           created_at: string
           customer_id: string

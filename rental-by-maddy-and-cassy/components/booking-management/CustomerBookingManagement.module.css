@@ -9,6 +9,9 @@
 .statusTopline h2,
 .sectionHeading h2 { margin: 0; font-size: 1.12rem; letter-spacing: -0.02em; }
 .statusMessage { max-width: 680px; margin: 0.85rem 0 1.1rem; color: var(--color-charcoal); font-size: 0.8rem; line-height: 1.65; }
+.cancellationPending { display: flex; align-items: center; flex-wrap: wrap; gap: 0.55rem; width: fit-content; margin: -0.25rem 0 1.1rem; padding: 0.5rem 0.7rem; border: 1px solid #e6c98f; border-radius: 10px; background: #fff8e9; color: #755319; font-size: 0.68rem; }
+.cancellationPending span { font-weight: 800; letter-spacing: 0.02em; }
+.cancellationPending strong { color: #9a6b16; font-size: 0.66rem; }
 .rejectedBadgeButton { padding: 0; border: 0; background: none; cursor: pointer; }
 .viewReasonLink { display: block; margin: -0.7rem 0 1.1rem; padding: 0; border: 0; background: none; color: var(--color-status-red); font-size: 0.72rem; font-weight: 700; text-decoration: underline; cursor: pointer; }
 .rejectionReasonLabel { display: inline-block; margin: 0 0 0.6rem; padding: 0.32rem 0.65rem; border-radius: 999px; background: var(--color-status-red-bg); color: var(--color-status-red); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.02em; }
@@ -78,14 +81,18 @@
 .cancelPanel label span { color: var(--color-charcoal); font-size: 0.61rem; font-weight: 700; }
 .addressGrid input,
 .notesField textarea,
-.cancelPanel textarea { width: 100%; padding: 0.65rem 0.7rem; border: 1px solid var(--color-light-gray); border-radius: 10px; outline: 0; background: white; color: var(--color-text-primary); font: inherit; font-size: 0.7rem; }
+.cancelPanel textarea,
+.cancelPanel select { width: 100%; padding: 0.65rem 0.7rem; border: 1px solid var(--color-light-gray); border-radius: 10px; outline: 0; background: white; color: var(--color-text-primary); font: inherit; font-size: 0.7rem; }
 .addressGrid input:focus,
 .notesField textarea:focus,
-.cancelPanel textarea:focus { border-color: var(--color-dusty-rose); box-shadow: 0 0 0 3px rgba(215,165,165,0.15); }
+.cancelPanel textarea:focus,
+.cancelPanel select:focus { border-color: var(--color-dusty-rose); box-shadow: 0 0 0 3px rgba(215,165,165,0.15); }
 .saveButton { justify-self: start; background: var(--color-primary); color: white; }
 .cancelPanel { border-color: var(--color-status-red-border); background: var(--color-status-red-bg); }
 .cancelPanel > p { margin: 0; color: var(--color-charcoal); font-size: 0.66rem; line-height: 1.6; }
+.cancelPanel em { color: #817a79; font-size: 0.58rem; font-style: normal; font-weight: 400; }
 .cancelPanel button { justify-self: start; border-color: var(--color-status-red); background: var(--color-status-red); color: white; }
+.cancelPanel button:disabled { cursor: wait; opacity: 0.65; }
 
 @media (max-width: 760px) {
   .milestones { grid-template-columns: 1fr; gap: 0.15rem; }
