@@ -48,6 +48,7 @@ const blankForm: CatalogEditorInput = {
 const blankCategory: CatalogCategoryInput = { name: "", description: "", sortOrder: 0 };
 
 const UNITS_PAGE_SIZE = 10;
+const CATALOG_PAGE_SIZE = 10;
 
 type CatalogTab = "catalog" | "categories" | "units" | "reviews" | "pricing";
 
@@ -89,6 +90,7 @@ export default function AdminCatalogManager() {
   const [statusFilter, setStatusFilter] = useState<"all" | ProductStatus>("all");
   const [inventoryProductFilter, setInventoryProductFilter] = useState("all");
   const [unitsPage, setUnitsPage] = useState(1);
+  const [catalogPage, setCatalogPage] = useState(1);
   const [editing, setEditing] = useState<Product | "new" | null>(null);
   const [form, setForm] = useState<CatalogEditorInput>(blankForm);
   const [includedText, setIncludedText] = useState("");
@@ -145,6 +147,13 @@ export default function AdminCatalogManager() {
       return matchesSearch && matchesCategory && matchesStatus;
     });
   }, [categoryFilter, products, search, statusFilter]);
+
+  const catalogPageCount = Math.max(1, Math.ceil(filteredProducts.length / CATALOG_PAGE_SIZE));
+  const catalogCurrentPage = Math.min(catalogPage, catalogPageCount);
+  const pagedProducts = filteredProducts.slice(
+    (catalogCurrentPage - 1) * CATALOG_PAGE_SIZE,
+    catalogCurrentPage * CATALOG_PAGE_SIZE,
+  );
 
   const visibleInventoryUnits = useMemo(
     () => inventoryUnits.filter((unit) => inventoryProductFilter === "all" || unit.productId === inventoryProductFilter),
@@ -383,15 +392,15 @@ export default function AdminCatalogManager() {
         <div className={styles.controlsRow}>
           <label className={styles.searchField}>
             <span className={styles.srOnly}>Search products</span>
-            <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by name, brand, description, or specification" />
+            <input type="search" value={search} onChange={(event) => { setSearch(event.target.value); setCatalogPage(1); }} placeholder="Search by name, brand, description, or specification" />
           </label>
           <label className={styles.filterField}>
             <span className={styles.srOnly}>Category</span>
-            <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}><option>All categories</option>{categories.map((category) => <option key={category.id}>{category.name}</option>)}</select>
+            <select value={categoryFilter} onChange={(event) => { setCategoryFilter(event.target.value); setCatalogPage(1); }}><option>All categories</option>{categories.map((category) => <option key={category.id}>{category.name}</option>)}</select>
           </label>
           <label className={styles.filterField}>
             <span className={styles.srOnly}>Status</span>
-            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}><option value="all">All statuses</option><option value="active">Active</option><option value="draft">Draft</option><option value="inactive">Inactive</option><option value="archived">Archived</option></select>
+            <select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value as typeof statusFilter); setCatalogPage(1); }}><option value="all">All statuses</option><option value="active">Active</option><option value="draft">Draft</option><option value="inactive">Inactive</option><option value="archived">Archived</option></select>
           </label>
           <button type="button" className={styles.addButton} onClick={() => openEditor()}>+ Add Product</button>
         </div>
@@ -407,15 +416,14 @@ export default function AdminCatalogManager() {
         {products && filteredProducts.length === 0 ? <div className={styles.empty}>No products match the current search and filters.</div> : null}
         {products && filteredProducts.length > 0 ? (
           <div className={styles.grid}>
-            {filteredProducts.map((product) => {
+            {pagedProducts.map((product) => {
               const productUnits = inventoryUnits.filter((unit) => unit.productId === product.id);
               const maintenanceCount = productUnits.filter((unit) => unit.lifecycleStatus === "maintenance").length;
               return (
                 <article key={product.id} className={styles.card}>
                   <div className={styles.imageWrap}>
-                    <Image src={product.image || "/images/product-placeholder.png"} alt={`${product.name} catalog preview`} fill sizes="240px" className={styles.image} />
+                    <Image src={product.image || "/images/product-placeholder.png"} alt={`${product.name} catalog preview`} fill sizes="(max-width:650px) 100vw, (max-width:900px) 45vw, (max-width:1200px) 30vw, 22vw" className={styles.image} />
                     <span className={styles.categoryTag}>{product.category}</span>
-                    <i className={styles.statusTag} data-status={product.status}>{product.status}</i>
                   </div>
                   <div className={styles.cardBody}>
                     <div className={styles.cardHeading}>
@@ -427,21 +435,49 @@ export default function AdminCatalogManager() {
                       {product.discountPercent > 0 ? <span>{product.discountPercent}% off</span> : null}
                     </div>
                     <dl className={styles.inventoryFacts}>
-                      <div><dt>Available today</dt><dd>{product.availableUnits} / {product.totalUnits}</dd></div>
+                      <div><dt>Availability</dt><dd>{product.availableUnits} / {product.totalUnits}</dd></div>
                       <div><dt>Maintenance</dt><dd>{maintenanceCount}</dd></div>
                       <div><dt>Specifications</dt><dd>{Object.keys(product.specs).length}</dd></div>
                     </dl>
+                    <div className={styles.statusLine}>
+                      <span className={styles.statusLineLabel}>Product status</span>
+                      <i className={styles.statusTag} data-status={product.status}>{product.status}</i>
+                    </div>
                     {(!product.description || Object.keys(product.specs).length === 0) ? <p className={styles.contentWarning}>Needs more product details</p> : null}
                     <div className={styles.actions}>
-                      <button type="button" onClick={() => openEditor(product)}>View / Edit</button>
-                      {product.isActive ? <Link href={`/catalog/${product.id}`} target="_blank">Public page</Link> : null}
-                      {product.isActive ? <button type="button" className={styles.danger} onClick={() => requestDeactivate(product)}>Remove</button> : null}
+                      <div className={styles.actionRow}>
+                        <button type="button" className={styles.primaryAction} onClick={() => openEditor(product)}>View / Edit</button>
+                        {product.isActive ? <Link className={styles.secondaryAction} href={`/catalog/${product.id}`} target="_blank">Public page</Link> : null}
+                      </div>
+                      {product.isActive ? <button type="button" className={styles.removeAction} onClick={() => requestDeactivate(product)}>Remove</button> : null}
                     </div>
                   </div>
                 </article>
               );
             })}
           </div>
+        ) : null}
+        {products && filteredProducts.length > CATALOG_PAGE_SIZE ? (
+          <nav className={styles.pagination} aria-label="Catalog pagination">
+            <span>
+              Showing {(catalogCurrentPage - 1) * CATALOG_PAGE_SIZE + 1}&ndash;{Math.min(catalogCurrentPage * CATALOG_PAGE_SIZE, filteredProducts.length)} of {filteredProducts.length}
+            </span>
+            <div>
+              <button type="button" disabled={catalogCurrentPage === 1} onClick={() => setCatalogPage(catalogCurrentPage - 1)}>Previous</button>
+              {Array.from({ length: catalogPageCount }, (_, index) => index + 1).map((pageNumber) => (
+                <button
+                  key={pageNumber}
+                  type="button"
+                  className={pageNumber === catalogCurrentPage ? styles.pageActive : undefined}
+                  aria-current={pageNumber === catalogCurrentPage ? "page" : undefined}
+                  onClick={() => setCatalogPage(pageNumber)}
+                >
+                  {pageNumber}
+                </button>
+              ))}
+              <button type="button" disabled={catalogCurrentPage === catalogPageCount} onClick={() => setCatalogPage(catalogCurrentPage + 1)}>Next</button>
+            </div>
+          </nav>
         ) : null}
       </section>
       </div>
