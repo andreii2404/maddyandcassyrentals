@@ -167,26 +167,43 @@
 .table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: auto;
+  table-layout: fixed;
 }
 
 .table th,
 .table td {
-  padding: 0.65rem 0.75rem;
+  padding: 0.5rem 0.5rem;
   border-bottom: 1px solid var(--color-light-gray);
   color: var(--color-charcoal);
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   text-align: left;
   vertical-align: middle;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 
 .table th {
   background: var(--color-background);
-  font-size: 0.66rem;
+  font-size: 0.64rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
+}
+
+/* Column sizing so the full table fits the page width without horizontal scroll. */
+.table th:nth-child(1) { width: 8%; }   /* Booking */
+.table th:nth-child(2) { width: 17%; }  /* Customer */
+.table th:nth-child(3) { width: 9%; }   /* Account Type */
+.table th:nth-child(4) { width: 14%; }  /* Rental Item */
+.table th:nth-child(5) { width: 12%; }  /* Dates */
+.table th:nth-child(6) { width: 10%; }  /* Status */
+.table th:nth-child(7) { width: 11%; }  /* Fulfillment Update */
+.table th:nth-child(8) { width: 10%; }  /* Submitted */
+.table th:nth-child(9) { width: 9%; }   /* Action */
+
+.table td[data-label="Status"],
+.table td[data-label="Account Type"] {
+  white-space: nowrap;
 }
 
 .table tbody tr.row {
@@ -220,20 +237,14 @@
   white-space: normal;
 }
 
-.table td[data-label="Customer"] {
-  min-width: 220px;
-}
-
 .table td[data-label="Customer"] small {
-  max-width: 280px;
   overflow-wrap: break-word;
   word-break: break-word;
 }
 
 .table td[data-label="Rental Item"] {
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .bookingLink,
@@ -263,8 +274,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 84px;
-  padding: 0.45rem 0.95rem;
+  min-width: 0;
+  padding: 0.4rem 0.7rem;
   border: 1px solid var(--color-primary);
   border-radius: 999px;
   background: var(--color-primary);

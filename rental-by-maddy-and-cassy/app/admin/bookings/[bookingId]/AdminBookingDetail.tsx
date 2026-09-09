@@ -748,12 +748,12 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
               </h3>
             </div>
             <dl className={styles.detailGrid}>
-              <div><dt>Full name</dt><dd>{fullName}</dd></div>
-              <div><dt>Email address</dt><dd>{email}</dd></div>
-              <div><dt>Phone number</dt><dd>{phone}</dd></div>
-              <div className={styles.wideDetail}><dt>Complete address</dt><dd>{address}</dd></div>
-              <div><dt>Facebook</dt><dd>{facebook ? <a href={facebook} target="_blank" rel="noopener noreferrer">Open profile</a> : "-"}</dd></div>
-              <div><dt>Instagram</dt><dd>{instagram ? <a href={instagram} target="_blank" rel="noopener noreferrer">Open profile</a> : "-"}</dd></div>
+              <div><dt>Full Name</dt><dd>{fullName}</dd></div>
+              <div><dt>Email Address</dt><dd>{email}</dd></div>
+              <div><dt>Phone Number</dt><dd>{phone}</dd></div>
+              <div className={styles.wideDetail}><dt>Complete Address</dt><dd>{address}</dd></div>
+              <div><dt>Facebook</dt><dd>{facebook ? <a href={facebook} target="_blank" rel="noopener noreferrer">Open Profile</a> : "-"}</dd></div>
+              <div><dt>Instagram</dt><dd>{instagram ? <a href={instagram} target="_blank" rel="noopener noreferrer">Open Profile</a> : "-"}</dd></div>
             </dl>
           </div>
         </section>
