@@ -182,6 +182,26 @@ test("approval and completion emails contain the booking reference and safe cust
   assert.match(approved.text, /BK-TEST-100/);
   assert.match(approved.html, /Andrei/);
   assert.doesNotMatch(approved.html, /Andrei <Test>/);
+  const detailedApproved = buildBookingStatusEmail({
+    bookingId: "booking-id",
+    bookingReference: "BK-TEST-100",
+    customerName: "Andrei Test",
+    customerEmail: "andrei@example.com",
+    productName: "iPhone 17 Pro Max",
+    status: "approved",
+    statusChangedAt: "2026-09-10T08:00:00.000Z",
+    bookingUrl: "https://example.com/account/bookings/booking-id",
+    rentalDates: "Sep 12, 2026 - Sep 14, 2026 (2 days)",
+    paymentStatus: "Partially Paid",
+    amountPaid: "PHP 1,000",
+    remainingBalance: "PHP 1,000",
+    fulfillmentMethod: "Delivery",
+    remainingAction: "Pay the remaining balance before handover",
+  });
+  assert.match(detailedApproved.text, /Rental dates: Sep 12, 2026 - Sep 14, 2026/);
+  assert.match(detailedApproved.text, /Payment status: Partially Paid/);
+  assert.match(detailedApproved.html, /PAYMENT STATUS/);
+  assert.match(detailedApproved.html, /Pay the remaining balance before handover/);
 
   const completed = buildBookingStatusEmail({
     bookingId: "booking-id",

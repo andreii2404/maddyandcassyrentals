@@ -114,6 +114,27 @@ export async function updateAdminBookingStatus(
   };
 }
 
+export async function sendAdminBookingConfirmationEmail(
+  bookingId: string,
+): Promise<{ emailedTo: string }> {
+  const response = await fetch(
+    `/api/admin/bookings/${encodeURIComponent(bookingId)}/confirmation-email`,
+    {
+      method: "POST",
+      credentials: "same-origin",
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "The booking confirmation email could not be sent."));
+  }
+
+  const body = (await response.json()) as { emailedTo?: unknown };
+  return {
+    emailedTo: typeof body.emailedTo === "string" ? body.emailedTo : "the customer",
+  };
+}
+
 export async function reviewAdminCancellationRequest(
   bookingId: string,
   requestId: string,

@@ -32,7 +32,7 @@ export async function sendBookingStatusEmail(
   if (!isEmail(details.customerEmail)) return { sent: false, reason: "invalid_recipient" };
 
   const email = buildBookingStatusEmail(details);
-  const idempotencyKey = `booking-${details.status}-${details.bookingId}-${details.statusChangedAt}`
+  const idempotencyKey = (details.deliveryKey ?? `booking-${details.status}-${details.bookingId}-${details.statusChangedAt}`)
     .replace(/[^a-zA-Z0-9_-]/g, "-")
     .slice(0, 256);
 

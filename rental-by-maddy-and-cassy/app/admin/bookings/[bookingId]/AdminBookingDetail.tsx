@@ -14,6 +14,7 @@ import {
   countersignBookingAgreement,
   downloadAdminBookingPdf,
   reviewAdminCancellationRequest,
+  sendAdminBookingConfirmationEmail,
   updateAdminBookingStatus,
 } from "@/src/services/adminBookingService";
 import { getUserProfile } from "@/src/services/userService";
@@ -136,6 +137,8 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   const [statusConfirmationOpen, setStatusConfirmationOpen] = useState(false);
   const [countersignConfirmationOpen, setCountersignConfirmationOpen] = useState(false);
   const [sendingReceiptId, setSendingReceiptId] = useState<string | null>(null);
+  const [sendingConfirmationEmail, setSendingConfirmationEmail] = useState(false);
+  const [confirmationEmailSentAt, setConfirmationEmailSentAt] = useState<string | null>(null);
   const [activeStep, setActiveStep] = useState<AdminReviewStep>("customer");
   const confirmationDialogRef = useRef<HTMLDivElement>(null);
   const countersignDialogRef = useRef<HTMLDivElement>(null);
@@ -346,6 +349,24 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
     }
   }
 
+  async function handleSendBookingConfirmationEmail() {
+    setSendingConfirmationEmail(true);
+    try {
+      const result = await sendAdminBookingConfirmationEmail(bookingId);
+      setConfirmationEmailSentAt(new Date().toISOString());
+      showToast(`Booking confirmation sent to ${result.emailedTo}.`, "success");
+    } catch (sendError) {
+      showToast(
+        sendError instanceof Error
+          ? sendError.message
+          : "The booking confirmation email could not be sent.",
+        "error",
+      );
+    } finally {
+      setSendingConfirmationEmail(false);
+    }
+  }
+
   async function handleCancellationDecision(decision: "approved" | "rejected") {
     const request = state?.details.booking.cancellationRequest;
     if (!request || request.status !== "pending") return;
@@ -496,17 +517,19 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   const isClosedRecord = booking.status === "returned" || booking.status === "cancelled" || booking.status === "rejected";
   const itemsSummary = bookingItemsSummaryData(booking, agreement);
   const requirementsAttention = booking.requirementsStatus === "rejected" || documents.some((document) => document.reviewStatus === "rejected");
-  const paymentAttention = payments[0]?.status === "rejected" && amountPaid < booking.totalAmount - 0.01;
+  const paymentAttention = payments.some((payment) => payment.status === "rejected") && amountPaid < booking.totalAmount - 0.01;
   const agreementAttention = booking.agreementStatus === "rejected";
   const reviewChecks = [
     {
       label: "Payment",
       value: paymentStatusLabel,
-      detail: amountPaid > 0
+      detail: paymentAttention
+        ? "A payment proof was rejected and needs attention"
+        : amountPaid > 0
         ? `PHP ${amountPaid.toLocaleString("en-PH")} verified`
-        : paymentAttention ? "A payment proof needs attention" : payments.length ? "Payment submitted for review" : "No payment submitted",
+        : payments.length ? "Payment submitted for review" : "No payment submitted",
       ready: amountPaid > 0 && !paymentAttention,
-      state: paymentAttention ? "attention" : amountPaid > 0 ? "complete" : payments.length ? "pending" : "not-started",
+      state: paymentAttention ? "attention" : amountPaid > 0 ? "complete" : "pending",
     },
     {
       label: "Verification",
@@ -515,7 +538,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
         ? "One or more files need correction"
         : documents.length ? `${documents.length} submitted file${documents.length === 1 ? "" : "s"}` : "No files submitted",
       ready: booking.requirementsStatus === "approved" && !requirementsAttention,
-      state: requirementsAttention ? "attention" : booking.requirementsStatus === "approved" ? "complete" : documents.length ? "pending" : "not-started",
+      state: requirementsAttention ? "attention" : booking.requirementsStatus === "approved" ? "complete" : "pending",
     },
     {
       label: "Agreement",
@@ -526,19 +549,45 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
           ? "Customer signed; business countersignature required"
           : agreementAttention ? "Agreement needs attention" : agreement ? "Customer signature pending" : "Agreement not started",
       ready: booking.agreementStatus === "completed" && !agreementAttention,
-      state: agreementAttention ? "attention" : booking.agreementStatus === "completed" ? "complete" : agreement ? "pending" : "not-started",
+      state: agreementAttention ? "attention" : booking.agreementStatus === "completed" ? "complete" : "pending",
     },
     {
       label: "Inventory",
       value: inventoryReady ? "Reserved" : "Needs Assignment",
       detail: `${totalAssignedUnits}/${totalUnits} unit(s) reserved`,
       ready: inventoryReady,
-      state: inventoryReady ? "complete" : booking.items.length ? "pending" : "not-started",
+      state: inventoryReady ? "complete" : "pending",
     },
   ];
   const remainingChecks = reviewChecks.filter((check) => !check.ready).length;
   const primaryAction = actions.find((action) => action.tone !== "danger") ?? null;
   const alternativeActions = actions.filter((action) => action.status !== primaryAction?.status);
+  const bookingApproved = ["approved", "confirmed", "ready_for_release", "released"].includes(booking.status);
+  const finalDecisionLabel = booking.status === "pending"
+    ? remainingChecks === 0 ? "Ready for Approval" : "Pending"
+    : booking.status === "returned"
+      ? "Returned / Completed"
+      : booking.status === "cancelled"
+        ? "Cancelled"
+        : booking.status === "rejected"
+          ? "Rejected"
+          : bookingApproved
+            ? "Approved"
+            : "Pending";
+  const finalDecisionTone = booking.status === "cancelled" || booking.status === "rejected"
+    ? "attention"
+    : booking.status === "pending" && remainingChecks > 0
+      ? "pending"
+      : "complete";
+  const finalActionTitle = primaryAction?.status === "approved" || primaryAction?.status === "confirmed"
+    ? "Approve / Confirm Booking"
+    : primaryAction?.label ?? "Booking decision recorded";
+  const unresolvedChecks = reviewChecks
+    .filter((check) => !check.ready)
+    .map((check) => `${check.label}: ${check.detail}`);
+  const remainingActionSummary = unresolvedChecks.length
+    ? unresolvedChecks.join("; ")
+    : "No checklist items need attention before the next booking action.";
 
   const stepState: Record<AdminReviewStep, ReviewState> = {
     customer: email !== "-" && phone !== "-" ? "complete" : "not-started",
@@ -1044,35 +1093,65 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
           <div className={styles.detailSectionHeader}>
             <span className={styles.sectionNumber}>06</span>
             <div><strong>Final Review</strong><small>Decision summary and booking actions</small></div>
-            <span className={`${styles.sectionHeaderStatus} ${!isClosedRecord && remainingChecks === 0 ? styles.sectionHeaderReady : ""}`}>
-              {isClosedRecord ? "Closed record" : remainingChecks === 0 ? "Ready to decide" : `${remainingChecks} check${remainingChecks === 1 ? "" : "s"} remaining`}
+            <span className={`${styles.sectionHeaderStatus} ${finalDecisionTone === "complete" ? styles.sectionHeaderReady : finalDecisionTone === "attention" ? styles.sectionHeaderAttention : styles.sectionHeaderPending}`}>
+              {finalDecisionLabel}
             </span>
           </div>
           <div className={styles.detailBody}>
-            <div className={styles.finalReviewSummary} aria-label="Final review summary">
-              <div><span>Customer</span><strong>{fullName}</strong></div>
-              <div><span>Rental</span><strong>{bookingHeadline(booking.items)}</strong></div>
-              <div><span>Requirements</span><strong>{REQUIREMENTS_STATUS_LABELS[booking.requirementsStatus] ?? formatStatus(booking.requirementsStatus)}</strong></div>
-              <div><span>Payment</span><strong>{paymentStatusLabel}{remainingBalance > 0.01 ? ` · PHP ${remainingBalance.toLocaleString("en-PH")} due` : ""}</strong></div>
-              <div><span>Agreement</span><strong>{AGREEMENT_STATUS_LABELS[booking.agreementStatus] ?? formatStatus(booking.agreementStatus)}</strong></div>
-              <div><span>Inventory</span><strong>{inventoryReady ? "Ready" : `${totalAssignedUnits}/${totalUnits} reserved`}</strong></div>
-              <div><span>Fulfillment</span><strong>{fulfillmentLabel}</strong></div>
-              <div><span>Current status</span><strong>{formatStatus(booking.status)}</strong></div>
+            <div className={styles.finalReviewBlockHeading}>
+              <span>Booking Summary</span>
+              <p>All important booking, customer, payment, fulfillment, and status details in one place.</p>
             </div>
+            <div className={styles.finalReviewSummary} aria-label="Final review booking summary">
+              <div><span>Booking Number</span><strong>{booking.bookingRef}</strong></div>
+              <div><span>Customer</span><strong>{fullName}</strong></div>
+              <div><span>Account Type</span><strong>{accountTypeLabel}</strong></div>
+              <div><span>Contact</span><strong>{phone}<small>{email}</small></strong></div>
+              <div><span>Rental Item</span><strong>{bookingHeadline(booking.items)}<small>{totalUnits} unit{totalUnits === 1 ? "" : "s"}</small></strong></div>
+              <div><span>Rental Dates</span><strong>{formatDate(booking.startDate)} - {formatDate(booking.endDate)}</strong></div>
+              <div><span>Duration</span><strong>{booking.dayCount} day{booking.dayCount === 1 ? "" : "s"}</strong></div>
+              <div><span>Verification Status</span><strong>{REQUIREMENTS_STATUS_LABELS[booking.requirementsStatus] ?? formatStatus(booking.requirementsStatus)}</strong></div>
+              <div><span>Payment Status</span><strong>{paymentStatusLabel}</strong></div>
+              <div><span>Fulfillment</span><strong>{fulfillmentLabel}<small>{booking.location || "Location not provided"}</small></strong></div>
+              <div><span>Payment Type</span><strong>{paymentTypeLabel}</strong></div>
+              <div><span>Amount Paid</span><strong>PHP {amountPaid.toLocaleString("en-PH")}</strong></div>
+              <div><span>Remaining Balance</span><strong>PHP {remainingBalance.toLocaleString("en-PH")}</strong></div>
+              <div><span>Agreement Status</span><strong>{AGREEMENT_STATUS_LABELS[booking.agreementStatus] ?? formatStatus(booking.agreementStatus)}</strong></div>
+              <div><span>Inventory Status</span><strong>{inventoryReady ? "Reserved" : `${totalAssignedUnits}/${totalUnits} reserved`}</strong></div>
+              <div><span>Current Booking Status</span><strong>{formatStatus(booking.status)}</strong></div>
+            </div>
+            <section className={`${styles.completionStatus} ${styles[`completionStatus${finalDecisionTone[0].toUpperCase()}${finalDecisionTone.slice(1)}`]}`} aria-labelledby="completion-status-heading">
+              <div className={styles.completionStatusHeading}>
+                <div>
+                  <span>Completion Status</span>
+                  <h2 id="completion-status-heading">{finalDecisionLabel}</h2>
+                  <p>{isClosedRecord ? "This decision is recorded. The booking history remains available below." : remainingChecks > 0 ? "The items below still need attention before the booking can move forward." : "All four review areas are complete for the next booking decision."}</p>
+                </div>
+                <strong>{remainingChecks === 0 ? "4 / 4 complete" : `${4 - remainingChecks} / 4 complete`}</strong>
+              </div>
+              <div className={styles.finalChecklist} aria-label="Final completion checklist">
+                {reviewChecks.map((check) => (
+                  <div key={check.label} className={styles[`finalCheck${check.state[0].toUpperCase()}${check.state.slice(1)}`]}>
+                    <span aria-hidden="true">{check.state === "complete" ? "✓" : check.state === "attention" ? "!" : "•"}</span>
+                    <div><strong>{check.label}</strong><b>{check.value}</b><small>{check.detail}</small></div>
+                  </div>
+                ))}
+              </div>
+            </section>
             {isClosedRecord ? (
               <p className={styles.finalRecordNote}>
                 This is a closed booking record. Historical steps and actions remain available for reference; no further booking action is available.
               </p>
             ) : remainingChecks > 0 ? (
               <p className={styles.finalReviewWarning}>
-                Review the highlighted items above before confirming. The booking can still be managed through the available actions below when an exception or correction is needed.
+                Still needs attention: {remainingActionSummary}.
               </p>
             ) : null}
             <div className={styles.actionPanel} aria-labelledby="booking-action-heading">
               <div className={styles.actionIntro}>
-                <span>{isClosedRecord ? "RECORD CLOSED" : "NEXT ACTION"}</span>
-                <h2 id="booking-action-heading">{isClosedRecord ? "No further action needed" : "What should happen now"}</h2>
-                <p>{isClosedRecord ? "This booking is complete or closed. Historical details remain available for reference." : "Use the recommended action below. Open other actions only when the booking needs a different outcome."}</p>
+                <span>Final Decision</span>
+                <h2 id="booking-action-heading">{isClosedRecord ? "No further action needed" : finalActionTitle}</h2>
+                <p>{isClosedRecord ? "This booking is complete or closed. Historical details remain available for reference." : "Choose the final booking decision below. A confirmation popup will appear before anything is applied."}</p>
               </div>
               {actions.length ? (
                 <div className={styles.actionControls}>
@@ -1080,15 +1159,15 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                     {primaryAction ? renderActionChoice(primaryAction) : null}
                   </div>
                   {alternativeActions.length ? (
-                    <details className={styles.secondaryActions}>
-                      <summary>
+                    <div className={styles.secondaryActions}>
+                      <div className={styles.secondaryActionsHeading}>
                         <span>Other available actions</span>
                         <small>{alternativeActions.length}</small>
-                      </summary>
+                      </div>
                       <div className={styles.actionChoiceGrid}>
                         {alternativeActions.map(renderActionChoice)}
                       </div>
-                    </details>
+                    </div>
                   ) : null}
                   {actions.some((action) => action.status === "released") && !handoverPaymentReady ? (
                     <p className={styles.choosePrompt}>Handover is protected: the remaining balance must be recorded before “Released to Customer” becomes available.</p>
@@ -1147,6 +1226,24 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                 </div>
               ) : <p className={styles.terminalNotice}>This booking is complete or closed. No further actions are available.</p>}
             </div>
+            <section className={`${styles.customerNotification} ${bookingApproved ? styles.customerNotificationApproved : ""}`} aria-labelledby="customer-notification-heading">
+              <div>
+                <span>Customer Notification</span>
+                <h2 id="customer-notification-heading">{bookingApproved ? "Booking Approved" : "Confirmation email available after approval"}</h2>
+                <p>{bookingApproved ? `Send the approved booking summary directly to ${email === "-" ? "the customer" : email}. The email includes the booking number, rental details, dates, payment status, fulfillment method, and any remaining action.` : "Complete the approval step before sending the customer a booking confirmation email."}</p>
+              </div>
+              <div className={styles.customerNotificationAction}>
+                <button
+                  type="button"
+                  className={styles.sendConfirmationButton}
+                  onClick={() => void handleSendBookingConfirmationEmail()}
+                  disabled={!bookingApproved || email === "-" || sendingConfirmationEmail}
+                >
+                  {sendingConfirmationEmail ? "Sending confirmation..." : "Send Booking Confirmation to Email"}
+                </button>
+                {confirmationEmailSentAt ? <small>Last sent {formatDate(confirmationEmailSentAt, true)}</small> : null}
+              </div>
+            </section>
           </div>
         </section>
 
