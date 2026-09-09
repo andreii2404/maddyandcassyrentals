@@ -16,11 +16,15 @@ const DEFAULT_PAGE_SIZE = 10;
 const SEARCH_DEBOUNCE_MS = 300;
 
 const PAYMENT_STATUS_TONES: Record<AdminPaymentRecord["status"], StatusTone> = {
-  submitted: "yellow",
+  submitted: "red",
   under_review: "yellow",
   verified: "green",
   rejected: "red",
   void: "neutral",
+};
+
+const PAYMENT_STATUS_LABELS: Partial<Record<AdminPaymentRecord["status"], string>> = {
+  submitted: "Unverified",
 };
 
 function money(value: number) {
@@ -250,7 +254,7 @@ export default function AdminPaymentsPage() {
                           <td data-label="Amount">{money(payment.amount)}</td>
                           <td data-label="Status">
                             <StatusBadge
-                              label={formatLabel(payment.status)}
+                              label={PAYMENT_STATUS_LABELS[payment.status] ?? formatLabel(payment.status)}
                               tone={PAYMENT_STATUS_TONES[payment.status] ?? "neutral"}
                             />
                           </td>
