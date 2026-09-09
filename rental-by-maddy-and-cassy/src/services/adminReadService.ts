@@ -37,13 +37,16 @@ export async function getPaymentRecordsPage(
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
+  // Every row in booking_payment_submissions is a manual submission now — PayMongo
+  // is retired and fulfillVerifiedPayment() reuses paymongo_payment_id as a generic
+  // external-reference slot, so filtering on `paymongo_payment_id IS NULL` here would
+  // wrongly hide every *verified* payment (and zero out the revenue metric below).
   let query = supabase
     .from("booking_payment_submissions")
     .select(
       "*, customer_documents(storage_bucket, storage_path, original_filename), bookings(booking_reference, customer_id, is_guest_checkout)",
       { count: "exact" },
     )
-    .is("paymongo_payment_id", null)
     .order("created_at", { ascending: false });
 
   const search = options.search?.trim();
@@ -90,8 +93,7 @@ export async function getPaymentMetricsSummary(
 ): Promise<PaymentMetricsSummary> {
   const { data, error } = await supabase
     .from("booking_payment_submissions")
-    .select("status, declared_amount")
-    .is("paymongo_payment_id", null);
+    .select("status, declared_amount");
   if (error) throw new Error(error.message);
   const rows = data ?? [];
   const verified = rows.filter((row) => row.status === "verified");

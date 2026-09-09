@@ -24,6 +24,8 @@ import { resolveAccountName } from "@/src/lib/accountDisplay";
 import GuestBadge from "@/components/status-badge/GuestBadge";
 import styles from "./bookings.module.css";
 
+const PAGE_SIZE = 10;
+
 const STATUS_OPTIONS: Array<{ value: "" | BookingStatus; label: string }> = [
   { value: "", label: "All statuses" },
   { value: "pending", label: "Pending Review" },
@@ -60,6 +62,7 @@ export default function AdminBookingsList() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<"" | BookingStatus>("");
   const [historyFilter, setHistoryFilter] = useState<BookingHistoryFilter>("all");
+  const [page, setPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
 
   const loadBookings = useCallback(async () => {
@@ -111,6 +114,15 @@ export default function AdminBookingsList() {
     });
   }, [bookings, historyFilter, search, status, usersById]);
 
+  const pageCount = Math.max(1, Math.ceil(filteredBookings.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const visibleBookings = filteredBookings.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
+
+  const resetToFirstPage = () => setPage(1);
+
   const summaryCounts = useMemo(() => {
     const records = bookings ?? [];
     return {
@@ -148,7 +160,7 @@ export default function AdminBookingsList() {
             key={value}
             type="button"
             className={`${styles.summaryCard} ${historyFilter === value ? styles.summaryCardActive : ""}`}
-            onClick={() => setHistoryFilter(value)}
+            onClick={() => { setHistoryFilter(value); resetToFirstPage(); }}
             aria-pressed={historyFilter === value}
           >
             <span>{label}</span>
@@ -170,7 +182,7 @@ export default function AdminBookingsList() {
               <input
                 type="search"
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) => { setSearch(event.target.value); resetToFirstPage(); }}
                 placeholder="Search booking, customer, or item"
               />
             </label>
@@ -178,7 +190,7 @@ export default function AdminBookingsList() {
               <span className={styles.visuallyHidden}>Filter bookings by status</span>
               <select
                 value={status}
-                onChange={(event) => setStatus(event.target.value as "" | BookingStatus)}
+                onChange={(event) => { setStatus(event.target.value as "" | BookingStatus); resetToFirstPage(); }}
               >
                 {STATUS_OPTIONS.map((option) => (
                   <option key={option.value || "all"} value={option.value}>
@@ -217,7 +229,7 @@ export default function AdminBookingsList() {
                 </tr>
               </thead>
               <tbody>
-                {filteredBookings.map((booking) => {
+                {visibleBookings.map((booking) => {
                   const user = usersById.get(booking.customerId);
                   const href = `/admin/bookings/${booking.id}`;
                   const goToBooking = () => router.push(href);
@@ -270,13 +282,40 @@ export default function AdminBookingsList() {
               </tbody>
             </table>
           </div>
-        ) : (
+        ) : null}
+
+        {!error && filteredBookings.length > PAGE_SIZE ? (
+          <nav className={styles.pagination} aria-label="Bookings pagination">
+            <span>
+              Showing {(currentPage - 1) * PAGE_SIZE + 1}&ndash;{Math.min(currentPage * PAGE_SIZE, filteredBookings.length)} of {filteredBookings.length}
+            </span>
+            <div>
+              <button
+                type="button"
+                disabled={currentPage === 1}
+                onClick={() => setPage(currentPage - 1)}
+              >
+                Previous
+              </button>
+              <strong>Page {currentPage} of {pageCount}</strong>
+              <button
+                type="button"
+                disabled={currentPage === pageCount}
+                onClick={() => setPage(currentPage + 1)}
+              >
+                Next
+              </button>
+            </div>
+          </nav>
+        ) : null}
+
+        {(bookings || error) && !filteredBookings.length ? (
           <p className={styles.empty}>
             {bookings && bookings.length === 0
               ? "No bookings have been submitted yet."
               : "No bookings match the selected filters."}
           </p>
-        )}
+        ) : null}
       </section>
     </div>
   );

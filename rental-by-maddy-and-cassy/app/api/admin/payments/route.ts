@@ -37,7 +37,16 @@ export async function GET(request: Request): Promise<NextResponse> {
     if (error instanceof RequestSecurityError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
+    // Always log the full underlying error server-side (Supabase/PostgREST message,
+    // code, stack). Keep the user-facing message generic in production, but echo the
+    // real cause in the response outside production so it shows up in the Network tab.
     console.error("Admin payment activity read failed", error);
-    return NextResponse.json({ error: "Payment activity could not be loaded." }, { status: 500 });
+    const payload: { error: string; detail?: string } = {
+      error: "Payment activity could not be loaded.",
+    };
+    if (process.env.NODE_ENV !== "production") {
+      payload.detail = error instanceof Error ? error.message : String(error);
+    }
+    return NextResponse.json(payload, { status: 500 });
   }
 }

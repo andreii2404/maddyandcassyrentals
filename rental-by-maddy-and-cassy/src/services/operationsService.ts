@@ -110,9 +110,16 @@ export interface AdminPaymentsData {
 
 async function getAdminData<T>(path: string): Promise<T> {
   const response = await fetch(path, { credentials: "same-origin", cache: "no-store" });
-  const body = (await response.json().catch(() => null)) as (T & { error?: unknown }) | null;
+  const body = (await response.json().catch(() => null)) as
+    | (T & { error?: unknown; detail?: unknown })
+    | null;
   if (!response.ok) {
-    throw new Error(typeof body?.error === "string" ? body.error : "Administrator data could not be loaded.");
+    const message =
+      typeof body?.error === "string" ? body.error : "Administrator data could not be loaded.";
+    // `detail` is only ever populated by the API outside production — surface it so
+    // the exact Supabase/database error is visible without digging through logs.
+    const detail = typeof body?.detail === "string" ? ` (${body.detail})` : "";
+    throw new Error(`${message}${detail}`);
   }
   if (!body) throw new Error("Administrator data could not be loaded.");
   return body;
