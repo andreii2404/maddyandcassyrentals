@@ -98,6 +98,8 @@ type AdminReviewStep =
   | "final"
   | "history";
 
+type ReviewState = "complete" | "pending" | "attention" | "not-started";
+
 const REVIEW_STEPS: { id: AdminReviewStep; label: string }[] = [
   { id: "customer", label: "Customer Information" },
   { id: "rental", label: "Rental Details" },
@@ -472,6 +474,15 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
     .reduce((sum, p) => sum + p.amount, 0);
   const paymentStatusLabel =
     amountPaid <= 0 ? "Unpaid" : amountPaid >= booking.totalAmount - 0.01 ? "Paid" : "Partially Paid";
+  const remainingBalance = Math.max(0, booking.totalAmount - amountPaid);
+  const currentPayment = payments.find((payment) => payment.status !== "rejected") ?? payments[0];
+  const paymentTypeLabel = currentPayment
+    ? currentPayment.stage === "down_payment" ? "Down Payment" : "Full Payment"
+    : amountPaid >= booking.totalAmount - 0.01
+      ? "Full Payment"
+      : "Not Started";
+  const accountTypeLabel = booking.isGuestCheckout ? "Guest checkout" : "Registered account";
+  const fulfillmentLabel = formatStatus(booking.fulfillmentMethod);
   const handoverPaymentReady = amountPaid >= booking.totalAmount - 0.01 || booking.payLaterAllowed;
   const canCountersignAgreement = Boolean(
     agreement?.status === "awaiting_business_signature" &&
@@ -482,21 +493,29 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   const totalUnits = booking.items.reduce((sum, item) => sum + item.quantity, 0);
   const totalAssignedUnits = booking.items.reduce((sum, item) => sum + item.assignedUnitCount, 0);
   const inventoryReady = booking.items.length > 0 && booking.items.every((item) => item.assignedUnitCount >= item.quantity);
+  const isClosedRecord = booking.status === "returned" || booking.status === "cancelled" || booking.status === "rejected";
   const itemsSummary = bookingItemsSummaryData(booking, agreement);
+  const requirementsAttention = booking.requirementsStatus === "rejected" || documents.some((document) => document.reviewStatus === "rejected");
+  const paymentAttention = payments[0]?.status === "rejected" && amountPaid < booking.totalAmount - 0.01;
+  const agreementAttention = booking.agreementStatus === "rejected";
   const reviewChecks = [
     {
       label: "Payment",
       value: paymentStatusLabel,
       detail: amountPaid > 0
         ? `PHP ${amountPaid.toLocaleString("en-PH")} verified`
-        : "No verified payment",
-      ready: amountPaid > 0,
+        : paymentAttention ? "A payment proof needs attention" : payments.length ? "Payment submitted for review" : "No payment submitted",
+      ready: amountPaid > 0 && !paymentAttention,
+      state: paymentAttention ? "attention" : amountPaid > 0 ? "complete" : payments.length ? "pending" : "not-started",
     },
     {
       label: "Verification",
       value: REQUIREMENTS_STATUS_LABELS[booking.requirementsStatus] ?? formatStatus(booking.requirementsStatus),
-      detail: documents.length ? `${documents.length} submitted file${documents.length === 1 ? "" : "s"}` : "No files submitted",
-      ready: booking.requirementsStatus === "approved",
+      detail: requirementsAttention
+        ? "One or more files need correction"
+        : documents.length ? `${documents.length} submitted file${documents.length === 1 ? "" : "s"}` : "No files submitted",
+      ready: booking.requirementsStatus === "approved" && !requirementsAttention,
+      state: requirementsAttention ? "attention" : booking.requirementsStatus === "approved" ? "complete" : documents.length ? "pending" : "not-started",
     },
     {
       label: "Agreement",
@@ -505,28 +524,30 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
         ? `Countersigned by ${businessSignature.signerName}`
         : customerSignature
           ? "Customer signed; business countersignature required"
-          : "Customer signature pending",
-      ready: booking.agreementStatus === "completed",
+          : agreementAttention ? "Agreement needs attention" : agreement ? "Customer signature pending" : "Agreement not started",
+      ready: booking.agreementStatus === "completed" && !agreementAttention,
+      state: agreementAttention ? "attention" : booking.agreementStatus === "completed" ? "complete" : agreement ? "pending" : "not-started",
     },
     {
       label: "Inventory",
       value: inventoryReady ? "Reserved" : "Needs Assignment",
       detail: `${totalAssignedUnits}/${totalUnits} unit(s) reserved`,
       ready: inventoryReady,
+      state: inventoryReady ? "complete" : booking.items.length ? "pending" : "not-started",
     },
   ];
   const remainingChecks = reviewChecks.filter((check) => !check.ready).length;
   const primaryAction = actions.find((action) => action.tone !== "danger") ?? null;
   const alternativeActions = actions.filter((action) => action.status !== primaryAction?.status);
 
-  const stepCompletion: Record<AdminReviewStep, boolean> = {
-    customer: email !== "-" && phone !== "-",
-    rental: booking.items.length > 0,
-    requirements: booking.requirementsStatus === "approved",
-    payment: amountPaid > 0,
-    agreement: booking.agreementStatus === "completed",
-    final: FINAL_REVIEW_STATUSES.includes(booking.status),
-    history: statusHistory.length > 0,
+  const stepState: Record<AdminReviewStep, ReviewState> = {
+    customer: email !== "-" && phone !== "-" ? "complete" : "not-started",
+    rental: booking.items.length > 0 ? "complete" : "not-started",
+    requirements: requirementsAttention ? "attention" : booking.requirementsStatus === "approved" ? "complete" : documents.length ? "pending" : "not-started",
+    payment: paymentAttention ? "attention" : amountPaid > 0 ? "complete" : payments.length ? "pending" : "not-started",
+    agreement: agreementAttention ? "attention" : booking.agreementStatus === "completed" ? "complete" : agreement ? "pending" : "not-started",
+    final: isClosedRecord || FINAL_REVIEW_STATUSES.includes(booking.status) ? "complete" : remainingChecks === 0 ? "pending" : "not-started",
+    history: statusHistory.length > 0 ? "complete" : "not-started",
   };
 
   function jumpToNextStep() {
@@ -568,15 +589,25 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
       <Link href="/admin/bookings" className={styles.backLink}>Back to Bookings</Link>
 
       <header className={styles.header}>
-        <div>
+        <div className={styles.headerIdentity}>
           <p className={styles.eyebrow}>BOOKING REVIEW</p>
           <h1>{booking.bookingRef}</h1>
+          <p className={styles.headerContext}>
+            <strong>{fullName}</strong>
+            {booking.isGuestCheckout ? <GuestBadge /> : null}
+            <span aria-hidden="true">·</span>
+            <span>{bookingHeadline(booking.items)}</span>
+          </p>
         </div>
         <div className={styles.headerActions}>
           <span className={`${styles.liveStatus} ${styles[liveStatus]}`}>
             <span aria-hidden="true" />
             {getBookingLiveStatusLabel(liveStatus)}
           </span>
+          <div className={styles.headerStatus}>
+            <small>Current status</small>
+            <StatusBadge status={booking.status} />
+          </div>
           <button
             type="button"
             className={styles.exportButton}
@@ -602,33 +633,40 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
             {formatDate(booking.startDate)} — {formatDate(booking.endDate)}
             <span>{booking.dayCount} day{booking.dayCount === 1 ? "" : "s"} · {totalUnits} unit{totalUnits === 1 ? "" : "s"}</span>
           </p>
-          <dl className={styles.snapshotFacts}>
-            <div>
-              <dt>Customer</dt>
-              <dd className={styles.customerNameRow}>
-                {fullName}
-                {booking.isGuestCheckout ? <GuestBadge /> : null}
-              </dd>
-            </div>
-            <div><dt>Contact</dt><dd>{phone}<small>{email}</small></dd></div>
-            <div><dt>Fulfillment</dt><dd>{formatStatus(booking.fulfillmentMethod)}<small>{getFulfillmentProgressLabel(booking.status, booking.fulfillmentMethod)}</small></dd></div>
-            <div><dt>Total</dt><dd>{totalAmount}<small>{paymentStatusLabel}</small></dd></div>
-          </dl>
+           <dl className={styles.snapshotFacts}>
+             <div>
+               <dt>Customer</dt>
+               <dd className={styles.customerNameRow}>{fullName}</dd>
+             </div>
+             <div><dt>Contact</dt><dd>{phone}<small>{email}</small></dd></div>
+             <div><dt>Account type</dt><dd>{accountTypeLabel}</dd></div>
+             <div><dt>Rental item</dt><dd>{bookingHeadline(booking.items)}</dd></div>
+             <div><dt>Rental dates</dt><dd>{formatDate(booking.startDate)} — {formatDate(booking.endDate)}</dd></div>
+             <div><dt>Duration</dt><dd>{booking.dayCount} day{booking.dayCount === 1 ? "" : "s"}</dd></div>
+             <div><dt>Quantity / units</dt><dd>{totalUnits} unit{totalUnits === 1 ? "" : "s"}</dd></div>
+             <div><dt>Fulfillment</dt><dd>{fulfillmentLabel}<small>{booking.location || "Location not provided"}</small></dd></div>
+             <div><dt>Payment status</dt><dd>{paymentStatusLabel}<small>{amountPaid > 0 ? `PHP ${amountPaid.toLocaleString("en-PH")} verified` : "No verified payment"}</small></dd></div>
+             <div><dt>Payment type</dt><dd>{paymentTypeLabel}<small>{remainingBalance > 0.01 ? `PHP ${remainingBalance.toLocaleString("en-PH")} remaining` : "Fully paid"}</small></dd></div>
+             <div><dt>Total</dt><dd>{totalAmount}</dd></div>
+             {remainingBalance > 0.01 ? <div><dt>Remaining balance</dt><dd>PHP {remainingBalance.toLocaleString("en-PH")}</dd></div> : null}
+             <div><dt>Current status</dt><dd>{formatStatus(booking.status)}<small>{getFulfillmentProgressLabel(booking.status, booking.fulfillmentMethod)}</small></dd></div>
+             <div><dt>Created</dt><dd>{formatDate(booking.createdAt, true)}</dd></div>
+           </dl>
           <div className={styles.summaryChecklist}>
             <div className={styles.summaryChecklistHead}>
               <span>Review checklist</span>
               <span className={remainingChecks === 0 ? styles.readyPill : styles.pendingPill}>
-                {remainingChecks === 0 ? "Ready for the next action" : `${remainingChecks} check${remainingChecks === 1 ? "" : "s"} remaining`}
+                {isClosedRecord ? "Closed record" : remainingChecks === 0 ? "Ready for the next action" : `${remainingChecks} check${remainingChecks === 1 ? "" : "s"} remaining`}
               </span>
             </div>
             <div className={styles.checklistChips}>
               {reviewChecks.map((check) => (
                 <div
                   key={check.label}
-                  className={check.ready ? styles.checkChipReady : styles.checkChipPending}
+                  className={styles[check.state === "complete" ? "checkChipReady" : check.state === "attention" ? "checkChipAttention" : check.state === "not-started" ? "checkChipNotStarted" : "checkChipPending"]}
                   title={check.detail}
                 >
-                  <span aria-hidden="true">{check.ready ? "✓" : "!"}</span>
+                  <span aria-hidden="true">{check.state === "complete" ? "✓" : check.state === "attention" ? "!" : check.state === "not-started" ? "—" : "•"}</span>
                   <div><small>{check.label}</small><strong>{check.value}</strong></div>
                 </div>
               ))}
@@ -706,21 +744,44 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
 
       <nav id="admin-workspace-nav" className={styles.stepNav} aria-label="Booking review steps" role="tablist">
         {REVIEW_STEPS.map((step, index) => {
-          const done = stepCompletion[step.id];
+          const status = stepState[step.id];
+          const done = status === "complete";
           const current = activeStep === step.id;
           const stateClass = current
             ? styles.stepCurrent
             : done
               ? styles.stepDone
-              : styles.stepUpcoming;
+              : status === "attention"
+                ? styles.stepAttention
+                : status === "not-started"
+                  ? styles.stepNotStarted
+                  : styles.stepUpcoming;
           return (
             <button
               key={step.id}
               type="button"
               role="tab"
+              id={`booking-tab-${step.id}`}
               aria-selected={current}
+              aria-controls={`booking-step-${step.id}`}
+              tabIndex={0}
+              aria-current={current ? "step" : undefined}
+              aria-label={`${step.label}: ${status === "complete" ? "Completed" : status === "attention" ? "Needs attention" : status === "not-started" ? "Not started" : "Pending"}`}
               className={`${styles.step} ${stateClass}`}
               onClick={() => setActiveStep(step.id)}
+              onKeyDown={(event) => {
+                const direction = event.key === "ArrowRight" || event.key === "ArrowDown" ? 1 : event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1 : 0;
+                const nextIndex = event.key === "Home"
+                  ? 0
+                  : event.key === "End"
+                    ? REVIEW_STEPS.length - 1
+                    : (index + direction + REVIEW_STEPS.length) % REVIEW_STEPS.length;
+                if (direction === 0 && event.key !== "Home" && event.key !== "End") return;
+                event.preventDefault();
+                const nextStep = REVIEW_STEPS[nextIndex];
+                setActiveStep(nextStep.id);
+                window.setTimeout(() => document.getElementById(`booking-tab-${nextStep.id}`)?.focus(), 0);
+              }}
             >
               <span className={styles.stepMarker} aria-hidden="true">
                 {done && !current ? "✓" : index + 1}
@@ -731,88 +792,8 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
         })}
       </nav>
 
-      <section id="admin-actions" className={styles.actionPanel} aria-labelledby="booking-action-heading" hidden={activeStep !== "final"}>
-        <div className={styles.actionIntro}>
-          <span>NEXT ACTION</span>
-          <h2 id="booking-action-heading">What should happen now</h2>
-          <p>Use the recommended action below. Open other actions only when the booking needs a different outcome.</p>
-        </div>
-        {actions.length ? (
-          <div className={styles.actionControls}>
-            <div className={styles.actionChoiceGrid} aria-label="Available booking actions">
-              {primaryAction ? renderActionChoice(primaryAction) : null}
-            </div>
-            {alternativeActions.length ? (
-              <details className={styles.secondaryActions}>
-                <summary>
-                  <span>Other available actions</span>
-                  <small>{alternativeActions.length}</small>
-                </summary>
-                <div className={styles.actionChoiceGrid}>
-                  {alternativeActions.map(renderActionChoice)}
-                </div>
-              </details>
-            ) : null}
-            {actions.some((action) => action.status === "released") && !handoverPaymentReady ? (
-              <p className={styles.choosePrompt}>Handover is protected: the remaining balance must be recorded before “Released to Customer” becomes available.</p>
-            ) : null}
-            {selectedAction ? (
-              <div className={`${styles.actionConfirmation} ${selectedAction.tone === "danger" ? styles.dangerConfirmation : ""}`}>
-                <div>
-                  <small>Selected action</small>
-                  <h3>{selectedAction.label}</h3>
-                  <p>{selectedAction.description}</p>
-                </div>
-                {isDeclineAction ? (
-                  <>
-                    <label className={styles.noteField}>
-                      <span>Decline reason (required)</span>
-                      <select value={declineReason} onChange={(event) => setDeclineReason(event.target.value)} disabled={updating}>
-                        <option value="" disabled>Select a reason</option>
-                        {DECLINE_REASON_OPTIONS.map((reason) => (
-                          <option key={reason} value={reason}>{reason}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className={styles.noteField}>
-                      <span>Explanation for the customer (required)</span>
-                      <textarea
-                        value={note}
-                        onChange={(event) => setNote(event.target.value)}
-                        rows={3}
-                        maxLength={1000}
-                        placeholder="Describe exactly what was found and what the customer needs to know"
-                        disabled={updating}
-                      />
-                    </label>
-                  </>
-                ) : (
-                  <label className={styles.noteField}>
-                    <span>Message to customer{selectedAction.requiresNote ? " (required)" : " (optional)"}</span>
-                    <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={3} maxLength={1000} placeholder={selectedAction.requiresNote ? "Explain the reason clearly before continuing" : "Add a helpful update or handover instruction"} disabled={updating} />
-                  </label>
-                )}
-                <div className={styles.confirmationActions}>
-                  <button type="button" className={styles.cancelSelectionButton} onClick={() => { setSelectedStatus(""); setNote(""); setDeclineReason(""); }} disabled={updating}>Choose another action</button>
-                  <button
-                    type="button"
-                    className={`${styles.applyButton} ${selectedAction.tone === "danger" ? styles.dangerButton : ""}`}
-                    onClick={requestStatusAction}
-                    disabled={updating || (isDeclineAction ? declineIncomplete : (selectedAction.requiresNote && !note.trim()))}
-                  >
-                    {updating ? "Updating customer..." : `Confirm ${selectedAction.label}`}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <p className={styles.choosePrompt}>Choose an action card to review its customer message before confirming.</p>
-            )}
-          </div>
-        ) : <p className={styles.terminalNotice}>This booking is complete or closed. No further actions are available.</p>}
-      </section>
-
       <div className={styles.detailSections}>
-        <section className={styles.detailSection} role="tabpanel" hidden={activeStep !== "customer"}>
+        <section id="booking-step-customer" className={styles.detailSection} role="tabpanel" aria-labelledby="booking-tab-customer" hidden={activeStep !== "customer"}>
           <div className={styles.detailSectionHeader}>
             <span className={styles.sectionNumber}>01</span>
             <div><strong>Customer Details</strong><small>Contact information and social links</small></div>
@@ -837,7 +818,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
           </div>
         </section>
 
-        <section className={styles.detailSection} role="tabpanel" hidden={activeStep !== "rental"}>
+        <section id="booking-step-rental" className={styles.detailSection} role="tabpanel" aria-labelledby="booking-tab-rental" hidden={activeStep !== "rental"}>
           <div className={styles.detailSectionHeader}>
             <span className={styles.sectionNumber}>02</span>
             <div><strong>Rental Details</strong><small>Dates, handover, items and pricing</small></div>
@@ -863,18 +844,46 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
           </div>
         </section>
 
-        <section className={styles.detailSection} role="tabpanel" hidden={activeStep !== "payment"}>
+        <section id="booking-step-requirements" className={styles.detailSection} role="tabpanel" aria-labelledby="booking-tab-requirements" hidden={activeStep !== "requirements"}>
           <div className={styles.detailSectionHeader}>
             <span className={styles.sectionNumber}>03</span>
-            <div><strong>Payment Status</strong><small>{paymentStatusLabel} · {payments.length} attempt{payments.length === 1 ? "" : "s"}</small></div>
-            <span className={`${styles.sectionHeaderStatus} ${amountPaid > 0 ? styles.sectionHeaderReady : ""}`}>{paymentStatusLabel}</span>
+            <div><strong>Requirements</strong><small>{REQUIREMENTS_STATUS_LABELS[booking.requirementsStatus] ?? formatStatus(booking.requirementsStatus)} · {documents.length} file{documents.length === 1 ? "" : "s"}</small></div>
+            <span className={`${styles.sectionHeaderStatus} ${requirementsAttention ? styles.sectionHeaderAttention : booking.requirementsStatus === "approved" ? styles.sectionHeaderReady : booking.requirementsStatus === "pending_review" ? styles.sectionHeaderPending : ""}`}>{REQUIREMENTS_STATUS_LABELS[booking.requirementsStatus] ?? formatStatus(booking.requirementsStatus)}</span>
+          </div>
+          <div className={styles.detailBody}>
+            {emergencyContact || documents.length ? <>
+              {emergencyContact ? <dl className={`${styles.detailGrid} ${styles.emergencyGrid}`}>
+                <div><dt>Emergency contact</dt><dd>{emergencyContact.fullName}</dd></div>
+                <div><dt>Relationship</dt><dd>{emergencyContact.relationship}</dd></div>
+                <div><dt>Emergency phone</dt><dd>{emergencyContact.phoneNumber}</dd></div>
+                <div><dt>Address</dt><dd>{emergencyContact.address || "-"}</dd></div>
+              </dl> : null}
+              <RequirementsReviewPanel
+                bookingId={bookingId}
+                documents={documents}
+                onOpenDocument={(document) => openPrivateFile(
+                  document.storageBucket as Parameters<typeof getBookingFileUrl>[1],
+                  document.storagePath,
+                )}
+                onReviewed={handleDocumentReviewed}
+              />
+            </> : <p className={styles.empty}>Requirements have not been submitted for this booking.</p>}
+          </div>
+        </section>
+
+        <section id="booking-step-payment" className={styles.detailSection} role="tabpanel" aria-labelledby="booking-tab-payment" hidden={activeStep !== "payment"}>
+          <div className={styles.detailSectionHeader}>
+            <span className={styles.sectionNumber}>04</span>
+            <div><strong>Payment &amp; Documents</strong><small>{paymentStatusLabel} · {payments.length} attempt{payments.length === 1 ? "" : "s"}</small></div>
+            <span className={`${styles.sectionHeaderStatus} ${paymentAttention ? styles.sectionHeaderAttention : amountPaid >= booking.totalAmount - 0.01 ? styles.sectionHeaderReady : amountPaid > 0 ? styles.sectionHeaderPending : ""}`}>{paymentStatusLabel}</span>
           </div>
           <div className={styles.detailBody}>
             <article className={styles.recordCard}>
               <dl className={styles.paymentFacts}>
+                <div><dt>Payment Type</dt><dd>{paymentTypeLabel}</dd></div>
                 <div><dt>Verified Amount</dt><dd>PHP {amountPaid.toLocaleString("en-PH")}</dd></div>
                 <div><dt>Booking Total</dt><dd>PHP {booking.totalAmount.toLocaleString("en-PH")}</dd></div>
-                <div><dt>Balance</dt><dd>PHP {Math.max(0, booking.totalAmount - amountPaid).toLocaleString("en-PH")}</dd></div>
+                <div><dt>Balance</dt><dd>PHP {remainingBalance.toLocaleString("en-PH")}</dd></div>
                 <div><dt>Payment Attempts</dt><dd>{payments.length}</dd></div>
                 <div><dt>Receipts</dt><dd>{receipts.length}</dd></div>
               </dl>
@@ -932,38 +941,11 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
           </div>
         </section>
 
-        <section className={styles.detailSection} role="tabpanel" hidden={activeStep !== "requirements"}>
-          <div className={styles.detailSectionHeader}>
-            <span className={styles.sectionNumber}>04</span>
-            <div><strong>Verification Documents</strong><small>{REQUIREMENTS_STATUS_LABELS[booking.requirementsStatus] ?? formatStatus(booking.requirementsStatus)} · {documents.length} file{documents.length === 1 ? "" : "s"}</small></div>
-            <span className={`${styles.sectionHeaderStatus} ${booking.requirementsStatus === "approved" ? styles.sectionHeaderReady : ""}`}>{REQUIREMENTS_STATUS_LABELS[booking.requirementsStatus] ?? formatStatus(booking.requirementsStatus)}</span>
-          </div>
-          <div className={styles.detailBody}>
-            {emergencyContact || documents.length ? <>
-              {emergencyContact ? <dl className={`${styles.detailGrid} ${styles.emergencyGrid}`}>
-                <div><dt>Emergency contact</dt><dd>{emergencyContact.fullName}</dd></div>
-                <div><dt>Relationship</dt><dd>{emergencyContact.relationship}</dd></div>
-                <div><dt>Emergency phone</dt><dd>{emergencyContact.phoneNumber}</dd></div>
-                <div><dt>Address</dt><dd>{emergencyContact.address || "-"}</dd></div>
-              </dl> : null}
-              <RequirementsReviewPanel
-                bookingId={bookingId}
-                documents={documents}
-                onOpenDocument={(document) => openPrivateFile(
-                  document.storageBucket as Parameters<typeof getBookingFileUrl>[1],
-                  document.storagePath,
-                )}
-                onReviewed={handleDocumentReviewed}
-              />
-            </> : <p className={styles.empty}>Requirements have not been submitted for this booking.</p>}
-          </div>
-        </section>
-
-        <section className={styles.detailSection} role="tabpanel" hidden={activeStep !== "agreement"}>
+        <section id="booking-step-agreement" className={styles.detailSection} role="tabpanel" aria-labelledby="booking-tab-agreement" hidden={activeStep !== "agreement"}>
           <div className={styles.detailSectionHeader}>
             <span className={styles.sectionNumber}>05</span>
             <div><strong>Rental Agreement</strong><small>{AGREEMENT_STATUS_LABELS[booking.agreementStatus] ?? formatStatus(booking.agreementStatus)}</small></div>
-            <span className={`${styles.sectionHeaderStatus} ${agreement?.status === "completed" ? styles.sectionHeaderReady : ""}`}>{agreement?.status === "awaiting_business_signature" ? "Action required" : AGREEMENT_STATUS_LABELS[booking.agreementStatus] ?? formatStatus(booking.agreementStatus)}</span>
+            <span className={`${styles.sectionHeaderStatus} ${agreementAttention ? styles.sectionHeaderAttention : agreement?.status === "completed" ? styles.sectionHeaderReady : agreement ? styles.sectionHeaderPending : ""}`}>{agreement?.status === "awaiting_business_signature" ? "Action required" : AGREEMENT_STATUS_LABELS[booking.agreementStatus] ?? formatStatus(booking.agreementStatus)}</span>
           </div>
           <div className={styles.detailBody}>
               <article className={`${styles.recordCard} ${styles.agreementCard}`}>
@@ -1052,14 +1034,124 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
           </div>
         </section>
 
-        <section className={styles.detailSection} role="tabpanel" hidden={activeStep !== "history"}>
+        <section id="booking-step-final" className={styles.detailSection} role="tabpanel" aria-labelledby="booking-tab-final" hidden={activeStep !== "final"}>
           <div className={styles.detailSectionHeader}>
             <span className={styles.sectionNumber}>06</span>
+            <div><strong>Final Review</strong><small>Decision summary and booking actions</small></div>
+            <span className={`${styles.sectionHeaderStatus} ${!isClosedRecord && remainingChecks === 0 ? styles.sectionHeaderReady : ""}`}>
+              {isClosedRecord ? "Closed record" : remainingChecks === 0 ? "Ready to decide" : `${remainingChecks} check${remainingChecks === 1 ? "" : "s"} remaining`}
+            </span>
+          </div>
+          <div className={styles.detailBody}>
+            <div className={styles.finalReviewSummary} aria-label="Final review summary">
+              <div><span>Customer</span><strong>{fullName}</strong></div>
+              <div><span>Rental</span><strong>{bookingHeadline(booking.items)}</strong></div>
+              <div><span>Requirements</span><strong>{REQUIREMENTS_STATUS_LABELS[booking.requirementsStatus] ?? formatStatus(booking.requirementsStatus)}</strong></div>
+              <div><span>Payment</span><strong>{paymentStatusLabel}{remainingBalance > 0.01 ? ` · PHP ${remainingBalance.toLocaleString("en-PH")} due` : ""}</strong></div>
+              <div><span>Agreement</span><strong>{AGREEMENT_STATUS_LABELS[booking.agreementStatus] ?? formatStatus(booking.agreementStatus)}</strong></div>
+              <div><span>Inventory</span><strong>{inventoryReady ? "Ready" : `${totalAssignedUnits}/${totalUnits} reserved`}</strong></div>
+              <div><span>Fulfillment</span><strong>{fulfillmentLabel}</strong></div>
+              <div><span>Current status</span><strong>{formatStatus(booking.status)}</strong></div>
+            </div>
+            {isClosedRecord ? (
+              <p className={styles.finalRecordNote}>
+                This is a closed booking record. Historical steps and actions remain available for reference; no further booking action is available.
+              </p>
+            ) : remainingChecks > 0 ? (
+              <p className={styles.finalReviewWarning}>
+                Review the highlighted items above before confirming. The booking can still be managed through the available actions below when an exception or correction is needed.
+              </p>
+            ) : null}
+            <div className={styles.actionPanel} aria-labelledby="booking-action-heading">
+              <div className={styles.actionIntro}>
+                <span>{isClosedRecord ? "RECORD CLOSED" : "NEXT ACTION"}</span>
+                <h2 id="booking-action-heading">{isClosedRecord ? "No further action needed" : "What should happen now"}</h2>
+                <p>{isClosedRecord ? "This booking is complete or closed. Historical details remain available for reference." : "Use the recommended action below. Open other actions only when the booking needs a different outcome."}</p>
+              </div>
+              {actions.length ? (
+                <div className={styles.actionControls}>
+                  <div className={styles.actionChoiceGrid} aria-label="Available booking actions">
+                    {primaryAction ? renderActionChoice(primaryAction) : null}
+                  </div>
+                  {alternativeActions.length ? (
+                    <details className={styles.secondaryActions}>
+                      <summary>
+                        <span>Other available actions</span>
+                        <small>{alternativeActions.length}</small>
+                      </summary>
+                      <div className={styles.actionChoiceGrid}>
+                        {alternativeActions.map(renderActionChoice)}
+                      </div>
+                    </details>
+                  ) : null}
+                  {actions.some((action) => action.status === "released") && !handoverPaymentReady ? (
+                    <p className={styles.choosePrompt}>Handover is protected: the remaining balance must be recorded before “Released to Customer” becomes available.</p>
+                  ) : null}
+                  {selectedAction ? (
+                    <div className={`${styles.actionConfirmation} ${selectedAction.tone === "danger" ? styles.dangerConfirmation : ""}`}>
+                      <div>
+                        <small>Selected action</small>
+                        <h3>{selectedAction.label}</h3>
+                        <p>{selectedAction.description}</p>
+                      </div>
+                      {isDeclineAction ? (
+                        <>
+                          <label className={styles.noteField}>
+                            <span>Decline reason (required)</span>
+                            <select value={declineReason} onChange={(event) => setDeclineReason(event.target.value)} disabled={updating}>
+                              <option value="" disabled>Select a reason</option>
+                              {DECLINE_REASON_OPTIONS.map((reason) => (
+                                <option key={reason} value={reason}>{reason}</option>
+                              ))}
+                            </select>
+                          </label>
+                          <label className={styles.noteField}>
+                            <span>Explanation for the customer (required)</span>
+                            <textarea
+                              value={note}
+                              onChange={(event) => setNote(event.target.value)}
+                              rows={3}
+                              maxLength={1000}
+                              placeholder="Describe exactly what was found and what the customer needs to know"
+                              disabled={updating}
+                            />
+                          </label>
+                        </>
+                      ) : (
+                        <label className={styles.noteField}>
+                          <span>Message to customer{selectedAction.requiresNote ? " (required)" : " (optional)"}</span>
+                          <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={3} maxLength={1000} placeholder={selectedAction.requiresNote ? "Explain the reason clearly before continuing" : "Add a helpful update or handover instruction"} disabled={updating} />
+                        </label>
+                      )}
+                      <div className={styles.confirmationActions}>
+                        <button type="button" className={styles.cancelSelectionButton} onClick={() => { setSelectedStatus(""); setNote(""); setDeclineReason(""); }} disabled={updating}>Choose another action</button>
+                        <button
+                          type="button"
+                          className={`${styles.applyButton} ${selectedAction.tone === "danger" ? styles.dangerButton : ""}`}
+                          onClick={requestStatusAction}
+                          disabled={updating || (isDeclineAction ? declineIncomplete : (selectedAction.requiresNote && !note.trim()))}
+                        >
+                          {updating ? "Updating customer..." : `Confirm ${selectedAction.label}`}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className={styles.choosePrompt}>Choose an action card to review its customer message before confirming.</p>
+                  )}
+                </div>
+              ) : <p className={styles.terminalNotice}>This booking is complete or closed. No further actions are available.</p>}
+            </div>
+          </div>
+        </section>
+
+        <section id="booking-step-history" className={styles.detailSection} role="tabpanel" aria-labelledby="booking-tab-history" hidden={activeStep !== "history"}>
+          <div className={styles.detailSectionHeader}>
+            <span className={styles.sectionNumber}>07</span>
             <div><strong>Status Activity</strong><small>{statusHistory.length} recorded update{statusHistory.length === 1 ? "" : "s"}</small></div>
             <span className={styles.sectionHeaderStatus}>Audit trail</span>
           </div>
           <div className={styles.detailBody}>
-            {statusHistory.length ? <ol className={styles.timeline}>{statusHistory.map((entry) => <li key={entry.id}><span aria-hidden="true" /><div><strong>{entry.fromStatus ? `${formatStatus(entry.fromStatus)} to ` : ""}{formatStatus(entry.toStatus)}</strong><p>{entry.note || "Status updated."}</p><small>{formatDate(entry.createdAt, true)}</small></div></li>)}</ol> : <p className={styles.empty}>No status history is available.</p>}
+            {statusHistory.length ? <ol className={styles.timeline}>{statusHistory.map((entry) => <li key={entry.id}><span aria-hidden="true" /><div><strong>{entry.fromStatus ? `${formatStatus(entry.fromStatus)} to ` : ""}{formatStatus(entry.toStatus)}</strong><p>{entry.note || "Status updated."}</p><small>{formatDate(entry.createdAt, true)} · {entry.changedByUserId ? "Recorded by account" : "Booking update"}</small></div></li>)}</ol> : <p className={styles.empty}>No status history is available.</p>}
           </div>
         </section>
       </div>
@@ -1091,6 +1183,10 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
               <p id="status-confirmation-description">Apply this update to booking <strong>{booking.bookingRef}</strong>?</p>
               <div className={styles.confirmationSummary}>
                 <strong>{selectedAction.description}</strong>
+                <span><strong>Booking:</strong> {booking.bookingRef}</span>
+                <span><strong>Customer:</strong> {fullName}</span>
+                <span><strong>Rental:</strong> {bookingHeadline(booking.items)}</span>
+                <span><strong>Current status:</strong> {formatStatus(booking.status)}</span>
                 {isDeclineAction ? (
                   <>
                     <span><strong>Reason:</strong> {declineReason}</span>
@@ -1137,6 +1233,10 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
               <p id="countersign-confirmation-description">Are you sure you want to countersign and finalize this rental agreement?</p>
               <div className={styles.confirmationSummary}>
                 <strong>Signing as {businessSignerName.trim()}</strong>
+                <span><strong>Booking:</strong> {booking.bookingRef}</span>
+                <span><strong>Customer:</strong> {fullName}</span>
+                <span><strong>Rental:</strong> {bookingHeadline(booking.items)}</span>
+                <span><strong>Current status:</strong> {formatStatus(booking.status)}</span>
                 <span>This action is permanent and cannot be undone. The final PDF will be generated and made available to the customer immediately.</span>
               </div>
             </div>

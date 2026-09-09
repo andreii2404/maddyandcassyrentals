@@ -47,6 +47,30 @@
   letter-spacing: -0.03em;
 }
 
+.headerIdentity {
+  min-width: 0;
+}
+
+.headerContext {
+  display: flex;
+  max-width: 46rem;
+  margin: 0.42rem 0 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.55rem;
+  color: var(--color-charcoal);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.headerContext strong {
+  color: var(--color-text-primary);
+}
+
+.headerContext > span:last-child {
+  overflow-wrap: anywhere;
+}
+
 .header p:not(.eyebrow) {
   margin: 0.4rem 0 0;
   color: var(--color-charcoal);
@@ -270,6 +294,28 @@
   border-color: var(--color-primary);
   background: var(--color-primary);
   color: #fff;
+}
+
+.stepAttention {
+  border-color: var(--color-status-red-border);
+  background: var(--color-status-red-bg);
+  color: var(--color-status-red);
+}
+
+.stepAttention .stepMarker {
+  border-color: var(--color-status-red);
+  background: var(--color-status-red);
+  color: #fff;
+}
+
+.stepNotStarted {
+  color: #77736f;
+}
+
+.stepNotStarted .stepMarker {
+  border-color: #c9c5c0;
+  background: #f3f1ef;
+  color: #77736f;
 }
 
 /* Upcoming: neutral box + step number */
@@ -736,6 +782,27 @@
   gap: 0.7rem;
 }
 
+.headerStatus {
+  display: grid;
+  min-height: 32px;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--color-light-gray);
+  border-radius: 11px;
+  background: var(--color-white);
+  align-content: center;
+  justify-items: start;
+  gap: 0.14rem;
+}
+
+.headerStatus small {
+  color: var(--color-charcoal);
+  font-size: 0.53rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
 .cancellationDecisionButtons {
   display: flex;
   flex-wrap: wrap;
@@ -760,7 +827,7 @@
 .snapshotFacts {
   display: grid;
   margin: 0.65rem 0;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.55rem;
 }
 
@@ -863,7 +930,9 @@
 }
 
 .checkChipReady,
-.checkChipPending {
+.checkChipPending,
+.checkChipAttention,
+.checkChipNotStarted {
   display: grid;
   min-width: 0;
   padding: 0.55rem 0.6rem;
@@ -884,8 +953,20 @@
   background: var(--color-white);
 }
 
+.checkChipAttention {
+  border-color: var(--color-status-red-border);
+  background: var(--color-status-red-bg);
+}
+
+.checkChipNotStarted {
+  border-color: #d7d3ce;
+  background: #f3f1ef;
+}
+
 .checkChipReady > span,
-.checkChipPending > span {
+.checkChipPending > span,
+.checkChipAttention > span,
+.checkChipNotStarted > span {
   display: grid;
   width: 22px;
   height: 22px;
@@ -902,8 +983,20 @@
   color: var(--color-primary);
 }
 
+.checkChipAttention > span {
+  background: var(--color-status-red);
+  color: #fff;
+}
+
+.checkChipNotStarted > span {
+  background: #e4e0dc;
+  color: #77736f;
+}
+
 .checkChipReady div,
-.checkChipPending div {
+.checkChipPending div,
+.checkChipAttention div,
+.checkChipNotStarted div {
   display: flex;
   min-width: 0;
   flex-direction: column;
@@ -911,7 +1004,9 @@
 }
 
 .checkChipReady small,
-.checkChipPending small {
+.checkChipPending small,
+.checkChipAttention small,
+.checkChipNotStarted small {
   color: var(--color-charcoal);
   font-size: 0.6rem;
   font-weight: 700;
@@ -919,7 +1014,9 @@
 }
 
 .checkChipReady strong,
-.checkChipPending strong {
+.checkChipPending strong,
+.checkChipAttention strong,
+.checkChipNotStarted strong {
   font-size: 0.74rem;
   line-height: 1.35;
   overflow-wrap: anywhere;
@@ -949,6 +1046,73 @@
   border-radius: 16px;
   background: var(--color-white);
   box-shadow: 0 8px 24px rgba(36, 36, 36, 0.035);
+}
+
+.finalReviewSummary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.finalReviewSummary > div {
+  min-width: 0;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid rgba(154, 89, 101, 0.12);
+  border-radius: 11px;
+  background: var(--color-background);
+}
+
+.finalReviewSummary span,
+.finalReviewSummary strong {
+  display: block;
+}
+
+.finalReviewSummary span {
+  color: var(--color-charcoal);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.finalReviewSummary strong {
+  margin-top: 0.2rem;
+  overflow-wrap: anywhere;
+  color: var(--color-text-primary);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.finalReviewWarning {
+  margin: 0.75rem 0 0 !important;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--color-status-yellow-border);
+  border-radius: 10px;
+  background: var(--color-status-yellow-bg);
+  color: var(--color-status-yellow) !important;
+  font-size: 0.72rem !important;
+}
+
+.finalRecordNote {
+  margin: 0.75rem 0 0 !important;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--color-status-green-border);
+  border-radius: 10px;
+  background: var(--color-status-green-bg);
+  color: var(--color-status-green) !important;
+  font-size: 0.72rem !important;
+}
+
+.finalReviewSummary + .finalReviewWarning + .actionPanel,
+.finalReviewSummary + .actionPanel {
+  margin-top: 0.8rem;
+}
+
+.finalReviewSummary ~ .actionPanel {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
 }
 
 .detailSectionHeader {
@@ -984,6 +1148,8 @@
 
 .sectionHeaderStatus { border: 1px solid var(--color-light-gray); }
 .sectionHeaderReady { border-color: var(--color-status-green-border); background: var(--color-status-green-bg); color: var(--color-status-green); }
+.sectionHeaderPending { border-color: var(--color-status-yellow-border); background: var(--color-status-yellow-bg); color: var(--color-status-yellow); }
+.sectionHeaderAttention { border-color: var(--color-status-red-border); background: var(--color-status-red-bg); color: var(--color-status-red); }
 
 .detailSection > summary {
   display: grid;
@@ -1615,6 +1781,11 @@
 .dialogDangerButton { border-color: var(--color-status-red); background: var(--color-status-red); }
 
 @media (max-width: 1050px) {
+  .snapshotFacts,
+  .finalReviewSummary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .statusJourney { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.7rem 0; }
   .statusJourney li:nth-child(3)::after { display: none; }
 
@@ -1680,7 +1851,7 @@
   .signatureSteps li:first-child::before { display: none; }
 
   .snapshotFacts {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .reviewReadinessHeading {
@@ -1741,6 +1912,17 @@
   }
 
   .checklistChips {
+    grid-template-columns: 1fr;
+  }
+
+  .finalReviewSummary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .snapshotFacts,
+  .finalReviewSummary {
     grid-template-columns: 1fr;
   }
 }
