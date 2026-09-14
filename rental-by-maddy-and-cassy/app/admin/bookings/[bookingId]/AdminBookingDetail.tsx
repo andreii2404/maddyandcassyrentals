@@ -27,10 +27,7 @@ import Spinner from "@/components/ui/Spinner";
 import StatusBadge from "@/components/status-badge/StatusBadge";
 import GuestBadge from "@/components/status-badge/GuestBadge";
 import { useToast } from "@/components/ui/ToastProvider";
-import {
-  getBookingLiveStatusLabel,
-  useBookingRealtime,
-} from "@/hooks/useBookingRealtime";
+import { useBookingRealtime } from "@/hooks/useBookingRealtime";
 import styles from "./bookingDetail.module.css";
 import RequirementsReviewPanel from "@/components/admin/RequirementsReviewPanel";
 import PaymentsReviewPanel from "@/components/admin/PaymentsReviewPanel";
@@ -169,7 +166,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
     void loadDetails();
   }, [loadDetails]);
 
-  const liveStatus = useBookingRealtime({ bookingId, onChange: loadDetails });
+  useBookingRealtime({ bookingId, onChange: loadDetails });
 
   const actions = useMemo(
     () => (state ? ADMIN_BOOKING_ACTIONS[state.details.booking.status] : []),
@@ -650,10 +647,6 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
           </p>
         </div>
         <div className={styles.headerActions}>
-          <span className={`${styles.liveStatus} ${styles[liveStatus]}`}>
-            <span aria-hidden="true" />
-            {getBookingLiveStatusLabel(liveStatus)}
-          </span>
           <div className={styles.headerStatus}>
             <small>Current status</small>
             <StatusBadge status={booking.status} />
@@ -673,35 +666,34 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
         <article className={styles.bookingSnapshot}>
           <div className={styles.snapshotTopline}>
             <span>Booking summary</span>
-            <div className={styles.snapshotStatus}>
-              <small>Current status</small>
-              <StatusBadge status={booking.status} />
-            </div>
           </div>
           <h2>{bookingHeadline(booking.items)}</h2>
           <p className={styles.rentalWindow}>
             {formatDate(booking.startDate)} — {formatDate(booking.endDate)}
             <span>{booking.dayCount} day{booking.dayCount === 1 ? "" : "s"} · {totalUnits} unit{totalUnits === 1 ? "" : "s"}</span>
           </p>
-           <dl className={styles.snapshotFacts}>
-             <div>
-               <dt>Customer</dt>
-               <dd className={styles.customerNameRow}>{fullName}</dd>
-             </div>
-             <div><dt>Contact</dt><dd>{phone}<small>{email}</small></dd></div>
-             <div><dt>Account type</dt><dd>{accountTypeLabel}</dd></div>
-             <div><dt>Rental item</dt><dd>{bookingHeadline(booking.items)}</dd></div>
-             <div><dt>Rental dates</dt><dd>{formatDate(booking.startDate)} — {formatDate(booking.endDate)}</dd></div>
-             <div><dt>Duration</dt><dd>{booking.dayCount} day{booking.dayCount === 1 ? "" : "s"}</dd></div>
-             <div><dt>Quantity / units</dt><dd>{totalUnits} unit{totalUnits === 1 ? "" : "s"}</dd></div>
-             <div><dt>Fulfillment</dt><dd>{fulfillmentLabel}<small>{booking.location || "Location not provided"}</small></dd></div>
-             <div><dt>Payment status</dt><dd>{paymentStatusLabel}<small>{amountPaid > 0 ? `PHP ${amountPaid.toLocaleString("en-PH")} verified` : "No verified payment"}</small></dd></div>
-             <div><dt>Payment type</dt><dd>{paymentTypeLabel}<small>{remainingBalance > 0.01 ? `PHP ${remainingBalance.toLocaleString("en-PH")} remaining` : "Fully paid"}</small></dd></div>
-             <div><dt>Total</dt><dd>{totalAmount}</dd></div>
-             {remainingBalance > 0.01 ? <div><dt>Remaining balance</dt><dd>PHP {remainingBalance.toLocaleString("en-PH")}</dd></div> : null}
-             <div><dt>Current status</dt><dd>{formatStatus(booking.status)}<small>{getFulfillmentProgressLabel(booking.status, booking.fulfillmentMethod)}</small></dd></div>
-             <div><dt>Created</dt><dd>{formatDate(booking.createdAt, true)}</dd></div>
-           </dl>
+          <details className={styles.collapsibleBlock}>
+            <summary className={styles.expandLabel}>View full booking details</summary>
+            <dl className={styles.snapshotFacts}>
+              <div>
+                <dt>Customer</dt>
+                <dd className={styles.customerNameRow}>{fullName}</dd>
+              </div>
+              <div><dt>Contact</dt><dd>{phone}<small>{email}</small></dd></div>
+              <div><dt>Account type</dt><dd>{accountTypeLabel}</dd></div>
+              <div><dt>Rental item</dt><dd>{bookingHeadline(booking.items)}</dd></div>
+              <div><dt>Rental dates</dt><dd>{formatDate(booking.startDate)} — {formatDate(booking.endDate)}</dd></div>
+              <div><dt>Duration</dt><dd>{booking.dayCount} day{booking.dayCount === 1 ? "" : "s"}</dd></div>
+              <div><dt>Quantity / units</dt><dd>{totalUnits} unit{totalUnits === 1 ? "" : "s"}</dd></div>
+              <div><dt>Fulfillment</dt><dd>{fulfillmentLabel}<small>{booking.location || "Location not provided"}</small></dd></div>
+              <div><dt>Payment status</dt><dd>{paymentStatusLabel}<small>{amountPaid > 0 ? `PHP ${amountPaid.toLocaleString("en-PH")} verified` : "No verified payment"}</small></dd></div>
+              <div><dt>Payment type</dt><dd>{paymentTypeLabel}<small>{remainingBalance > 0.01 ? `PHP ${remainingBalance.toLocaleString("en-PH")} remaining` : "Fully paid"}</small></dd></div>
+              <div><dt>Total</dt><dd>{totalAmount}</dd></div>
+              {remainingBalance > 0.01 ? <div><dt>Remaining balance</dt><dd>PHP {remainingBalance.toLocaleString("en-PH")}</dd></div> : null}
+              <div><dt>Current status</dt><dd>{formatStatus(booking.status)}<small>{getFulfillmentProgressLabel(booking.status, booking.fulfillmentMethod)}</small></dd></div>
+              <div><dt>Created</dt><dd>{formatDate(booking.createdAt, true)}</dd></div>
+            </dl>
+          </details>
           <div className={styles.summaryChecklist}>
             <div className={styles.summaryChecklistHead}>
               <span>Review checklist</span>
@@ -1119,24 +1111,27 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
               <span>Booking Summary</span>
               <p>All important booking, customer, payment, fulfillment, and status details in one place.</p>
             </div>
-            <div className={styles.finalReviewSummary} aria-label="Final review booking summary">
-              <div><span>Booking Number</span><strong>{booking.bookingRef}</strong></div>
-              <div><span>Customer</span><strong>{fullName}</strong></div>
-              <div><span>Account Type</span><strong>{accountTypeLabel}</strong></div>
-              <div><span>Contact</span><strong>{phone}<small>{email}</small></strong></div>
-              <div><span>Rental Item</span><strong>{bookingHeadline(booking.items)}<small>{totalUnits} unit{totalUnits === 1 ? "" : "s"}</small></strong></div>
-              <div><span>Rental Dates</span><strong>{formatDate(booking.startDate)} - {formatDate(booking.endDate)}</strong></div>
-              <div><span>Duration</span><strong>{booking.dayCount} day{booking.dayCount === 1 ? "" : "s"}</strong></div>
-              <div><span>Verification Status</span><strong>{REQUIREMENTS_STATUS_LABELS[booking.requirementsStatus] ?? formatStatus(booking.requirementsStatus)}</strong></div>
-              <div><span>Payment Status</span><strong>{paymentStatusLabel}</strong></div>
-              <div><span>Fulfillment</span><strong>{fulfillmentLabel}<small>{booking.location || "Location not provided"}</small></strong></div>
-              <div><span>Payment Type</span><strong>{paymentTypeLabel}</strong></div>
-              <div><span>Amount Paid</span><strong>PHP {amountPaid.toLocaleString("en-PH")}</strong></div>
-              <div><span>Remaining Balance</span><strong>PHP {remainingBalance.toLocaleString("en-PH")}</strong></div>
-              <div><span>Agreement Status</span><strong>{AGREEMENT_STATUS_LABELS[booking.agreementStatus] ?? formatStatus(booking.agreementStatus)}</strong></div>
-              <div><span>Inventory Status</span><strong>{inventoryReady ? "Reserved" : `${totalAssignedUnits}/${totalUnits} reserved`}</strong></div>
-              <div><span>Current Booking Status</span><strong>{formatStatus(booking.status)}</strong></div>
-            </div>
+            <details className={styles.collapsibleBlock}>
+              <summary className={styles.expandLabel}>View full booking record</summary>
+              <div className={styles.finalReviewSummary} aria-label="Final review booking summary">
+                <div><span>Booking Number</span><strong>{booking.bookingRef}</strong></div>
+                <div><span>Customer</span><strong>{fullName}</strong></div>
+                <div><span>Account Type</span><strong>{accountTypeLabel}</strong></div>
+                <div><span>Contact</span><strong>{phone}<small>{email}</small></strong></div>
+                <div><span>Rental Item</span><strong>{bookingHeadline(booking.items)}<small>{totalUnits} unit{totalUnits === 1 ? "" : "s"}</small></strong></div>
+                <div><span>Rental Dates</span><strong>{formatDate(booking.startDate)} - {formatDate(booking.endDate)}</strong></div>
+                <div><span>Duration</span><strong>{booking.dayCount} day{booking.dayCount === 1 ? "" : "s"}</strong></div>
+                <div><span>Verification Status</span><strong>{REQUIREMENTS_STATUS_LABELS[booking.requirementsStatus] ?? formatStatus(booking.requirementsStatus)}</strong></div>
+                <div><span>Payment Status</span><strong>{paymentStatusLabel}</strong></div>
+                <div><span>Fulfillment</span><strong>{fulfillmentLabel}<small>{booking.location || "Location not provided"}</small></strong></div>
+                <div><span>Payment Type</span><strong>{paymentTypeLabel}</strong></div>
+                <div><span>Amount Paid</span><strong>PHP {amountPaid.toLocaleString("en-PH")}</strong></div>
+                <div><span>Remaining Balance</span><strong>PHP {remainingBalance.toLocaleString("en-PH")}</strong></div>
+                <div><span>Agreement Status</span><strong>{AGREEMENT_STATUS_LABELS[booking.agreementStatus] ?? formatStatus(booking.agreementStatus)}</strong></div>
+                <div><span>Inventory Status</span><strong>{inventoryReady ? "Reserved" : `${totalAssignedUnits}/${totalUnits} reserved`}</strong></div>
+                <div><span>Current Booking Status</span><strong>{formatStatus(booking.status)}</strong></div>
+              </div>
+            </details>
             <section className={`${styles.completionStatus} ${styles[`completionStatus${finalDecisionTone[0].toUpperCase()}${finalDecisionTone.slice(1)}`]}`} aria-labelledby="completion-status-heading">
               <div className={styles.completionStatusHeading}>
                 <div>

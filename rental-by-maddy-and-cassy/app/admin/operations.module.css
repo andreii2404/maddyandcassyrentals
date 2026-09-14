@@ -15,6 +15,15 @@
 .panelHeader h2 { font-size:1rem; }
 .panelHeader p { margin-top:.25rem; color:var(--color-charcoal); font-size:.76rem; }
 .searchInput { width:min(280px,100%); padding:.6rem .85rem; border:1px solid var(--color-border); border-radius:999px; background:var(--color-white); font-size:.78rem; }
+.filterBar { display:flex; align-items:flex-end; flex-wrap:wrap; gap:.75rem; padding:1rem 1.2rem; border-bottom:1px solid var(--color-border); background:var(--color-background); }
+.filterField { display:flex; flex-direction:column; gap:.3rem; font-size:.68rem; font-weight:700; letter-spacing:.03em; text-transform:uppercase; color:var(--color-charcoal); }
+.filterField select { padding:.5rem .6rem; border:1px solid var(--color-border); border-radius:var(--radius-control); background:var(--color-white); font:inherit; font-size:.78rem; font-weight:400; text-transform:none; letter-spacing:normal; color:var(--color-charcoal); min-height:38px; }
+.clearFiltersButton { display:inline-flex; min-height:38px; align-items:center; justify-content:center; padding:.5rem .8rem; border:1px solid var(--color-border); border-radius:var(--radius-control); background:var(--color-white); color:var(--color-charcoal); font:inherit; font-size:.72rem; font-weight:700; cursor:pointer; white-space:nowrap; transition:background-color 140ms ease, border-color 140ms ease, transform 140ms ease; }
+.clearFiltersButton:hover:not(:disabled) { border-color:var(--color-dusty-rose); background:var(--color-background-soft); transform:translateY(-1px); }
+.clearFiltersButton:active:not(:disabled) { transform:translateY(1px); }
+.clearFiltersButton:disabled { cursor:not-allowed; opacity:.45; }
+.filterBar .searchInput { margin-left:auto; }
+@media(max-width:620px){.filterBar{align-items:stretch}.filterField{flex:1 1 140px}.filterBar .searchInput{margin-left:0; width:100%;}}
 .pagination { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.75rem; padding:.85rem 1.1rem; border-top:1px solid var(--color-border); background:var(--color-background); color:var(--color-charcoal); font-size:.72rem; }
 .paginationControls { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
 .pageSizeLabel { display:flex; align-items:center; gap:.4rem; font-size:.72rem; color:var(--color-charcoal); }

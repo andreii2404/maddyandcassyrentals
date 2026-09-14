@@ -8,7 +8,11 @@ import Spinner from "@/components/ui/Spinner";
 import StatusBadge, { type StatusTone } from "@/components/status-badge/StatusBadge";
 import PaymentProofModal, { type PaymentWithProof } from "@/components/admin/PaymentProofModal";
 import { useAuth } from "@/hooks/useAuth";
-import { getAdminPayments, type AdminPaymentsData } from "@/src/services/operationsService";
+import {
+  getAdminPayments,
+  type AdminPaymentsData,
+  type AdminPaymentsFilters,
+} from "@/src/services/operationsService";
 import type { AdminPaymentRecord } from "@/src/types/payment";
 import styles from "../operations.module.css";
 
@@ -27,6 +31,72 @@ const PAYMENT_STATUS_TONES: Record<AdminPaymentRecord["status"], StatusTone> = {
 const PAYMENT_STATUS_LABELS: Partial<Record<AdminPaymentRecord["status"], string>> = {
   submitted: "Unverified",
 };
+
+const DEFAULT_FILTERS: AdminPaymentsFilters = {
+  status: undefined,
+  stage: undefined,
+  accountType: undefined,
+  bookingStatus: undefined,
+  proof: undefined,
+  sort: "newest",
+};
+
+const STATUS_FILTER_OPTIONS: Array<{ value: NonNullable<AdminPaymentsFilters["status"]> | "all"; label: string }> = [
+  { value: "all", label: "All" },
+  { value: "verified", label: "Verified" },
+  { value: "unverified", label: "Unverified" },
+  { value: "rejected", label: "Rejected" },
+];
+
+const STAGE_FILTER_OPTIONS: Array<{ value: NonNullable<AdminPaymentsFilters["stage"]> | "all"; label: string }> = [
+  { value: "all", label: "All" },
+  { value: "full_payment", label: "Full Payment" },
+  { value: "down_payment", label: "Down Payment" },
+  { value: "balance", label: "Balance" },
+  { value: "other", label: "Other" },
+];
+
+const ACCOUNT_TYPE_FILTER_OPTIONS: Array<{
+  value: NonNullable<AdminPaymentsFilters["accountType"]> | "all";
+  label: string;
+}> = [
+  { value: "all", label: "All" },
+  { value: "with_account", label: "With Account" },
+  { value: "guest", label: "Guest" },
+];
+
+const BOOKING_STATUS_FILTER_OPTIONS: Array<{
+  value: NonNullable<AdminPaymentsFilters["bookingStatus"]> | "all";
+  label: string;
+}> = [
+  { value: "all", label: "All" },
+  { value: "pending", label: "Pending" },
+  { value: "approved", label: "Approved" },
+  { value: "returned", label: "Returned" },
+  { value: "cancelled", label: "Cancelled" },
+];
+
+const PROOF_FILTER_OPTIONS: Array<{ value: NonNullable<AdminPaymentsFilters["proof"]> | "all"; label: string }> = [
+  { value: "all", label: "All" },
+  { value: "with_proof", label: "With Proof" },
+  { value: "no_proof", label: "No Proof" },
+];
+
+const SORT_FILTER_OPTIONS: Array<{ value: NonNullable<AdminPaymentsFilters["sort"]>; label: string }> = [
+  { value: "newest", label: "Newest" },
+  { value: "oldest", label: "Oldest" },
+];
+
+function isDefaultFilters(filters: AdminPaymentsFilters): boolean {
+  return (
+    !filters.status &&
+    !filters.stage &&
+    !filters.accountType &&
+    !filters.bookingStatus &&
+    !filters.proof &&
+    (filters.sort ?? "newest") === "newest"
+  );
+}
 
 function money(value: number) {
   return `PHP ${value.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`;
@@ -126,6 +196,7 @@ export default function AdminPaymentsPage() {
 
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [filters, setFilters] = useState<AdminPaymentsFilters>(DEFAULT_FILTERS);
   const [paymentsPage, setPaymentsPage] = useState(1);
   const [paymentsPageSize, setPaymentsPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
   const [paymentsData, setPaymentsData] = useState<AdminPaymentsData | null>(null);
@@ -133,6 +204,20 @@ export default function AdminPaymentsPage() {
   const [proofPayment, setProofPayment] = useState<PaymentWithProof | null>(null);
   const [refreshing, setRefreshing] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
+
+  function updateFilter<K extends keyof AdminPaymentsFilters>(key: K, value: AdminPaymentsFilters[K]) {
+    setFilters((current) => ({ ...current, [key]: value }));
+    setPaymentsPage(1);
+  }
+
+  function clearFilters() {
+    setSearchInput("");
+    setDebouncedSearch("");
+    setFilters(DEFAULT_FILTERS);
+    setPaymentsPage(1);
+  }
+
+  const filtersActive = !isDefaultFilters(filters) || Boolean(debouncedSearch);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -149,7 +234,12 @@ export default function AdminPaymentsPage() {
     const timeoutId = window.setTimeout(() => {
       if (!active) return;
       setRefreshing(true);
-      getAdminPayments({ page: paymentsPage, pageSize: paymentsPageSize, search: debouncedSearch || undefined })
+      getAdminPayments({
+        page: paymentsPage,
+        pageSize: paymentsPageSize,
+        search: debouncedSearch || undefined,
+        filters,
+      })
         .then((result) => {
           if (active) {
             setPaymentsData(result);
@@ -172,7 +262,23 @@ export default function AdminPaymentsPage() {
       active = false;
       window.clearTimeout(timeoutId);
     };
-  }, [user, paymentsPage, paymentsPageSize, debouncedSearch, retryCount]);
+  }, [user, paymentsPage, paymentsPageSize, debouncedSearch, filters, retryCount]);
+
+  async function handleProofReviewed() {
+    const result = await getAdminPayments({
+      page: paymentsPage,
+      pageSize: paymentsPageSize,
+      search: debouncedSearch || undefined,
+      filters,
+    });
+    setPaymentsData(result);
+    setPaymentsError(null);
+    setProofPayment((current) => {
+      if (!current) return current;
+      const updated = result.payments.find((candidate) => candidate.id === current.id);
+      return updated && hasProof(updated) ? updated : current;
+    });
+  }
 
   const loading = !paymentsData && !paymentsError;
 
@@ -220,6 +326,124 @@ export default function AdminPaymentsPage() {
                   <p>Manual GCash submissions and their review status.</p>
                 </div>
                 {refreshing && paymentsData ? <span className={styles.refreshNote} role="status">Updating…</span> : null}
+              </div>
+              <div className={styles.filterBar}>
+                <label className={styles.filterField}>
+                  <span>Status</span>
+                  <select
+                    value={filters.status ?? "all"}
+                    onChange={(event) =>
+                      updateFilter(
+                        "status",
+                        event.target.value === "all" ? undefined : (event.target.value as AdminPaymentsFilters["status"]),
+                      )
+                    }
+                  >
+                    {STATUS_FILTER_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className={styles.filterField}>
+                  <span>Payment Type</span>
+                  <select
+                    value={filters.stage ?? "all"}
+                    onChange={(event) =>
+                      updateFilter(
+                        "stage",
+                        event.target.value === "all" ? undefined : (event.target.value as AdminPaymentsFilters["stage"]),
+                      )
+                    }
+                  >
+                    {STAGE_FILTER_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className={styles.filterField}>
+                  <span>Account Type</span>
+                  <select
+                    value={filters.accountType ?? "all"}
+                    onChange={(event) =>
+                      updateFilter(
+                        "accountType",
+                        event.target.value === "all"
+                          ? undefined
+                          : (event.target.value as AdminPaymentsFilters["accountType"]),
+                      )
+                    }
+                  >
+                    {ACCOUNT_TYPE_FILTER_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className={styles.filterField}>
+                  <span>Booking Status</span>
+                  <select
+                    value={filters.bookingStatus ?? "all"}
+                    onChange={(event) =>
+                      updateFilter(
+                        "bookingStatus",
+                        event.target.value === "all"
+                          ? undefined
+                          : (event.target.value as AdminPaymentsFilters["bookingStatus"]),
+                      )
+                    }
+                  >
+                    {BOOKING_STATUS_FILTER_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className={styles.filterField}>
+                  <span>Proof</span>
+                  <select
+                    value={filters.proof ?? "all"}
+                    onChange={(event) =>
+                      updateFilter(
+                        "proof",
+                        event.target.value === "all" ? undefined : (event.target.value as AdminPaymentsFilters["proof"]),
+                      )
+                    }
+                  >
+                    {PROOF_FILTER_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className={styles.filterField}>
+                  <span>Sort</span>
+                  <select
+                    value={filters.sort ?? "newest"}
+                    onChange={(event) => updateFilter("sort", event.target.value as AdminPaymentsFilters["sort"])}
+                  >
+                    {SORT_FILTER_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <Button
+                  variant="none"
+                  type="button"
+                  className={styles.clearFiltersButton}
+                  disabled={!filtersActive}
+                  onClick={clearFilters}
+                >
+                  Clear Filters
+                </Button>
                 <input
                   type="search"
                   className={styles.searchInput}
@@ -281,7 +505,7 @@ export default function AdminPaymentsPage() {
                 </div>
               ) : (
                 <p className={styles.empty}>
-                  {debouncedSearch ? "No payment records match your search." : "No payment records yet."}
+                  {filtersActive ? "No payment records match your filters." : "No payment records yet."}
                 </p>
               )}
               <PaginationBar
@@ -299,7 +523,11 @@ export default function AdminPaymentsPage() {
         ) : null}
       </div>
       {proofPayment ? (
-        <PaymentProofModal payment={proofPayment} onClose={() => setProofPayment(null)} />
+        <PaymentProofModal
+          payment={proofPayment}
+          onClose={() => setProofPayment(null)}
+          onReviewed={handleProofReviewed}
+        />
       ) : null}
     </AdminShell>
   );

@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
 import Spinner from "@/components/ui/Spinner";
+import { useToast } from "@/components/ui/ToastProvider";
 import { createClient } from "@/src/lib/supabase/client";
 import { getBookingFileUrl } from "@/src/services/bookingDetailService";
+import { reviewManualPayment } from "@/src/services/paymentService";
 import type { StorageBucket } from "@/src/lib/supabase/storage";
 import type { AdminPaymentRecord } from "@/src/types/payment";
 import GuestBadge from "@/components/status-badge/GuestBadge";
@@ -32,15 +35,31 @@ function isPdfProof(payment: PaymentWithProof): boolean {
   return name.toLowerCase().endsWith(".pdf");
 }
 
+/** Maps the payment_submission_status enum to the Pending/Approved/Rejected label this modal shows. */
+function reviewStatusLabel(status: PaymentWithProof["status"]): string {
+  if (status === "verified") return "Approved";
+  if (status === "rejected") return "Rejected";
+  if (status === "void") return "Void";
+  return "Pending";
+}
+
 export default function PaymentProofModal({
   payment,
   onClose,
+  onReviewed,
 }: {
   payment: PaymentWithProof;
   onClose: () => void;
+  /** Called after Approve/Reject saves successfully, so the caller can refresh the payment list/record. */
+  onReviewed?: () => void | Promise<void>;
 }) {
+  const { showToast } = useToast();
   const [url, setUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isRejecting, setIsRejecting] = useState(false);
+  const [reason, setReason] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -57,6 +76,33 @@ export default function PaymentProofModal({
       active = false;
     };
   }, [payment]);
+
+  const actionable = payment.status === "submitted" || payment.status === "under_review";
+
+  async function handleReview(status: "verified" | "rejected") {
+    if (saving) return;
+    const rejectionReason = status === "rejected" ? reason.trim() : "";
+    if (status === "rejected" && !rejectionReason) {
+      setReviewError("Add a reason for the rejection.");
+      return;
+    }
+    setSaving(true);
+    setReviewError(null);
+    try {
+      await reviewManualPayment(payment.bookingId, payment.id, status, rejectionReason || undefined);
+      setReason("");
+      setIsRejecting(false);
+      await onReviewed?.();
+      showToast(status === "verified" ? "Payment approved." : "Payment proof rejected.", "success");
+    } catch (reviewException) {
+      const message =
+        reviewException instanceof Error ? reviewException.message : "The payment review could not be saved.";
+      setReviewError(message);
+      showToast(message, "error");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <Modal title="Payment Proof" onClose={onClose}>
@@ -88,6 +134,10 @@ export default function PaymentProofModal({
             </dd>
           </div>
           <div>
+            <dt>Account Type</dt>
+            <dd>{payment.isGuestCheckout ? "Guest" : "With Account"}</dd>
+          </div>
+          <div>
             <dt>Booking</dt>
             <dd>{payment.bookingRef}</dd>
           </div>
@@ -112,6 +162,111 @@ export default function PaymentProofModal({
             <dd>{formatDate(payment.submittedAt)}</dd>
           </div>
         </dl>
+
+        <div className={styles.reviewSection}>
+          <div className={styles.reviewHeader}>
+            <span>Review Status</span>
+            <span className={`${styles.pill} ${styles[payment.status] ?? ""}`}>
+              {reviewStatusLabel(payment.status)}
+            </span>
+          </div>
+
+          {payment.status === "verified" ? (
+            <dl className={styles.reviewDetails}>
+              <div>
+                <dt>Approved By</dt>
+                <dd>{payment.reviewedByName || "Admin"}</dd>
+              </div>
+              <div>
+                <dt>Approved Date &amp; Time</dt>
+                <dd>{payment.reviewedAt ? formatDate(payment.reviewedAt) : "—"}</dd>
+              </div>
+            </dl>
+          ) : payment.status === "rejected" ? (
+            <dl className={styles.reviewDetails}>
+              <div>
+                <dt>Rejected By</dt>
+                <dd>{payment.reviewedByName || "Admin"}</dd>
+              </div>
+              <div>
+                <dt>Rejection Reason</dt>
+                <dd>{payment.reviewNotes || "—"}</dd>
+              </div>
+              <div>
+                <dt>Rejected Date &amp; Time</dt>
+                <dd>{payment.reviewedAt ? formatDate(payment.reviewedAt) : "—"}</dd>
+              </div>
+            </dl>
+          ) : actionable ? (
+            <div className={styles.reviewActions}>
+              {!isRejecting ? (
+                <>
+                  <Button
+                    variant="none"
+                    type="button"
+                    className={styles.approveButton}
+                    onClick={() => void handleReview("verified")}
+                    disabled={saving}
+                  >
+                    {saving ? "Saving…" : "Approve"}
+                  </Button>
+                  <Button
+                    variant="none"
+                    type="button"
+                    className={styles.rejectButton}
+                    onClick={() => {
+                      setIsRejecting(true);
+                      setReason("");
+                      setReviewError(null);
+                    }}
+                    disabled={saving}
+                  >
+                    Reject
+                  </Button>
+                </>
+              ) : (
+                <div className={styles.rejectEditor}>
+                  <label>
+                    <span>Why is this payment proof being rejected?</span>
+                    <textarea
+                      rows={3}
+                      maxLength={1000}
+                      value={reason}
+                      onChange={(event) => setReason(event.target.value)}
+                      placeholder="Example: The reference number doesn't match any transaction we received."
+                      autoFocus
+                    />
+                  </label>
+                  <div>
+                    <Button
+                      variant="none"
+                      type="button"
+                      className={styles.cancelButton}
+                      onClick={() => {
+                        setIsRejecting(false);
+                        setReason("");
+                        setReviewError(null);
+                      }}
+                      disabled={saving}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="none"
+                      type="button"
+                      className={styles.sendButton}
+                      onClick={() => void handleReview("rejected")}
+                      disabled={saving || !reason.trim()}
+                    >
+                      {saving ? "Sending…" : "Send rejection"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {reviewError ? <p className={styles.reviewError}>{reviewError}</p> : null}
+            </div>
+          ) : null}
+        </div>
       </div>
     </Modal>
   );

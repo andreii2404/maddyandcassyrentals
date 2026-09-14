@@ -1,15 +1,12 @@
 "use client";
 
 import { Button } from "@/components/ui/Button";
+import Modal from "@/components/ui/Modal";
 import { useState } from "react";
 import { useToast } from "@/components/ui/ToastProvider";
-import {
-  recordInPersonBalance,
-  reviewManualPayment,
-  setBookingPayLaterOverride,
-} from "@/src/services/paymentService";
+import { recordInPersonBalance, reviewManualPayment } from "@/src/services/paymentService";
 import type { Booking } from "@/src/types/booking";
-import type { PaymentRecord } from "@/src/types/payment";
+import type { PaymentRecord, PaymentStage } from "@/src/types/payment";
 import styles from "./PaymentsReviewPanel.module.css";
 
 function money(value: number): string {
@@ -24,6 +21,19 @@ function formatDate(value: string | undefined): string {
 function formatStage(value: string): string {
   return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
+
+/** "other" is how a single up-front full payment (no prior deposit) is recorded server-side. */
+function stageLabel(stage: PaymentStage): string {
+  if (stage === "other") return "Full Payment";
+  if (stage === "down_payment") return "Down Payment";
+  if (stage === "balance") return "Balance Payment";
+  return formatStage(stage);
+}
+
+type PendingAction =
+  | { kind: "verify"; payment: PaymentRecord }
+  | { kind: "reject"; payment: PaymentRecord }
+  | { kind: "recordBalance" };
 
 export default function PaymentsReviewPanel({
   bookingId,
@@ -46,7 +56,7 @@ export default function PaymentsReviewPanel({
   const [recordMethod, setRecordMethod] = useState<"cash" | "gcash_in_person">("cash");
   const [recordReference, setRecordReference] = useState("");
   const [recordNotes, setRecordNotes] = useState("");
-  const [exceptionNote, setExceptionNote] = useState(booking.payLaterNote ?? "");
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
 
   const needsReview = payments.filter((p) => p.status === "submitted" || p.status === "under_review");
   const reviewed = payments.filter((p) => p.status !== "submitted" && p.status !== "under_review");
@@ -64,24 +74,6 @@ export default function PaymentsReviewPanel({
       showToast("In-person balance recorded. The receipt is now available to the customer.", "success");
     } catch (error) {
       showToast(error instanceof Error ? error.message : "The in-person payment could not be recorded.", "error");
-    } finally {
-      setRecording(false);
-    }
-  }
-
-  async function savePayLater(allowed: boolean) {
-    if (recording || activeId !== null) return;
-    if (allowed && !exceptionNote.trim()) {
-      showToast("Add the approved pay-later arrangement before enabling the exception.", "error");
-      return;
-    }
-    setRecording(true);
-    try {
-      await setBookingPayLaterOverride(bookingId, allowed, allowed ? exceptionNote.trim() : undefined);
-      await onUpdated();
-      showToast(allowed ? "Pay-later exception enabled." : "Pay-later exception removed.", "success");
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : "The pay-later exception could not be saved.", "error");
     } finally {
       setRecording(false);
     }
@@ -108,6 +100,15 @@ export default function PaymentsReviewPanel({
     }
   }
 
+  async function confirmPendingAction() {
+    if (!pendingAction) return;
+    const action = pendingAction;
+    setPendingAction(null);
+    if (action.kind === "verify") await saveReview(action.payment, "verified");
+    else if (action.kind === "reject") await saveReview(action.payment, "rejected");
+    else await saveInPersonPayment();
+  }
+
   return (
     <section className={styles.panel} aria-labelledby="payment-review-heading">
       <div className={styles.panelHeader}>
@@ -128,6 +129,10 @@ export default function PaymentsReviewPanel({
         <div className={styles.balanceWorkspace}>
           <div className={styles.balanceHeader}>
             <div>
+              <span>AMOUNT PAID</span>
+              <strong>{money(amountPaid)}</strong>
+            </div>
+            <div>
               <span>REMAINING BALANCE</span>
               <strong>{money(balanceDue)}</strong>
               <small>
@@ -140,7 +145,7 @@ export default function PaymentsReviewPanel({
           <div className={styles.optionsGrid}>
             <details className={`${styles.optionCard} ${styles.collectionPanel}`} open={booking.balancePaymentPreference === "in_person"}>
               <summary className={styles.optionSummary}>
-                <span className={styles.optionTitle}>Mark as Paid in Person</span>
+                <span className={styles.optionTitle}>Record Remaining Balance</span>
                 <span className={styles.optionDesc}>Record cash or GCash collected face-to-face and clear the balance right away.</span>
               </summary>
               <div className={styles.collectionForm}>
@@ -152,33 +157,23 @@ export default function PaymentsReviewPanel({
                   </select>
                 </label>
                 <label>
-                  <span>Reference number (optional)</span>
+                  <span>Reference number (if applicable)</span>
                   <input value={recordReference} onChange={(event) => setRecordReference(event.target.value)} maxLength={120} disabled={recording} />
                 </label>
                 <label className={styles.fullField}>
-                  <span>Collection note (optional)</span>
+                  <span>Note (optional)</span>
                   <textarea value={recordNotes} onChange={(event) => setRecordNotes(event.target.value)} rows={2} maxLength={1000} disabled={recording} placeholder="Who received it, where, or any useful handover note" />
                 </label>
-                <Button variant="none" type="button" className={styles.recordButton} onClick={() => void saveInPersonPayment()} disabled={recording || needsReview.length > 0}>
+                <Button
+                  variant="none"
+                  type="button"
+                  className={styles.recordButton}
+                  onClick={() => setPendingAction({ kind: "recordBalance" })}
+                  disabled={recording || needsReview.length > 0}
+                >
                   {recording ? "Recording…" : `Record ${money(balanceDue)} as paid`}
                 </Button>
                 {needsReview.length > 0 ? <small className={styles.collectionWarning}>Review the pending online proof before recording another payment.</small> : null}
-              </div>
-            </details>
-
-            <details className={`${styles.optionCard} ${styles.exceptionPanel}`} open={booking.payLaterAllowed}>
-              <summary className={styles.optionSummary}>
-                <span className={styles.optionTitle}>
-                  Allow Pay Later <span className={styles.exceptionTag}>Exception</span>
-                </span>
-                <span className={styles.optionDesc}>Not a normal payment method — only for approved cases where handover happens before the balance is paid.</span>
-              </summary>
-              <div className={styles.exceptionBody}>
-                <p>Handover is blocked until the balance is fully paid. Only enable this when the business explicitly approves collection after handover.</p>
-                <textarea value={exceptionNote} onChange={(event) => setExceptionNote(event.target.value)} rows={2} maxLength={1000} placeholder="Required: explain the approved arrangement" disabled={recording} />
-                <Button variant="none" type="button" onClick={() => void savePayLater(!booking.payLaterAllowed)} disabled={recording || (!booking.payLaterAllowed && !exceptionNote.trim())}>
-                  {booking.payLaterAllowed ? "Remove pay-later exception" : "Allow handover with balance"}
-                </Button>
               </div>
             </details>
           </div>
@@ -199,7 +194,7 @@ export default function PaymentsReviewPanel({
               <div className={styles.topline}>
                 <div className={styles.summary}>
                   <strong>{money(payment.amount)}</strong>
-                  <span>{formatStage(payment.stage)} · {payment.paymentMethod?.toUpperCase() || "MANUAL"}</span>
+                  <span>{stageLabel(payment.stage)} · {payment.paymentMethod?.toUpperCase() || "MANUAL"}</span>
                 </div>
                 <span className={`${styles.statusPill} ${styles[payment.status] ?? ""}`}>{formatStage(payment.status)}</span>
               </div>
@@ -210,11 +205,17 @@ export default function PaymentsReviewPanel({
                 <div><dt>Submitted Date &amp; Time</dt><dd>{formatDate(payment.submittedAt)}</dd></div>
               </dl>
 
-              {payment.reviewNotes ? (
-                <div className={styles.note}>
-                  <strong>Review note</strong>
-                  <p>{payment.reviewNotes}</p>
-                </div>
+              {payment.status === "verified" ? (
+                <dl className={styles.reviewInfo}>
+                  <div><dt>Approved By</dt><dd>{payment.reviewedByName || "Admin"}</dd></div>
+                  <div><dt>Approved Date &amp; Time</dt><dd>{formatDate(payment.reviewedAt)}</dd></div>
+                </dl>
+              ) : payment.status === "rejected" ? (
+                <dl className={styles.reviewInfo}>
+                  <div><dt>Rejected By</dt><dd>{payment.reviewedByName || "Admin"}</dd></div>
+                  <div><dt>Rejection Reason</dt><dd>{payment.reviewNotes || "-"}</dd></div>
+                  <div><dt>Rejected Date &amp; Time</dt><dd>{formatDate(payment.reviewedAt)}</dd></div>
+                </dl>
               ) : null}
 
               <div className={styles.actions}>
@@ -228,7 +229,7 @@ export default function PaymentsReviewPanel({
                     <Button variant="none"
                       type="button"
                       className={styles.approveButton}
-                      onClick={() => void saveReview(payment, "verified")}
+                      onClick={() => setPendingAction({ kind: "verify", payment })}
                       disabled={activeId !== null}
                     >
                       {isSaving && !isRejecting ? "Saving..." : "Verify payment"}
@@ -265,7 +266,7 @@ export default function PaymentsReviewPanel({
                     <Button variant="none"
                       type="button"
                       className={styles.sendButton}
-                      onClick={() => void saveReview(payment, "rejected")}
+                      onClick={() => setPendingAction({ kind: "reject", payment })}
                       disabled={isSaving || !reason.trim()}
                     >
                       {isSaving ? "Sending..." : "Send rejection"}
@@ -277,6 +278,28 @@ export default function PaymentsReviewPanel({
           );
         })}
       </div>
+
+      {pendingAction ? (
+        <Modal title="Confirm action" onClose={() => setPendingAction(null)}>
+          <div className={styles.confirmBody}>
+            <p>
+              {pendingAction.kind === "verify"
+                ? "Are you sure you want to verify this payment?"
+                : pendingAction.kind === "reject"
+                ? "Are you sure you want to reject this payment?"
+                : "Is this payment information final?"}
+            </p>
+            <div className={styles.confirmActions}>
+              <Button variant="none" type="button" onClick={() => setPendingAction(null)}>
+                Cancel
+              </Button>
+              <Button variant="none" type="button" className={styles.confirmButton} onClick={() => void confirmPendingAction()}>
+                Confirm
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      ) : null}
     </section>
   );
 }

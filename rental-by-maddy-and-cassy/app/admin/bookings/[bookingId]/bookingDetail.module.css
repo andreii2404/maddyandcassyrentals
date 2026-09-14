@@ -1404,12 +1404,12 @@
   font-size: 0.72rem !important;
 }
 
-.finalReviewSummary + .finalReviewWarning + .actionPanel,
-.finalReviewSummary + .actionPanel {
+.collapsibleBlock + .finalReviewWarning + .actionPanel,
+.collapsibleBlock + .actionPanel {
   margin-top: 0.8rem;
 }
 
-.finalReviewSummary ~ .actionPanel {
+.collapsibleBlock ~ .actionPanel {
   border: 0;
   border-radius: 0;
   box-shadow: none;
@@ -1514,6 +1514,33 @@
 
 .detailSection[open] .expandLabel::after {
   transform: rotate(180deg);
+}
+
+.collapsibleBlock {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-light-gray);
+}
+
+.collapsibleBlock > summary.expandLabel {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  list-style: none;
+  outline: none;
+}
+
+.collapsibleBlock > summary.expandLabel::-webkit-details-marker {
+  display: none;
+}
+
+.collapsibleBlock[open] > summary.expandLabel::after {
+  transform: rotate(180deg);
+}
+
+.collapsibleBlock > .snapshotFacts,
+.collapsibleBlock > .finalReviewSummary {
+  margin-top: 0.6rem;
 }
 
 .detailBody {

@@ -1,4 +1,5 @@
 import type { Database } from "@/src/lib/supabase/database.types";
+import type { BookingStatus } from "@/src/types/booking";
 
 // Mirrors public.booking_payment_submissions / public.booking_receipts /
 // public.paymongo_webhook_events. The 2026-08-04 schema normalization dropped
@@ -37,6 +38,8 @@ export interface PaymentRecord {
   providerMetadata: Record<string, unknown>;
   reviewNotes?: string;
   reviewedBy?: string;
+  /** Display name of the admin named in reviewedBy, resolved via a profiles lookup where available. */
+  reviewedByName?: string;
   reviewedAt?: string;
   submittedAt: string;
   completedAt?: string;
@@ -49,6 +52,9 @@ export interface AdminPaymentRecord extends PaymentRecord {
   bookingRef: string;
   customerName: string;
   isGuestCheckout: boolean;
+  bookingStatus: BookingStatus;
+  /** Display name of the admin named in reviewedBy, resolved server-side. */
+  reviewedByName?: string;
 }
 
 /** One row of public.booking_receipts. */
