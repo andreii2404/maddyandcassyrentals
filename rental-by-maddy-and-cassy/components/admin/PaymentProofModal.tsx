@@ -50,8 +50,11 @@ export default function PaymentProofModal({
 }: {
   payment: PaymentWithProof;
   onClose: () => void;
-  /** Called after Approve/Reject saves successfully, so the caller can refresh the payment list/record. */
-  onReviewed?: () => void | Promise<void>;
+  /**
+   * Called after Approve/Reject saves successfully, with the outcome, so the caller can
+   * apply it to the payment list/record immediately rather than waiting on a refetch.
+   */
+  onReviewed?: (status: "verified" | "rejected", reason?: string) => void | Promise<void>;
 }) {
   const { showToast } = useToast();
   const [url, setUrl] = useState<string | null>(null);
@@ -92,7 +95,7 @@ export default function PaymentProofModal({
       await reviewManualPayment(payment.bookingId, payment.id, status, rejectionReason || undefined);
       setReason("");
       setIsRejecting(false);
-      await onReviewed?.();
+      await onReviewed?.(status, rejectionReason || undefined);
       showToast(status === "verified" ? "Payment approved." : "Payment proof rejected.", "success");
     } catch (reviewException) {
       const message =

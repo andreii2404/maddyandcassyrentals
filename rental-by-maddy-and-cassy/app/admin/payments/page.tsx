@@ -1,13 +1,15 @@
 "use client";
 
 import { Button } from "@/components/ui/Button";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import AdminShell from "@/components/admin/AdminShell";
 import Spinner from "@/components/ui/Spinner";
 import StatusBadge, { type StatusTone } from "@/components/status-badge/StatusBadge";
 import PaymentProofModal, { type PaymentWithProof } from "@/components/admin/PaymentProofModal";
 import { useAuth } from "@/hooks/useAuth";
+import { useBookingRealtime } from "@/hooks/useBookingRealtime";
+import { resolveAccountName } from "@/src/lib/accountDisplay";
 import {
   getAdminPayments,
   type AdminPaymentsData,
@@ -15,6 +17,9 @@ import {
 } from "@/src/services/operationsService";
 import type { AdminPaymentRecord } from "@/src/types/payment";
 import styles from "../operations.module.css";
+
+/** Tables whose changes affect this page's records, cards, or filters. */
+const PAYMENTS_REALTIME_TABLES = ["booking_payment_submissions", "bookings"];
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50] as const;
 const DEFAULT_PAGE_SIZE = 10;
@@ -192,7 +197,7 @@ function PaginationBar({
 }
 
 export default function AdminPaymentsPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -202,8 +207,10 @@ export default function AdminPaymentsPage() {
   const [paymentsData, setPaymentsData] = useState<AdminPaymentsData | null>(null);
   const [paymentsError, setPaymentsError] = useState<string | null>(null);
   const [proofPayment, setProofPayment] = useState<PaymentWithProof | null>(null);
-  const [refreshing, setRefreshing] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
+  // Guards against an older, slower fetch (filter change, retry, or realtime refresh)
+  // overwriting the screen after a newer one has already resolved.
+  const latestRequestRef = useRef(0);
 
   function updateFilter<K extends keyof AdminPaymentsFilters>(key: K, value: AdminPaymentsFilters[K]) {
     setFilters((current) => ({ ...current, [key]: value }));
@@ -227,56 +234,85 @@ export default function AdminPaymentsPage() {
     return () => window.clearTimeout(timeoutId);
   }, [searchInput]);
 
-  useEffect(() => {
-    let active = true;
+  // Shared by the param-driven effect below and by realtime change notifications, so
+  // both paths go through the same de-duplicated, stale-response-safe fetch.
+  const loadPayments = useCallback(async () => {
     if (!user) return;
-
-    const timeoutId = window.setTimeout(() => {
-      if (!active) return;
-      setRefreshing(true);
-      getAdminPayments({
+    const requestId = ++latestRequestRef.current;
+    try {
+      const result = await getAdminPayments({
         page: paymentsPage,
         pageSize: paymentsPageSize,
         search: debouncedSearch || undefined,
         filters,
-      })
-        .then((result) => {
-          if (active) {
-            setPaymentsData(result);
-            setPaymentsError(null);
-          }
-        })
-        .catch((loadError: unknown) => {
-          if (active) {
-            setPaymentsError(
-              loadError instanceof Error ? loadError.message : "Payment activity could not be loaded.",
-            );
-          }
-        })
-        .finally(() => {
-          if (active) setRefreshing(false);
-        });
-    }, 0);
+      });
+      if (latestRequestRef.current !== requestId) return;
+      setPaymentsData(result);
+      setPaymentsError(null);
+    } catch (loadError) {
+      if (latestRequestRef.current !== requestId) return;
+      setPaymentsError(loadError instanceof Error ? loadError.message : "Payment activity could not be loaded.");
+    }
+  }, [user, paymentsPage, paymentsPageSize, debouncedSearch, filters]);
 
-    return () => {
-      active = false;
-      window.clearTimeout(timeoutId);
-    };
-  }, [user, paymentsPage, paymentsPageSize, debouncedSearch, filters, retryCount]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadPayments();
+  }, [loadPayments, retryCount]);
 
-  async function handleProofReviewed() {
-    const result = await getAdminPayments({
-      page: paymentsPage,
-      pageSize: paymentsPageSize,
-      search: debouncedSearch || undefined,
-      filters,
+  // Realtime is the source of truth for keeping this page live; the polling/focus
+  // fallback inside the hook only covers sleeping tabs and dropped WebSocket connections.
+  useBookingRealtime({ tables: PAYMENTS_REALTIME_TABLES, onChange: loadPayments });
+
+  function handleProofReviewed(status: "verified" | "rejected", reason?: string) {
+    const reviewedAt = new Date().toISOString();
+    const reviewerName = resolveAccountName({ displayName: profile?.displayName, email: profile?.email });
+
+    setPaymentsData((current) => {
+      if (!current || !proofPayment) return current;
+      let pendingDelta = 0;
+      let successfulDelta = 0;
+      let revenueDelta = 0;
+      const payments = current.payments.map((candidate) => {
+        if (candidate.id !== proofPayment.id) return candidate;
+        if (candidate.status === "submitted" || candidate.status === "under_review") {
+          pendingDelta -= 1;
+          if (status === "verified") {
+            successfulDelta += 1;
+            revenueDelta += candidate.amount;
+          }
+        }
+        return {
+          ...candidate,
+          status,
+          reviewNotes: status === "rejected" ? reason : candidate.reviewNotes,
+          reviewedAt,
+          reviewedByName: reviewerName,
+        };
+      });
+      return {
+        ...current,
+        payments,
+        metrics: {
+          verifiedRevenue: current.metrics.verifiedRevenue + revenueDelta,
+          successfulPayments: current.metrics.successfulPayments + successfulDelta,
+          pendingCheckouts: current.metrics.pendingCheckouts + pendingDelta,
+        },
+      };
     });
-    setPaymentsData(result);
-    setPaymentsError(null);
+
+    // The realtime subscription above will refetch moments after the PATCH lands,
+    // replacing this optimistic guess with the authoritative database record.
     setProofPayment((current) => {
       if (!current) return current;
-      const updated = result.payments.find((candidate) => candidate.id === current.id);
-      return updated && hasProof(updated) ? updated : current;
+      const updated: PaymentWithProof = {
+        ...current,
+        status,
+        reviewNotes: status === "rejected" ? reason : current.reviewNotes,
+        reviewedAt,
+        reviewedByName: reviewerName,
+      };
+      return updated;
     });
   }
 
@@ -325,7 +361,6 @@ export default function AdminPaymentsPage() {
                   <h2>Payment Records</h2>
                   <p>Manual GCash submissions and their review status.</p>
                 </div>
-                {refreshing && paymentsData ? <span className={styles.refreshNote} role="status">Updating…</span> : null}
               </div>
               <div className={styles.filterBar}>
                 <label className={styles.filterField}>
