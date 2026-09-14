@@ -1035,42 +1035,58 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                         <h4>Review, countersign, and finalize</h4>
                         <p>The customer has completed their part. Verify the payment and all required documents, then enter the authorized business signer&apos;s name.</p>
                       </div>
-                      <div className={styles.readinessChecks}>
-                        <span className={amountPaid > 0 ? styles.ready : styles.notReady}>{amountPaid > 0 ? "✓" : "!"} Payment verified</span>
-                        <span className={booking.requirementsStatus === "approved" ? styles.ready : styles.notReady}>{booking.requirementsStatus === "approved" ? "✓" : "!"} Documents approved</span>
-                        <span className={customerSignature ? styles.ready : styles.notReady}>{customerSignature ? "✓" : "!"} Customer signed</span>
+                      <div className={styles.countersignGroup}>
+                        <span>1 · Review requirements</span>
+                        <div className={styles.readinessChecks}>
+                          <span className={amountPaid > 0 ? styles.ready : styles.notReady}>{amountPaid > 0 ? "✓" : "!"} Payment Verified</span>
+                          <span className={booking.requirementsStatus === "approved" ? styles.ready : styles.notReady}>{booking.requirementsStatus === "approved" ? "✓" : "!"} Documents Approved</span>
+                          <span className={customerSignature ? styles.ready : styles.notReady}>{customerSignature ? "✓" : "!"} Customer Signed</span>
+                        </div>
+                        {!canCountersignAgreement ? (
+                          <p className={styles.blockedMessage}>Complete every check above before the business countersignature becomes available.</p>
+                        ) : null}
                       </div>
-                      {!canCountersignAgreement ? (
-                        <p className={styles.blockedMessage}>Complete every check above before the business countersignature becomes available.</p>
-                      ) : null}
-                      <label className={styles.signerField}>
-                        <span>Authorized business signer&apos;s complete name</span>
-                        <input
-                          value={businessSignerName}
-                          onChange={(event) => setBusinessSignerName(event.target.value)}
-                          maxLength={120}
-                          placeholder="Enter the person signing for Maddy & Cassy"
-                          disabled={!canCountersignAgreement || countersigning}
-                        />
-                      </label>
-                      <label className={styles.authorizationCheck}>
-                        <input
-                          type="checkbox"
-                          checked={countersignAcknowledged}
-                          onChange={(event) => setCountersignAcknowledged(event.target.checked)}
-                          disabled={!canCountersignAgreement || countersigning}
-                        />
-                        <span>I confirm that I am authorized to countersign this rental agreement for Rental by Maddy &amp; Cassy.</span>
-                      </label>
-                      <Button variant="none"
-                        type="button"
-                        className={styles.countersignButton}
-                        onClick={requestCountersignAgreement}
-                        disabled={!canCountersignAgreement || !businessSignerName.trim() || !countersignAcknowledged || countersigning}
-                      >
-                        {countersigning ? "Finalizing agreement..." : "Countersign & Finalize Agreement"}
-                      </Button>
-                      <small className={styles.legalNote}>This records the administrator, signer name, timestamp, IP address, and finalized PDF in the audit trail.</small>
+
+                      <div className={styles.signerAndAuthGroup}>
+                        <div className={styles.countersignGroup}>
+                          <span>2 · Authorized Business Signer</span>
+                          <label className={styles.signerField}>
+                            <input
+                              value={businessSignerName}
+                              onChange={(event) => setBusinessSignerName(event.target.value)}
+                              maxLength={120}
+                              placeholder="Enter the person signing for Maddy & Cassy"
+                              disabled={!canCountersignAgreement || countersigning}
+                            />
+                          </label>
+                        </div>
+
+                        <div className={styles.countersignGroup}>
+                          <span>3 · Authorization Confirmation</span>
+                          <label className={styles.authorizationCheck}>
+                            <input
+                              type="checkbox"
+                              checked={countersignAcknowledged}
+                              onChange={(event) => setCountersignAcknowledged(event.target.checked)}
+                              disabled={!canCountersignAgreement || countersigning}
+                            />
+                            <span>I confirm that I am authorized to countersign this rental agreement for Rental by Maddy &amp; Cassy.</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      <div className={styles.countersignGroup}>
+                        <span>4 · Finalize Agreement</span>
+                        <Button variant="none"
+                          type="button"
+                          className={styles.countersignButton}
+                          onClick={requestCountersignAgreement}
+                          disabled={!canCountersignAgreement || !businessSignerName.trim() || !countersignAcknowledged || countersigning}
+                        >
+                          {countersigning ? "Finalizing agreement..." : "Countersign & Finalize Agreement"}
+                        </Button>
+                        <small className={styles.legalNote}>This records the administrator, signer name, timestamp, IP address, and finalized PDF in the audit trail.</small>
+                      </div>
                     </div>
                   ) : null}
 
@@ -1333,7 +1349,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
             <div className={styles.confirmationIcon} aria-hidden="true">!</div>
             <div className={styles.confirmationCopy}>
               <span>Confirm agreement finalization</span>
-              <h2 id="countersign-confirmation-title">Countersign &amp; Finalize Agreement</h2>
+              <h2 id="countersign-confirmation-title">Finalize Rental Agreement?</h2>
               <p id="countersign-confirmation-description">Are you sure you want to countersign and finalize this rental agreement?</p>
               <div className={styles.confirmationSummary}>
                 <strong>Signing as {businessSignerName.trim()}</strong>
@@ -1345,9 +1361,9 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
               </div>
             </div>
             <div className={styles.dialogActions}>
-              <Button variant="none" type="button" className={styles.dialogCancelButton} onClick={() => setCountersignConfirmationOpen(false)} disabled={countersigning}>Cancel</Button>
+              <Button variant="none" type="button" className={styles.dialogCancelButton} onClick={() => setCountersignConfirmationOpen(false)} disabled={countersigning}>Back</Button>
               <Button variant="none" type="button" className={`${styles.dialogConfirmButton} ${styles.dialogDangerButton}`} onClick={() => void confirmCountersignAgreement()} disabled={countersigning}>
-                {countersigning ? "Finalizing agreement..." : "Yes, Finalize Agreement"}
+                {countersigning ? "Finalizing agreement..." : "Finalize Agreement"}
               </Button>
             </div>
           </div>

@@ -1836,6 +1836,13 @@
 .countersignIntro > span { color: var(--color-primary); font-size: 0.55rem; font-weight: 900; letter-spacing: 0.09em; }
 .countersignIntro h4 { margin: 0.2rem 0 0; font-size: 0.8rem; }
 .countersignIntro p { margin: 0.3rem 0 0; color: var(--color-charcoal); font-size: 0.62rem; line-height: 1.55; }
+
+/* Labeled sub-groups inside the countersign panel: Review requirements,
+   Authorized Business Signer, Authorization Confirmation, Finalize Agreement. */
+.countersignGroup { display: grid; gap: 0.4rem; }
+.countersignGroup > span:first-child { color: var(--color-primary); font-size: 0.55rem; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase; }
+.signerAndAuthGroup { display: grid; gap: 0.5rem; }
+
 .readinessChecks { display: flex; flex-wrap: wrap; gap: 0.4rem; }
 .readinessChecks span { padding: 0.34rem 0.5rem; border-radius: 999px; font-size: 0.55rem; font-weight: 800; }
 .ready { background: var(--color-status-green-bg); color: var(--color-status-green); }
@@ -1894,21 +1901,22 @@
 }
 
 .agreementCard .countersignPanel {
-  gap: 0.65rem;
-  padding: 0.85rem;
+  gap: 0.6rem;
+  padding: 0.8rem;
 }
 
 .agreementCard .readinessChecks {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.35rem;
 }
 
 .agreementCard .readinessChecks span {
   display: flex;
-  flex: 1 1 auto;
   align-items: center;
   justify-content: center;
   gap: 0.3rem;
-  padding: 0.4rem 0.5rem;
+  padding: 0.4rem 0.4rem;
   text-align: center;
 }
 
@@ -2177,6 +2185,8 @@
   .signatureSteps { grid-template-columns: 1fr; gap: 0.65rem; }
   .signatureSteps li::before { top: -0.7rem; bottom: 50%; left: 13px; width: 2px; height: auto; }
   .signatureSteps li:first-child::before { display: none; }
+
+  .agreementCard .readinessChecks { grid-template-columns: 1fr; }
 
   .snapshotFacts {
     grid-template-columns: repeat(2, minmax(0, 1fr));
