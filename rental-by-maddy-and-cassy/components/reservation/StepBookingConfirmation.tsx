@@ -1,5 +1,4 @@
-import Link from "next/link";
-import formStyles from "@/components/ui/Form.module.css";
+import { Button } from "@/components/ui/Button";
 import sharedStyles from "./StepShared.module.css";
 import styles from "./StepPaymentSubmission.module.css";
 import { bookingTrackingPath } from "@/src/lib/bookingAccess";
@@ -44,15 +43,18 @@ export default function StepBookingConfirmation({
         </div>
       ) : null}
       <div className={sharedStyles.footer}>
-        <Link href={isGuest ? "/guest/bookings" : "/account/payments"} className={formStyles.secondaryButton}>
+        <Button
+          href={isGuest ? "/guest/bookings" : "/account/payments"}
+          variant="secondary"
+        >
           {isGuest ? "All Guest Bookings" : "Payment History"}
-        </Link>
-        <Link
+        </Button>
+        <Button
           href={`${bookingTrackingPath(bookingId, isGuest)}?justSubmitted=1`}
-          className={formStyles.primaryButton}
+          variant="primary"
         >
           {isGuest ? "Track Guest Booking" : "View Booking & Documents"}
-        </Link>
+        </Button>
       </div>
     </div>
   );

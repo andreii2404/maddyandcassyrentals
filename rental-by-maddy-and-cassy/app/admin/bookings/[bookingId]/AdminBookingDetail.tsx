@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -614,7 +615,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
     const selected = action.status === selectedStatus;
     const blockedByBalance = action.status === "released" && !handoverPaymentReady;
     return (
-      <button
+      <Button variant="none"
         key={action.status}
         type="button"
         className={`${styles.actionChoice} ${action.tone === "danger" ? styles.dangerChoice : ""} ${selected ? styles.actionChoiceSelected : ""}`}
@@ -629,7 +630,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
           <span>{blockedByBalance ? "Record the remaining balance or approve a pay-later exception in Requirements first." : action.description}</span>
         </span>
         <span className={styles.actionChoiceState}>{selected ? "Selected" : "Select"}</span>
-      </button>
+      </Button>
     );
   }
 
@@ -657,14 +658,14 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
             <small>Current status</small>
             <StatusBadge status={booking.status} />
           </div>
-          <button
+          <Button variant="none"
             type="button"
             className={styles.exportButton}
             onClick={handlePdfExport}
             disabled={exporting}
           >
             {exporting ? "Preparing PDF..." : "Export to PDF"}
-          </button>
+          </Button>
         </div>
       </header>
 
@@ -722,9 +723,9 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
             </div>
           </div>
           {primaryAction ? (
-            <button type="button" className={styles.statusHeroButton} onClick={jumpToNextStep}>
+            <Button variant="none" type="button" className={styles.statusHeroButton} onClick={jumpToNextStep}>
               Go to Final Review — {primaryAction.label}
-            </button>
+            </Button>
           ) : null}
           <div className={styles.snapshotFooter}>
             <span>Created {formatDate(booking.createdAt, true)}</span>
@@ -771,22 +772,22 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                 />
               </label>
               <div className={styles.cancellationDecisionButtons}>
-                <button
+                <Button variant="none"
                   type="button"
                   className={styles.cancellationRejectButton}
                   onClick={() => void handleCancellationDecision("rejected")}
                   disabled={reviewingCancellation}
                 >
                   {reviewingCancellation && cancellationDecision === "rejected" ? "Rejecting..." : "Reject request"}
-                </button>
-                <button
+                </Button>
+                <Button variant="none"
                   type="button"
                   className={styles.cancellationApproveButton}
                   onClick={() => void handleCancellationDecision("approved")}
                   disabled={reviewingCancellation}
                 >
                   {reviewingCancellation && cancellationDecision === "approved" ? "Approving..." : "Approve cancellation"}
-                </button>
+                </Button>
               </div>
             </div>
           ) : (
@@ -812,7 +813,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                   ? styles.stepNotStarted
                   : styles.stepUpcoming;
           return (
-            <button
+            <Button variant="none"
               key={step.id}
               type="button"
               role="tab"
@@ -842,7 +843,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                 {done && !current ? "✓" : index + 1}
               </span>
               <span className={styles.stepLabel}>{step.label}</span>
-            </button>
+            </Button>
           );
         })}
       </nav>
@@ -952,13 +953,13 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                     const sending = sendingReceiptId === receipt.id;
                     return (
                       <div key={receipt.id} className={styles.receiptRow}>
-                        <button type="button" onClick={() => openPrivateFile("receipts", receipt.documentPath!)}>
+                        <Button variant="none" type="button" onClick={() => openPrivateFile("receipts", receipt.documentPath!)}>
                           <span className={styles.receiptIcon}>PDF</span>
                           <span><strong>{receipt.receiptNumber ?? receipt.id.slice(0, 8)}</strong><small>Open Receipt</small></span>
                           <span aria-hidden="true">↗</span>
-                        </button>
+                        </Button>
                         <div className={styles.receiptEmailAction}>
-                          <button
+                          <Button variant="none"
                             type="button"
                             className={styles.sendReceiptButton}
                             disabled={!paymentVerified || sending}
@@ -966,7 +967,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                             title={paymentVerified ? "Email the official receipt to the customer" : "Payment must be verified before the receipt can be emailed"}
                           >
                             {sending ? "Sending..." : "Send Receipt to Email"}
-                          </button>
+                          </Button>
                           {receipt.emailedAt ? (
                             <span className={styles.receiptSentBadge}>
                               Receipt sent {formatDate(receipt.emailedAt, true)}
@@ -1061,14 +1062,14 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                         />
                         <span>I confirm that I am authorized to countersign this rental agreement for Rental by Maddy &amp; Cassy.</span>
                       </label>
-                      <button
+                      <Button variant="none"
                         type="button"
                         className={styles.countersignButton}
                         onClick={requestCountersignAgreement}
                         disabled={!canCountersignAgreement || !businessSignerName.trim() || !countersignAcknowledged || countersigning}
                       >
                         {countersigning ? "Finalizing agreement..." : "Countersign & Finalize Agreement"}
-                      </button>
+                      </Button>
                       <small className={styles.legalNote}>This records the administrator, signer name, timestamp, IP address, and finalized PDF in the audit trail.</small>
                     </div>
                   ) : null}
@@ -1079,8 +1080,8 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                       {booking.status === "approved" ? <p className={styles.nextAdminStep}><strong>Next admin step:</strong> Use “Update this booking” above and choose “Confirm Booking.” The customer will then receive the final booking confirmation.</p> : null}
                       {booking.status === "pending" ? <p className={styles.nextAdminStep}><strong>Next admin step:</strong> Approve the booking first, then confirm it after every checklist item is complete.</p> : null}
                       <div className={styles.agreementButtons}>
-                        {agreement.finalDocumentPath ? <button type="button" onClick={() => openPrivateFile("agreements", agreement.finalDocumentPath!)}>Open final agreement</button> : null}
-                        {customerSignature?.signaturePath ? <button type="button" className={styles.secondaryRecordButton} onClick={() => openPrivateFile("customer-documents", customerSignature.signaturePath!)}>View customer signature</button> : null}
+                        {agreement.finalDocumentPath ? <Button variant="none" type="button" onClick={() => openPrivateFile("agreements", agreement.finalDocumentPath!)}>Open final agreement</Button> : null}
+                        {customerSignature?.signaturePath ? <Button variant="none" type="button" className={styles.secondaryRecordButton} onClick={() => openPrivateFile("customer-documents", customerSignature.signaturePath!)}>View customer signature</Button> : null}
                       </div>
                     </div>
                   ) : null}
@@ -1209,15 +1210,15 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                         </label>
                       )}
                       <div className={styles.confirmationActions}>
-                        <button type="button" className={styles.cancelSelectionButton} onClick={() => { setSelectedStatus(""); setNote(""); setDeclineReason(""); }} disabled={updating}>Choose another action</button>
-                        <button
+                        <Button variant="none" type="button" className={styles.cancelSelectionButton} onClick={() => { setSelectedStatus(""); setNote(""); setDeclineReason(""); }} disabled={updating}>Choose another action</Button>
+                        <Button variant="none"
                           type="button"
                           className={`${styles.applyButton} ${selectedAction.tone === "danger" ? styles.dangerButton : ""}`}
                           onClick={requestStatusAction}
                           disabled={updating || (isDeclineAction ? declineIncomplete : (selectedAction.requiresNote && !note.trim()))}
                         >
                           {updating ? "Updating customer..." : `Confirm ${selectedAction.label}`}
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   ) : (
@@ -1233,14 +1234,14 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                 <p>{bookingApproved ? `Send the approved booking summary directly to ${email === "-" ? "the customer" : email}. The email includes the booking number, rental details, dates, payment status, fulfillment method, and any remaining action.` : "Complete the approval step before sending the customer a booking confirmation email."}</p>
               </div>
               <div className={styles.customerNotificationAction}>
-                <button
+                <Button variant="none"
                   type="button"
                   className={styles.sendConfirmationButton}
                   onClick={() => void handleSendBookingConfirmationEmail()}
                   disabled={!bookingApproved || email === "-" || sendingConfirmationEmail}
                 >
                   {sendingConfirmationEmail ? "Sending confirmation..." : "Send Booking Confirmation to Email"}
-                </button>
+                </Button>
                 {confirmationEmailSentAt ? <small>Last sent {formatDate(confirmationEmailSentAt, true)}</small> : null}
               </div>
             </section>
@@ -1300,10 +1301,10 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
               </div>
             </div>
             <div className={styles.dialogActions}>
-              <button type="button" className={styles.dialogCancelButton} onClick={() => setStatusConfirmationOpen(false)} disabled={updating}>Not yet</button>
-              <button type="button" className={`${styles.dialogConfirmButton} ${selectedAction.tone === "danger" ? styles.dialogDangerButton : ""}`} onClick={() => void confirmStatusAction()} disabled={updating}>
+              <Button variant="none" type="button" className={styles.dialogCancelButton} onClick={() => setStatusConfirmationOpen(false)} disabled={updating}>Not yet</Button>
+              <Button variant="none" type="button" className={`${styles.dialogConfirmButton} ${selectedAction.tone === "danger" ? styles.dialogDangerButton : ""}`} onClick={() => void confirmStatusAction()} disabled={updating}>
                 {updating ? "Updating booking..." : `Yes, ${selectedAction.label}`}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -1344,10 +1345,10 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
               </div>
             </div>
             <div className={styles.dialogActions}>
-              <button type="button" className={styles.dialogCancelButton} onClick={() => setCountersignConfirmationOpen(false)} disabled={countersigning}>Cancel</button>
-              <button type="button" className={`${styles.dialogConfirmButton} ${styles.dialogDangerButton}`} onClick={() => void confirmCountersignAgreement()} disabled={countersigning}>
+              <Button variant="none" type="button" className={styles.dialogCancelButton} onClick={() => setCountersignConfirmationOpen(false)} disabled={countersigning}>Cancel</Button>
+              <Button variant="none" type="button" className={`${styles.dialogConfirmButton} ${styles.dialogDangerButton}`} onClick={() => void confirmCountersignAgreement()} disabled={countersigning}>
                 {countersigning ? "Finalizing agreement..." : "Yes, Finalize Agreement"}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

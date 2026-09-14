@@ -167,6 +167,7 @@
 
 .submitButton {
   width: 100%;
+  min-height: var(--control-height);
 }
 
 .footer {
@@ -263,6 +264,9 @@
 }
 
 .verifyActions button {
+  min-height: 40px;
+  padding: 0.45rem 0.65rem;
+  border-radius: var(--radius-control);
   border: 0;
   background: transparent;
   color: var(--color-primary);
@@ -270,6 +274,16 @@
   font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease, transform 150ms ease;
+}
+
+.verifyActions button:hover:not(:disabled) {
+  background: var(--color-blush);
+  color: var(--color-primary-hover);
+}
+
+.verifyActions button:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .verifyActions button:disabled {

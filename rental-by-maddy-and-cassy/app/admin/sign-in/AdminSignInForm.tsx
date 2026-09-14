@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { loginWithEmail, logout } from "@/src/services/authService";
 import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/Button";
 import formStyles from "@/components/ui/Form.module.css";
 import PasswordInput from "@/components/ui/PasswordInput";
 import styles from "../../(auth)/auth.module.css";
@@ -50,6 +51,7 @@ export default function AdminSignInForm() {
   }, [isAdmin, loading, redirectTo, router, user]);
 
   async function onSubmit(values: FormValues) {
+    if (submitting) return;
     setFormError(null);
     setSubmitting(true);
 
@@ -95,7 +97,7 @@ export default function AdminSignInForm() {
 
       <form className={styles.form} onSubmit={handleSubmit(onSubmit)} noValidate>
         {resetNotice ? <p className={styles.successNotice} role="status">{resetNotice}</p> : null}
-        {formError ? <p className={styles.formError}>{formError}</p> : null}
+        {formError ? <p className={styles.formError} role="alert">{formError}</p> : null}
 
         <div className={formStyles.field}>
           <label className={formStyles.label} htmlFor="admin-email">
@@ -144,13 +146,15 @@ export default function AdminSignInForm() {
         </div>
 
         <div className={styles.submitRow}>
-          <button
+          <Button
             type="submit"
-            className={`${formStyles.primaryButton} ${styles.submitButton}`}
-            disabled={submitting}
+            variant="primary"
+            className={styles.submitButton}
+            loading={submitting}
+            loadingText="Verifying access..."
           >
-            {submitting ? "Verifying access..." : "Admin Login"}
-          </button>
+            Admin Login
+          </Button>
         </div>
       </form>
 

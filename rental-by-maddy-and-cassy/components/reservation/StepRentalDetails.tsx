@@ -25,6 +25,8 @@ import {
 import DateRangePicker from "@/components/date-range-picker/DateRangePicker";
 import PickupTimeSelector from "@/components/reservation/PickupTimeSelector";
 import formStyles from "@/components/ui/Form.module.css";
+import { Button } from "@/components/ui/Button";
+import ReservationFooter from "@/components/reservation/ReservationFooter";
 import styles from "./StepRentalDetails.module.css";
 import { PHILIPPINE_PROVINCES } from "@/src/data/philippineLocations";
 
@@ -484,7 +486,7 @@ export default function StepRentalDetails({
                 <span>{units.totalUnits} {units.totalUnits === 1 ? "unit" : "units"} in inventory</span>
               </div>
               <div className={styles.quantityControl}>
-                <button type="button" onClick={() => onUpdate({ quantity: draft.quantity - 1 })} disabled={draft.quantity <= 1} aria-label="Decrease rental quantity">−</button>
+                <Button variant="icon" size="sm" aria-label="Decrease rental quantity" onClick={() => onUpdate({ quantity: draft.quantity - 1 })} disabled={draft.quantity <= 1}>−</Button>
                 <input
                   id="rentalQuantity"
                   type="number"
@@ -493,7 +495,7 @@ export default function StepRentalDetails({
                   value={draft.quantity}
                   onChange={(event) => onUpdate({ quantity: Math.max(1, Math.min(Math.max(1, units.totalUnits), Number(event.target.value) || 1)) })}
                 />
-                <button type="button" onClick={() => onUpdate({ quantity: draft.quantity + 1 })} disabled={draft.quantity >= units.totalUnits} aria-label="Increase rental quantity">+</button>
+                <Button variant="icon" size="sm" aria-label="Increase rental quantity" onClick={() => onUpdate({ quantity: draft.quantity + 1 })} disabled={draft.quantity >= units.totalUnits}>+</Button>
               </div>
             </div>
           </section>
@@ -550,12 +552,6 @@ export default function StepRentalDetails({
                 </ul>
               </div>
             ) : null}
-            <div className={styles.summaryActions}>
-              {onBack ? <button type="button" className={formStyles.secondaryButton} onClick={onBack} disabled={checking}>Back</button> : <span />}
-              <button type="button" className={formStyles.primaryButton} disabled={!canContinue || checking} onClick={handleContinue}>
-                {checking ? "Checking…" : "Continue"}
-              </button>
-            </div>
           </div>
         </aside>
       </div>
@@ -566,26 +562,25 @@ export default function StepRentalDetails({
         </p>
       ) : null}
 
-      <div className={styles.footer}>
-        {onBack ? (
-          <button
-            type="button"
-            className={formStyles.secondaryButton}
-            onClick={onBack}
-            disabled={checking}
-          >
-            Back
-          </button>
-        ) : <span />}
-        <button
-          type="button"
-          className={formStyles.primaryButton}
-          disabled={!canContinue || checking}
-          onClick={handleContinue}
-        >
-          {checking ? "Checking availability..." : "Continue"}
-        </button>
-      </div>
+      {onBack ? (
+        <ReservationFooter
+          onBack={onBack}
+          backDisabled={checking}
+          primaryLabel={checking ? "Checking availability..." : "Continue"}
+          primaryDisabled={!canContinue || checking}
+          primaryLoading={checking}
+          primaryLoadingText="Checking…"
+          onContinue={handleContinue}
+        />
+      ) : (
+        <ReservationFooter
+          primaryLabel={checking ? "Checking availability..." : "Continue"}
+          primaryDisabled={!canContinue || checking}
+          primaryLoading={checking}
+          primaryLoadingText="Checking…"
+          onContinue={handleContinue}
+        />
+      )}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import AdminShell from "@/components/admin/AdminShell";
@@ -91,16 +92,16 @@ function PaginationBar({
           </select>
         </label>
         <div className={styles.pageButtons}>
-          <button type="button" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
+          <Button variant="none" type="button" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
             Previous
-          </button>
+          </Button>
           {getPageNumbers(page, pageCount).map((entry, index) =>
             entry === "ellipsis" ? (
               <span key={`ellipsis-${index}`} className={styles.pageEllipsis}>
                 …
               </span>
             ) : (
-              <button
+              <Button variant="none"
                 key={entry}
                 type="button"
                 className={entry === page ? styles.pageButtonActive : undefined}
@@ -108,12 +109,12 @@ function PaginationBar({
                 onClick={() => onPageChange(entry)}
               >
                 {entry}
-              </button>
+              </Button>
             ),
           )}
-          <button type="button" disabled={page >= pageCount} onClick={() => onPageChange(page + 1)}>
+          <Button variant="none" type="button" disabled={page >= pageCount} onClick={() => onPageChange(page + 1)}>
             Next
-          </button>
+          </Button>
         </div>
       </div>
     </footer>
@@ -188,7 +189,7 @@ export default function AdminPaymentsPage() {
         {paymentsError ? (
           <div className={styles.error} role="alert">
             {paymentsError}
-            <button type="button" onClick={() => setRetryCount((count) => count + 1)}>Try again</button>
+            <Button variant="none" type="button" onClick={() => setRetryCount((count) => count + 1)}>Try again</Button>
           </div>
         ) : null}
         {loading ? (
@@ -262,13 +263,13 @@ export default function AdminPaymentsPage() {
                           <td data-label="Date">{formatDate(payment.createdAt)}</td>
                           <td data-label="Proof">
                             {hasProof(payment) ? (
-                              <button
+                              <Button variant="none"
                                 type="button"
                                 className={styles.viewProofButton}
                                 onClick={() => setProofPayment(payment)}
                               >
                                 View Proof
-                              </button>
+                              </Button>
                             ) : (
                               <span className={styles.noProof}>No proof submitted</span>
                             )}

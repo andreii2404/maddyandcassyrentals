@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { getAllAdmins } from "@/src/services/adminService";
@@ -135,7 +136,7 @@ export default function AdminUsersList() {
         {error ? (
           <div className={styles.error} role="alert">
             {error}
-            <button type="button" onClick={() => setRetryCount((count) => count + 1)}>Try again</button>
+            <Button variant="none" type="button" onClick={() => setRetryCount((count) => count + 1)}>Try again</Button>
           </div>
         ) : null}
 
@@ -200,15 +201,15 @@ export default function AdminUsersList() {
                   Showing {(currentPage - 1) * PAGE_SIZE + 1}&ndash;{Math.min(currentPage * PAGE_SIZE, filteredUsers.length)} of {filteredUsers.length}
                 </span>
                 <div>
-                  <button
+                  <Button variant="none"
                     type="button"
                     disabled={currentPage === 1}
                     onClick={() => setPage(currentPage - 1)}
                   >
                     Previous
-                  </button>
+                  </Button>
                   {Array.from({ length: pageCount }, (_, index) => index + 1).map((pageNumber) => (
-                    <button
+                    <Button variant="none"
                       key={pageNumber}
                       type="button"
                       className={pageNumber === currentPage ? styles.pageActive : undefined}
@@ -216,15 +217,15 @@ export default function AdminUsersList() {
                       onClick={() => setPage(pageNumber)}
                     >
                       {pageNumber}
-                    </button>
+                    </Button>
                   ))}
-                  <button
+                  <Button variant="none"
                     type="button"
                     disabled={currentPage === pageCount}
                     onClick={() => setPage(currentPage + 1)}
                   >
                     Next
-                  </button>
+                  </Button>
                 </div>
               </nav>
             ) : null}

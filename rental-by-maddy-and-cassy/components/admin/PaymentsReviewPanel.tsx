@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 import { useState } from "react";
 import { useToast } from "@/components/ui/ToastProvider";
 import {
@@ -53,6 +54,7 @@ export default function PaymentsReviewPanel({
   const balanceDue = Math.max(0, booking.totalAmount - amountPaid);
 
   async function saveInPersonPayment() {
+    if (recording || activeId !== null || needsReview.length > 0) return;
     setRecording(true);
     try {
       await recordInPersonBalance(bookingId, recordMethod, recordReference.trim() || undefined, recordNotes.trim() || undefined);
@@ -68,6 +70,7 @@ export default function PaymentsReviewPanel({
   }
 
   async function savePayLater(allowed: boolean) {
+    if (recording || activeId !== null) return;
     if (allowed && !exceptionNote.trim()) {
       showToast("Add the approved pay-later arrangement before enabling the exception.", "error");
       return;
@@ -85,6 +88,7 @@ export default function PaymentsReviewPanel({
   }
 
   async function saveReview(payment: PaymentRecord, status: "verified" | "rejected") {
+    if (activeId !== null || recording) return;
     const rejectionReason = status === "rejected" ? reason.trim() : "";
     if (status === "rejected" && !rejectionReason) {
       showToast("Explain why this payment proof is being rejected.", "error");
@@ -155,9 +159,9 @@ export default function PaymentsReviewPanel({
                   <span>Collection note (optional)</span>
                   <textarea value={recordNotes} onChange={(event) => setRecordNotes(event.target.value)} rows={2} maxLength={1000} disabled={recording} placeholder="Who received it, where, or any useful handover note" />
                 </label>
-                <button type="button" className={styles.recordButton} onClick={() => void saveInPersonPayment()} disabled={recording || needsReview.length > 0}>
+                <Button variant="none" type="button" className={styles.recordButton} onClick={() => void saveInPersonPayment()} disabled={recording || needsReview.length > 0}>
                   {recording ? "Recording…" : `Record ${money(balanceDue)} as paid`}
-                </button>
+                </Button>
                 {needsReview.length > 0 ? <small className={styles.collectionWarning}>Review the pending online proof before recording another payment.</small> : null}
               </div>
             </details>
@@ -172,9 +176,9 @@ export default function PaymentsReviewPanel({
               <div className={styles.exceptionBody}>
                 <p>Handover is blocked until the balance is fully paid. Only enable this when the business explicitly approves collection after handover.</p>
                 <textarea value={exceptionNote} onChange={(event) => setExceptionNote(event.target.value)} rows={2} maxLength={1000} placeholder="Required: explain the approved arrangement" disabled={recording} />
-                <button type="button" onClick={() => void savePayLater(!booking.payLaterAllowed)} disabled={recording || (!booking.payLaterAllowed && !exceptionNote.trim())}>
+                <Button variant="none" type="button" onClick={() => void savePayLater(!booking.payLaterAllowed)} disabled={recording || (!booking.payLaterAllowed && !exceptionNote.trim())}>
                   {booking.payLaterAllowed ? "Remove pay-later exception" : "Allow handover with balance"}
-                </button>
+                </Button>
               </div>
             </details>
           </div>
@@ -215,28 +219,28 @@ export default function PaymentsReviewPanel({
 
               <div className={styles.actions}>
                 {payment.proofStoragePath ? (
-                  <button type="button" className={styles.openButton} onClick={() => onOpenProof(payment)} disabled={activeId !== null}>
+                  <Button variant="none" type="button" className={styles.openButton} onClick={() => onOpenProof(payment)} disabled={activeId !== null}>
                     Open proof
-                  </button>
+                  </Button>
                 ) : null}
                 {actionable ? (
                   <>
-                    <button
+                    <Button variant="none"
                       type="button"
                       className={styles.approveButton}
                       onClick={() => void saveReview(payment, "verified")}
                       disabled={activeId !== null}
                     >
                       {isSaving && !isRejecting ? "Saving..." : "Verify payment"}
-                    </button>
-                    <button
+                    </Button>
+                    <Button variant="none"
                       type="button"
                       className={styles.rejectButton}
                       onClick={() => { setRejectingId(payment.id); setReason(""); }}
                       disabled={activeId !== null}
                     >
                       Reject
-                    </button>
+                    </Button>
                   </>
                 ) : null}
               </div>
@@ -255,17 +259,17 @@ export default function PaymentsReviewPanel({
                     />
                   </label>
                   <div>
-                    <button type="button" onClick={() => { setRejectingId(null); setReason(""); }} disabled={isSaving}>
+                    <Button variant="none" type="button" onClick={() => { setRejectingId(null); setReason(""); }} disabled={isSaving}>
                       Cancel
-                    </button>
-                    <button
+                    </Button>
+                    <Button variant="none"
                       type="button"
                       className={styles.sendButton}
                       onClick={() => void saveReview(payment, "rejected")}
                       disabled={isSaving || !reason.trim()}
                     >
                       {isSaving ? "Sending..." : "Send rejection"}
-                    </button>
+                    </Button>
                   </div>
                 </div>
               ) : null}

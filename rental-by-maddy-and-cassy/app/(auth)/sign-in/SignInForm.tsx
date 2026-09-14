@@ -10,6 +10,7 @@ import { sendEmailOtp } from "@/src/services/authService";
 import { normalizeEmail } from "@/src/lib/authValidation";
 import formStyles from "@/components/ui/Form.module.css";
 import styles from "../auth.module.css";
+import { Button } from "@/components/ui/Button";
 
 const schema = z.object({
   email: z.string().min(1, "Email is required").email("Enter a valid email address"),
@@ -46,6 +47,7 @@ export default function SignInForm() {
       : null;
 
   async function onSubmit(values: FormValues) {
+    if (submitting) return;
     setFormError(null);
     setSubmitting(true);
     try {
@@ -82,7 +84,7 @@ export default function SignInForm() {
 
       <form className={styles.form} onSubmit={handleSubmit(onSubmit)} noValidate>
         {accountNotice ? <p className={accountNotice.includes("suspended") ? styles.formError : styles.successNotice} role="status">{accountNotice}</p> : null}
-        {formError ? <p className={styles.formError}>{formError}</p> : null}
+        {formError ? <p className={styles.formError} role="alert">{formError}</p> : null}
 
         <div className={formStyles.field}>
           <label className={formStyles.label} htmlFor="email">
@@ -107,13 +109,15 @@ export default function SignInForm() {
         </div>
 
         <div className={styles.submitRow}>
-          <button
+          <Button
             type="submit"
-            className={`${formStyles.primaryButton} ${styles.submitButton}`}
-            disabled={submitting}
+            variant="primary"
+            className={styles.submitButton}
+            loading={submitting}
+            loadingText="Sending code..."
           >
-            {submitting ? "Sending code..." : "Send Code"}
-          </button>
+            Send Code
+          </Button>
         </div>
       </form>
 

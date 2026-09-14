@@ -38,18 +38,25 @@
 }
 
 .closeButton {
+  min-width: 44px;
+  min-height: 44px;
   border: none;
+  border-radius: var(--radius-control);
   background: transparent;
   font-size: 1.5rem;
   line-height: 1;
   cursor: pointer;
   color: var(--color-charcoal);
   padding: 0.25rem 0.5rem;
+  transition: background-color 140ms ease, color 140ms ease, transform 140ms ease;
 }
 
 .closeButton:hover {
+  background: var(--color-background-soft);
   color: var(--color-primary);
 }
+
+.closeButton:active { transform: translateY(1px); }
 
 .body {
   padding: 1.5rem;

@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { Product } from "@/types/product";
@@ -664,7 +665,7 @@ export default function CheckoutFlowClient(props: CheckoutFlowClientProps) {
           <div>
             <strong>Continue as guest</strong>
             <span>No password required. You will still provide an email for booking updates.</span>
-            <button
+            <Button variant="none"
               type="button"
               disabled={startingGuest}
               onClick={async () => {
@@ -679,7 +680,7 @@ export default function CheckoutFlowClient(props: CheckoutFlowClientProps) {
               }}
             >
               {startingGuest ? "Starting guest checkout…" : "Continue as Guest"}
-            </button>
+            </Button>
           </div>
           <div>
             <strong>Use a customer account</strong>

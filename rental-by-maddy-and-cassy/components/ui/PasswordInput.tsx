@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 import { forwardRef, useState, type InputHTMLAttributes } from "react";
 import styles from "./PasswordInput.module.css";
 
@@ -17,7 +18,7 @@ const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
           type={visible ? "text" : "password"}
           className={`${className} ${styles.input}`.trim()}
         />
-        <button
+        <Button variant="none"
           type="button"
           className={styles.toggle}
           aria-label={visible ? "Hide password" : "Show password"}
@@ -34,7 +35,7 @@ const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
               <circle cx="12" cy="11" r="3" />
             </svg>
           )}
-        </button>
+        </Button>
       </div>
     );
   }

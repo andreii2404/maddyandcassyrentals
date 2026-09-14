@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 import ClockIcon from "@/components/icons/ClockIcon";
 import {
   createPickupTimeValue,
@@ -59,9 +60,9 @@ export default function PickupTimeSelector({
           <strong>{parts ? `${parts.hour}:${parts.minute} ${parts.period}` : "No time selected"}</strong>
         </span>
         {parts ? (
-          <button type="button" className={styles.clearTimeButton} onClick={() => onChange("")}>
+          <Button variant="none" type="button" className={styles.clearTimeButton} onClick={() => onChange("")}>
             Clear
-          </button>
+          </Button>
         ) : null}
       </div>
 
@@ -114,14 +115,14 @@ export default function PickupTimeSelector({
         <span>Quick select</span>
         <div>
           {QUICK_TIMES.map((option) => (
-            <button
+            <Button variant="none"
               key={option.value}
               type="button"
               aria-pressed={value === option.value}
               onClick={() => onChange(option.value)}
             >
               {option.label}
-            </button>
+            </Button>
           ))}
         </div>
       </div>

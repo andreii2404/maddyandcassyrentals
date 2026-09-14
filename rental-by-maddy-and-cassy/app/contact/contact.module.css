@@ -69,13 +69,15 @@
   display: inline-flex;
   margin-top: 1.4rem;
   padding: 0.65rem 1rem;
-  border-radius: 999px;
+  border-radius: var(--radius-control);
   background: var(--color-primary);
   color: var(--color-white);
   font-size: 0.85rem;
   font-weight: 600;
   text-decoration: none;
   transition: background 0.2s ease, transform 0.2s ease;
+
+  min-height: var(--control-height);
 }
 
 .contactLink:hover {

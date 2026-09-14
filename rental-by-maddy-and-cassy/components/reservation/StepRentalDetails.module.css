@@ -51,7 +51,9 @@
 .quantityPanel span { display: block; margin-top: .1rem; color: var(--color-charcoal); font-size: .64rem; line-height: 1.3; }
 .quantityControl { display: grid; grid-template-columns: 32px minmax(40px, 1fr) 32px; width: min(100%, 132px); min-width: 0; overflow: hidden; border: 1px solid var(--color-dusty-rose); border-radius: 999px; background: var(--color-white); }
 .quantityControl button, .quantityControl input { height: 32px; border: 0; background: transparent; text-align: center; font: inherit; }
-.quantityControl button { color: var(--color-primary); font-weight: 800; cursor: pointer; }
+.quantityControl button { min-width: 32px; color: var(--color-primary); font-weight: 800; cursor: pointer; transition: background-color 150ms ease, color 150ms ease; }
+.quantityControl button:hover:not(:disabled) { background: var(--color-background-soft); }
+.quantityControl button:active:not(:disabled) { color: var(--color-primary-hover); }
 .quantityControl button:disabled { color: var(--color-light-gray); cursor: not-allowed; }
 .quantityControl input { width: 100%; min-width: 0; border-right: 1px solid var(--color-light-gray); border-left: 1px solid var(--color-light-gray); appearance: textfield; }
 .quantityControl input::-webkit-inner-spin-button { appearance: none; }
@@ -157,15 +159,21 @@
 
 .clearTimeButton {
   margin-left: auto;
-  padding: 0.3rem 0.45rem;
+  min-height: 36px;
+  padding: 0.35rem 0.45rem;
   border: 0;
+  border-radius: var(--radius-control);
   background: transparent;
   color: var(--color-primary);
   font: inherit;
   font-size: 0.65rem;
   font-weight: 700;
   cursor: pointer;
+  transition: background-color 150ms ease, transform 150ms ease;
 }
+
+.clearTimeButton:hover { background: var(--color-blush); }
+.clearTimeButton:active { transform: translateY(1px); }
 
 .timeSelectRow {
   display: grid;
@@ -233,7 +241,7 @@
 
 .quickTimes button {
   flex: 0 0 auto;
-  min-height: 30px;
+  min-height: 36px;
   padding: 0.35rem 0.48rem;
   border: 1px solid var(--color-light-gray);
   border-radius: 999px;
@@ -243,6 +251,7 @@
   font-size: 0.61rem;
   font-weight: 700;
   cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, transform 150ms ease;
 }
 
 .quickTimes button:hover,
@@ -250,6 +259,10 @@
   border-color: var(--color-primary);
   background: var(--color-primary);
   color: var(--color-white);
+}
+
+.quickTimes button:active {
+  transform: translateY(1px);
 }
 
 .normalWindowNote {

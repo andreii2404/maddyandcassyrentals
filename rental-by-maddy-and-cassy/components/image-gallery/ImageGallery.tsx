@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { Button } from "@/components/ui/Button";
 import styles from "./ImageGallery.module.css";
 
 interface ImageGalleryProps {
@@ -112,57 +113,57 @@ export default function ImageGallery({ images, productName, badge }: ImageGaller
 
         {canSwipe ? (
           <>
-            <button
-              type="button"
-              className={`${styles.arrow} ${styles.arrowPrev}`}
-              onClick={() => goTo(activeIndex - 1)}
-              disabled={activeIndex === 0}
-              aria-label="Previous photo"
-            >
-              &#8249;
-            </button>
-            <button
-              type="button"
-              className={`${styles.arrow} ${styles.arrowNext}`}
-              onClick={() => goTo(activeIndex + 1)}
-              disabled={activeIndex === maxIndex}
-              aria-label="Next photo"
-            >
-              &#8250;
-            </button>
+          <Button
+            variant="none"
+            className={`${styles.arrow} ${styles.arrowPrev}`}
+            onClick={() => goTo(activeIndex - 1)}
+            disabled={activeIndex === 0}
+            aria-label="Previous photo"
+          >
+            &#8249;
+          </Button>
+          <Button
+            variant="none"
+            className={`${styles.arrow} ${styles.arrowNext}`}
+            onClick={() => goTo(activeIndex + 1)}
+            disabled={activeIndex === maxIndex}
+            aria-label="Next photo"
+          >
+            &#8250;
+          </Button>
           </>
         ) : null}
 
-        <button
-          type="button"
+        <Button
+          variant="none"
           className={`${styles.viewToggle} ${viewMode === "360" ? styles.viewToggleActive : ""}`}
           onClick={() => setViewMode((mode) => (mode === "photo" ? "360" : "photo"))}
           aria-pressed={viewMode === "360"}
           aria-label="Toggle between photo and 360 degree / 3D view"
         >
           360° | 3D View
-        </button>
+        </Button>
       </div>
 
       {galleryImages.length > 1 ? (
         <div className={styles.thumbnailRow} role="tablist" aria-label={`${productName} images`}>
           {galleryImages.map((image, index) => (
-            <button
-              key={image + index}
-              type="button"
-              role="tab"
-              aria-selected={index === activeIndex}
-              className={`${styles.thumbnail} ${index === activeIndex ? styles.thumbnailActive : ""}`}
-              onClick={() => goTo(index)}
-            >
-              <Image
-                src={image}
-                alt={`${productName} view ${index + 1}`}
-                fill
-                sizes="80px"
-                className={styles.thumbnailImage}
-              />
-            </button>
+          <Button
+            key={image + index}
+            variant="none"
+            role="tab"
+            aria-selected={index === activeIndex}
+            className={`${styles.thumbnail} ${index === activeIndex ? styles.thumbnailActive : ""}`}
+            onClick={() => goTo(index)}
+          >
+            <Image
+              src={image}
+              alt={`${productName} view ${index + 1}`}
+              fill
+              sizes="80px"
+              className={styles.thumbnailImage}
+            />
+          </Button>
           ))}
         </div>
       ) : null}

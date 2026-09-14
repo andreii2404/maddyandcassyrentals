@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 import { useEffect, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import type { UserNotification } from "@/src/types/notification";
@@ -36,13 +37,13 @@ export default function NotificationList({ uid }: { uid: string }) {
             </p>
           </div>
           {!notification.isRead ? (
-            <button
+            <Button variant="none"
               type="button"
               className={styles.markReadButton}
               onClick={() => markNotificationRead(createClient(), notification.id)}
             >
               Mark as read
-            </button>
+            </Button>
           ) : null}
         </li>
       ))}

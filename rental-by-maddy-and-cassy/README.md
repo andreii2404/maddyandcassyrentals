@@ -67,6 +67,27 @@ the Supabase project's own email settings.
 Run `npm run verify` to lint, type-check, test PDF generation, and build the
 production application.
 
+Optional browser regression scripts use Chrome and an available Playwright
+installation. Set `PLAYWRIGHT_MODULE` to its module directory if it is installed
+outside this project. `testControls.cjs` also uses the esbuild dependency
+installed with the project's TypeScript tooling.
+
+```bash
+node scripts/testControls.cjs
+node scripts/testUi.cjs
+node scripts/testStorefront.cjs
+```
+
+The latter two scripts expect a running local development server; set
+`TEST_BASE_URL` to override `http://localhost:3000`. They check desktop/mobile
+pages, sign-in validation, navigation, search, cart, and favorites. Set
+`UI_SCREENSHOT_DIR` to save screenshots during the page checks.
+
+Payment and admin form tests use isolated fake services, and sign-in requests
+are intercepted. These tests do not send email, submit live payments, or change
+production accounts. Authenticated customer/admin integration checks still
+require dedicated test sessions.
+
 ## GoDaddy production deployment
 
 The project builds as a standalone Node.js service for a GoDaddy VPS. It cannot

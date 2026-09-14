@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { updateUserProfile } from "@/src/services/userService";
 import type { UserProfile } from "@/src/types/database";
 import { useToast } from "@/components/ui/ToastProvider";
+import { Button } from "@/components/ui/Button";
 import formStyles from "@/components/ui/Form.module.css";
 import Spinner from "@/components/ui/Spinner";
 import styles from "./profile.module.css";
@@ -94,7 +95,7 @@ function CustomerProfileEditor({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!user) return;
+    if (!user || saving) return;
 
     if (draft.displayName.trim().length < 2) {
       showToast("Please enter your full name.", "error");
@@ -289,9 +290,15 @@ function CustomerProfileEditor({
           <span className={`${styles.status} ${styles[profile.accountStatus]}`}>
             Account {profile.accountStatus}
           </span>
-          <button type="submit" className={formStyles.primaryButton} disabled={saving}>
-            {saving ? "Saving..." : "Save Profile"}
-          </button>
+          <Button
+            type="submit"
+            variant="primary"
+            loading={saving}
+            loadingText="Saving..."
+            disabled={saving}
+          >
+            Save Profile
+          </Button>
         </div>
         <PushNotificationButton />
       </form>

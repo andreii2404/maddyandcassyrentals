@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -271,13 +272,13 @@ export default function AdminUserDetail({ uid }: { uid: string }) {
         </div>
 
         {!isAdministrator && !confirmationOpen ? (
-          <button
+          <Button variant="none"
             type="button"
             className={styles.deleteButton}
             onClick={() => setConfirmationOpen(true)}
           >
             Delete Account
-          </button>
+          </Button>
         ) : null}
 
         {!isAdministrator && confirmationOpen ? (
@@ -294,7 +295,7 @@ export default function AdminUserDetail({ uid }: { uid: string }) {
               disabled={deleting}
             />
             <div className={styles.confirmationActions}>
-              <button
+              <Button variant="none"
                 type="button"
                 className={styles.cancelButton}
                 onClick={() => {
@@ -304,15 +305,15 @@ export default function AdminUserDetail({ uid }: { uid: string }) {
                 disabled={deleting}
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button variant="none"
                 type="button"
                 className={styles.confirmDeleteButton}
                 onClick={handleDeleteAccount}
                 disabled={confirmationText !== "DELETE" || deleting}
               >
                 {deleting ? "Deleting..." : "Permanently Delete"}
-              </button>
+              </Button>
             </div>
           </div>
         ) : null}

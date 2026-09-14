@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/ToastProvider";
 import { submitManualPayment, updateBalancePaymentPreference } from "@/src/services/paymentService";
 import FileUploadField from "@/components/file-upload/FileUploadField";
@@ -29,6 +30,7 @@ export default function BookingPaymentPanel({
 }) {
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
+  const submitLock = useRef(false);
   const [referenceNumber, setReferenceNumber] = useState("");
   const [accountName, setAccountName] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
@@ -101,7 +103,8 @@ export default function BookingPaymentPanel({
   }
 
   async function handleSubmit() {
-    if (!validate() || !proofFile) return;
+    if (submitLock.current || savingPreference || !validate() || !proofFile) return;
+    submitLock.current = true;
     setSubmitting(true);
     try {
       await submitManualPayment(booking.id, {
@@ -121,6 +124,7 @@ export default function BookingPaymentPanel({
     } catch (error) {
       showToast(error instanceof Error ? error.message : "The payment details could not be submitted.", "error");
     } finally {
+      submitLock.current = false;
       setSubmitting(false);
     }
   }
@@ -203,26 +207,28 @@ export default function BookingPaymentPanel({
 
           {paymentStatus === "partially_paid" ? (
             <div className={styles.channelChoices} aria-label="Remaining balance payment method">
-              <button
+              <Button variant="none"
                 type="button"
                 className={balancePreference === "online_gcash" ? styles.channelSelected : styles.channelChoice}
                 onClick={() => void chooseBalancePreference("online_gcash")}
-                disabled={savingPreference}
+                disabled={savingPreference || submitting}
+                aria-pressed={balancePreference === "online_gcash"}
               >
                 <span>ONLINE</span>
                 <strong>Pay through GCash</strong>
                 <small>Scan the QR, submit proof, and receive a receipt after verification.</small>
-              </button>
-              <button
+              </Button>
+              <Button variant="none"
                 type="button"
                 className={balancePreference === "in_person" ? styles.channelSelected : styles.channelChoice}
                 onClick={() => void chooseBalancePreference("in_person")}
-                disabled={savingPreference}
+                disabled={savingPreference || submitting}
+                aria-pressed={balancePreference === "in_person"}
               >
                 <span>AT HANDOVER</span>
                 <strong>Pay in person</strong>
                 <small>Pay by cash or GCash when you receive the rental. Admin records your receipt.</small>
-              </button>
+              </Button>
             </div>
           ) : null}
 
@@ -236,7 +242,8 @@ export default function BookingPaymentPanel({
             </div>
           ) : null}
 
-          {showGcashForm ? <><GcashRecipientCard compact />
+          {showGcashForm ? <form className={styles.paymentForm} onSubmit={(event) => { event.preventDefault(); void handleSubmit(); }} noValidate aria-busy={submitting}>
+          <GcashRecipientCard compact />
 
           <div className={formStyles.field}>
             <label className={formStyles.label} htmlFor="panel-pay-reference">
@@ -279,6 +286,7 @@ export default function BookingPaymentPanel({
           </div>
           <FileUploadField
             label="Screenshot / proof of payment"
+        disabled={submitting}
             required
             value={proofFile}
             onChange={setProofFile}
@@ -292,10 +300,10 @@ export default function BookingPaymentPanel({
             </ul>
           ) : null}
 
-          <button className={styles.submitButton} type="button" onClick={() => void handleSubmit()} disabled={submitting}>
-            {submitting ? "Submitting payment…" : "Submit Payment Proof"}
-          </button>
-          </> : null}
+          <Button variant="primary" className={styles.submitButton} type="submit" loading={submitting} loadingText="Submitting payment…" disabled={savingPreference}>
+            Submit Payment Proof
+          </Button>
+          </form> : null}
         </>
       ) : (
         <p className={styles.message}>Payment is unavailable because this booking is no longer active.</p>

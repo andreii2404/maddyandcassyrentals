@@ -32,7 +32,9 @@
 .collectionForm input,.collectionForm select,.collectionForm textarea,.exceptionBody textarea { width:100%; min-height:36px; padding:.5rem .6rem; border:1px solid var(--color-light-gray); border-radius:8px; background:#fff; color:var(--color-text-primary); font:inherit; font-size:.64rem; }
 .collectionForm textarea,.exceptionBody textarea { resize:vertical; line-height:1.4; }
 .fullField { grid-column:1/-1; }
-.collectionForm .recordButton,.exceptionBody button { min-height:36px; padding:.5rem .7rem; border:1px solid var(--color-primary); border-radius:9px; background:var(--color-primary); color:#fff; font:inherit; font-size:.62rem; font-weight:800; cursor:pointer; }
+.collectionForm .recordButton,.exceptionBody button { display:inline-flex; align-items:center; justify-content:center; min-height:40px; padding:.45rem .65rem; border:1px solid var(--color-primary); border-radius:var(--radius-control); background:var(--color-primary); color:#fff; font:inherit; font-size:.62rem; font-weight:800; cursor:pointer; transition:background-color 140ms ease, box-shadow 140ms ease, transform 140ms ease; }
+.collectionForm .recordButton:hover:not(:disabled),.exceptionBody button:hover:not(:disabled) { background:var(--color-primary-hover); box-shadow:0 6px 16px rgba(154,89,101,.2); transform:translateY(-1px); }
+.collectionForm .recordButton:active:not(:disabled),.exceptionBody button:active:not(:disabled) { box-shadow:none; transform:translateY(1px); }
 .collectionForm .recordButton:disabled,.exceptionBody button:disabled { opacity:.55; cursor:not-allowed; }
 .collectionWarning { align-self:center; color:var(--color-status-red); font-size:.58rem; }
 .exceptionPanel { border-color:var(--color-status-yellow-border); }
@@ -60,7 +62,9 @@
 .note strong { color:var(--color-status-red); font-size:.58rem; text-transform:uppercase; }
 .note p { margin:.2rem 0 0; color:var(--color-text-primary); font-size:.62rem; line-height:1.5; }
 .actions { display:flex; margin-top:.8rem; flex-wrap:wrap; gap:.4rem; }
-.actions button,.rejectEditor button { min-height:34px; padding:.45rem .62rem; border:1px solid var(--color-light-gray); border-radius:9px; background:#fff; color:var(--color-charcoal); font:inherit; font-size:.6rem; font-weight:800; cursor:pointer; }
+.actions button,.rejectEditor button { min-height:40px; padding:.45rem .6rem; border:1px solid var(--color-light-gray); border-radius:var(--radius-control); background:#fff; color:var(--color-charcoal); font:inherit; font-size:.6rem; font-weight:800; cursor:pointer; transition:background-color 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease; }
+.actions button:hover:not(:disabled),.rejectEditor button:hover:not(:disabled) { border-color:var(--color-dusty-rose); background:var(--color-background-soft); transform:translateY(-1px); }
+.actions button:active:not(:disabled),.rejectEditor button:active:not(:disabled) { transform:translateY(1px); }
 .actions .openButton { margin-right:auto; color:var(--color-primary); }
 .actions .approveButton { border-color:var(--color-status-green-border); background:var(--color-status-green-bg); color:var(--color-status-green); }
 .actions .rejectButton { border-color:var(--color-status-red-border); background:var(--color-status-red-bg); color:var(--color-status-red); }

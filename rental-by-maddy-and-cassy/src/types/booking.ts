@@ -194,6 +194,11 @@ export interface BookingDocument {
   mimeType?: string;
   fileSizeBytes?: number;
   reviewStatus: RequirementReviewStatus;
+  /** Sequential upload attempt for this requirement. Attempts after the first are resubmissions. */
+  attemptNumber: number;
+  /** Timestamp when this specific file was submitted for review. */
+  submittedAt: string;
+  isResubmitted: boolean;
   reviewNotes?: string;
   reviewedBy?: string;
   reviewedAt?: string;

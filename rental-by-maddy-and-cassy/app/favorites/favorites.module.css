@@ -58,22 +58,27 @@
 }
 
 .clearButton {
-  padding: 0.55rem 0.9rem;
+  min-height: 40px;
+  padding: 0.45rem 0.8rem;
   border: 1px solid var(--color-dusty-rose);
-  border-radius: 999px;
+  border-radius: var(--radius-control);
   background: var(--color-white);
   color: var(--color-primary);
   font: inherit;
   font-size: 0.8rem;
   font-weight: 700;
   cursor: pointer;
-  transition: background 180ms ease, border-color 180ms ease;
+  transition: background 180ms ease, border-color 180ms ease, transform 150ms ease;
 }
 
 .clearButton:hover,
 .clearButton:focus-visible {
   border-color: var(--color-primary);
   background: var(--color-blush);
+}
+
+.clearButton:active {
+  transform: translateY(1px);
 }
 
 .grid {
@@ -120,8 +125,13 @@
 }
 
 .browseButton {
-  padding: 0.72rem 1.3rem;
-  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-height);
+  padding: 0.55rem 1.15rem;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--color-primary);
   background: var(--color-primary);
   color: var(--color-white);
   font-size: 0.86rem;
@@ -131,6 +141,10 @@
 
 .browseButton:hover {
   background: var(--color-primary-hover);
+}
+
+.browseButton:active {
+  transform: translateY(1px);
 }
 
 @media (max-width: 620px) {

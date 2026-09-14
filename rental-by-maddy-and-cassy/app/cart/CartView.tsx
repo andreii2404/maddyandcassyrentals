@@ -7,6 +7,7 @@ import type { Product } from "@/types/product";
 import type { UnitCounts } from "@/lib/availability";
 import { useCart } from "@/hooks/useCart";
 import { useInventoryMap } from "@/hooks/useInventory";
+import { Button } from "@/components/ui/Button";
 import styles from "./cart.module.css";
 
 function money(value: number): string {
@@ -59,7 +60,7 @@ export default function CartView({ products }: { products: Product[] }) {
           <p>Adjust quantities here. Exact dates, fulfillment, payment, documents, and the agreement are completed per rental booking.</p>
         </div>
         {cartLines.length > 0 ? (
-          <button type="button" className={styles.clearButton} onClick={clearCart}>Clear cart</button>
+          <Button variant="none" className={styles.clearButton} onClick={clearCart}>Clear cart</Button>
         ) : null}
       </header>
 
@@ -107,7 +108,7 @@ export default function CartView({ products }: { products: Product[] }) {
                   <div className={styles.itemControls}>
                     <label htmlFor={`quantity-${product.id}`}>Quantity</label>
                     <div className={styles.quantityControl}>
-                      <button type="button" onClick={() => updateQuantity(product.id, quantity - 1)} disabled={quantity <= 1} aria-label={`Decrease ${product.name} quantity`}>−</button>
+                      <Button variant="none" aria-label={`Decrease ${product.name} quantity`} onClick={() => updateQuantity(product.id, quantity - 1)} disabled={quantity <= 1}>−</Button>
                       <input
                         id={`quantity-${product.id}`}
                         type="number"
@@ -116,10 +117,10 @@ export default function CartView({ products }: { products: Product[] }) {
                         value={quantity}
                         onChange={(event) => updateQuantity(product.id, Math.min(maxQuantity, Number(event.target.value)))}
                       />
-                      <button type="button" onClick={() => updateQuantity(product.id, quantity + 1)} disabled={quantity >= maxQuantity} aria-label={`Increase ${product.name} quantity`}>+</button>
+                      <Button variant="none" aria-label={`Increase ${product.name} quantity`} onClick={() => updateQuantity(product.id, quantity + 1)} disabled={quantity >= maxQuantity}>+</Button>
                     </div>
                     <strong>{money(lineRental)} / day</strong>
-                    <button type="button" className={styles.removeButton} onClick={() => removeItem(product.id)}>Remove</button>
+                    <Button variant="none" className={styles.removeButton} onClick={() => removeItem(product.id)}>Remove</Button>
                   </div>
                 </article>
               );

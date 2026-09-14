@@ -49,17 +49,24 @@
 
 .clearButton {
   align-self: flex-start;
+  min-height: 36px;
+  padding: 0.35rem 0.45rem;
   border: none;
+  border-radius: var(--radius-control);
   background: transparent;
   color: var(--color-primary);
   font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
+  transition: background-color 150ms ease, transform 150ms ease;
 }
 
 .clearButton:hover {
+  background: var(--color-blush);
   text-decoration: underline;
 }
+
+.clearButton:active { transform: translateY(1px); }
 
 .uploadWrapper {
   display: flex;

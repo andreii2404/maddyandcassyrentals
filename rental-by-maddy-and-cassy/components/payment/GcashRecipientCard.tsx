@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 import Image from "next/image";
 import { useState, type ReactNode } from "react";
 import { GCASH_RECIPIENT } from "@/src/lib/gcashPayment";
@@ -60,9 +61,9 @@ export default function GcashRecipientCard({
           <span className={styles.detailLabel}>Mobile number</span>
           <div className={styles.mobileRow}>
             <strong className={styles.accountValue}>{GCASH_RECIPIENT.mobileNumber}</strong>
-            <button className={styles.copyButton} type="button" onClick={() => void copyMobileNumber()}>
+            <Button variant="none" className={styles.copyButton} type="button" onClick={() => void copyMobileNumber()}>
               {copyState === "copied" ? "Copied" : copyState === "failed" ? "Copy failed" : "Copy number"}
-            </button>
+            </Button>
           </div>
           <span className={styles.copyStatus} aria-live="polite">
             {copyState === "copied"

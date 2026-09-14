@@ -1,11 +1,13 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { AgreementDraft } from "@/src/types/reservationDraft";
 import AgreementDocument, { type AgreementDocumentData } from "./AgreementDocument";
 import SignaturePad from "@/components/signature-pad/SignaturePad";
 import formStyles from "@/components/ui/Form.module.css";
+import ReservationFooter from "@/components/reservation/ReservationFooter";
 import styles from "./StepShared.module.css";
 
 interface StepAgreementProps {
@@ -102,13 +104,13 @@ export default function StepAgreement({
           <h2 className={styles.heading}>Rental Agreement &amp; Terms</h2>
           <p className={styles.viewerHint}>Review the agreement, confirm both statements, then sign.</p>
         </div>
-        <button
+        <Button variant="none"
           type="button"
           className={styles.expandButton}
           onClick={() => setIsExpanded(true)}
         >
           Expand Agreement
-        </button>
+        </Button>
       </div>
       <AgreementDocument data={agreementData} />
 
@@ -125,14 +127,14 @@ export default function StepAgreement({
           >
             <div className={styles.expandHeader}>
               <h3 className={styles.expandTitle}>Rental Agreement</h3>
-              <button
+              <Button variant="none"
                 type="button"
                 className={styles.expandCloseButton}
                 onClick={() => setIsExpanded(false)}
                 aria-label="Minimize agreement"
               >
                 Close &amp; Minimize
-              </button>
+              </Button>
             </div>
             <div className={styles.expandBody}>
               <AgreementDocument data={agreementData} variant="expanded" />
@@ -206,28 +208,14 @@ export default function StepAgreement({
         </p>
       ) : null}
 
-      <div className={styles.footer}>
-        <button
-          type="button"
-          className={formStyles.secondaryButton}
-          onClick={onBack}
-          disabled={submitting}
-        >
-          Back
-        </button>
-        <button
-          type="button"
-          className={formStyles.primaryButton}
-          disabled={!canContinue || submitting}
-          onClick={onContinue}
-        >
-          {submitting
-            ? "Submitting…"
-            : !unitsReady && !unitsCheckError
-              ? "Confirming assigned units…"
-              : "Sign & Submit Agreement"}
-        </button>
-      </div>
+      <ReservationFooter
+        onBack={onBack}
+        primaryLabel={submitting ? "Submitting…" : !unitsReady && !unitsCheckError ? "Confirming assigned units…" : "Sign & Submit Agreement"}
+        primaryLoading={submitting}
+        primaryLoadingText="Submitting…"
+        primaryDisabled={!canContinue || submitting}
+        onContinue={onContinue}
+      />
     </div>
   );
 }

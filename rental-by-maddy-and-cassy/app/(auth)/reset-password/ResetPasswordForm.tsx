@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -51,6 +51,7 @@ export default function ResetPasswordForm({ recoveryReady }: { recoveryReady: bo
   }, [complete, destination, router]);
 
   async function onSubmit(values: FormValues) {
+    if (submitting) return;
     setFormError(null);
     setSubmitting(true);
     try {
@@ -83,9 +84,13 @@ export default function ResetPasswordForm({ recoveryReady }: { recoveryReady: bo
         <p className={styles.eyebrow}>Reset link unavailable</p>
         <h1 className={styles.heading}>Request a new link</h1>
         <p className={styles.subheading}>This password reset link is invalid, expired, or has already been used.</p>
-        <Link className={`${formStyles.primaryButton} ${styles.submitButton}`} href={`/forgot-password?source=${source}`}>
+        <Button
+          href={`/forgot-password?source=${source}`}
+          variant="primary"
+          className={styles.submitButton}
+        >
           Send a New Reset Link
-        </Link>
+        </Button>
       </div>
     );
   }
@@ -97,7 +102,9 @@ export default function ResetPasswordForm({ recoveryReady }: { recoveryReady: bo
         <h1 className={styles.heading}>Your account is secure.</h1>
         <p className={styles.successNotice} role="status">Your password was changed successfully. Returning you to login...</p>
         <div className={styles.successActions}>
-          <Link className={`${formStyles.primaryButton} ${styles.submitButton}`} href={destination}>Continue to Login</Link>
+          <Button href={destination} variant="primary" className={styles.submitButton}>
+            Continue to Login
+          </Button>
         </div>
       </div>
     );
@@ -141,9 +148,15 @@ export default function ResetPasswordForm({ recoveryReady }: { recoveryReady: bo
           />
           {errors.confirmPassword ? <p id="confirm-password-error" className={formStyles.errorText} role="alert">{errors.confirmPassword.message}</p> : null}
         </div>
-        <button type="submit" className={`${formStyles.primaryButton} ${styles.submitButton}`} disabled={submitting}>
-          {submitting ? "Updating password..." : "Update Password"}
-        </button>
+          <Button
+            type="submit"
+            variant="primary"
+            className={styles.submitButton}
+            loading={submitting}
+            loadingText="Updating password..."
+          >
+            Update Password
+          </Button>
       </form>
     </div>
   );

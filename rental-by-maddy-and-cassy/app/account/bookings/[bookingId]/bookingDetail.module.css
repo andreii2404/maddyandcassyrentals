@@ -183,6 +183,7 @@
   gap: 0.05rem 0.48rem;
   align-items: center;
   padding: 0.55rem 0.65rem;
+  min-height: 44px;
   border: 0;
   border-right: 1px solid rgba(154, 89, 101, 0.08);
   background: transparent;
@@ -190,8 +191,10 @@
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: background 160ms ease, color 160ms ease;
+  transition: background 160ms ease, color 160ms ease, transform 150ms ease;
 }
+
+.sectionNav button:active { transform: translateY(1px); }
 
 .sectionNav button:last-child { border-right: 0; }
 .sectionNav button:hover,
@@ -528,13 +531,14 @@
   list-style: none;
 }
 
-.documentList button {
+.documentList > li > button {
   display: grid;
   width: 100%;
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 0.65rem;
   align-items: center;
-  padding: 0.72rem;
+  min-height: 44px;
+  padding: 0.6rem 0.7rem;
   border: 1px solid var(--color-light-gray);
   border-radius: 12px;
   background: var(--color-background);
@@ -545,11 +549,17 @@
   transition: border-color 160ms ease, transform 160ms ease, background 160ms ease;
 }
 
-.documentList button:hover {
+.documentList > li > button:hover {
   border-color: var(--color-dusty-rose);
   background: var(--color-background-soft);
   transform: translateY(-1px);
 }
+.documentList > li > button:active { transform: translateY(1px); }
+.documentRow { display: grid; gap: .55rem; }
+.documentRow > button { width: 100%; }
+.rejectedDocumentDetails { display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; padding: .65rem .75rem .75rem; border-top: 1px solid var(--color-status-red-border); background: var(--color-status-red-bg); }
+.rejectedDocumentReason { display: grid; gap: .2rem; min-width: 0; color: var(--color-charcoal); font-size: .65rem; line-height: 1.45; }
+.rejectedDocumentReason strong { color: var(--color-status-red); font-size: .62rem; text-transform: uppercase; letter-spacing: .04em; }
 
 .documentIcon { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 9px; background: white; color: var(--color-primary); font-size: 0.52rem; font-weight: 900; }
 .documentInfo { min-width: 0; }

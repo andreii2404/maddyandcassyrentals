@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./ReviewCarousel.module.css";
@@ -135,22 +136,22 @@ export default function ReviewCarousel({ reviews }: ReviewCarouselProps) {
           <div className={styles.controls}>
             <span aria-live="polite">{activeIndex + 1} / {reviews.length}</span>
             <div>
-              <button
+              <Button variant="none"
                 type="button"
                 onClick={() => move(-1)}
                 disabled={!canScrollPrevious}
                 aria-label="Previous review"
               >
                 <ArrowIcon direction="left" />
-              </button>
-              <button
+              </Button>
+              <Button variant="none"
                 type="button"
                 onClick={() => move(1)}
                 disabled={!canScrollNext}
                 aria-label="Next review"
               >
                 <ArrowIcon direction="right" />
-              </button>
+              </Button>
             </div>
           </div>
         ) : null}

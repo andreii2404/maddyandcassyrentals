@@ -1,5 +1,5 @@
 import type { Product } from "@/types/product";
-import type { BookingStatus, RequirementsStatus } from "@/src/types/booking";
+import type { BookingStatus, CancellationRequestStatus, RequirementsStatus } from "@/src/types/booking";
 import type { AdminPaymentRecord } from "@/src/types/payment";
 import type { AuditLogEntry } from "@/src/types/admin";
 
@@ -10,12 +10,23 @@ export interface AdminDashboardData {
     successfulPayments: number;
     failedPayments: number;
     pendingVerification: number;
+    pendingCancellations: number;
     activeBookings: number;
     catalogProducts: number;
     completedRentals: number;
     popularProductName: string | null;
     popularProductBookings: number;
   };
+  cancellationRequests: Array<{
+    id: string;
+    bookingId: string;
+    bookingRef: string;
+    customerName: string;
+    productName: string;
+    reason: string;
+    requestedAt: string;
+    status: CancellationRequestStatus;
+  }>;
   recentBookings: Array<{
     id: string;
     bookingRef: string;

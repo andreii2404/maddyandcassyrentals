@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/ToastProvider";
 import { isPushSupported, subscribeToPush } from "@/src/lib/webpush/client";
@@ -10,12 +11,11 @@ export default function PushNotificationButton() {
   const { user } = useAuth();
   const { showToast } = useToast();
   const [enabling, setEnabling] = useState(false);
-  const [enabled, setEnabled] = useState(
-    typeof Notification !== "undefined" && Notification.permission === "granted",
-  );
+  // Browser permission alone does not mean this account's subscription is registered.
+  const [enabled, setEnabled] = useState(false);
 
   async function enable() {
-    if (!user) return;
+    if (!user || enabling || enabled) return;
     setEnabling(true);
     try {
       if (!(await isPushSupported())) {
@@ -52,9 +52,9 @@ export default function PushNotificationButton() {
         <strong>Booking push notifications</strong>
         <span>Receive payment, review, and rental-status updates on this device.</span>
       </div>
-      <button type="button" onClick={enable} disabled={enabled || enabling}>
-        {enabled ? "Enabled" : enabling ? "Enabling..." : "Enable Notifications"}
-      </button>
+      <Button variant="secondary" type="button" onClick={enable} disabled={enabled || !user} loading={enabling} loadingText="Enabling...">
+        {enabled ? "Enabled" : "Enable Notifications"}
+      </Button>
     </div>
   );
 }

@@ -6,6 +6,7 @@ import type { Product } from "@/types/product";
 import type { UnitCounts } from "@/lib/availability";
 import { useCart } from "@/hooks/useCart";
 import { useToast } from "@/components/ui/ToastProvider";
+import { Button } from "@/components/ui/Button";
 import styles from "./ReserveAction.module.css";
 
 interface ReserveActionProps {
@@ -34,16 +35,16 @@ export default function ReserveAction({ product, units, selectedColor, awaitingC
   return (
     <div id="reserve" className={styles.wrapper}>
       <div className={styles.actions}>
-        <button
-          type="button"
+        <Button
+          variant="none"
           className={styles.reserveButton}
           disabled={locked}
           onClick={handleReserve}
         >
           {unavailable ? "Unavailable" : "Reserve Now"}
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant="none"
           className={styles.cartButton}
           disabled={locked}
           onClick={() => {
@@ -55,7 +56,7 @@ export default function ReserveAction({ product, units, selectedColor, awaitingC
           }}
         >
           Add to Cart
-        </button>
+        </Button>
       </div>
       <Link href="/cart" className={styles.cartLink}>View rental cart</Link>
 

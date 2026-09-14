@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
+import { Button } from "@/components/ui/Button";
 import {
   CANCELLATION_REASON_OPTIONS,
   type AgreementDoc,
@@ -65,6 +66,8 @@ export default function CustomerBookingManagement({
   const { showToast } = useToast();
   const [editOpen, setEditOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelConfirmationOpen, setCancelConfirmationOpen] = useState(false);
+  const cancelConfirmationDescriptionId = useId();
   const [saving, setSaving] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
@@ -91,6 +94,7 @@ export default function CustomerBookingManagement({
 
   async function handleEditSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (saving || cancelling || !canEdit) return;
     if (fulfillmentMethod === "delivery" && (!location.trim() || !cityMunicipality.trim() || !province.trim())) {
       showToast("Enter the complete street/barangay, city or municipality, and province.", "error");
       return;
@@ -114,14 +118,19 @@ export default function CustomerBookingManagement({
     }
   }
 
-  async function handleCancel(event: React.FormEvent<HTMLFormElement>) {
+  function handleCancel(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (cancelling || saving || !canCancel) return;
     if (!CANCELLATION_REASON_OPTIONS.includes(cancelReason as (typeof CANCELLATION_REASON_OPTIONS)[number])) {
       showToast("Choose a reason for cancelling this booking.", "error");
       return;
     }
-    if (!window.confirm(`Submit a cancellation request for booking ${booking.bookingRef}? The booking will remain active until an administrator reviews it.`)) return;
+    setCancelConfirmationOpen(true);
+  }
 
+  async function confirmCancellation() {
+    if (cancelling || saving || !canCancel) return;
+    setCancelConfirmationOpen(false);
     setCancelling(true);
     try {
       await requestCancellationAsCustomer(
@@ -151,13 +160,13 @@ export default function CustomerBookingManagement({
             <h2 id="current-status-heading">{getFulfillmentProgressLabel(booking.status, booking.fulfillmentMethod)}</h2>
           </div>
           {rejectionReason ? (
-            <button
+            <Button variant="none"
               type="button"
               className={styles.rejectedBadgeButton}
               onClick={() => setReasonModalOpen(true)}
             >
               <StatusBadge status={booking.status} />
-            </button>
+            </Button>
           ) : (
             <StatusBadge status={booking.status} />
           )}
@@ -174,9 +183,9 @@ export default function CustomerBookingManagement({
           </div>
         ) : null}
         {rejectionReason ? (
-          <button type="button" className={styles.viewReasonLink} onClick={() => setReasonModalOpen(true)}>
+          <Button variant="none" type="button" className={styles.viewReasonLink} onClick={() => setReasonModalOpen(true)}>
             View rejection reason
-          </button>
+          </Button>
         ) : null}
         <dl className={styles.statusFacts}>
           <div><dt>Reference number</dt><dd>{booking.bookingRef}</dd></div>
@@ -242,9 +251,9 @@ export default function CustomerBookingManagement({
             </div>
             <h3>Edit safe details</h3>
             <p>{canEdit ? "Update pickup/delivery information and notes before payment or verification begins." : "Editing is locked once payment or verification begins. Contact the business for changes."}</p>
-            <button type="button" disabled={!canEdit} onClick={() => { setEditOpen((open) => !open); setCancelOpen(false); }}>
+            <Button variant="none" type="button" disabled={!canEdit} onClick={() => { setEditOpen((open) => !open); setCancelOpen(false); }}>
               {editOpen ? "Close editor" : "Edit booking details"}
-            </button>
+            </Button>
           </article>
           <article>
             <div className={styles.actionHeader}>
@@ -261,9 +270,9 @@ export default function CustomerBookingManagement({
                   ? "Send a cancellation request for administrator review. Reserved dates remain held until it is approved."
                   : "Online cancellation requests are unavailable at this stage. Contact the business for assistance."}
             </p>
-            <button type="button" className={styles.cancelButton} disabled={!canCancel} onClick={() => { setCancelOpen((open) => !open); setEditOpen(false); }}>
+            <Button variant="none" type="button" className={styles.cancelButton} disabled={!canCancel} onClick={() => { setCancelOpen((open) => !open); setEditOpen(false); }}>
               {pendingCancellationRequest ? "Cancellation requested" : cancelOpen ? "Keep booking" : "Request cancellation"}
-            </button>
+            </Button>
           </article>
         </div>
 
@@ -283,7 +292,7 @@ export default function CustomerBookingManagement({
               </div>
             ) : null}
             <label className={styles.notesField}><span>Booking notes</span><textarea value={customerNotes} onChange={(event) => setCustomerNotes(event.target.value)} maxLength={1000} rows={3} placeholder="Optional instructions or notes" /></label>
-            <button type="submit" className={styles.saveButton} disabled={saving}>{saving ? "Saving…" : "Save changes"}</button>
+            <Button variant="primary" type="submit" className={styles.saveButton} loading={saving} loadingText="Saving…">Save changes</Button>
           </form>
         ) : null}
 
@@ -302,10 +311,42 @@ export default function CustomerBookingManagement({
               <span>Additional Details <em>(optional)</em></span>
               <textarea id="cancel-additional-details" aria-describedby="cancellation-warning" value={cancelAdditionalDetails} onChange={(event) => setCancelAdditionalDetails(event.target.value)} maxLength={1000} rows={3} placeholder="Add any extra explanation, if helpful" disabled={cancelling} />
             </label>
-            <button type="submit" disabled={cancelling}>{cancelling ? "Submitting…" : "Submit cancellation request"}</button>
+            <Button variant="danger" type="submit" loading={cancelling} loadingText="Submitting…">Submit cancellation request</Button>
           </form>
         ) : null}
       </section>
+
+      {cancelConfirmationOpen && canCancel ? (
+        <Modal
+          title="Confirm cancellation request"
+          onClose={() => setCancelConfirmationOpen(false)}
+          describedBy={cancelConfirmationDescriptionId}
+        >
+          <div className={styles.cancelConfirmation}>
+            <div id={cancelConfirmationDescriptionId}>
+              <div className={styles.confirmationBooking}>
+                <span>Booking ID</span>
+                <strong>{booking.bookingRef}</strong>
+              </div>
+              <p className={styles.confirmationPrompt}>Would you like to submit a cancellation request for this booking?</p>
+              <div className={styles.confirmationNotice}>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 7v5l3 2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <div>
+                  <strong>Administrator approval required</strong>
+                  <p>Your booking remains active until an administrator approves your cancellation request. Your reserved dates remain held during review.</p>
+                </div>
+              </div>
+            </div>
+            <div className={styles.confirmationActions}>
+              <Button variant="secondary" type="button" onClick={() => setCancelConfirmationOpen(false)}>Keep Booking</Button>
+              <Button variant="danger" type="button" onClick={() => void confirmCancellation()}>Confirm Cancellation</Button>
+            </div>
+          </div>
+        </Modal>
+      ) : null}
 
       {reasonModalOpen && rejectionReason ? (
         <Modal title="Booking rejected" onClose={() => setReasonModalOpen(false)}>

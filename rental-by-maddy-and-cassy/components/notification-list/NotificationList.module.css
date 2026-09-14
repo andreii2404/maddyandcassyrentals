@@ -57,7 +57,10 @@
 }
 
 .markReadButton {
+  min-height: 36px;
+  padding: 0.35rem 0.45rem;
   border: none;
+  border-radius: var(--radius-control);
   background: transparent;
   color: var(--color-primary);
   font-size: 0.62rem;
@@ -65,11 +68,15 @@
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
+  transition: background-color 150ms ease, transform 150ms ease;
 }
 
 .markReadButton:hover {
+  background: var(--color-background-soft);
   text-decoration: underline;
 }
+
+.markReadButton:active { transform: translateY(1px); }
 
 @media (max-width: 480px) {
   .item { flex-direction: column; }

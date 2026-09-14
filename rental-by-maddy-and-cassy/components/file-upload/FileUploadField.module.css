@@ -1,3 +1,14 @@
+.field:has(input:focus-visible) .dropzone,
+.field:has(input:focus-visible) .preview {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.field[aria-disabled="true"] .dropzone {
+  cursor: not-allowed;
+  background: var(--color-background);
+}
+
 .hiddenInput {
   position: absolute;
   width: 1px;
@@ -96,7 +107,10 @@
 }
 
 .removeButton {
+  min-height: 36px;
+  padding: 0.35rem 0.45rem;
   border: none;
+  border-radius: var(--radius-control);
   background: transparent;
   color: var(--color-status-red);
   font-size: 0.8rem;
@@ -106,5 +120,8 @@
 }
 
 .removeButton:hover {
+  background: var(--color-status-red-bg);
   text-decoration: underline;
 }
+
+.removeButton:active { transform: translateY(1px); }

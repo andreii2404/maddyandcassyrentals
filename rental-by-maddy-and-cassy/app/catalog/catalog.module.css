@@ -79,19 +79,30 @@
 }
 
 .resetButton {
-  padding: 0.6rem 1.4rem;
-  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-height);
+  padding: 0.55rem 1.2rem;
+  border-radius: var(--radius-control);
   border: none;
   background: var(--color-primary);
   color: var(--color-white);
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
 }
 
 .resetButton:hover {
   background: var(--color-primary-hover);
+  box-shadow: 0 6px 16px rgba(154, 89, 101, 0.2);
+  transform: translateY(-1px);
+}
+
+.resetButton:active {
+  box-shadow: none;
+  transform: translateY(1px);
 }
 
 @media (max-width: 640px) {

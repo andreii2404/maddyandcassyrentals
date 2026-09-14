@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -177,7 +178,7 @@ export default function AdminBookingsList() {
           ["completed", "Completed", "Returned rentals"],
           ["cancelled", "Cancelled", "Cancelled or declined"],
         ] as const).map(([value, label, description]) => (
-          <button
+          <Button variant="none"
             key={value}
             type="button"
             className={`${styles.summaryCard} ${historyFilter === value ? styles.summaryCardActive : ""}`}
@@ -187,7 +188,7 @@ export default function AdminBookingsList() {
             <span>{label}</span>
             <strong>{summaryCounts[value]}</strong>
             <small>{description}</small>
-          </button>
+          </Button>
         ))}
       </section>
 
@@ -239,7 +240,7 @@ export default function AdminBookingsList() {
         {error ? (
           <div className={styles.error} role="alert">
             {error}
-            <button type="button" onClick={() => void loadBookings()}>Try again</button>
+            <Button variant="none" type="button" onClick={() => void loadBookings()}>Try again</Button>
           </div>
         ) : null}
 
@@ -339,21 +340,21 @@ export default function AdminBookingsList() {
               Showing {(currentPage - 1) * PAGE_SIZE + 1}&ndash;{Math.min(currentPage * PAGE_SIZE, filteredBookings.length)} of {filteredBookings.length}
             </span>
             <div>
-              <button
+              <Button variant="none"
                 type="button"
                 disabled={currentPage === 1}
                 onClick={() => setPage(currentPage - 1)}
               >
                 Previous
-              </button>
+              </Button>
               <strong>Page {currentPage} of {pageCount}</strong>
-              <button
+              <Button variant="none"
                 type="button"
                 disabled={currentPage === pageCount}
                 onClick={() => setPage(currentPage + 1)}
               >
                 Next
-              </button>
+              </Button>
             </div>
           </nav>
         ) : null}

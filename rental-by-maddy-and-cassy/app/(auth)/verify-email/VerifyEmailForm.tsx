@@ -7,6 +7,7 @@ import { logout, sendEmailOtp, verifyEmailOtp } from "@/src/services/authService
 import { getUserProfile } from "@/src/services/userService";
 import Spinner from "@/components/ui/Spinner";
 import formStyles from "@/components/ui/Form.module.css";
+import { Button } from "@/components/ui/Button";
 import styles from "../auth.module.css";
 
 const RESEND_COOLDOWN_SECONDS = 60;
@@ -200,26 +201,34 @@ export default function VerifyEmailForm() {
           />
         </div>
 
-        <button
-          type="submit"
-          className={`${formStyles.primaryButton} ${styles.submitButton}`}
-          disabled={verifying || code.length !== 6}
-        >
-          {verifying ? "Verifying..." : "Verify & Continue"}
-        </button>
+          <Button
+            type="submit"
+            variant="primary"
+            className={styles.submitButton}
+            loading={verifying}
+            loadingText="Verifying..."
+            disabled={code.length !== 6}
+          >
+            Verify &amp; Continue
+          </Button>
       </form>
 
       <div className={styles.verifyActions}>
-        <button type="button" onClick={() => void resend()} disabled={resending || cooldown > 0}>
-          {resending
-            ? "Sending..."
-            : cooldown > 0
-              ? `Resend code in ${cooldown}s`
-              : "Send a new code"}
-        </button>
-        <button type="button" onClick={useAnotherEmail}>
-          Use another email
-        </button>
+          <Button
+            variant="none"
+            type="button"
+            onClick={() => void resend()}
+            disabled={resending || cooldown > 0}
+          >
+            {resending
+              ? "Sending..."
+              : cooldown > 0
+                ? `Resend code in ${cooldown}s`
+                : "Send a new code"}
+          </Button>
+          <Button variant="none" type="button" onClick={useAnotherEmail}>
+            Use another email
+          </Button>
       </div>
     </div>
   );

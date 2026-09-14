@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import type { Product } from "@/types/product";
@@ -58,9 +59,9 @@ export default function FavoritesView({ products }: FavoritesViewProps) {
             <span className={styles.count}>
               {favoriteProducts.length} {favoriteProducts.length === 1 ? "saved item" : "saved items"}
             </span>
-            <button type="button" className={styles.clearButton} onClick={clearFavorites}>
+            <Button variant="none" type="button" className={styles.clearButton} onClick={clearFavorites}>
               Clear all
-            </button>
+            </Button>
           </div>
         ) : null}
       </header>

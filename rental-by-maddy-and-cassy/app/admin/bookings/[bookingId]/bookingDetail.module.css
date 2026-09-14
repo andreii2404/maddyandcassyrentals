@@ -176,10 +176,10 @@
 
 .statusHeroButton {
   width: 100%;
-  min-height: 44px;
+  min-height: var(--control-height);
   padding: 0.7rem 1.1rem;
   border: 1px solid var(--color-primary);
-  border-radius: 11px;
+  border-radius: var(--radius-control);
   background: var(--color-primary);
   color: var(--color-white);
   flex-shrink: 0;
@@ -324,17 +324,28 @@
 .exportButton,
 .applyButton,
 .signatureButton {
-  min-height: 42px;
-  padding: 0.65rem 1rem;
+  display: inline-flex;
+  min-height: var(--control-height);
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 0.9rem;
   border: 1px solid var(--color-primary);
-  border-radius: 11px;
+  border-radius: var(--radius-control);
   background: var(--color-primary);
   color: var(--color-white);
   font: inherit;
   font-size: 0.8rem;
   font-weight: 700;
   cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease, filter 140ms ease;
 }
+
+.exportButton:hover:not(:disabled),
+.applyButton:hover:not(:disabled),
+.signatureButton:hover:not(:disabled) { background: var(--color-primary-hover); transform: translateY(-1px); }
+.exportButton:active:not(:disabled),
+.applyButton:active:not(:disabled),
+.signatureButton:active:not(:disabled) { transform: translateY(1px); }
 
 .exportButton {
   background: var(--color-white);
@@ -698,6 +709,8 @@
 
 .bookingSnapshot .statusHeroButton {
   margin-top: 0.85rem;
+
+  min-height: var(--control-height);
 }
 
 .bookingSnapshot .snapshotTopline {
@@ -782,6 +795,47 @@
   gap: 0.7rem;
 }
 
+.cancellationDecisionControls .noteField {
+  display: grid;
+  min-width: 0;
+  gap: 0.4rem;
+}
+
+.cancellationDecisionControls .noteField > span {
+  color: var(--color-charcoal);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.35;
+}
+
+.cancellationDecisionControls .noteField textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 5.5rem;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid rgba(154, 89, 101, 0.28);
+  border-radius: 10px;
+  background: var(--color-white);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  outline: 0;
+  resize: vertical;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.cancellationDecisionControls .noteField textarea:focus {
+  border-color: var(--color-status-red);
+  box-shadow: 0 0 0 3px rgba(154, 89, 101, 0.14);
+}
+
+.cancellationDecisionControls .noteField textarea:disabled {
+  background: rgba(255, 255, 255, 0.58);
+  cursor: not-allowed;
+}
+
 .headerStatus {
   display: grid;
   min-height: 32px;
@@ -808,21 +862,36 @@
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.55rem;
+  margin-top: 0.1rem;
 }
 
 .cancellationDecisionButtons button {
-  min-height: 38px;
-  padding: 0.5rem 0.8rem;
-  border-radius: 10px;
+  min-height: 40px;
+  padding: 0.45rem 0.75rem;
+  border-radius: var(--radius-control);
   font: inherit;
   font-size: 0.68rem;
   font-weight: 800;
   cursor: pointer;
+  transition: background-color 140ms ease, box-shadow 140ms ease, transform 140ms ease, filter 140ms ease;
 }
 
 .cancellationDecisionButtons button:disabled { cursor: wait; opacity: 0.65; }
 .cancellationRejectButton { border: 1px solid var(--color-status-red); background: white; color: var(--color-status-red); }
 .cancellationApproveButton { border: 1px solid var(--color-status-green); background: var(--color-status-green); color: white; }
+
+.cancellationRejectButton:hover:not(:disabled),
+.cancellationRejectButton:focus-visible {
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 0 0 3px rgba(154, 89, 101, 0.12);
+}
+
+.cancellationApproveButton:hover:not(:disabled),
+.cancellationApproveButton:focus-visible {
+  filter: brightness(0.94);
+  box-shadow: 0 0 0 3px rgba(72, 136, 97, 0.16);
+}
+.cancellationDecisionButtons button:active:not(:disabled) { transform: translateY(1px); box-shadow: none; }
 
 .snapshotFacts {
   display: grid;
@@ -1779,7 +1848,9 @@
 .signerField input:disabled { background: #f5f4f2; cursor: not-allowed; }
 .authorizationCheck { display: flex; align-items: flex-start; gap: 0.5rem; color: var(--color-charcoal); font-size: 0.6rem; line-height: 1.5; }
 .authorizationCheck input { width: 16px; height: 16px; margin: 0.08rem 0 0; accent-color: var(--color-primary); }
-.countersignButton { min-height: 41px; padding: 0.65rem 0.8rem; border: 1px solid var(--color-primary); border-radius: 10px; background: var(--color-primary); color: #fff; font: inherit; font-size: 0.68rem; font-weight: 800; cursor: pointer; }
+.countersignButton { display:inline-flex; min-height:var(--control-height); align-items:center; justify-content:center; padding:0.55rem 0.75rem; border:1px solid var(--color-primary); border-radius:var(--radius-control); background:var(--color-primary); color:#fff; font:inherit; font-size:0.68rem; font-weight:800; cursor:pointer; transition:background-color 140ms ease, box-shadow 140ms ease, transform 140ms ease; }
+.countersignButton:hover:not(:disabled) { background:var(--color-primary-hover); box-shadow:0 6px 16px rgba(154,89,101,.2); transform:translateY(-1px); }
+.countersignButton:active:not(:disabled) { box-shadow:none; transform:translateY(1px); }
 .countersignButton:disabled { border-color: var(--color-light-gray); background: var(--color-light-gray); color: var(--color-charcoal); cursor: not-allowed; }
 .legalNote { color: var(--color-charcoal); font-size: 0.52rem; line-height: 1.5; }
 
@@ -1790,7 +1861,9 @@
 .completedAgreement p { margin: 0.15rem 0 0; color: var(--color-charcoal); font-size: 0.6rem; line-height: 1.5; }
 .completedAgreement .nextAdminStep { margin: 0; padding: 0.65rem; border-radius: 9px; background: #fff; color: var(--color-text-primary); }
 .agreementButtons { display: flex; flex-wrap: wrap; gap: 0.45rem; }
-.agreementButtons button { min-height: 35px; padding: 0.48rem 0.65rem; border: 1px solid var(--color-status-green); border-radius: 9px; background: var(--color-status-green); color: #fff; font: inherit; font-size: 0.6rem; font-weight: 800; cursor: pointer; }
+.agreementButtons button { min-height:40px; padding:0.45rem 0.6rem; border:1px solid var(--color-status-green); border-radius:var(--radius-control); background:var(--color-status-green); color:#fff; font:inherit; font-size:0.6rem; font-weight:800; cursor:pointer; transition:background-color 140ms ease, transform 140ms ease; }
+.agreementButtons button:hover:not(:disabled) { filter:brightness(0.94); transform:translateY(-1px); }
+.agreementButtons button:active:not(:disabled) { transform:translateY(1px); }
 .agreementButtons .secondaryRecordButton { background: #fff; color: var(--color-status-green); }
 
 /* Rental Agreement — flatten the nested card into the section body, tighten spacing,
@@ -1857,8 +1930,9 @@
 .paymentFacts dt { color: var(--color-charcoal); font-size: 0.54rem; font-weight: 800; text-transform: uppercase; }
 .paymentFacts dd { margin: 0.18rem 0 0; overflow-wrap: anywhere; font-size: 0.68rem; font-weight: 800; }
 .receiptList { display: grid; gap: 0.45rem; margin-top: 0.75rem; }
-.receiptList button { display: grid; width: 100%; grid-template-columns: auto minmax(0,1fr) auto; gap: 0.55rem; align-items: center; padding: 0.62rem; border: 1px solid var(--color-light-gray); border-radius: 10px; background: #fff; color: var(--color-text-primary); text-align: left; cursor: pointer; }
-.receiptList button:hover { border-color: var(--color-dusty-rose); background: var(--color-background-soft); }
+.receiptList button { display: grid; width: 100%; min-height: 44px; grid-template-columns: auto minmax(0,1fr) auto; gap: 0.55rem; align-items: center; padding: 0.55rem 0.62rem; border: 1px solid var(--color-light-gray); border-radius: var(--radius-control); background: #fff; color: var(--color-text-primary); text-align: left; cursor: pointer; transition: border-color 140ms ease, background-color 140ms ease, transform 140ms ease; }
+.receiptList button:hover { border-color: var(--color-dusty-rose); background: var(--color-background-soft); transform: translateY(-1px); }
+.receiptList button:active { transform: translateY(1px); }
 .receiptIcon { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 8px; background: var(--color-background-soft); color: var(--color-primary); font-size: 0.5rem; font-weight: 900; }
 .receiptList button > span:nth-child(2) { min-width: 0; }
 .receiptList strong,.receiptList small { display: block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -1869,8 +1943,9 @@
 .receiptRow { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: stretch; gap: 0.45rem; }
 .receiptRow > button { height: 100%; }
 .receiptEmailAction { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
-.sendReceiptButton { min-height: 36px; padding: 0.5rem 0.7rem; border: 1px solid var(--color-primary); border-radius: 9px; background: #fff; color: var(--color-primary); font: inherit; font-size: 0.62rem; font-weight: 800; cursor: pointer; }
-.sendReceiptButton:hover:not(:disabled) { background: var(--color-primary); color: #fff; }
+.sendReceiptButton { min-height: 40px; padding: 0.45rem 0.65rem; border: 1px solid var(--color-primary); border-radius: var(--radius-control); background: #fff; color: var(--color-primary); font: inherit; font-size: 0.62rem; font-weight: 800; cursor: pointer; transition: background-color 140ms ease, color 140ms ease, transform 140ms ease; }
+.sendReceiptButton:hover:not(:disabled) { background: var(--color-primary); color: #fff; transform: translateY(-1px); }
+.sendReceiptButton:active:not(:disabled) { transform: translateY(1px); }
 .sendReceiptButton:disabled { border-color: var(--color-light-gray); background: var(--color-light-gray); color: var(--color-charcoal); cursor: not-allowed; }
 .receiptSentBadge { padding: 0.32rem 0.55rem; border-radius: 999px; background: var(--color-status-green-bg); color: var(--color-status-green); font-size: 0.56rem; font-weight: 800; }
 
@@ -2008,8 +2083,12 @@
 .dialogActions { display: grid; grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr); gap: 0.65rem; }
 .dialogActions button { min-height: 44px; padding: 0.65rem 0.8rem; border-radius: 12px; font: inherit; font-size: 0.74rem; font-weight: 800; cursor: pointer; }
 .dialogActions button:disabled { opacity: 0.6; cursor: wait; }
-.dialogCancelButton { border: 1px solid var(--color-light-gray); background: var(--color-white); color: var(--color-charcoal); }
-.dialogConfirmButton { border: 1px solid var(--color-primary); background: var(--color-primary); color: var(--color-white); }
+.dialogCancelButton { border: 1px solid var(--color-light-gray); background: var(--color-white); color: var(--color-charcoal);
+  min-height: var(--control-height);
+}
+.dialogConfirmButton { border: 1px solid var(--color-primary); background: var(--color-primary); color: var(--color-white);
+  min-height: var(--control-height);
+}
 .dialogDangerButton { border-color: var(--color-status-red); background: var(--color-status-red); }
 
 @media (max-width: 1050px) {
@@ -2061,7 +2140,9 @@
 
   .statusHeroButton {
     width: 100%;
-  }
+
+  min-height: var(--control-height);
+}
 
   .actionChoiceGrid,
   .actionConfirmation,

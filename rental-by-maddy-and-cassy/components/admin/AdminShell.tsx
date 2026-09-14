@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import RequireAdmin from "@/components/route-guards/RequireAdmin";
+import { Button } from "@/components/ui/Button";
 import { logout } from "@/src/services/authService";
 import styles from "./AdminShell.module.css";
 
@@ -82,24 +83,24 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     <RequireAdmin>
       <div className={styles.shell}>
         <header className={styles.mobileTopbar}>
-          <button
-            type="button"
-            className={`${styles.menuButton} ${sidebarOpen ? styles.menuButtonOpen : ""}`}
-            aria-expanded={sidebarOpen}
-            aria-controls="admin-sidebar"
-            aria-label={sidebarOpen ? "Close navigation menu" : "Open navigation menu"}
-            onClick={() => setSidebarOpen((open) => !open)}
-          >
-            <span />
-            <span />
-            <span />
-          </button>
+        <Button
+          variant="none"
+          className={`${styles.menuButton} ${sidebarOpen ? styles.menuButtonOpen : ""}`}
+          aria-expanded={sidebarOpen}
+          aria-controls="admin-sidebar"
+          aria-label={sidebarOpen ? "Close navigation menu" : "Open navigation menu"}
+          onClick={() => setSidebarOpen((open) => !open)}
+        >
+          <span />
+          <span />
+          <span />
+        </Button>
           <span className={styles.mobileTopbarTitle}>Rental Admin</span>
         </header>
 
         {sidebarOpen ? (
-          <button
-            type="button"
+          <Button
+            variant="none"
             className={styles.backdrop}
             aria-label="Close navigation menu"
             onClick={() => setSidebarOpen(false)}
@@ -127,14 +128,14 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                 <span>Maddy &amp; Cassy</span>
               </div>
             </div>
-            <button
-              type="button"
+            <Button
+              variant="none"
               className={styles.closeButton}
               aria-label="Close navigation menu"
               onClick={() => setSidebarOpen(false)}
             >
               ✕
-            </button>
+            </Button>
           </div>
 
           <nav className={styles.navigation} aria-label="Administrator navigation">
@@ -161,9 +162,16 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             <Link href="/" className={styles.siteLink}>
               View Public Website
             </Link>
-            <button type="button" className={styles.signOut} onClick={handleSignOut} disabled={signingOut}>
+            <Button
+              variant="none"
+              className={styles.signOut}
+              loading={signingOut}
+              loadingText="Signing out..."
+              disabled={signingOut}
+              onClick={handleSignOut}
+            >
               {signingOut ? "Signing out..." : "Sign Out"}
-            </button>
+            </Button>
           </div>
         </aside>
 

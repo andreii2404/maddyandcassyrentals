@@ -2,20 +2,26 @@
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  padding: 0.65rem 1.2rem;
-  border-radius: 999px;
+  min-height: var(--control-height);
+  padding: 0.55rem 1rem;
+  border-radius: var(--radius-control);
   border: 1px solid var(--color-light-gray);
   background: var(--color-white);
   color: var(--color-primary);
   font-size: 0.88rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
 }
 
 .button:hover {
   border-color: var(--color-dusty-rose);
   transform: translateY(-1px);
+}
+
+.button:active {
+  box-shadow: none;
+  transform: translateY(1px);
 }
 
 .active {

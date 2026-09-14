@@ -1,6 +1,7 @@
 "use client";
 
 import SearchIcon from "@/components/icons/SearchIcon";
+import { Button } from "@/components/ui/Button";
 import styles from "./CatalogFilters.module.css";
 
 export type CategoryFilter = string;
@@ -35,15 +36,15 @@ export default function CatalogFilters({
     <div className={styles.toolbar}>
       <div className={styles.categoryRow} role="group" aria-label="Filter by category">
         {categories.map((item) => (
-          <button
+          <Button
             key={item}
-            type="button"
-            aria-pressed={category === item}
+            variant="none"
             className={`${styles.categoryPill} ${category === item ? styles.categoryPillActive : ""}`}
+            aria-pressed={category === item}
             onClick={() => onCategoryChange(item)}
           >
             {item === "All" ? "All Products" : item}
-          </button>
+          </Button>
         ))}
       </div>
 

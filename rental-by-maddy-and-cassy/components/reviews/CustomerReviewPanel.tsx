@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { submitReview } from "@/src/services/reviewService";
+import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/ToastProvider";
 import styles from "./CustomerReviewPanel.module.css";
 
@@ -78,13 +79,17 @@ export default function CustomerReviewPanel({
       <fieldset disabled={submitting}>
         <legend>Rating</legend>
         <div className={styles.stars}>
-          {[1, 2, 3, 4, 5].map((value) => (
-            <button key={value} type="button" onClick={() => setRating(value)} aria-label={`${value} star rating`} aria-pressed={rating === value}>{value <= rating ? "★" : "☆"}</button>
-          ))}
+           {[1, 2, 3, 4, 5].map((value) => (
+             <Button key={value} variant="icon" size="sm" onClick={() => setRating(value)} aria-pressed={rating === value} aria-label={`${value} star rating`}>
+               {value <= rating ? "★" : "☆"}
+             </Button>
+           ))}
         </div>
       </fieldset>
       <label><span>Review (optional)</span><textarea rows={4} maxLength={1000} value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Share helpful details about the item and rental experience." /></label>
-      <button type="button" onClick={() => void handleSubmit()} disabled={submitting}>{submitting ? "Submitting..." : "Submit Review"}</button>
+      <Button variant="primary" type="button" loading={submitting} loadingText="Submitting..." onClick={() => void handleSubmit()}>
+        Submit Review
+      </Button>
     </div>
   );
 }

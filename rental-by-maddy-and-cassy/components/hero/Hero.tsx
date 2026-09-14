@@ -1,9 +1,9 @@
-import Link from "next/link";
 import ProductShowcase from "@/components/product-showcase/ProductShowcase";
 import Stats from "@/components/stats/Stats";
 import CalendarIcon from "@/components/icons/CalendarIcon";
 import SearchIcon from "@/components/icons/SearchIcon";
 import type { Product } from "@/types/product";
+import { Button } from "@/components/ui/Button";
 import styles from "./Hero.module.css";
 
 interface HeroProps {
@@ -44,14 +44,20 @@ export default function Hero({ products }: HeroProps) {
               autoComplete="off"
               placeholder="Search iPhones, cameras, or models"
             />
-            <button type="submit">Search</button>
+            <Button type="submit" variant="none">
+              Search
+            </Button>
           </form>
 
           <div className={styles.buttons}>
-            <Link href="/catalog" className={styles.primaryButton}>
-              <CalendarIcon size={18} />
+            <Button
+              href="/catalog"
+              variant="none"
+              className={styles.primaryButton}
+              icon={<CalendarIcon size={18} />}
+            >
               Check Availability
-            </Link>
+            </Button>
             <a href="#how-it-works" className={styles.tertiaryLink}>
               How Renting Works <span aria-hidden="true">→</span>
             </a>

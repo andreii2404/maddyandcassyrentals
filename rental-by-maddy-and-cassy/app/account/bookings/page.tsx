@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
@@ -113,7 +114,7 @@ export default function BookingsListPage() {
 
       <section className={styles.summaryGrid} aria-label="Booking summary">
         {FILTERS.map((item) => (
-          <button
+          <Button variant="none"
             key={item.value}
             type="button"
             className={`${styles.summaryCard} ${filter === item.value ? styles.summaryCardActive : ""}`}
@@ -123,7 +124,7 @@ export default function BookingsListPage() {
             <span>{item.label}</span>
             <strong>{counts[item.value]}</strong>
             <small>{item.value === "ongoing" ? "Needs attention or in progress" : item.value === "completed" ? "Returned rentals" : item.value === "cancelled" ? "Cancelled or declined" : "Complete history"}</small>
-          </button>
+          </Button>
         ))}
       </section>
 
@@ -195,7 +196,7 @@ export default function BookingsListPage() {
           <div className={styles.empty}>
             <strong>No matching bookings</strong>
             <p>Try another status or clear your search.</p>
-            <button type="button" onClick={() => { setFilter("all"); setSearch(""); }}>Clear filters</button>
+            <Button variant="none" type="button" onClick={() => { setFilter("all"); setSearch(""); }}>Clear filters</Button>
           </div>
         ) : (
           <ul className={styles.list} aria-live="polite">

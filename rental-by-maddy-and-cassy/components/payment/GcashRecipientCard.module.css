@@ -38,15 +38,16 @@
 
 .downloadButton,
 .copyButton {
-  min-height: 34px;
+  min-height: 40px;
   border: 1px solid var(--color-primary);
-  border-radius: 9px;
+  border-radius: var(--radius-control);
   color: var(--color-primary);
   background: var(--color-white);
   font: inherit;
   font-size: 0.68rem;
   font-weight: 800;
   cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 150ms ease;
 }
 
 .downloadButton {
@@ -71,8 +72,13 @@
 
 .downloadButton:focus-visible,
 .copyButton:focus-visible {
-  outline: 3px solid rgba(154, 89, 101, 0.22);
+  outline: 3px solid var(--color-focus);
   outline-offset: 2px;
+}
+
+.downloadButton:active,
+.copyButton:active {
+  transform: translateY(1px);
 }
 
 .details {
@@ -154,7 +160,7 @@
 
 .compact .downloadButton,
 .compact .copyButton {
-  min-height: 30px;
+  min-height: 36px;
   font-size: 0.62rem;
 }
 

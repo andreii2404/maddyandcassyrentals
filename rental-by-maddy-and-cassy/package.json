@@ -12,9 +12,10 @@
     "test:payments": "tsx --test scripts/testPayments.ts",
     "test:checkout": "tsx --test scripts/testCheckout.ts",
     "test:bookings": "tsx --test scripts/testBookingManagement.ts",
+    "test:documents": "tsx --test scripts/testDocumentResubmission.ts",
     "test:auth": "tsx --test scripts/testAuthValidation.ts",
     "test:rental-timing": "tsx --test scripts/testRentalTiming.ts",
-    "verify": "npm run lint && tsc --noEmit && npm run test:payments && npm run test:checkout && npm run test:bookings && npm run test:auth && npm run test:rental-timing && npm run build"
+    "verify": "npm run lint && tsc --noEmit && npm run test:payments && npm run test:checkout && npm run test:bookings && npm run test:documents && npm run test:auth && npm run test:rental-timing && npm run build"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.5.3",

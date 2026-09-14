@@ -22,9 +22,9 @@
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
-  min-height: 40px;
+  min-height: var(--control-height);
   padding: 0.55rem 0.75rem;
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   border: 1px solid var(--color-light-gray);
   background: var(--color-white);
   color: var(--color-text-primary);
@@ -37,7 +37,7 @@
 .input:focus,
 .textarea:focus,
 .select:focus {
-  border-color: var(--color-dusty-rose);
+  border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(215, 165, 165, 0.25);
 }
 
@@ -84,9 +84,9 @@
 }
 
 .primaryButton {
-  min-height: 42px;
-  padding: 0.65rem 1.35rem;
-  border-radius: 999px;
+  min-height: var(--control-height);
+  padding: 0.55rem 1.15rem;
+  border-radius: var(--radius-control);
   border: none;
   background: var(--color-primary);
   color: var(--color-white);
@@ -110,10 +110,15 @@
   box-shadow: none;
 }
 
+.primaryButton:active:not(:disabled) {
+  box-shadow: none;
+  transform: translateY(1px);
+}
+
 .secondaryButton {
-  min-height: 42px;
-  padding: 0.65rem 1.35rem;
-  border-radius: 999px;
+  min-height: var(--control-height);
+  padding: 0.55rem 1.15rem;
+  border-radius: var(--radius-control);
   border: 1px solid var(--color-light-gray);
   background: var(--color-white);
   color: var(--color-text-primary);
@@ -131,6 +136,10 @@
 .secondaryButton:disabled {
   color: var(--color-charcoal);
   cursor: not-allowed;
+}
+
+.secondaryButton:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .checkboxField {

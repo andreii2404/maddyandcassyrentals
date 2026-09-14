@@ -1,6 +1,7 @@
 "use client";
 
 import { useFavorites } from "@/hooks/useFavorites";
+import { Button } from "@/components/ui/Button";
 import HeartIcon from "@/components/icons/HeartIcon";
 import styles from "./FavoriteButton.module.css";
 
@@ -14,8 +15,8 @@ export default function FavoriteButton({ productId, productName }: FavoriteButto
   const active = isFavorite(productId);
 
   return (
-    <button
-      type="button"
+    <Button
+      variant="none"
       className={`${styles.button} ${active ? styles.active : ""}`}
       onClick={() => toggleFavorite(productId)}
       aria-pressed={active}
@@ -23,6 +24,6 @@ export default function FavoriteButton({ productId, productName }: FavoriteButto
     >
       <HeartIcon size={18} filled={active} />
       {active ? "Saved" : "Save"}
-    </button>
+    </Button>
   );
 }

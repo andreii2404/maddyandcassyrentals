@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -62,7 +63,7 @@ export default function CatalogProductCard({
   useEffect(() => stopSlideshow, [stopSlideshow]);
 
   const startSlideshow = useCallback(() => {
-    if (galleryImages.length < 2 || !window.matchMedia(CAN_HOVER_QUERY).matches) return;
+    if (galleryImages.length < 2 || !window.matchMedia(CAN_HOVER_QUERY).matches || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     setHasHovered(true);
     if (intervalRef.current !== null) return;
     intervalRef.current = window.setInterval(() => {
@@ -116,7 +117,7 @@ export default function CatalogProductCard({
         {unavailable ? <span className={styles.unavailableRibbon}>Unavailable</span> : null}
       </div>
 
-      <button
+      <Button variant="none"
         type="button"
         className={`${styles.favoriteButton} ${isFavorite ? styles.favoriteActive : ""}`}
         onClick={() => onToggleFavorite(product.id)}
@@ -124,7 +125,7 @@ export default function CatalogProductCard({
         aria-label={isFavorite ? `Remove ${product.name} from favorites` : `Add ${product.name} to favorites`}
       >
         <HeartIcon size={17} filled={isFavorite} />
-      </button>
+      </Button>
 
       <div className={styles.info}>
         <p className={styles.category}>{product.category}</p>
@@ -175,7 +176,7 @@ export default function CatalogProductCard({
             <Link href={detailsHref} className={styles.detailsButton}>
               View Details
             </Link>
-            <button
+            <Button variant="none"
               type="button"
               className={styles.cartButton}
               disabled={unavailable}
@@ -185,7 +186,7 @@ export default function CatalogProductCard({
               }}
             >
               + Add to Cart
-            </button>
+            </Button>
           </div>
         </div>
       </div>

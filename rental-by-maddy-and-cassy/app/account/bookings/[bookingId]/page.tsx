@@ -17,6 +17,7 @@ import Spinner from "@/components/ui/Spinner";
 import formStyles from "@/components/ui/Form.module.css";
 import styles from "./bookingDetail.module.css";
 import BookingPaymentPanel from "@/components/payment/BookingPaymentPanel";
+import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/ToastProvider";
 import CustomerReviewPanel from "@/components/reviews/CustomerReviewPanel";
 import CustomerBookingManagement from "@/components/booking-management/CustomerBookingManagement";
@@ -27,6 +28,7 @@ import {
 import { bookingHeadline, bookingItemsSummaryData } from "@/src/lib/bookingDisplay";
 import { formatManilaDateTime } from "@/src/lib/rentalTiming";
 import GuestBookingRecoveryForm from "@/components/guest-booking/GuestBookingRecoveryForm";
+import DocumentResubmission from "@/components/booking-management/DocumentResubmission";
 
 const REQUIREMENTS_STATUS_LABEL: Record<string, string> = {
   not_submitted: "Not Submitted",
@@ -184,7 +186,9 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
           Your signed-in rentals are available under My Bookings. To recover a separate guest
           checkout, sign out first, then reopen Track Guest Booking and verify its checkout details.
         </p>
-        <Link href="/account/bookings" className={formStyles.primaryButton}>Open My Bookings</Link>
+        <Button href="/account/bookings" variant="primary" className={styles.backLink}>
+          Open My Bookings
+        </Button>
       </section>
     );
   }
@@ -347,18 +351,18 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
       </header>
 
         <nav className={styles.sectionNav} aria-label="Booking detail sections" role="tablist">
-          <button type="button" role="tab" aria-selected={activePanel === "overview"} onClick={() => selectPanel("overview")}>
+          <Button variant="none" type="button" role="tab" aria-selected={activePanel === "overview"} onClick={() => selectPanel("overview")}>
             <span>01</span><strong>Overview</strong><small>Rental &amp; payment</small>
-          </button>
-          <button type="button" role="tab" aria-selected={activePanel === "progress"} onClick={() => selectPanel("progress")}>
+          </Button>
+          <Button variant="none" type="button" role="tab" aria-selected={activePanel === "progress"} onClick={() => selectPanel("progress")}>
             <span>02</span><strong>Progress</strong><small>{completedSteps} of {processSteps.length} steps</small>
-          </button>
-          <button type="button" role="tab" aria-selected={activePanel === "documents"} onClick={() => selectPanel("documents")}>
+          </Button>
+          <Button variant="none" type="button" role="tab" aria-selected={activePanel === "documents"} onClick={() => selectPanel("documents")}>
             <span>03</span><strong>Documents</strong><small>{documentCount} available</small>
-          </button>
-          <button type="button" role="tab" aria-selected={activePanel === "updates"} onClick={() => selectPanel("updates")}>
+          </Button>
+          <Button variant="none" type="button" role="tab" aria-selected={activePanel === "updates"} onClick={() => selectPanel("updates")}>
             <span>04</span><strong>Updates</strong><small>Live notifications</small>
-          </button>
+          </Button>
         </nav>
 
       <section className={styles.quickTracker} aria-label="Booking process summary">
@@ -370,7 +374,7 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
           <div className={styles.quickProgressTrack} aria-label={`${completionPercentage}% complete`}>
             <span style={{ width: `${completionPercentage}%` }} />
           </div>
-          <button type="button" onClick={() => selectPanel("progress")}>View full tracker →</button>
+          <Button variant="none" type="button" onClick={() => selectPanel("progress")}>View full tracker →</Button>
         </div>
         <ol>
           {processSteps.map((step, index) => (
@@ -441,12 +445,12 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
                 <h3>Continue your booking</h3>
                 <p>Complete the next guided step so the team can review and confirm your reservation.</p>
               </div>
-              <Link
+              <Button
                 href={`/catalog/${booking.productId}/reserve?bookingId=${booking.id}`}
-                className={formStyles.primaryButton}
+                variant="primary"
               >
                 Continue Booking
-              </Link>
+              </Button>
             </section>
           ) : null}
         </div>
@@ -553,7 +557,7 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
           <ul className={styles.documentList}>
             {agreementDocumentPath ? (
               <li>
-                <button type="button" onClick={() => openBookingFile("agreements", agreementDocumentPath)}>
+                <Button variant="none" type="button" onClick={() => openBookingFile("agreements", agreementDocumentPath)}>
                   <span className={styles.documentIcon} aria-hidden="true">PDF</span>
                   <span className={styles.documentInfo}>
                     <strong>{agreement?.finalDocumentPath ? "Signed Rental Agreement" : "Rental Agreement"}</strong>
@@ -562,24 +566,24 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
                   <span className={`${styles.documentStatus} ${agreement?.finalDocumentPath ? styles.approved : styles.pending}`}>
                     {agreement?.finalDocumentPath ? "Completed" : "Prepared"}
                   </span>
-                </button>
+                </Button>
               </li>
             ) : null}
             {issuedReceipts.map((receipt) => (
               <li key={receipt.id}>
-                <button type="button" onClick={() => openBookingFile("receipts", receipt.documentPath!)}>
+                <Button variant="none" type="button" onClick={() => openBookingFile("receipts", receipt.documentPath!)}>
                   <span className={styles.documentIcon} aria-hidden="true">PDF</span>
                   <span className={styles.documentInfo}>
                     <strong>Official Receipt {receipt.receiptNumber}</strong>
                     <small>Issued {new Date(receipt.issuedAt).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}</small>
                   </span>
                   <span className={`${styles.documentStatus} ${styles.approved}`}>Issued</span>
-                </button>
+                </Button>
               </li>
             ))}
             {documents.map((document) => (
-              <li key={document.id}>
-                <button
+              <li key={document.id} className={styles.documentRow}>
+                <Button variant="none"
                   type="button"
                   onClick={() => openBookingFile(
                     document.storageBucket as Parameters<typeof getBookingFileUrl>[1],
@@ -594,7 +598,15 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
                   <span className={`${styles.documentStatus} ${styles[document.reviewStatus]}`}>
                     {formatDocumentType(document.reviewStatus)}
                   </span>
-                </button>
+                </Button>
+                {document.reviewStatus === "rejected" ? (
+                  <div className={styles.rejectedDocumentDetails}>
+                    <span className={styles.rejectedDocumentReason}>
+                      <strong>Rejected</strong>{document.reviewNotes || "Please upload a corrected file for review."}
+                    </span>
+                    <DocumentResubmission bookingId={booking.id} document={document} onSubmitted={loadDetails} />
+                  </div>
+                ) : null}
               </li>
             ))}
           </ul>

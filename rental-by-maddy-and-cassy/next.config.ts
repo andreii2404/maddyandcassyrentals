@@ -11,6 +11,14 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "*.supabase.co" },
     ],
   },
+  async rewrites() {
+    return [
+      {
+        source: "/images/products/sony-a7r-v.jpg",
+        destination: "/images/sony-a7r-v.jpg",
+      },
+    ];
+  },
   async headers() {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
     const supabaseWsUrl = supabaseUrl.replace(/^https:/, "wss:");

@@ -13,6 +13,9 @@
   --color-surface: var(--color-white);
   --color-text-secondary: var(--color-charcoal);
   --color-border: var(--color-light-gray);
+  --radius-control: 10px;
+  --control-height: 44px;
+  --color-focus: #83454f;
 
   --color-status-green: #2f7a4d;
   --color-status-green-bg: rgba(210, 240, 220, 0.95);
@@ -83,7 +86,43 @@ img {
   display: block;
 }
 
-button:focus-visible {
-  outline: 3px solid rgba(154, 89, 101, 0.55);
+:where(a, button, input, textarea, select, summary, [tabindex]):focus-visible {
+  outline: 3px solid var(--color-focus);
   outline-offset: 2px;
+}
+
+::selection {
+  background: var(--color-blush);
+  color: var(--color-text-primary);
+}
+
+:where(input, textarea) {
+  caret-color: var(--color-primary);
+}
+
+:where(input, textarea)::placeholder {
+  color: var(--color-charcoal);
+  opacity: 1;
+}
+
+:where(button, a, input, textarea, select) {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 640px) {
+  /* Keep mobile browsers from zooming the page when a field receives focus. */
+  :root :is(input, textarea, select) {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

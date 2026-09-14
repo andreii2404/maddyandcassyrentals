@@ -74,6 +74,8 @@ export default function PaymentProofModal({
               </a>
             </div>
           ) : (
+            // Private signed URLs must load directly, without the public image optimizer/cache.
+            // eslint-disable-next-line @next/next/no-img-element
             <img src={url} alt="Submitted GCash payment proof" className={styles.previewImage} />
           )}
         </div>

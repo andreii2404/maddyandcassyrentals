@@ -24,6 +24,7 @@ import {
 import DateRangePicker from "@/components/date-range-picker/DateRangePicker";
 import PickupTimeSelector from "@/components/reservation/PickupTimeSelector";
 import formStyles from "@/components/ui/Form.module.css";
+import ReservationFooter from "@/components/reservation/ReservationFooter";
 import styles from "./StepRentalDetails.module.css";
 import { PHILIPPINE_PROVINCES } from "@/src/data/philippineLocations";
 
@@ -554,12 +555,6 @@ export default function StepCartRentalDetails({
                 </ul>
               </div>
             ) : null}
-            <div className={styles.summaryActions}>
-              {onBack ? <button type="button" className={formStyles.secondaryButton} onClick={onBack} disabled={checking}>Back</button> : <span />}
-              <button type="button" className={formStyles.primaryButton} disabled={!canContinue || checking} onClick={() => void handleContinue()}>
-                {checking ? "Checking…" : "Continue"}
-              </button>
-            </div>
           </div>
         </aside>
       </div>
@@ -570,26 +565,15 @@ export default function StepCartRentalDetails({
         </p>
       ) : null}
 
-      <div className={styles.footer}>
-        {onBack ? (
-          <button
-            type="button"
-            className={formStyles.secondaryButton}
-            onClick={onBack}
-            disabled={checking}
-          >
-            Back
-          </button>
-        ) : <span />}
-        <button
-          type="button"
-          className={formStyles.primaryButton}
-          disabled={!canContinue || checking}
-          onClick={() => void handleContinue()}
-        >
-          {checking ? "Checking availability..." : "Continue"}
-        </button>
-      </div>
+      <ReservationFooter
+        onBack={onBack}
+        backDisabled={checking}
+        primaryLabel={checking ? "Checking availability..." : "Continue"}
+        primaryLoading={checking}
+        primaryLoadingText="Checking…"
+        primaryDisabled={!canContinue || checking}
+        onContinue={() => void handleContinue()}
+      />
     </div>
   );
 }

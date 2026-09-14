@@ -8,17 +8,23 @@
 .reviewCount span { color:var(--color-charcoal); font-size:.52rem; font-weight:700; text-transform:uppercase; }
 .progress { overflow:hidden; height:6px; border-radius:999px; background:var(--color-light-gray); }
 .progress span { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,var(--color-primary),var(--color-dusty-rose)); transition:width 180ms ease; }
+.resubmissionAlert { display:grid; gap:.2rem; padding:.7rem .8rem; border:1px solid rgba(154,89,101,.28); border-left:4px solid var(--color-primary); border-radius:11px; background:linear-gradient(90deg,rgba(246,235,231,.9),#fff); color:var(--color-text-primary); }
+.resubmissionAlert strong { color:var(--color-primary); font-size:.68rem; }
+.resubmissionAlert span { color:var(--color-charcoal); font-size:.62rem; line-height:1.45; }
 .bulkBar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.6rem; padding:.55rem .7rem; border:1px solid rgba(154,89,101,.14); border-radius:12px; background:#fff; }
 .bulkCheckbox { display:inline-flex; align-items:center; gap:.45rem; color:var(--color-charcoal); font-size:.62rem; font-weight:800; cursor:pointer; }
 .bulkCheckbox input,.cardCheckbox { width:15px; height:15px; flex:0 0 auto; margin:0; accent-color:var(--color-primary); cursor:pointer; }
 .bulkCheckbox input:disabled,.cardCheckbox:disabled { opacity:.55; cursor:not-allowed; }
-.bulkApproveButton { display:inline-flex; align-items:center; justify-content:center; gap:.35rem; min-height:34px; padding:.45rem .85rem; border:1px solid var(--color-status-green-border); border-radius:9px; background:var(--color-status-green-bg); color:var(--color-status-green); font:inherit; font-size:.6rem; font-weight:800; cursor:pointer; }
+.bulkApproveButton { display:inline-flex; align-items:center; justify-content:center; gap:.35rem; min-height:40px; padding:.45rem .75rem; border:1px solid var(--color-status-green-border); border-radius:var(--radius-control); background:var(--color-status-green-bg); color:var(--color-status-green); font:inherit; font-size:.6rem; font-weight:800; cursor:pointer; transition:background-color 140ms ease, border-color 140ms ease, transform 140ms ease; }
+.bulkApproveButton:hover:not(:disabled) { border-color:var(--color-status-green); background:var(--color-status-green-bg); transform:translateY(-1px); }
+.bulkApproveButton:active:not(:disabled) { transform:translateY(1px); }
 .bulkApproveButton:disabled { opacity:.55; cursor:not-allowed; }
 .toplineMain { display:flex; min-width:0; align-items:center; gap:.55rem; }
 .list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.7rem; }
 .documentCard { min-width:0; padding:.85rem; border:1px solid var(--color-light-gray); border-radius:14px; background:#fff; }
 .documentCard.approved { border-color:var(--color-status-green-border); }
 .documentCard.rejected { border-color:var(--color-status-red-border); }
+.documentCard.resubmitted { border:2px solid var(--color-primary); box-shadow:0 8px 24px rgba(154,89,101,.14); background:linear-gradient(145deg,#fff,rgba(246,235,231,.62)); }
 .documentTopline { display:flex; align-items:flex-start; justify-content:space-between; gap:.7rem; }
 .fileButton { display:flex; min-width:0; gap:.6rem; align-items:center; padding:0; border:0; background:transparent; color:var(--color-text-primary); text-align:left; cursor:pointer; }
 .fileButton:disabled { cursor:wait; }
@@ -30,11 +36,17 @@
 .statusPill { padding:.3rem .48rem; border-radius:999px; background:var(--color-status-yellow-bg); color:var(--color-status-yellow); font-size:.52rem; font-weight:800; white-space:nowrap; }
 .statusPill.approved { background:var(--color-status-green-bg); color:var(--color-status-green); }
 .statusPill.rejected { background:var(--color-status-red-bg); color:var(--color-status-red); }
+.statusPill.resubmitted { background:var(--color-primary); color:#fff; }
+.resubmissionMeta { display:flex; align-items:center; justify-content:space-between; gap:.6rem; margin-top:.7rem; padding:.5rem .6rem; border-radius:9px; background:rgba(154,89,101,.1); color:var(--color-primary); }
+.resubmissionMeta strong { font-size:.6rem; letter-spacing:.02em; }
+.resubmissionMeta span { color:var(--color-charcoal); font-size:.58rem; white-space:nowrap; }
 .previousNote { margin-top:.75rem; padding:.65rem; border-radius:10px; background:var(--color-status-red-bg); }
 .previousNote strong { color:var(--color-status-red); font-size:.58rem; text-transform:uppercase; }
 .previousNote p { margin:.2rem 0 0; color:var(--color-text-primary); font-size:.62rem; line-height:1.5; }
 .actions { display:flex; margin-top:.8rem; flex-wrap:wrap; gap:.4rem; }
-.actions button,.rejectEditor button { display:inline-flex; align-items:center; justify-content:center; gap:.35rem; min-height:34px; padding:.45rem .62rem; border:1px solid var(--color-light-gray); border-radius:9px; background:#fff; color:var(--color-charcoal); font:inherit; font-size:.6rem; font-weight:800; cursor:pointer; }
+.actions button,.rejectEditor button { display:inline-flex; align-items:center; justify-content:center; gap:.35rem; min-height:40px; padding:.45rem .6rem; border:1px solid var(--color-light-gray); border-radius:var(--radius-control); background:#fff; color:var(--color-charcoal); font:inherit; font-size:.6rem; font-weight:800; cursor:pointer; transition:background-color 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease; }
+.actions button:hover:not(:disabled),.rejectEditor button:hover:not(:disabled) { border-color:var(--color-dusty-rose); background:var(--color-background-soft); transform:translateY(-1px); }
+.actions button:active:not(:disabled),.rejectEditor button:active:not(:disabled) { transform:translateY(1px); }
 .actions .openButton { margin-right:auto; color:var(--color-primary); }
 .actions .approveButton { border-color:var(--color-status-green-border); background:var(--color-status-green-bg); color:var(--color-status-green); }
 .actions .rejectButton { border-color:var(--color-status-red-border); background:var(--color-status-red-bg); color:var(--color-status-red); }

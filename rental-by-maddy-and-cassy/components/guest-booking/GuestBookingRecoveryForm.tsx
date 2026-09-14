@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { Button } from "@/components/ui/Button";
 import { normalizeEmail, normalizePhoneInput, PHONE_DIGIT_COUNT } from "@/src/lib/authValidation";
 import { startGuestCheckout } from "@/src/services/authService";
 import styles from "./GuestBookingRecoveryForm.module.css";
@@ -129,9 +130,9 @@ export default function GuestBookingRecoveryForm({
         </label>
 
         {error ? <p className={styles.error} role="alert">{error}</p> : null}
-        <button type="submit" disabled={submitting}>
-          {submitting ? "Restoring access…" : "Track Guest Booking"}
-        </button>
+        <Button variant="primary" type="submit" loading={submitting} loadingText="Restoring access…">
+          Track Guest Booking
+        </Button>
       </form>
     </section>
   );

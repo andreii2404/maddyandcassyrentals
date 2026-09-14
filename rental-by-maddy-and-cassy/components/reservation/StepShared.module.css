@@ -44,6 +44,7 @@
   bottom: 0.6rem;
   display: flex;
   justify-content: space-between;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
   margin-top: 0.15rem;
@@ -157,6 +158,13 @@
 }
 
 @media (max-width: 480px) {
+  .footer {
+    bottom: max(0.6rem, env(safe-area-inset-bottom));
+  }
+
+  .footer > a:last-child {
+    flex-basis: 100%;
+  }
   .footer > span:empty {
     display: none;
   }
@@ -187,20 +195,25 @@
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  padding: 0.35rem 0.75rem;
+  min-height: 40px;
+  padding: 0.45rem 0.7rem;
   border: 1px solid var(--color-border);
-  border-radius: 999px;
+  border-radius: var(--radius-control);
   background: var(--color-background);
   color: var(--color-primary);
   font-size: 0.72rem;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
 
 .expandButton:hover {
   background: var(--color-blush);
   border-color: var(--color-primary);
+}
+
+.expandButton:active {
+  transform: translateY(1px);
 }
 
 .expandOverlay {
@@ -248,21 +261,27 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.45rem 0.9rem;
+  min-height: 40px;
+  padding: 0.45rem 0.8rem;
   border: 1px solid var(--color-border);
-  border-radius: 999px;
+  border-radius: var(--radius-control);
   background: var(--color-background);
   color: var(--color-text-primary);
   font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
 }
 
 .expandCloseButton:hover {
   background: var(--color-blush);
   border-color: var(--color-primary);
   color: var(--color-primary);
+}
+
+.expandCloseButton:active {
+  transform: translateY(1px);
 }
 
 .expandBody {
@@ -376,26 +395,33 @@
 
 .replaceButton {
   margin-top: auto;
-  padding: 0.55rem 0.75rem;
+  min-height: 40px;
+  padding: 0.45rem 0.7rem;
   border: 1px solid var(--color-dusty-rose);
-  border-radius: 999px;
+  border-radius: var(--radius-control);
   background: var(--color-white);
   color: var(--color-primary);
   font: inherit;
   font-size: 0.72rem;
   font-weight: 700;
   cursor: pointer;
-  transition: background 140ms ease;
+  transition: background 140ms ease, transform 140ms ease;
 }
 
 .replaceButton:hover {
   background: var(--color-background-soft);
 }
 
+.replaceButton:active {
+  transform: translateY(1px);
+}
+
 .cancelReplaceButton {
   margin-top: 0.4rem;
-  padding: 0;
+  min-height: 36px;
+  padding: 0.35rem 0.45rem;
   border: 0;
+  border-radius: var(--radius-control);
   background: transparent;
   color: var(--color-primary);
   font: inherit;

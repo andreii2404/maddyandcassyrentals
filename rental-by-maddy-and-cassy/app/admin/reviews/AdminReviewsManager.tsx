@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Spinner from "@/components/ui/Spinner";
@@ -187,9 +188,9 @@ export default function AdminReviewsManager() {
           <h1>Feedback &amp; Reviews</h1>
           <span>Review verified renter feedback and control what appears publicly.</span>
         </div>
-        <button type="button" onClick={() => void load()} disabled={refreshing}>
+        <Button variant="none" type="button" onClick={() => void load()} disabled={refreshing}>
           {refreshing ? "Refreshing…" : "Refresh feedback"}
-        </button>
+        </Button>
       </header>
 
       <section className={styles.metrics} aria-label="Review summary">
@@ -229,7 +230,7 @@ export default function AdminReviewsManager() {
               ["approved", "Published", summary.published],
               ["rejected", "Hidden", summary.hidden],
             ] as const).map(([value, label, count]) => (
-              <button
+              <Button variant="none"
                 key={value}
                 type="button"
                 className={status === value ? styles.activeTab : ""}
@@ -237,7 +238,7 @@ export default function AdminReviewsManager() {
                 aria-pressed={status === value}
               >
                 {label}<span>{count}</span>
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -273,7 +274,7 @@ export default function AdminReviewsManager() {
         {error ? (
           <div className={styles.error} role="alert">
             <div><strong>Feedback could not be loaded</strong><span>{error}</span></div>
-            <button type="button" onClick={() => void load()}>Try again</button>
+            <Button variant="none" type="button" onClick={() => void load()}>Try again</Button>
           </div>
         ) : null}
 
@@ -347,17 +348,17 @@ export default function AdminReviewsManager() {
                       </Link>
                     ) : null}
                     {review.status !== "rejected" ? (
-                      <button
+                      <Button variant="none"
                         type="button"
                         className={styles.hideButton}
                         disabled={Boolean(activeReviewId)}
                         onClick={() => void moderateReview(review, "rejected")}
                       >
                         {isSaving ? "Saving…" : "Hide Review"}
-                      </button>
+                      </Button>
                     ) : null}
                     {review.status !== "approved" ? (
-                      <button
+                      <Button variant="none"
                         type="button"
                         className={styles.publishButton}
                         disabled={Boolean(activeReviewId)}
@@ -368,7 +369,7 @@ export default function AdminReviewsManager() {
                           : review.status === "pending"
                             ? "Approve & Publish"
                             : "Publish Review"}
-                      </button>
+                      </Button>
                     ) : null}
                   </div>
                 </article>
@@ -383,9 +384,9 @@ export default function AdminReviewsManager() {
               Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredReviews.length)} of {filteredReviews.length}
             </span>
             <div>
-              <button type="button" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>Previous</button>
+              <Button variant="none" type="button" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>Previous</Button>
               <strong>Page {currentPage} of {pageCount}</strong>
-              <button type="button" disabled={currentPage === pageCount} onClick={() => setPage(currentPage + 1)}>Next</button>
+              <Button variant="none" type="button" disabled={currentPage === pageCount} onClick={() => setPage(currentPage + 1)}>Next</Button>
             </div>
           </footer>
         ) : null}

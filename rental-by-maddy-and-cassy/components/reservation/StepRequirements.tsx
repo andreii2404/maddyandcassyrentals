@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { RequirementsDraft } from "@/src/types/reservationDraft";
@@ -7,6 +8,7 @@ import FileUploadField from "@/components/file-upload/FileUploadField";
 import { isValidPhoneNumber, normalizePhoneInput, PHONE_DIGIT_COUNT } from "@/src/lib/authValidation";
 import { scrollToFirstError } from "@/src/lib/formScroll";
 import formStyles from "@/components/ui/Form.module.css";
+import ReservationFooter from "@/components/reservation/ReservationFooter";
 import styles from "./StepShared.module.css";
 
 interface StepRequirementsProps {
@@ -291,13 +293,13 @@ export default function StepRequirements({
                   <span className={styles.verifiedBadge}>✓ Verified</span>
                   <p className={styles.savedDocMeta}>Verified {formatDate(saved.verifiedAt)}</p>
                 </div>
-                <button
+                <Button variant="none"
                   type="button"
                   className={styles.replaceButton}
                   onClick={() => startReplacement(field.slot, field.fileKey)}
                 >
                   Replace ID
-                </button>
+                </Button>
               </div>
             );
           }
@@ -320,13 +322,13 @@ export default function StepRequirements({
                 }}
               />
               {saved ? (
-                <button
+                <Button variant="none"
                   type="button"
                   className={styles.cancelReplaceButton}
                   onClick={() => cancelReplacement(field.slot, field.fileKey)}
                 >
                   Cancel replacement — keep verified ID
-                </button>
+                </Button>
               ) : null}
             </div>
           );
@@ -472,14 +474,11 @@ export default function StepRequirements({
         </p>
       </div>
 
-      <div className={styles.footer}>
-        <button type="button" className={formStyles.secondaryButton} onClick={onBack}>
-          Back
-        </button>
-        <button type="button" className={formStyles.primaryButton} onClick={handleContinue}>
-          Continue
-        </button>
-      </div>
+      <ReservationFooter
+        onBack={onBack}
+        primaryLabel="Continue"
+        onContinue={handleContinue}
+      />
     </div>
   );
 }

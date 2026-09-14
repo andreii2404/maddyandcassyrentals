@@ -20,6 +20,7 @@ import {
 } from "@/src/lib/authValidation";
 import formStyles from "@/components/ui/Form.module.css";
 import styles from "../auth.module.css";
+import { Button } from "@/components/ui/Button";
 
 const schema = z.object({
   fullName: z.string().trim().min(2, "Enter your complete name").max(150, "Name is too long"),
@@ -59,6 +60,7 @@ export default function SignUpForm() {
   const redirectTo = getCustomerRedirect(searchParams.get("redirect"));
 
   async function onSubmit(values: FormValues) {
+    if (submitting) return;
     setFormError(null);
     setSubmitting(true);
     try {
@@ -99,7 +101,7 @@ export default function SignUpForm() {
       </div>
 
       <form className={styles.form} onSubmit={handleSubmit(onSubmit)} noValidate>
-        {formError ? <p className={styles.formError}>{formError}</p> : null}
+        {formError ? <p className={styles.formError} role="alert">{formError}</p> : null}
 
         <div className={formStyles.field}>
           <label className={formStyles.label} htmlFor="signup-name">
@@ -190,13 +192,15 @@ export default function SignUpForm() {
         </div>
 
         <div className={styles.submitRow}>
-          <button
+          <Button
             type="submit"
-            className={`${formStyles.primaryButton} ${styles.submitButton}`}
-            disabled={submitting}
+            variant="primary"
+            className={styles.submitButton}
+            loading={submitting}
+            loadingText="Sending code..."
           >
-            {submitting ? "Sending code..." : "Send Code"}
-          </button>
+            Send Code
+          </Button>
         </div>
       </form>
 

@@ -43,6 +43,25 @@ export async function GET(request: Request): Promise<NextResponse> {
     const failedPayments = paymentRows.filter((row) => row.status === "rejected" || row.status === "void").length;
     const popularProduct = [...productBookingCounts.entries()].sort((a, b) => b[1] - a[1])[0];
 
+    // Use all bookings, not the limited recent-activity list, so older requests stay visible.
+    const cancellationRequests = bookings.flatMap((booking) => {
+      const request = booking.cancellationRequest;
+      if (request?.status !== "pending") return [];
+      return [{
+        id: request.id,
+        bookingId: booking.id,
+        bookingRef: booking.bookingRef,
+        customerName: resolveAccountName({
+          displayName: booking.customerSnapshot.fullName,
+          email: booking.customerSnapshot.email,
+        }),
+        productName: bookingHeadline(booking.items),
+        reason: request.reason,
+        requestedAt: request.requestedAt,
+        status: request.status,
+      }];
+    }).sort((a, b) => Date.parse(b.requestedAt) - Date.parse(a.requestedAt));
+
     // Bookings are already newest-first (getAllBookings orders by created_at desc);
     // bubble pending-review bookings to the top so they stay easy to spot without
     // losing the newest-first order within each group.
@@ -60,12 +79,14 @@ export async function GET(request: Request): Promise<NextResponse> {
         successfulPayments: verifiedPayments.length,
         failedPayments,
         pendingVerification,
+        pendingCancellations: cancellationRequests.length,
         activeBookings,
         catalogProducts: catalogProducts ?? 0,
         completedRentals,
         popularProductName: popularProduct?.[0] ?? null,
         popularProductBookings: popularProduct?.[1] ?? 0,
       },
+      cancellationRequests,
       recentBookings: recentBookingsSorted.slice(0, 8).map((booking) => ({
         id: booking.id,
         bookingRef: booking.bookingRef,

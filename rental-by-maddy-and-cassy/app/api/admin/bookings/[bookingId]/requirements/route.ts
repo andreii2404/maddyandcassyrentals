@@ -46,6 +46,24 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
       return NextResponse.json({ error: "The document could not be found." }, { status: 404 });
     }
 
+    const { data: latestSubmission, error: latestSubmissionError } = await supabase
+      .from("booking_requirement_submissions")
+      .select("id")
+      .eq("booking_requirement_id", submission.booking_requirement_id)
+      .order("submitted_at", { ascending: false })
+      .order("attempt_number", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (latestSubmissionError) {
+      throw new Error(latestSubmissionError.message);
+    }
+    if (latestSubmission?.id !== documentId) {
+      return NextResponse.json(
+        { error: "This document is no longer the latest upload. Refresh the Requirements section and review the replacement instead." },
+        { status: 409 },
+      );
+    }
+
     const now = new Date().toISOString();
     await supabase
       .from("booking_requirement_submissions")

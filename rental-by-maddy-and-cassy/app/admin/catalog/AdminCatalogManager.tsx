@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 import { useToast } from "@/components/ui/ToastProvider";
 import Spinner from "@/components/ui/Spinner";
@@ -204,6 +205,7 @@ export default function AdminCatalogManager() {
   }
 
   async function saveProduct() {
+    if (saving) return;
     if (!editing) return;
     if (!form.name.trim()) {
       showToast("Product name is required.", "error");
@@ -263,6 +265,7 @@ export default function AdminCatalogManager() {
   }
 
   async function saveCategory() {
+    if (saving) return;
     if (!categoryEditing) return;
     if (!categoryForm.name.trim()) {
       showToast("Category name is required.", "error");
@@ -306,6 +309,7 @@ export default function AdminCatalogManager() {
   }
 
   async function saveUnit() {
+    if (saving) return;
     if (!unitEditing || !unitForm) return;
     if (!unitForm.unitCode.trim()) {
       showToast("Unit code is required.", "error");
@@ -361,7 +365,7 @@ export default function AdminCatalogManager() {
       <div className={styles.tabBar}>
       <nav className={styles.tabNav} role="tablist" aria-label="Catalog sections">
         {catalogTabs.map((tab) => (
-          <button
+          <Button variant="none"
             key={tab.value}
             type="button"
             role="tab"
@@ -372,12 +376,12 @@ export default function AdminCatalogManager() {
             onClick={() => setActiveTab(tab.value)}
           >
             {tab.label}
-          </button>
+          </Button>
         ))}
       </nav>
       </div>
 
-      {error ? <div className={styles.error} role="alert">{error}<button type="button" onClick={() => void load()}>Try again</button></div> : null}
+      {error ? <div className={styles.error} role="alert">{error}<Button variant="none" type="button" onClick={() => void load()}>Try again</Button></div> : null}
 
       {activeTab === "catalog" ? (
       <div id="catalog-panel-catalog" role="tabpanel" aria-labelledby="catalog-tab-catalog">
@@ -402,7 +406,7 @@ export default function AdminCatalogManager() {
             <span className={styles.srOnly}>Status</span>
             <select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value as typeof statusFilter); setCatalogPage(1); }}><option value="all">All statuses</option><option value="active">Active</option><option value="draft">Draft</option><option value="inactive">Inactive</option><option value="archived">Archived</option></select>
           </label>
-          <button type="button" className={styles.addButton} onClick={() => openEditor()}>+ Add Product</button>
+          <Button variant="none" type="button" className={styles.addButton} onClick={() => openEditor()}>+ Add Product</Button>
         </div>
       </section>
 
@@ -446,10 +450,10 @@ export default function AdminCatalogManager() {
                     {(!product.description || Object.keys(product.specs).length === 0) ? <p className={styles.contentWarning}>Needs more product details</p> : null}
                     <div className={styles.actions}>
                       <div className={styles.actionRow}>
-                        <button type="button" className={styles.primaryAction} onClick={() => openEditor(product)}>View / Edit</button>
+                        <Button variant="none" type="button" className={styles.primaryAction} onClick={() => openEditor(product)}>View / Edit</Button>
                         {product.isActive ? <Link className={styles.secondaryAction} href={`/catalog/${product.id}`} target="_blank">Public page</Link> : null}
                       </div>
-                      {product.isActive ? <button type="button" className={styles.removeAction} onClick={() => requestDeactivate(product)}>Remove</button> : null}
+                      {product.isActive ? <Button variant="none" type="button" className={styles.removeAction} onClick={() => requestDeactivate(product)}>Remove</Button> : null}
                     </div>
                   </div>
                 </article>
@@ -463,9 +467,9 @@ export default function AdminCatalogManager() {
               Showing {(catalogCurrentPage - 1) * CATALOG_PAGE_SIZE + 1}&ndash;{Math.min(catalogCurrentPage * CATALOG_PAGE_SIZE, filteredProducts.length)} of {filteredProducts.length}
             </span>
             <div>
-              <button type="button" disabled={catalogCurrentPage === 1} onClick={() => setCatalogPage(catalogCurrentPage - 1)}>Previous</button>
+              <Button variant="none" type="button" disabled={catalogCurrentPage === 1} onClick={() => setCatalogPage(catalogCurrentPage - 1)}>Previous</Button>
               {Array.from({ length: catalogPageCount }, (_, index) => index + 1).map((pageNumber) => (
-                <button
+                <Button variant="none"
                   key={pageNumber}
                   type="button"
                   className={pageNumber === catalogCurrentPage ? styles.pageActive : undefined}
@@ -473,9 +477,9 @@ export default function AdminCatalogManager() {
                   onClick={() => setCatalogPage(pageNumber)}
                 >
                   {pageNumber}
-                </button>
+                </Button>
               ))}
-              <button type="button" disabled={catalogCurrentPage === catalogPageCount} onClick={() => setCatalogPage(catalogCurrentPage + 1)}>Next</button>
+              <Button variant="none" type="button" disabled={catalogCurrentPage === catalogPageCount} onClick={() => setCatalogPage(catalogCurrentPage + 1)}>Next</Button>
             </div>
           </nav>
         ) : null}
@@ -488,14 +492,14 @@ export default function AdminCatalogManager() {
       <section className={styles.section} aria-labelledby="categories-heading">
         <div className={styles.sectionHeading}>
           <div><p>CATEGORIES</p><h2 id="categories-heading">Product Categories</h2></div>
-          <button type="button" onClick={() => openCategoryEditor()}>Add Category</button>
+          <Button variant="none" type="button" onClick={() => openCategoryEditor()}>Add Category</Button>
         </div>
         <div className={styles.tableWrap}>
           {categories.length === 0 ? <div className={styles.emptySmall}>No categories yet. Add one to organize the catalog.</div> : (
           <table><thead><tr><th>Name</th><th>Description</th><th>Products</th><th>Order</th><th>Actions</th></tr></thead>
             <tbody>{categories.map((category) => <tr key={category.id}>
               <td data-label="Name"><strong>{category.name}</strong></td><td data-label="Description">{category.description || "No description"}</td><td data-label="Products">{category.productCount}</td><td data-label="Order">{category.sortOrder}</td>
-              <td data-label="Actions"><div className={styles.tableActions}><button type="button" onClick={() => openCategoryEditor(category)}>Edit</button><button type="button" className={styles.dangerText} onClick={() => requestRemoveCategory(category)}>Delete</button></div></td>
+              <td data-label="Actions"><div className={styles.tableActions}><Button variant="none" type="button" onClick={() => openCategoryEditor(category)}>Edit</Button><Button variant="none" type="button" className={styles.dangerText} onClick={() => requestRemoveCategory(category)}>Delete</Button></div></td>
             </tr>)}</tbody>
           </table>
           )}
@@ -518,7 +522,7 @@ export default function AdminCatalogManager() {
             <tbody>{pagedInventoryUnits.map((unit) => <tr key={unit.id}>
               <td data-label="Unit code"><strong>{unit.unitCode}</strong></td><td data-label="Product">{products?.find((product) => product.id === unit.productId)?.name ?? "Product"}</td><td data-label="Serial number">{unit.serialNumber || "Not recorded"}</td>
               <td data-label="Status"><span className={styles.unitStatus} data-status={unit.lifecycleStatus}>{unit.lifecycleStatus}</span></td><td data-label="Reservation">{unit.hasActiveReservation ? "Reserved / in use" : "Clear"}</td>
-              <td data-label="Action"><button type="button" className={styles.tableButton} onClick={() => openUnitEditor(unit)}>Manage</button></td>
+              <td data-label="Action"><Button variant="none" type="button" className={styles.tableButton} onClick={() => openUnitEditor(unit)}>Manage</Button></td>
             </tr>)}</tbody>
           </table>
           )}
@@ -529,9 +533,9 @@ export default function AdminCatalogManager() {
               Showing {(unitsCurrentPage - 1) * UNITS_PAGE_SIZE + 1}&ndash;{Math.min(unitsCurrentPage * UNITS_PAGE_SIZE, visibleInventoryUnits.length)} of {visibleInventoryUnits.length}
             </span>
             <div>
-              <button type="button" disabled={unitsCurrentPage === 1} onClick={() => setUnitsPage(unitsCurrentPage - 1)}>Previous</button>
+              <Button variant="none" type="button" disabled={unitsCurrentPage === 1} onClick={() => setUnitsPage(unitsCurrentPage - 1)}>Previous</Button>
               {Array.from({ length: unitsPageCount }, (_, index) => index + 1).map((pageNumber) => (
-                <button
+                <Button variant="none"
                   key={pageNumber}
                   type="button"
                   className={pageNumber === unitsCurrentPage ? styles.pageActive : undefined}
@@ -539,9 +543,9 @@ export default function AdminCatalogManager() {
                   onClick={() => setUnitsPage(pageNumber)}
                 >
                   {pageNumber}
-                </button>
+                </Button>
               ))}
-              <button type="button" disabled={unitsCurrentPage === unitsPageCount} onClick={() => setUnitsPage(unitsCurrentPage + 1)}>Next</button>
+              <Button variant="none" type="button" disabled={unitsCurrentPage === unitsPageCount} onClick={() => setUnitsPage(unitsCurrentPage + 1)}>Next</Button>
             </div>
           </nav>
         ) : null}
@@ -562,7 +566,7 @@ export default function AdminCatalogManager() {
             <p className={styles.reviewStars}>{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</p>
             <p>{review.comment || "Rating submitted without a written comment."}</p>
             <small>{new Date(review.createdAt).toLocaleString("en-PH")}</small>
-            {review.status === "pending" ? <div className={styles.tableActions}><button type="button" onClick={() => void moderateReview(review, "approved")}>Approve</button><button type="button" className={styles.dangerText} onClick={() => void moderateReview(review, "rejected")}>Reject</button></div> : null}
+            {review.status === "pending" ? <div className={styles.tableActions}><Button variant="none" type="button" onClick={() => void moderateReview(review, "approved")}>Approve</Button><Button variant="none" type="button" className={styles.dangerText} onClick={() => void moderateReview(review, "rejected")}>Reject</Button></div> : null}
           </article>)}</div>
         )}
       </section>
@@ -586,8 +590,8 @@ export default function AdminCatalogManager() {
 
       {editing ? (
         <div className={styles.overlay} role="presentation" onMouseDown={() => !saving && setEditing(null)}>
-          <section className={styles.editor} role="dialog" aria-modal="true" aria-labelledby="product-editor-title" onMouseDown={(event) => event.stopPropagation()}>
-            <div className={styles.editorHeader}><div><p>PRODUCT EDITOR</p><h2 id="product-editor-title">{editing === "new" ? "Add Product" : `Edit ${editing.name}`}</h2></div><button type="button" onClick={() => setEditing(null)} disabled={saving}>Close</button></div>
+          <form onSubmit={(event) => { event.preventDefault(); void saveProduct(); }} aria-busy={saving} className={styles.editor} role="dialog" aria-modal="true" aria-labelledby="product-editor-title" onMouseDown={(event) => event.stopPropagation()}>
+            <div className={styles.editorHeader}><div><p>PRODUCT EDITOR</p><h2 id="product-editor-title">{editing === "new" ? "Add Product" : `Edit ${editing.name}`}</h2></div><Button variant="none" type="button" onClick={() => setEditing(null)} disabled={saving}>Close</Button></div>
             <div className={styles.formGrid}>
               <label><span>Product name *</span><input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
               <label><span>Brand</span><input value={form.brand} onChange={(event) => setForm({ ...form, brand: event.target.value })} /></label>
@@ -605,25 +609,25 @@ export default function AdminCatalogManager() {
               <label className={styles.wide}><span>Included accessories</span><textarea rows={5} value={includedText} placeholder="One included item per line" onChange={(event) => setIncludedText(event.target.value)} /></label>
               <label className={styles.checkbox}><input type="checkbox" checked={form.isFeatured} onChange={(event) => setForm({ ...form, isFeatured: event.target.checked })} /><span>Feature this product on the storefront</span></label>
             </div>
-            <div className={styles.editorActions}><button type="button" onClick={() => setEditing(null)} disabled={saving}>Cancel</button><button type="button" onClick={() => void saveProduct()} disabled={saving}>{saving ? "Saving..." : "Save Product"}</button></div>
-          </section>
+            <div className={styles.editorActions}><Button variant="none" type="button" onClick={() => setEditing(null)} disabled={saving}>Cancel</Button><Button variant="primary" type="submit" loading={saving} loadingText="Saving...">Save Product</Button></div>
+          </form>
         </div>
       ) : null}
 
       {categoryEditing ? (
         <div className={styles.overlay} role="presentation" onMouseDown={() => !saving && setCategoryEditing(null)}>
-          <section className={styles.smallEditor} role="dialog" aria-modal="true" aria-labelledby="category-editor-title" onMouseDown={(event) => event.stopPropagation()}>
-            <div className={styles.editorHeader}><div><p>CATEGORY EDITOR</p><h2 id="category-editor-title">{categoryEditing === "new" ? "Add Category" : "Edit Category"}</h2></div><button type="button" onClick={() => setCategoryEditing(null)} disabled={saving}>Close</button></div>
+          <form onSubmit={(event) => { event.preventDefault(); void saveCategory(); }} aria-busy={saving} className={styles.smallEditor} role="dialog" aria-modal="true" aria-labelledby="category-editor-title" onMouseDown={(event) => event.stopPropagation()}>
+            <div className={styles.editorHeader}><div><p>CATEGORY EDITOR</p><h2 id="category-editor-title">{categoryEditing === "new" ? "Add Category" : "Edit Category"}</h2></div><Button variant="none" type="button" onClick={() => setCategoryEditing(null)} disabled={saving}>Close</Button></div>
             <div className={styles.formGrid}><label><span>Name *</span><input value={categoryForm.name} onChange={(event) => setCategoryForm({ ...categoryForm, name: event.target.value })} /></label><label><span>Display order</span><input type="number" min="0" value={categoryForm.sortOrder} onChange={(event) => setCategoryForm({ ...categoryForm, sortOrder: Number(event.target.value) })} /></label><label className={styles.wide}><span>Description</span><textarea rows={4} value={categoryForm.description} onChange={(event) => setCategoryForm({ ...categoryForm, description: event.target.value })} /></label></div>
-            <div className={styles.editorActions}><button type="button" onClick={() => setCategoryEditing(null)} disabled={saving}>Cancel</button><button type="button" onClick={() => void saveCategory()} disabled={saving}>{saving ? "Saving..." : "Save Category"}</button></div>
-          </section>
+            <div className={styles.editorActions}><Button variant="none" type="button" onClick={() => setCategoryEditing(null)} disabled={saving}>Cancel</Button><Button variant="primary" type="submit" loading={saving} loadingText="Saving...">Save Category</Button></div>
+          </form>
         </div>
       ) : null}
 
       {unitEditing && unitForm ? (
         <div className={styles.overlay} role="presentation" onMouseDown={() => !saving && setUnitEditing(null)}>
-          <section className={styles.smallEditor} role="dialog" aria-modal="true" aria-labelledby="unit-editor-title" onMouseDown={(event) => event.stopPropagation()}>
-            <div className={styles.editorHeader}><div><p>PHYSICAL UNIT</p><h2 id="unit-editor-title">Manage {unitEditing.unitCode}</h2></div><button type="button" onClick={() => setUnitEditing(null)} disabled={saving}>Close</button></div>
+          <form onSubmit={(event) => { event.preventDefault(); void saveUnit(); }} aria-busy={saving} className={styles.smallEditor} role="dialog" aria-modal="true" aria-labelledby="unit-editor-title" onMouseDown={(event) => event.stopPropagation()}>
+            <div className={styles.editorHeader}><div><p>PHYSICAL UNIT</p><h2 id="unit-editor-title">Manage {unitEditing.unitCode}</h2></div><Button variant="none" type="button" onClick={() => setUnitEditing(null)} disabled={saving}>Close</Button></div>
             {unitEditing.hasActiveReservation ? <p className={styles.protectedNotice}>This unit has an active reservation. Its identifying information can be updated, but it cannot be moved out of active service yet.</p> : null}
             <div className={styles.formGrid}>
               <label><span>Unit code *</span><input value={unitForm.unitCode} onChange={(event) => setUnitForm({ ...unitForm, unitCode: event.target.value })} /></label>
@@ -632,18 +636,18 @@ export default function AdminCatalogManager() {
               <label><span>Acquired date</span><input type="date" value={unitForm.acquiredAt} onChange={(event) => setUnitForm({ ...unitForm, acquiredAt: event.target.value })} /></label>
               <label className={styles.wide}><span>Condition notes</span><textarea rows={4} value={unitForm.conditionNotes} onChange={(event) => setUnitForm({ ...unitForm, conditionNotes: event.target.value })} /></label>
             </div>
-            <div className={styles.editorActions}><button type="button" onClick={() => setUnitEditing(null)} disabled={saving}>Cancel</button><button type="button" onClick={() => void saveUnit()} disabled={saving}>{saving ? "Saving..." : "Save Unit"}</button></div>
-          </section>
+            <div className={styles.editorActions}><Button variant="none" type="button" onClick={() => setUnitEditing(null)} disabled={saving}>Cancel</Button><Button variant="primary" type="submit" loading={saving} loadingText="Saving...">Save Unit</Button></div>
+          </form>
         </div>
       ) : null}
       {confirmDialog ? (
         <div className={styles.overlay} role="presentation" onMouseDown={() => !confirmBusy && setConfirmDialog(null)}>
           <section className={styles.smallEditor} role="alertdialog" aria-modal="true" aria-labelledby="confirm-dialog-title" aria-describedby="confirm-dialog-message" onMouseDown={(event) => event.stopPropagation()}>
-            <div className={styles.editorHeader}><div><p>PLEASE CONFIRM</p><h2 id="confirm-dialog-title">{confirmDialog.title}</h2></div><button type="button" onClick={() => setConfirmDialog(null)} disabled={confirmBusy}>Close</button></div>
+            <div className={styles.editorHeader}><div><p>PLEASE CONFIRM</p><h2 id="confirm-dialog-title">{confirmDialog.title}</h2></div><Button variant="none" type="button" onClick={() => setConfirmDialog(null)} disabled={confirmBusy}>Close</Button></div>
             <p id="confirm-dialog-message" className={styles.protectedNotice}>{confirmDialog.message}</p>
             <div className={styles.editorActions}>
-              <button type="button" onClick={() => setConfirmDialog(null)} disabled={confirmBusy}>Cancel</button>
-              <button type="button" className={styles.danger} onClick={() => void runConfirmedAction()} disabled={confirmBusy}>{confirmBusy ? "Working..." : confirmDialog.confirmLabel}</button>
+              <Button variant="none" type="button" onClick={() => setConfirmDialog(null)} disabled={confirmBusy}>Cancel</Button>
+              <Button variant="none" type="button" className={styles.danger} onClick={() => void runConfirmedAction()} disabled={confirmBusy}>{confirmBusy ? "Working..." : confirmDialog.confirmLabel}</Button>
             </div>
           </section>
         </div>

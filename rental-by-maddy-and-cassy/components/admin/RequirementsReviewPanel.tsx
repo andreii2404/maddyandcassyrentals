@@ -1,8 +1,10 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 import { useEffect, useRef, useState } from "react";
 import { useToast } from "@/components/ui/ToastProvider";
 import Spinner from "@/components/ui/Spinner";
+import { formatManilaDateTime } from "@/src/lib/rentalTiming";
 import type { BookingDocument, RequirementReviewStatus, RequirementsStatus } from "@/src/types/booking";
 import styles from "./RequirementsReviewPanel.module.css";
 
@@ -36,6 +38,7 @@ export default function RequirementsReviewPanel({
   const selectAllRef = useRef<HTMLInputElement>(null);
   const reviewedCount = documents.filter((document) => document.reviewStatus !== "pending").length;
   const approvedCount = documents.filter((document) => document.reviewStatus === "approved").length;
+  const resubmittedCount = documents.filter((document) => document.isResubmitted && document.reviewStatus === "pending").length;
   const progress = documents.length ? Math.round((reviewedCount / documents.length) * 100) : 0;
   const selectableIds = documents
     .filter((document) => document.reviewStatus !== "approved")
@@ -200,6 +203,13 @@ export default function RequirementsReviewPanel({
         <span style={{ width: `${progress}%` }} />
       </div>
 
+      {resubmittedCount > 0 ? (
+        <div className={styles.resubmissionAlert} role="alert">
+          <strong>{resubmittedCount} document{resubmittedCount === 1 ? " has" : "s have"} been resubmitted.</strong>
+          <span>Review the highlighted latest upload below. The previously rejected file is kept in history and is not the active review target.</span>
+        </div>
+      ) : null}
+
       {selectableIds.length > 0 ? (
         <div className={styles.bulkBar}>
           <label className={styles.bulkCheckbox}>
@@ -212,7 +222,7 @@ export default function RequirementsReviewPanel({
             />
             <span>Select all ({selectedCount}/{selectableIds.length})</span>
           </label>
-          <button
+          <Button variant="none"
             type="button"
             className={styles.bulkApproveButton}
             onClick={handleApproveSelected}
@@ -224,7 +234,7 @@ export default function RequirementsReviewPanel({
             ) : (
               `Approve Selected${selectedCount > 0 ? ` (${selectedCount})` : ""}`
             )}
-          </button>
+          </Button>
         </div>
       ) : null}
 
@@ -236,8 +246,9 @@ export default function RequirementsReviewPanel({
           const isOpening = openingId === document.id;
           const isRejecting = rejectingId === document.id;
           const isApproved = document.reviewStatus === "approved";
+          const isResubmitted = document.isResubmitted && document.reviewStatus === "pending";
           return (
-            <article key={document.id} className={`${styles.documentCard} ${styles[document.reviewStatus]}`}>
+            <article key={document.id} className={`${styles.documentCard} ${styles[document.reviewStatus]} ${isResubmitted ? styles.resubmitted : ""}`}>
               <div className={styles.documentTopline}>
                 <div className={styles.toplineMain}>
                   <input
@@ -252,7 +263,7 @@ export default function RequirementsReviewPanel({
                         : `Select ${formatDocumentType(document.documentType)} for approval`
                     }
                   />
-                  <button
+                  <Button variant="none"
                     type="button"
                     className={styles.fileButton}
                     onClick={() => handleOpen(document)}
@@ -264,12 +275,19 @@ export default function RequirementsReviewPanel({
                       <strong>{formatDocumentType(document.documentType)}</strong>
                       <small>{isOpening ? "Opening..." : (document.originalFilename || "Open secure customer file")}</small>
                     </span>
-                  </button>
+                  </Button>
                 </div>
-                <span className={`${styles.statusPill} ${styles[document.reviewStatus]}`}>
-                  {document.reviewStatus === "pending" ? "Needs review" : formatDocumentType(document.reviewStatus)}
+                <span className={`${styles.statusPill} ${styles[isResubmitted ? "resubmitted" : document.reviewStatus]}`}>
+                  {isResubmitted ? "Resubmitted" : document.reviewStatus === "pending" ? "Needs review" : formatDocumentType(document.reviewStatus)}
                 </span>
               </div>
+
+              {isResubmitted ? (
+                <div className={styles.resubmissionMeta} aria-label={`Resubmitted ${formatManilaDateTime(document.submittedAt)}`}>
+                  <strong>Resubmitted – Needs Review</strong>
+                  <span>{formatManilaDateTime(document.submittedAt)}</span>
+                </div>
+              ) : null}
 
               {document.reviewNotes ? (
                 <div className={styles.previousNote}>
@@ -279,7 +297,7 @@ export default function RequirementsReviewPanel({
               ) : null}
 
               <div className={styles.actions}>
-                <button
+                <Button variant="none"
                   type="button"
                   className={styles.openButton}
                   onClick={() => handleOpen(document)}
@@ -287,8 +305,8 @@ export default function RequirementsReviewPanel({
                   aria-busy={isOpening}
                 >
                   {isOpening ? <><Spinner size={11} label="Opening file" /> Opening...</> : "Open file"}
-                </button>
-                <button
+                </Button>
+                <Button variant="none"
                   type="button"
                   className={styles.approveButton}
                   onClick={() => saveReview(document.id, "approved")}
@@ -296,15 +314,15 @@ export default function RequirementsReviewPanel({
                   aria-busy={isApproving}
                 >
                   {isApproving ? <><Spinner size={11} label="Saving approval" /> Saving...</> : document.reviewStatus === "approved" ? "Approved" : "Approve document"}
-                </button>
-                <button
+                </Button>
+                <Button variant="none"
                   type="button"
                   className={styles.rejectButton}
                   onClick={() => openCorrectionEditor(document)}
                   disabled={isSaving || bulkApproving}
                 >
                   {document.reviewStatus === "rejected" ? "Edit correction" : "Request correction"}
-                </button>
+                </Button>
               </div>
 
               {isRejecting ? (
@@ -321,14 +339,14 @@ export default function RequirementsReviewPanel({
                     />
                   </label>
                   <div>
-                    <button
+                    <Button variant="none"
                       type="button"
                       onClick={() => { setRejectingId(null); setReason(""); }}
                       disabled={isSaving}
                     >
                       Cancel
-                    </button>
-                    <button
+                    </Button>
+                    <Button variant="none"
                       type="button"
                       className={styles.sendButton}
                       onClick={() => saveReview(document.id, "rejected")}
@@ -336,7 +354,7 @@ export default function RequirementsReviewPanel({
                       aria-busy={isRejectingSave}
                     >
                       {isRejectingSave ? <><Spinner size={11} label="Sending correction request" /> Sending...</> : "Send correction request"}
-                    </button>
+                    </Button>
                   </div>
                 </div>
               ) : null}

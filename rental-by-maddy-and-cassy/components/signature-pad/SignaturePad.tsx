@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import SignatureCanvas from "react-signature-canvas";
 import type { SignatureMethod } from "@/src/types/reservationDraft";
+import { Button } from "@/components/ui/Button";
 import formStyles from "@/components/ui/Form.module.css";
 import styles from "./SignaturePad.module.css";
 
@@ -55,26 +56,26 @@ export default function SignaturePad({
 
   return (
     <div className={styles.wrapper}>
-      <div className={styles.tabs} role="tablist" aria-label="Signature method">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={method === "drawn"}
-          className={`${styles.tab} ${method === "drawn" ? styles.tabActive : ""}`}
-          onClick={() => switchMethod("drawn")}
-        >
-          Draw Signature
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={method === "uploaded"}
-          className={`${styles.tab} ${method === "uploaded" ? styles.tabActive : ""}`}
-          onClick={() => switchMethod("uploaded")}
-        >
-          Upload Signature Image
-        </button>
-      </div>
+       <div className={styles.tabs} role="tablist" aria-label="Signature method">
+         <Button
+           variant="none"
+           role="tab"
+           aria-selected={method === "drawn"}
+           className={`${styles.tab} ${method === "drawn" ? styles.tabActive : ""}`}
+           onClick={() => switchMethod("drawn")}
+         >
+           Draw Signature
+         </Button>
+         <Button
+           variant="none"
+           role="tab"
+           aria-selected={method === "uploaded"}
+           className={`${styles.tab} ${method === "uploaded" ? styles.tabActive : ""}`}
+           onClick={() => switchMethod("uploaded")}
+         >
+           Upload Signature Image
+         </Button>
+       </div>
 
       {method === "drawn" ? (
         <div className={styles.canvasWrapper}>
@@ -84,9 +85,9 @@ export default function SignaturePad({
             canvasProps={{ className: styles.canvas, "aria-label": "Draw your signature" }}
             onEnd={handleEnd}
           />
-          <button type="button" className={styles.clearButton} onClick={handleClear}>
+          <Button variant="none" className={styles.clearButton} onClick={handleClear}>
             Clear Signature
-          </button>
+          </Button>
         </div>
       ) : (
         <div className={styles.uploadWrapper}>
@@ -94,9 +95,9 @@ export default function SignaturePad({
             <div className={styles.uploadPreview}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={signatureDataUrl} alt="Uploaded signature preview" />
-              <button type="button" className={styles.clearButton} onClick={handleClear}>
+              <Button variant="none" className={styles.clearButton} onClick={handleClear}>
                 Clear Signature
-              </button>
+              </Button>
             </div>
           ) : (
             <label className={styles.uploadDropzone}>

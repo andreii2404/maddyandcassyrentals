@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { Product } from "@/types/product";
@@ -136,7 +137,7 @@ export default function CatalogView({
       ) : (
         <div className={styles.emptyState}>
           <p>No products match your filters.</p>
-          <button
+          <Button variant="none"
             type="button"
             className={styles.resetButton}
             onClick={() => {
@@ -147,7 +148,7 @@ export default function CatalogView({
             }}
           >
             Reset filters
-          </button>
+          </Button>
         </div>
       )}
     </section>

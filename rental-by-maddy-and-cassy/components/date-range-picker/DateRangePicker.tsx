@@ -19,6 +19,7 @@ import {
 import ArrowLeftIcon from "@/components/icons/ArrowLeftIcon";
 import { toDateKey } from "@/src/services/availabilityService";
 import styles from "./DateRangePicker.module.css";
+import { Button } from "@/components/ui/Button";
 
 interface DateRangePickerProps {
   startDate: Date | null;
@@ -131,23 +132,23 @@ export default function DateRangePicker({
   return (
     <div className={`${styles.wrapper} ${compact ? styles.compact : ""}`}>
       <div className={styles.header}>
-        <button
-          type="button"
+        <Button
+          variant="none"
           className={styles.navButton}
           onClick={() => setVisibleMonth((current) => subMonths(current, 1))}
           aria-label="Previous month"
         >
           <ArrowLeftIcon size={14} />
-        </button>
+        </Button>
         <p className={styles.monthLabel}>{format(visibleMonth, "MMMM yyyy")}</p>
-        <button
-          type="button"
+        <Button
+          variant="none"
           className={`${styles.navButton} ${styles.navButtonNext}`}
           onClick={() => setVisibleMonth((current) => addMonths(current, 1))}
           aria-label="Next month"
         >
           <ArrowLeftIcon size={14} />
-        </button>
+        </Button>
       </div>
 
       <div className={styles.weekdays} aria-hidden="true">
@@ -178,7 +179,7 @@ export default function DateRangePicker({
           else statusLabel = ", available";
 
           return (
-            <button
+            <Button variant="none"
               key={day.toISOString()}
               type="button"
               role="gridcell"
@@ -204,7 +205,7 @@ export default function DateRangePicker({
               {selected ? (
                 <span className={styles.selectedMark} aria-hidden="true">✓</span>
               ) : null}
-            </button>
+            </Button>
           );
         })}
       </div>

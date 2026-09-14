@@ -12,8 +12,11 @@
 .cancellationPending { display: flex; align-items: center; flex-wrap: wrap; gap: 0.55rem; width: fit-content; margin: -0.25rem 0 1.1rem; padding: 0.5rem 0.7rem; border: 1px solid #e6c98f; border-radius: 10px; background: #fff8e9; color: #755319; font-size: 0.68rem; }
 .cancellationPending span { font-weight: 800; letter-spacing: 0.02em; }
 .cancellationPending strong { color: #9a6b16; font-size: 0.66rem; }
-.rejectedBadgeButton { padding: 0; border: 0; background: none; cursor: pointer; }
-.viewReasonLink { display: block; margin: -0.7rem 0 1.1rem; padding: 0; border: 0; background: none; color: var(--color-status-red); font-size: 0.72rem; font-weight: 700; text-decoration: underline; cursor: pointer; }
+.rejectedBadgeButton { min-height: 32px; padding: 0.2rem 0.35rem; border: 0; border-radius: var(--radius-control); background: none; cursor: pointer; transition: background-color 160ms ease, color 160ms ease; }
+.rejectedBadgeButton:hover { background: var(--color-status-red-bg); color: var(--color-status-red); }
+.viewReasonLink { display: block; min-height: 36px; margin: -0.7rem 0 1.1rem; padding: 0.35rem 0.45rem; border: 0; border-radius: var(--radius-control); background: none; color: var(--color-status-red); font-size: 0.72rem; font-weight: 700; text-decoration: underline; cursor: pointer; transition: background-color 160ms ease, transform 150ms ease; }
+.viewReasonLink:hover { background: var(--color-status-red-bg); }
+.viewReasonLink:active { transform: translateY(1px); }
 .rejectionReasonLabel { display: inline-block; margin: 0 0 0.6rem; padding: 0.32rem 0.65rem; border-radius: 999px; background: var(--color-status-red-bg); color: var(--color-status-red); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.02em; }
 .rejectionReasonText { margin: 0; color: var(--color-charcoal); font-size: 0.8rem; line-height: 1.6; }
 .statusFacts { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 0.7rem; margin: 0; }
@@ -59,7 +62,9 @@
 .managementGrid p { flex: 1; min-height: 42px; margin: 0.4rem 0 0.8rem; color: var(--color-charcoal); font-size: 0.66rem; line-height: 1.55; }
 .managementGrid button,
 .saveButton,
-.cancelPanel button { min-height: 38px; padding: 0.5rem 0.75rem; border: 1px solid var(--color-primary); border-radius: 10px; background: white; color: var(--color-primary); font: inherit; font-size: 0.68rem; font-weight: 700; cursor: pointer; }
+.cancelPanel button { display: inline-flex; align-items: center; justify-content: center; min-height: var(--control-height); padding: 0.5rem 0.75rem; border: 1px solid var(--color-primary); border-radius: var(--radius-control); background: white; color: var(--color-primary); font: inherit; font-size: 0.68rem; font-weight: 700; cursor: pointer; transition: background-color 160ms ease, box-shadow 160ms ease, transform 150ms ease; }
+.managementGrid button:hover:not(:disabled), .saveButton:hover:not(:disabled) { background: var(--color-background-soft); box-shadow: 0 6px 16px rgba(154, 89, 101, .12); transform: translateY(-1px); }
+.managementGrid button:active:not(:disabled), .saveButton:active:not(:disabled), .cancelPanel button:active:not(:disabled) { box-shadow: none; transform: translateY(1px); }
 .managementGrid button:disabled { border-color: var(--color-light-gray); color: #9a9493; background: #f7f7f5; cursor: not-allowed; }
 .managementGrid .cancelButton:not(:disabled) { border-color: var(--color-status-red-border); color: var(--color-status-red); }
 .managementGrid button { width: 100%; }
@@ -88,12 +93,27 @@
 .notesField textarea:focus,
 .cancelPanel textarea:focus,
 .cancelPanel select:focus { border-color: var(--color-dusty-rose); box-shadow: 0 0 0 3px rgba(215,165,165,0.15); }
-.saveButton { justify-self: start; background: var(--color-primary); color: white; }
+.saveButton { justify-self: start; background: var(--color-primary); color: white;
+  min-height: var(--control-height);
+}
+.saveButton:hover:not(:disabled), .cancelPanel button:hover:not(:disabled) { background: var(--color-primary-hover); color: white; }
 .cancelPanel { border-color: var(--color-status-red-border); background: var(--color-status-red-bg); }
 .cancelPanel > p { margin: 0; color: var(--color-charcoal); font-size: 0.66rem; line-height: 1.6; }
 .cancelPanel em { color: #817a79; font-size: 0.58rem; font-style: normal; font-weight: 400; }
 .cancelPanel button { justify-self: start; border-color: var(--color-status-red); background: var(--color-status-red); color: white; }
 .cancelPanel button:disabled { cursor: wait; opacity: 0.65; }
+
+.cancelConfirmation { display: grid; gap: 1.5rem; }
+.confirmationBooking { display: grid; gap: 0.35rem; padding: 1rem; border: 1px solid var(--color-status-red-border); border-radius: 12px; background: var(--color-background-soft); }
+.confirmationBooking span { color: var(--color-charcoal); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.confirmationBooking strong { color: var(--color-primary); font-size: 1.1rem; overflow-wrap: anywhere; }
+.confirmationPrompt { margin: 1.1rem 0; color: var(--color-text-primary); font-size: 0.88rem; line-height: 1.65; }
+.confirmationNotice { display: flex; align-items: flex-start; gap: 0.75rem; padding: 1rem; border-radius: 12px; background: var(--color-background); }
+.confirmationNotice svg { flex: 0 0 22px; width: 22px; height: 22px; color: var(--color-primary); }
+.confirmationNotice strong { color: var(--color-text-primary); font-size: 0.82rem; }
+.confirmationNotice p { margin: 0.4rem 0 0; color: var(--color-charcoal); font-size: 0.8rem; line-height: 1.65; }
+.confirmationActions { display: flex; justify-content: flex-end; gap: 0.75rem; padding-top: 1.25rem; border-top: 1px solid var(--color-border); }
+.confirmationActions button { min-height: 44px; }
 
 @media (max-width: 760px) {
   .milestones { grid-template-columns: 1fr; gap: 0.15rem; }
@@ -106,6 +126,8 @@
 }
 
 @media (max-width: 520px) {
+  .confirmationActions { flex-direction: column; }
+  .confirmationActions button { width: 100%; }
   .statusTopline,
   .sectionHeading,
   .formHeading { align-items: flex-start; flex-direction: column; }

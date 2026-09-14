@@ -94,10 +94,10 @@
 }
 
 .resetButton {
-  min-height: 40px;
-  padding: 0 0.9rem;
+  min-height: var(--control-height);
+  padding: 0 0.85rem;
   border: 1px solid var(--color-border);
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   background: var(--color-white);
   color: var(--color-primary);
   font: inherit;
@@ -109,7 +109,10 @@
 
 .resetButton:hover:not(:disabled) {
   background: var(--color-blush);
+  transform: translateY(-1px);
 }
+
+.resetButton:active:not(:disabled) { transform: translateY(1px); }
 
 .resetButton:disabled {
   color: var(--color-charcoal);
@@ -226,15 +229,21 @@
 }
 
 .pagination button {
-  padding: 0.45rem 0.7rem;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0.4rem 0.6rem;
   border: 1px solid var(--color-border);
-  border-radius: 9px;
+  border-radius: var(--radius-control);
   background: var(--color-white);
   color: var(--color-charcoal);
   font: inherit;
   font-size: 0.68rem;
   cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, transform 140ms ease;
 }
+
+.pagination button:hover:not(:disabled) { border-color: var(--color-dusty-rose); background: var(--color-background-soft); transform: translateY(-1px); }
+.pagination button:active:not(:disabled) { transform: translateY(1px); }
 
 .pagination button:disabled {
   cursor: not-allowed;

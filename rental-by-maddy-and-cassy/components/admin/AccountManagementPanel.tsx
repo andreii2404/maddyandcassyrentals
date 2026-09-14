@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/ToastProvider";
 import { updateAccountAsAdmin } from "@/src/services/userService";
 import type { UserProfile } from "@/src/types/database";
@@ -29,6 +30,7 @@ export default function AccountManagementPanel({
   const [saving, setSaving] = useState(false);
 
   async function save() {
+    if (saving) return;
     if (form.displayName.trim().length < 2) {
       showToast("Enter the account holder's full name.", "error");
       return;
@@ -49,7 +51,7 @@ export default function AccountManagementPanel({
   }
 
   return (
-    <section className={styles.panel}>
+    <form className={styles.panel} onSubmit={(event) => { event.preventDefault(); void save(); }} aria-busy={saving}>
       <div className={styles.header}>
         <div><h2>Account Access &amp; Role</h2><p>Edit profile details, suspend access, or manage administrator privileges.</p></div>
       </div>
@@ -60,7 +62,7 @@ export default function AccountManagementPanel({
         <label><span>Account status</span><select value={form.accountStatus} onChange={(e)=>setForm({...form,accountStatus:e.target.value as UserProfile["accountStatus"]})}><option value="active">Active</option><option value="suspended">Suspended</option></select></label>
         <label><span>Role</span><select value={form.role} onChange={(e)=>setForm({...form,role:e.target.value as UserProfile["role"]})}><option value="customer">Customer</option><option value="admin">Administrator</option></select></label>
       </div>
-      <button type="button" onClick={save} disabled={saving}>{saving ? "Saving..." : "Save Account Changes"}</button>
-    </section>
+      <Button variant="primary" type="submit" loading={saving} loadingText="Saving...">Save Account Changes</Button>
+    </form>
   );
 }

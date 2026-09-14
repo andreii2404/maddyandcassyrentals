@@ -101,21 +101,29 @@
 }
 
 .searchForm button {
-  padding: 0.72rem 1.2rem;
+  min-height: var(--control-height);
+  padding: 0.6rem 1.1rem;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-control);
   background: var(--color-primary);
   color: var(--color-white);
+  font: inherit;
   font-size: 0.86rem;
   font-weight: 700;
   cursor: pointer;
-  transition: background 180ms ease, transform 180ms ease;
+  transition: background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
 
 .searchForm button:hover,
 .searchForm button:focus-visible {
   background: var(--color-primary-hover);
+  box-shadow: 0 6px 16px rgba(154, 89, 101, 0.2);
   transform: translateY(-1px);
+}
+
+.searchForm button:active {
+  box-shadow: none;
+  transform: translateY(1px);
 }
 
 .srOnly {
@@ -141,8 +149,9 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.85rem 1.6rem;
-  border-radius: 999px;
+  min-height: var(--control-height);
+  padding: 0.7rem 1.4rem;
+  border-radius: var(--radius-control);
   background: var(--color-primary);
   color: var(--color-white);
   font-size: 0.95rem;
@@ -155,6 +164,11 @@
   background: var(--color-primary-hover);
   box-shadow: 0 10px 30px rgba(154, 89, 101, 0.3);
   transform: translateY(-2px);
+}
+
+.primaryButton:active {
+  box-shadow: none;
+  transform: translateY(1px);
 }
 
 .tertiaryLink {
@@ -240,5 +254,7 @@
   .primaryButton {
     justify-content: center;
     width: 100%;
-  }
+
+  min-height: var(--control-height);
+}
 }

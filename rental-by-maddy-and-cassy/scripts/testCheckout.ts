@@ -1,7 +1,28 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { calculateReservationPricing } from "../src/lib/reservationPricing";
 import { calculateReturnDateTime } from "../src/lib/rentalTiming";
+
+const cartRentalDetailsSource = readFileSync(
+  join(dirname(fileURLToPath(import.meta.url)), "../components/reservation/StepCartRentalDetails.tsx"),
+  "utf8",
+);
+const rentalDetailsSource = readFileSync(
+  join(dirname(fileURLToPath(import.meta.url)), "../components/reservation/StepRentalDetails.tsx"),
+  "utf8",
+);
+
+test("cart checkout renders one continue action for rental details", () => {
+  assert.equal((cartRentalDetailsSource.match(/<ReservationFooter/g) ?? []).length, 1);
+  assert.equal((cartRentalDetailsSource.match(/className=\{styles\.summaryActions\}/g) ?? []).length, 0);
+});
+
+test("single-rental checkout does not duplicate the continue action", () => {
+  assert.equal((rentalDetailsSource.match(/className=\{styles\.summaryActions\}/g) ?? []).length, 0);
+});
 
 test("checkout totals include quantity, discount, and non-refundable deposit", () => {
   const pricing = calculateReservationPricing(

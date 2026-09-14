@@ -10,6 +10,7 @@ import { normalizeEmail } from "@/src/lib/authValidation";
 import { requestPasswordReset } from "@/src/services/authService";
 import formStyles from "@/components/ui/Form.module.css";
 import styles from "../auth.module.css";
+import { Button } from "@/components/ui/Button";
 
 const schema = z.object({
   email: z.string().trim().min(1, "Email is required").email("Enter a valid email address"),
@@ -29,6 +30,7 @@ export default function ForgotPasswordForm() {
   });
 
   async function onSubmit(values: FormValues) {
+    if (submitting) return;
     setFormError(null);
     setSubmitting(true);
     try {
@@ -60,9 +62,13 @@ export default function ForgotPasswordForm() {
             If a password-based account exists for that email, a reset link has been sent. Check your inbox and spam folder.
           </p>
           <div className={styles.successActions}>
-            <Link className={`${formStyles.primaryButton} ${styles.submitButton}`} href={source === "admin" ? "/admin/sign-in" : "/sign-in"}>
+            <Button
+              href={source === "admin" ? "/admin/sign-in" : "/sign-in"}
+              variant="primary"
+              className={styles.submitButton}
+            >
               Return to login
-            </Link>
+            </Button>
           </div>
         </div>
       ) : (
@@ -86,9 +92,15 @@ export default function ForgotPasswordForm() {
             />
             {errors.email ? <p id="recovery-email-error" className={formStyles.errorText} role="alert">{errors.email.message}</p> : null}
           </div>
-          <button type="submit" className={`${formStyles.primaryButton} ${styles.submitButton}`} disabled={submitting}>
-            {submitting ? "Sending secure link..." : "Send Reset Link"}
-          </button>
+          <Button
+            type="submit"
+            variant="primary"
+            className={styles.submitButton}
+            loading={submitting}
+            loadingText="Sending secure link..."
+          >
+            Send Reset Link
+          </Button>
         </form>
       )}
 

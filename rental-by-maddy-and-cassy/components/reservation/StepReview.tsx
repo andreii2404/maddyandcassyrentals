@@ -7,6 +7,8 @@ import { formatCustomerAddress, formatCustomerLocation, getDayCount } from "@/sr
 import BookingSummaryCard from "@/components/booking-summary/BookingSummaryCard";
 
 import formStyles from "@/components/ui/Form.module.css";
+import { Button } from "@/components/ui/Button";
+import ReservationFooter from "@/components/reservation/ReservationFooter";
 import styles from "./StepShared.module.css";
 import reviewStyles from "./StepReview.module.css";
 
@@ -60,14 +62,9 @@ export default function StepReview({
         <div className={reviewStyles.sectionHeader}>
           <h3>Rental Details</h3>
 
-          <button
-            type="button"
-            className={reviewStyles.editLink}
-            onClick={() => onEditStep(1)}
-            disabled={submitting}
-          >
+          <Button variant="ghost" className={reviewStyles.editLink} type="button" onClick={() => onEditStep(1)} disabled={submitting}>
             Edit
-          </button>
+          </Button>
         </div>
 
         {draft.startDate &&
@@ -97,14 +94,9 @@ export default function StepReview({
         <div className={reviewStyles.sectionHeader}>
           <h3>Customer Information</h3>
 
-          <button
-            type="button"
-            className={reviewStyles.editLink}
-            onClick={() => onEditStep(2)}
-            disabled={submitting}
-          >
+          <Button variant="ghost" className={reviewStyles.editLink} type="button" onClick={() => onEditStep(2)} disabled={submitting}>
             Edit
-          </button>
+          </Button>
         </div>
 
         <dl className={reviewStyles.detailGrid}>
@@ -142,14 +134,9 @@ export default function StepReview({
         <div className={reviewStyles.sectionHeader}>
           <h3>Rental Requirements</h3>
 
-          <button
-            type="button"
-            className={reviewStyles.editLink}
-            onClick={() => onEditStep(3)}
-            disabled={submitting}
-          >
+          <Button variant="ghost" className={reviewStyles.editLink} type="button" onClick={() => onEditStep(3)} disabled={submitting}>
             Edit
-          </button>
+          </Button>
         </div>
 
         <dl className={reviewStyles.detailGrid}>
@@ -197,14 +184,9 @@ export default function StepReview({
         <div className={reviewStyles.sectionHeader}>
           <h3>Agreement &amp; Signature</h3>
 
-          <button
-            type="button"
-            className={reviewStyles.editLink}
-            onClick={() => onEditStep(4)}
-            disabled={submitting}
-          >
+          <Button variant="ghost" className={reviewStyles.editLink} type="button" onClick={() => onEditStep(4)} disabled={submitting}>
             Edit
-          </button>
+          </Button>
         </div>
 
         <div className={reviewStyles.signaturePreviewRow}>
@@ -246,32 +228,14 @@ export default function StepReview({
         request for review?
       </div>
 
-      <div className={styles.footer}>
-        <button
-          type="button"
-          className={formStyles.secondaryButton}
-          onClick={onBack}
-          disabled={submitting}
-        >
-          Back
-        </button>
-
-        <button
-          type="button"
-          className={formStyles.primaryButton}
-          onClick={handleSubmit}
-          disabled={
-            submitting ||
-            !draft.startDate ||
-            !draft.endDate ||
-            !draft.fulfillmentMethod
-          }
-        >
-          {submitting
-            ? "Submitting Booking Request..."
-            : "Confirm & Submit Booking"}
-        </button>
-      </div>
+      <ReservationFooter
+        onBack={onBack}
+        primaryLabel="Confirm & Submit Booking"
+        primaryLoading={submitting}
+        primaryLoadingText="Submitting Booking Request..."
+        primaryDisabled={submitting || !draft.startDate || !draft.endDate || !draft.fulfillmentMethod}
+        onContinue={handleSubmit}
+      />
     </div>
   );
 }

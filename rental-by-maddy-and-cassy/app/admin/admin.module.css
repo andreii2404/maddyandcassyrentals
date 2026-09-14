@@ -219,6 +219,21 @@ a.secondaryCard:focus-visible {
   border-bottom: 1px solid var(--color-light-gray);
 }
 
+.cancellationPanel {
+  margin-bottom: 1.1rem;
+  scroll-margin-top: 1rem;
+}
+
+.cancellationTable td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.cancellationTable td:nth-child(4) {
+  min-width: 160px;
+  max-width: 280px;
+}
+
 .panelHeader h2 {
   margin: 0;
   font-size: 1.08rem;
@@ -361,16 +376,21 @@ a.secondaryCard:focus-visible {
 
 .error button {
   flex: 0 0 auto;
-  padding: 0.45rem 0.75rem;
+  min-height: 40px;
+  padding: 0.45rem 0.7rem;
   border: 1px solid currentColor;
-  border-radius: 999px;
+  border-radius: var(--radius-control);
   background: transparent;
   color: inherit;
   font: inherit;
   font-size: 0.72rem;
   font-weight: 700;
   cursor: pointer;
+  transition: background-color 140ms ease, transform 140ms ease;
 }
+
+.error button:hover { background: var(--color-white); transform: translateY(-1px); }
+.error button:active { transform: translateY(1px); }
 
 @media (max-width: 640px) {
   .pageHeader {
@@ -401,12 +421,14 @@ a.secondaryCard:focus-visible {
   .table,
   .table tbody,
   .table tbody tr.row,
+  .table tbody tr.cancellationRow,
   .table td {
     display: block;
     width: 100%;
   }
 
-  .table tbody tr.row {
+  .table tbody tr.row,
+  .table tbody tr.cancellationRow {
     padding: 0.85rem 0.9rem;
     margin-bottom: 0.75rem;
     border: 1px solid var(--color-light-gray);
@@ -417,6 +439,11 @@ a.secondaryCard:focus-visible {
     padding: 0.35rem 0;
     border-bottom: none;
     white-space: normal;
+  }
+
+  .cancellationTable td:nth-child(4) {
+    min-width: 0;
+    max-width: none;
   }
 
   .table td[data-label]::before {

@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import AdminShell from "@/components/admin/AdminShell";
@@ -227,20 +228,20 @@ export default function AdminAuditPage() {
                 ))}
               </select>
             </label>
-            <button
+            <Button variant="none"
               type="button"
               className={styles.resetButton}
               onClick={resetFilters}
               disabled={!hasActiveFilters}
             >
               Reset filters
-            </button>
+            </Button>
           </div>
 
           {error ? (
             <div className={styles.error} role="alert">
               {error}
-              <button type="button" onClick={() => setRetryCount((count) => count + 1)}>Try again</button>
+              <Button variant="none" type="button" onClick={() => setRetryCount((count) => count + 1)}>Try again</Button>
             </div>
           ) : null}
 
@@ -304,19 +305,19 @@ export default function AdminAuditPage() {
                     {filtered.length}
                   </span>
                   <div>
-                    <button type="button" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>
+                    <Button variant="none" type="button" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>
                       Previous
-                    </button>
+                    </Button>
                     <strong>
                       Page {currentPage} of {pageCount}
                     </strong>
-                    <button
+                    <Button variant="none"
                       type="button"
                       disabled={currentPage === pageCount}
                       onClick={() => setPage(currentPage + 1)}
                     >
                       Next
-                    </button>
+                    </Button>
                   </div>
                 </footer>
               </>

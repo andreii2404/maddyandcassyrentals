@@ -12,6 +12,7 @@ import FileUploadField from "@/components/file-upload/FileUploadField";
 import GcashRecipientCard from "@/components/payment/GcashRecipientCard";
 import { isValidPhoneNumber, normalizePhoneInput, PHONE_DIGIT_COUNT } from "@/src/lib/authValidation";
 import formStyles from "@/components/ui/Form.module.css";
+import ReservationFooter from "@/components/reservation/ReservationFooter";
 import sharedStyles from "./StepShared.module.css";
 import styles from "./StepPaymentSubmission.module.css";
 
@@ -280,6 +281,7 @@ export default function StepCartPaymentSubmission({
 
       <FileUploadField
         label="Screenshot / proof of payment"
+        disabled={opening}
         required
         value={draft.manualPayment.proofFile}
         onChange={(file) => onManualPaymentUpdate({ proofFile: file })}
@@ -301,28 +303,15 @@ export default function StepCartPaymentSubmission({
         </p>
       ) : null}
 
-      <div className={sharedStyles.footer}>
-        <button
-          type="button"
-          className={formStyles.secondaryButton}
-          onClick={onBack}
-          disabled={opening || !!bookingNumber}
-        >
-          Back
-        </button>
-        <button
-          type="button"
-          className={formStyles.primaryButton}
-          onClick={handleContinue}
-          disabled={opening}
-        >
-          {opening
-            ? "Saving your reservation…"
-            : alreadySubmitted
-              ? "Continue"
-              : "Submit Payment & Continue"}
-        </button>
-      </div>
+      <ReservationFooter
+        onBack={onBack}
+        backDisabled={opening || !!bookingNumber}
+        primaryLabel={opening ? "Saving your reservation…" : alreadySubmitted ? "Continue" : "Submit Payment & Continue"}
+        primaryLoading={opening}
+        primaryLoadingText="Saving your reservation…"
+        primaryDisabled={opening}
+        onContinue={handleContinue}
+      />
     </div>
   );
 }

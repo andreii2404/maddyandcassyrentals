@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 import styles from "./RentalDurationSelector.module.css";
 
 interface RentalDurationSelectorProps {
@@ -37,7 +38,7 @@ export default function RentalDurationSelector({
         Rental Duration
       </label>
       <div className={styles.stepper}>
-        <button
+        <Button variant="none"
           type="button"
           className={styles.stepButton}
           onClick={decrement}
@@ -45,7 +46,7 @@ export default function RentalDurationSelector({
           aria-label="Decrease rental days"
         >
           −
-        </button>
+        </Button>
         <input
           id="rental-duration"
           type="number"
@@ -57,7 +58,7 @@ export default function RentalDurationSelector({
           onChange={(event) => handleInputChange(event.target.value)}
           aria-label="Number of rental days"
         />
-        <button
+        <Button variant="none"
           type="button"
           className={styles.stepButton}
           onClick={increment}
@@ -65,7 +66,7 @@ export default function RentalDurationSelector({
           aria-label="Increase rental days"
         >
           +
-        </button>
+        </Button>
         <span className={styles.unitLabel}>{days === 1 ? "day" : "days"}</span>
       </div>
     </div>

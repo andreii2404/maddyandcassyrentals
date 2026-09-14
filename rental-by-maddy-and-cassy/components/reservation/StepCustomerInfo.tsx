@@ -14,6 +14,7 @@ import {
 } from "@/src/lib/authValidation";
 import { scrollToFirstError } from "@/src/lib/formScroll";
 import formStyles from "@/components/ui/Form.module.css";
+import ReservationFooter from "@/components/reservation/ReservationFooter";
 import styles from "./StepShared.module.css";
 
 const FIELD_ORDER: Array<keyof CustomerInfoDraft> = [
@@ -335,21 +336,13 @@ export default function StepCustomerInfo({
 
       {saveError ? <p className={formStyles.errorText} role="alert">{saveError}</p> : null}
 
-      <div className={styles.footer}>
-        {onBack ? (
-          <button type="button" className={formStyles.secondaryButton} onClick={onBack}>
-            Back
-          </button>
-        ) : <span />}
-        <button
-          type="button"
-          className={formStyles.primaryButton}
-          disabled={saving}
-          onClick={handleContinue}
-        >
-          {saving ? "Saving..." : "Continue"}
-        </button>
-      </div>
+      <ReservationFooter
+        onBack={onBack}
+        primaryLabel={saving ? "Saving…" : "Continue"}
+        primaryLoading={saving}
+        primaryLoadingText="Saving…"
+        onContinue={handleContinue}
+      />
     </div>
   );
 }

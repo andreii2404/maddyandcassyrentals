@@ -89,15 +89,16 @@
 }
 
 .colorButton {
-  padding: 0.42rem 0.85rem;
+  min-height: 40px;
+  padding: 0.45rem 0.8rem;
   border: 1px solid var(--color-dusty-rose);
-  border-radius: 999px;
+  border-radius: var(--radius-control);
   background: white;
   color: var(--color-text-primary);
   font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
 }
 
 .colorButton:hover:not(:disabled) {
@@ -113,6 +114,10 @@
 
 .colorButtonActive:hover:not(:disabled) {
   color: white;
+}
+
+.colorButton:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .colorButtonSoon {

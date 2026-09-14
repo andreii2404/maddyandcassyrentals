@@ -21,7 +21,7 @@ import type { BookingReceipt, PaymentRecord } from "@/src/types/payment";
 
 type RequirementSubmissionRow = Pick<
   Tables<"booking_requirement_submissions">,
-  "id" | "review_status" | "review_notes" | "reviewed_by" | "reviewed_at" | "submitted_at"
+  "id" | "attempt_number" | "review_status" | "review_notes" | "reviewed_by" | "reviewed_at" | "submitted_at"
 > & {
   customer_documents: Pick<
     Tables<"customer_documents">,
@@ -46,9 +46,10 @@ type RequirementRow = Pick<
 /** Picks the most recently submitted attempt for a requirement, if any exists yet. */
 export function mapRequirementToDocument(requirement: RequirementRow): BookingDocument | null {
   const submissions = requirement.booking_requirement_submissions ?? [];
-  const latest = [...submissions].sort(
-    (a, b) => Date.parse(b.submitted_at) - Date.parse(a.submitted_at),
-  )[0];
+  const latest = [...submissions].sort((a, b) => {
+    const byDate = Date.parse(b.submitted_at) - Date.parse(a.submitted_at);
+    return byDate || b.attempt_number - a.attempt_number;
+  })[0];
   if (!latest) return null;
 
   const document = latest.customer_documents;
@@ -64,6 +65,9 @@ export function mapRequirementToDocument(requirement: RequirementRow): BookingDo
     mimeType: document?.mime_type ?? undefined,
     fileSizeBytes: document?.file_size_bytes ?? undefined,
     reviewStatus: latest.review_status as RequirementReviewStatus,
+    attemptNumber: latest.attempt_number,
+    submittedAt: latest.submitted_at,
+    isResubmitted: latest.attempt_number > 1,
     reviewNotes: latest.review_notes ?? undefined,
     reviewedBy: latest.reviewed_by ?? undefined,
     reviewedAt: latest.reviewed_at ?? undefined,
@@ -176,7 +180,7 @@ export async function getBookingDetails(
         `
           id, booking_id, document_type_snapshot, requirement_key_snapshot, created_at, updated_at,
           booking_requirement_submissions(
-            id, review_status, review_notes, reviewed_by, reviewed_at, submitted_at,
+            id, attempt_number, review_status, review_notes, reviewed_by, reviewed_at, submitted_at,
             customer_documents(document_type, storage_bucket, storage_path, original_filename, mime_type, file_size_bytes, created_at, updated_at)
           )
         `,

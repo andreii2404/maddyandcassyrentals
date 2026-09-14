@@ -3,6 +3,7 @@
 import { useState, type KeyboardEvent } from "react";
 import type { ProductReview } from "@/types/product";
 import styles from "./ProductTabs.module.css";
+import { Button } from "@/components/ui/Button";
 
 interface ProductTabsProps {
   specs: Record<string, string>;
@@ -39,9 +40,9 @@ export default function ProductTabs({ specs, included, reviews, rating, reviewCo
     <div className={styles.card}>
       <div className={styles.tabList} role="tablist" aria-label="Product information" onKeyDown={handleKeyDown}>
         {tabs.map((tab) => (
-          <button
+          <Button
             key={tab.id}
-            type="button"
+            variant="none"
             role="tab"
             id={`tab-${tab.id}`}
             aria-selected={activeTab === tab.id}
@@ -51,7 +52,7 @@ export default function ProductTabs({ specs, included, reviews, rating, reviewCo
             onClick={() => setActiveTab(tab.id)}
           >
             {tab.label}
-          </button>
+          </Button>
         ))}
       </div>
 

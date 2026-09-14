@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -87,6 +88,15 @@ export default function AdminDashboard() {
           urgent: data.metrics.pendingVerification > 0,
         },
         {
+          key: "cancellationRequests",
+          label: "Cancellation Requests",
+          value: String(data.metrics.pendingCancellations),
+          caption: "Pending cancellation requests",
+          cta: "Review cancellation requests",
+          href: "#cancellation-requests",
+          urgent: data.metrics.pendingCancellations > 0,
+        },
+        {
           key: "activeBookings",
           label: "Active Bookings",
           value: String(data.metrics.activeBookings),
@@ -167,7 +177,7 @@ export default function AdminDashboard() {
       {error ? (
         <div className={styles.error} role="alert">
           {error}
-          <button type="button" onClick={() => setRetryCount((count) => count + 1)}>Try again</button>
+          <Button variant="none" type="button" onClick={() => setRetryCount((count) => count + 1)}>Try again</Button>
         </div>
       ) : null}
 
@@ -212,6 +222,65 @@ export default function AdminDashboard() {
                   <small>{card.caption}</small>
                 </article>
               ),
+            )}
+          </section>
+
+          <section
+            id="cancellation-requests"
+            className={`${styles.panel} ${styles.cancellationPanel}`}
+            aria-labelledby="cancellation-requests-heading"
+          >
+            <div className={styles.panelHeader}>
+              <div>
+                <h2 id="cancellation-requests-heading">Cancellation Requests</h2>
+                <p>Pending customer requests awaiting approval or rejection.</p>
+              </div>
+            </div>
+
+            {data.cancellationRequests.length ? (
+              <div className={styles.tableWrapper}>
+                <table className={`${styles.table} ${styles.cancellationTable}`}>
+                  <thead>
+                    <tr>
+                      <th scope="col">Booking ID</th>
+                      <th scope="col">Customer</th>
+                      <th scope="col">Product</th>
+                      <th scope="col">Cancellation reason</th>
+                      <th scope="col">Request date</th>
+                      <th scope="col">Status</th>
+                      <th scope="col" className={styles.actionCell}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.cancellationRequests.map((request) => {
+                      const href = `/admin/bookings/${request.bookingId}`;
+                      return (
+                        <tr key={request.id} className={styles.cancellationRow}>
+                          <td data-label="Booking ID">
+                            <Link href={href} className={styles.bookingLink}>{request.bookingRef}</Link>
+                          </td>
+                          <td data-label="Customer">{request.customerName}</td>
+                          <td data-label="Product">{request.productName}</td>
+                          <td data-label="Cancellation reason">{request.reason}</td>
+                          <td data-label="Request date">{formatDate(request.requestedAt)}</td>
+                          <td data-label="Status"><StatusBadge label="Pending" tone="yellow" /></td>
+                          <td data-label="Action" className={styles.actionCell}>
+                            <Link
+                              href={href}
+                              className={styles.openLink}
+                              aria-label={`Review cancellation request for ${request.bookingRef}`}
+                            >
+                              Review
+                            </Link>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className={styles.empty}>No pending cancellation requests.</p>
             )}
           </section>
 

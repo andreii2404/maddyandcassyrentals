@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useCart } from "@/hooks/useCart";
 import { logout } from "@/src/services/authService";
+import { Button } from "@/components/ui/Button";
 import styles from "./Navbar.module.css";
 
 const primaryLinks = [
@@ -206,8 +207,8 @@ export default function Navbar() {
           })}
 
           <div className={styles.guideMenu} ref={guideRef}>
-            <button
-              type="button"
+            <Button
+              variant="none"
               className={`${styles.guideTrigger} ${guideActive ? styles.linkActive : ""} ${guideOpen ? styles.guideTriggerOpen : ""}`}
               aria-expanded={guideOpen}
               aria-haspopup="true"
@@ -218,7 +219,7 @@ export default function Navbar() {
             >
               Rental Guide
               <ChevronIcon />
-            </button>
+            </Button>
             {guideOpen ? (
               <div className={styles.guideDropdown}>
                 <p>Plan your rental</p>
@@ -268,8 +269,8 @@ export default function Navbar() {
 
           {isAccountHolder ? (
             <div className={styles.profileMenu} ref={profileRef}>
-              <button
-                type="button"
+              <Button
+                variant="none"
                 className={`${styles.profileTrigger} ${profileOpen ? styles.profileTriggerOpen : ""}`}
                 aria-expanded={profileOpen}
                 aria-haspopup="true"
@@ -284,7 +285,7 @@ export default function Navbar() {
                   <strong>{firstName}</strong>
                 </span>
                 <ChevronIcon />
-              </button>
+              </Button>
               {profileOpen ? (
                 <div className={styles.profileDropdown}>
                   <div className={styles.profileDropdownHeader}>
@@ -301,7 +302,7 @@ export default function Navbar() {
                   {!isAdmin ? (
                     <Link href="/account/payments" className={styles.profileMenuLink} onClick={() => setProfileOpen(false)}>Payment History</Link>
                   ) : null}
-                  <button type="button" className={styles.profileMenuButton} onClick={handleSignOut}>Sign Out</button>
+                   <Button variant="none" className={styles.profileMenuButton} onClick={handleSignOut}>Sign Out</Button>
                 </div>
               ) : null}
             </div>
@@ -333,8 +334,8 @@ export default function Navbar() {
             <CartIcon />
             {totalQuantity > 0 ? <span className={styles.actionCount}>{totalQuantity}</span> : null}
           </Link>
-          <button
-            type="button"
+          <Button
+            variant="none"
             className={`${styles.menuButton} ${menuOpen ? styles.menuButtonOpen : ""}`}
             aria-expanded={menuOpen}
             aria-controls="mobile-navigation"
@@ -347,7 +348,7 @@ export default function Navbar() {
             <span />
             <span />
             <span />
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -421,7 +422,7 @@ export default function Navbar() {
                     <Link href={accountHomeHref} onClick={closeMenu}>{accountHomeLabel}</Link>
                     {!isAdmin ? <Link href={profileHref} onClick={closeMenu}>{profileLabel}</Link> : null}
                     {!isAdmin ? <Link href="/account/payments" onClick={closeMenu}>Payment History</Link> : null}
-                    <button type="button" onClick={handleSignOut}>Sign Out</button>
+                     <Button variant="none" onClick={handleSignOut}>Sign Out</Button>
                   </div>
                 </>
               ) : (

@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 import { useState } from "react";
 import Link from "next/link";
 import type { Product } from "@/types/product";
@@ -97,7 +98,7 @@ export default function ProductDetailsClient({
               {product.colorOptions.map((color) => {
                 const hasPhotos = product.images.some((image) => image.color === color);
                 return (
-                  <button
+                  <Button variant="none"
                     key={color}
                     type="button"
                     aria-pressed={activeColor === color}
@@ -111,7 +112,7 @@ export default function ProductDetailsClient({
                     onClick={() => setSelectedColor(color)}
                   >
                     {color}{hasPhotos ? "" : " · soon"}
-                  </button>
+                  </Button>
                 );
               })}
               <span className={styles.colorHint} role="status">
