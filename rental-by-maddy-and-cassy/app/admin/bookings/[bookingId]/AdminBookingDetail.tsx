@@ -1005,20 +1005,23 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                 </div>
 
                 {agreement ? <>
-                  <ol className={styles.signatureSteps}>
-                    <li className={customerSignature ? styles.stepComplete : styles.stepCurrent}>
-                      <span>{customerSignature ? "✓" : "1"}</span>
-                      <div><strong>Customer Signature</strong><small>{customerSignature ? `${customerSignature.signerName} · ${formatDate(customerSignature.signedAt, true)}` : "Waiting for customer"}</small></div>
-                    </li>
-                    <li className={businessSignature ? styles.stepComplete : customerSignature ? styles.stepCurrent : styles.stepUpcoming}>
-                      <span>{businessSignature ? "✓" : "2"}</span>
-                      <div><strong>Business Countersignature</strong><small>{businessSignature ? `${businessSignature.signerName} · ${formatDate(businessSignature.signedAt, true)}` : customerSignature ? "Admin reviews and countersigns" : "Available after customer signs"}</small></div>
-                    </li>
-                    <li className={agreement.finalDocumentPath ? styles.stepComplete : styles.stepUpcoming}>
-                      <span>{agreement.finalDocumentPath ? "✓" : "3"}</span>
-                      <div><strong>Final Agreement PDF</strong><small>{agreement.finalDocumentPath ? "Ready for admin and customer" : "Created after both signatures"}</small></div>
-                    </li>
-                  </ol>
+                  <div className={styles.signatureStatusRow}>
+                    <div className={`${styles.signatureStatusCard} ${customerSignature ? styles.signatureStatusComplete : styles.signatureStatusCurrent}`}>
+                      <span className={styles.signatureStatusBadge}>{customerSignature ? "Complete" : "In progress"}</span>
+                      <strong>Customer Signature</strong>
+                      <small>{customerSignature ? `${customerSignature.signerName} · ${formatDate(customerSignature.signedAt, true)}` : "Waiting for customer"}</small>
+                    </div>
+                    <div className={`${styles.signatureStatusCard} ${businessSignature ? styles.signatureStatusComplete : customerSignature ? styles.signatureStatusCurrent : styles.signatureStatusPending}`}>
+                      <span className={styles.signatureStatusBadge}>{businessSignature ? "Complete" : customerSignature ? "In progress" : "Pending"}</span>
+                      <strong>Business Countersignature</strong>
+                      <small>{businessSignature ? `${businessSignature.signerName} · ${formatDate(businessSignature.signedAt, true)}` : customerSignature ? "Admin reviews and countersigns" : "Available after customer signs"}</small>
+                    </div>
+                    <div className={`${styles.signatureStatusCard} ${agreement.finalDocumentPath ? styles.signatureStatusComplete : styles.signatureStatusPending}`}>
+                      <span className={styles.signatureStatusBadge}>{agreement.finalDocumentPath ? "Complete" : "Pending"}</span>
+                      <strong>Final Agreement PDF</strong>
+                      <small>{agreement.finalDocumentPath ? "Ready for admin and customer" : "Created after both signatures"}</small>
+                    </div>
+                  </div>
 
                   {agreement.status === "awaiting_business_signature" ? (
                     <div className={styles.countersignPanel}>

@@ -115,8 +115,15 @@ async function callAdminUserRoute<T>(
   );
 }
 
-export async function deleteCustomerAccountAsAdmin(uid: string): Promise<void> {
-  await callAdminUserRoute(uid, { method: "DELETE" });
+export async function deleteCustomerAccountAsAdmin(
+  uid: string,
+  details: { deletedBy: string; reason: string },
+): Promise<void> {
+  await callAdminUserRoute(uid, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(details),
+  });
 }
 
 export async function updateAccountAsAdmin(

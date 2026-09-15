@@ -8,6 +8,7 @@ import { bookingTrackingPath } from "@/src/lib/bookingAccess";
 export const runtime = "nodejs";
 
 const REVIEW_STATUSES = new Set(["verified", "rejected"]);
+const REVIEWER_NAMES = new Set(["Maddy", "Cassy"]);
 
 export async function POST(request: Request, { params }: { params: Promise<{ bookingId: string }> }) {
   try {
@@ -104,16 +105,21 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
     const admin = createAdminClient();
 
     const body = (await request.json().catch(() => null)) as
-      | { paymentId?: unknown; status?: unknown; reason?: unknown }
+      | { paymentId?: unknown; status?: unknown; reviewerName?: unknown; reason?: unknown }
       | null;
     const paymentId = typeof body?.paymentId === "string" ? body.paymentId : "";
     const rawStatus = body?.status;
+    const rawReviewerName = body?.reviewerName;
     const reason = typeof body?.reason === "string" ? body.reason.trim() : "";
 
     if (!paymentId || typeof rawStatus !== "string" || !REVIEW_STATUSES.has(rawStatus)) {
       return NextResponse.json({ error: "Choose a valid payment review action." }, { status: 400 });
     }
     const status = rawStatus as "verified" | "rejected";
+    if (typeof rawReviewerName !== "string" || !REVIEWER_NAMES.has(rawReviewerName)) {
+      return NextResponse.json({ error: "Choose who approved or rejected this payment." }, { status: 400 });
+    }
+    const reviewerName = rawReviewerName as "Maddy" | "Cassy";
     if (status === "rejected" && !reason) {
       return NextResponse.json({ error: "Add a reason for the rejection." }, { status: 400 });
     }
@@ -146,7 +152,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
       });
       await admin
         .from("booking_payment_submissions")
-        .update({ reviewed_by: user.id })
+        .update({ reviewed_by: user.id, reviewer_name: reviewerName })
         .eq("id", paymentId);
 
       const booking = await getBookingById(admin, bookingId);
@@ -154,8 +160,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
         booking_id: bookingId,
         from_status: booking?.status ?? "pending",
         to_status: booking?.status ?? "pending",
-        note: `Admin verified a GCash payment of PHP ${submission.declared_amount.toLocaleString("en-PH")}.${result.bookingConfirmed ? " Booking auto-confirmed." : ""}`,
+        note: `${reviewerName} verified a GCash payment of PHP ${submission.declared_amount.toLocaleString("en-PH")}.${result.bookingConfirmed ? " Booking auto-confirmed." : ""}`,
         changed_by: user.id,
+      });
+
+      await admin.rpc("log_audit_event", {
+        p_action: "payment.reviewed",
+        p_entity_type: "payment_submission",
+        p_entity_id: paymentId,
+        p_booking_id: bookingId,
+        p_new_values: { status, reviewerName },
       });
     } else {
       const now = new Date().toISOString();
@@ -165,6 +179,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
           status: "rejected",
           review_notes: reason,
           reviewed_by: user.id,
+          reviewer_name: reviewerName,
           reviewed_at: now,
         })
         .eq("id", paymentId);
@@ -175,7 +190,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
         booking_id: bookingId,
         from_status: booking?.status ?? "pending",
         to_status: booking?.status ?? "pending",
-        note: `Admin rejected a submitted payment proof: ${reason}`,
+        note: `${reviewerName} rejected a submitted payment proof: ${reason}`,
         changed_by: user.id,
       });
 
@@ -195,7 +210,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
         p_entity_type: "payment_submission",
         p_entity_id: paymentId,
         p_booking_id: bookingId,
-        p_new_values: { status, reason },
+        p_new_values: { status, reviewerName, reason },
       });
     }
 

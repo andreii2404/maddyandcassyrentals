@@ -58,6 +58,9 @@
 .reviewInfo dd { margin:.15rem 0 0; font-size:.64rem; line-height:1.4; }
 .confirmBody { display:grid; gap:1rem; }
 .confirmBody p { margin:0; color:var(--color-text-primary); font-size:.72rem; line-height:1.5; }
+.reviewerField { display:grid; gap:.3rem; }
+.reviewerField span { color:var(--color-charcoal); font-size:.62rem; font-weight:800; text-transform:uppercase; letter-spacing:.03em; }
+.reviewerField select { width:100%; min-height:38px; padding:.5rem .6rem; border:1px solid var(--color-light-gray); border-radius:8px; background:#fff; color:var(--color-text-primary); font:inherit; font-size:.7rem; }
 .confirmActions { display:flex; justify-content:flex-end; gap:.5rem; }
 .confirmActions button { min-height:40px; padding:.45rem .75rem; border:1px solid var(--color-light-gray); border-radius:var(--radius-control); background:#fff; color:var(--color-charcoal); font:inherit; font-size:.64rem; font-weight:800; cursor:pointer; }
 .confirmButton { border-color:var(--color-primary) !important; background:var(--color-primary) !important; color:#fff !important; }

@@ -1812,43 +1812,49 @@
 .recordComplete { background: var(--color-status-green-bg); color: var(--color-status-green); }
 .recordPending { background: var(--color-status-yellow-bg); color: var(--color-status-yellow); }
 
-.signatureSteps {
+.signatureStatusRow {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0;
+  gap: 0.6rem;
   margin: 1rem 0 0;
-  padding: 0;
-  list-style: none;
 }
 
-.signatureSteps li {
-  position: relative;
-  display: grid;
+.signatureStatusCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
   min-width: 0;
-  grid-template-columns: 26px minmax(0, 1fr);
-  gap: 0.45rem;
-  padding-right: 0.6rem;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid var(--color-light-gray);
+  border-radius: 12px;
+  background: var(--color-background-soft);
 }
 
-.signatureSteps li::before {
-  position: absolute;
-  top: 13px;
-  right: 0;
-  left: 13px;
-  height: 2px;
-  background: var(--color-light-gray);
-  content: "";
+.signatureStatusBadge {
+  align-self: flex-start;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--color-light-gray);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--color-charcoal);
+  font-size: 0.52rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
-.signatureSteps li:last-child::before { display: none; }
-.signatureSteps li > span { z-index: 1; display: grid; width: 26px; height: 26px; place-items: center; border: 1px solid var(--color-light-gray); border-radius: 50%; background: #fff; color: var(--color-charcoal); font-size: 0.58rem; font-weight: 900; }
-.signatureSteps .stepComplete > span { border-color: var(--color-status-green); background: var(--color-status-green); color: #fff; }
-.signatureSteps .stepCurrent > span { border-color: var(--color-primary); color: var(--color-primary); box-shadow: 0 0 0 4px rgba(154,89,101,.1); }
-.signatureSteps div { position: relative; z-index: 1; min-width: 0; padding-right: 0.3rem; background: linear-gradient(90deg, transparent, #fff 15%); }
-.signatureSteps strong,.signatureSteps small { display: block; }
-.signatureSteps strong { font-size: 0.61rem; line-height: 1.35; }
-.signatureSteps small { margin-top: 0.16rem; color: var(--color-charcoal); font-size: 0.52rem; line-height: 1.4; }
-.stepUpcoming { opacity: 0.65; }
+.signatureStatusCard strong { display: block; font-size: 0.62rem; line-height: 1.35; }
+.signatureStatusCard small { display: block; margin-top: 0.1rem; color: var(--color-charcoal); font-size: 0.54rem; line-height: 1.4; }
+
+.signatureStatusComplete { border-color: var(--color-status-green); background: var(--color-status-green-bg); }
+.signatureStatusComplete .signatureStatusBadge { border-color: var(--color-status-green); background: var(--color-status-green); color: #fff; }
+.signatureStatusComplete strong { color: var(--color-status-green); }
+
+.signatureStatusCurrent { border-color: var(--color-dusty-rose); background: var(--color-blush); }
+.signatureStatusCurrent .signatureStatusBadge { border-color: var(--color-primary); background: var(--color-primary); color: #fff; }
+.signatureStatusCurrent strong { color: var(--color-primary); }
+
+.signatureStatusPending { opacity: 0.7; }
 
 .countersignPanel {
   display: grid;
@@ -1915,12 +1921,9 @@
   border-bottom: 1px solid var(--color-light-gray);
 }
 
-.agreementCard .signatureSteps {
+.agreementCard .signatureStatusRow {
   margin-top: 0.85rem;
 }
-
-.agreementCard .signatureSteps .stepComplete strong { color: var(--color-status-green); }
-.agreementCard .signatureSteps .stepCurrent strong { color: var(--color-primary); }
 
 .agreementCard .countersignPanel,
 .agreementCard .completedAgreement {
@@ -2209,9 +2212,7 @@
 
   .receiptRow { grid-template-columns: 1fr; }
 
-  .signatureSteps { grid-template-columns: 1fr; gap: 0.65rem; }
-  .signatureSteps li::before { top: -0.7rem; bottom: 50%; left: 13px; width: 2px; height: auto; }
-  .signatureSteps li:first-child::before { display: none; }
+  .signatureStatusRow { grid-template-columns: 1fr; gap: 0.5rem; }
 
   .agreementCard .readinessChecks { grid-template-columns: 1fr; }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
@@ -11,7 +11,10 @@ import {
   createCatalogProductAsAdmin,
   deactivateCatalogProductAsAdmin,
   deleteCatalogCategoryAsAdmin,
+  deleteCatalogImageAsAdmin,
   moderateProductReviewAsAdmin,
+  replaceCatalogImageAsAdmin,
+  setPrimaryCatalogImageAsAdmin,
   updateCatalogCategoryAsAdmin,
   updateCatalogProductAsAdmin,
   updateInventoryUnitAsAdmin,
@@ -27,7 +30,7 @@ import {
   type AdminPriceHistoryEntry,
   type AdminProductReview,
 } from "@/src/services/operationsService";
-import type { Product, ProductStatus } from "@/types/product";
+import type { Product, ProductImage, ProductStatus } from "@/types/product";
 import styles from "./catalog.module.css";
 
 const blankForm: CatalogEditorInput = {
@@ -97,6 +100,11 @@ export default function AdminCatalogManager() {
   const [includedText, setIncludedText] = useState("");
   const [specificationsText, setSpecificationsText] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [pendingPhotoAction, setPendingPhotoAction] = useState<
+    { type: "add" } | { type: "replace"; imageId: string } | null
+  >(null);
+  const [photoBusyId, setPhotoBusyId] = useState<string | null>(null);
   const [categoryEditing, setCategoryEditing] = useState<AdminCatalogCategory | "new" | null>(null);
   const [categoryForm, setCategoryForm] = useState<CatalogCategoryInput>(blankCategory);
   const [unitEditing, setUnitEditing] = useState<AdminInventoryUnit | null>(null);
@@ -107,11 +115,13 @@ export default function AdminCatalogManager() {
     message: string;
     confirmLabel: string;
     successMessage: string;
+    /** When set, re-syncs the open product editor with this product's fresh data after the action runs. */
+    focusProductId?: string;
     action: () => Promise<void>;
   } | null>(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (focusProductId?: string) => {
     setError(null);
     try {
       const data = await getAdminCatalog();
@@ -120,6 +130,13 @@ export default function AdminCatalogManager() {
       setInventoryUnits(data.inventoryUnits);
       setPriceHistory(data.priceHistory);
       setReviews(data.reviews);
+      if (focusProductId) {
+        setEditing((current) =>
+          current !== "new" && current && current.id === focusProductId
+            ? data.products.find((product) => product.id === focusProductId) ?? current
+            : current,
+        );
+      }
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "The catalog could not be loaded.");
     }
@@ -202,6 +219,14 @@ export default function AdminCatalogManager() {
       setSpecificationsText("");
     }
     setImageFile(null);
+    setPendingPhotoAction(null);
+    setPhotoBusyId(null);
+  }
+
+  function closeEditor() {
+    setEditing(null);
+    setPendingPhotoAction(null);
+    setPhotoBusyId(null);
   }
 
   async function saveProduct() {
@@ -234,7 +259,7 @@ export default function AdminCatalogManager() {
       if (editing !== "new") await updateCatalogProductAsAdmin(productId, editorInput);
       if (imageFile) await uploadCatalogImage(productId, imageFile);
       await load();
-      setEditing(null);
+      closeEditor();
       showToast("Product details and inventory updated.", "success");
     } catch (saveError) {
       showToast(saveError instanceof Error ? saveError.message : "The product could not be saved.", "error");
@@ -251,6 +276,69 @@ export default function AdminCatalogManager() {
       successMessage: "Product removed from the public catalog.",
       action: async () => {
         await deactivateCatalogProductAsAdmin(product.id);
+      },
+    });
+  }
+
+  function triggerAddPhoto() {
+    setPendingPhotoAction({ type: "add" });
+    photoInputRef.current?.click();
+  }
+
+  function triggerReplacePhoto(imageId: string) {
+    setPendingPhotoAction({ type: "replace", imageId });
+    photoInputRef.current?.click();
+  }
+
+  async function handlePhotoFileSelected(file: File | null) {
+    const action = pendingPhotoAction;
+    setPendingPhotoAction(null);
+    if (photoInputRef.current) photoInputRef.current.value = "";
+    if (!file || !action || editing === "new" || !editing) return;
+    const productId = editing.id;
+    setPhotoBusyId(action.type === "replace" ? action.imageId : "new");
+    try {
+      if (action.type === "add") {
+        await uploadCatalogImage(productId, file);
+        showToast("Photo added.", "success");
+      } else {
+        await replaceCatalogImageAsAdmin(productId, action.imageId, file);
+        showToast("Photo replaced.", "success");
+      }
+      await load(productId);
+    } catch (photoError) {
+      showToast(photoError instanceof Error ? photoError.message : "The photo could not be saved.", "error");
+    } finally {
+      setPhotoBusyId(null);
+    }
+  }
+
+  async function setMainPhoto(imageId: string) {
+    if (editing === "new" || !editing) return;
+    const productId = editing.id;
+    setPhotoBusyId(imageId);
+    try {
+      await setPrimaryCatalogImageAsAdmin(productId, imageId);
+      await load(productId);
+      showToast("Main photo updated.", "success");
+    } catch (photoError) {
+      showToast(photoError instanceof Error ? photoError.message : "The main photo could not be updated.", "error");
+    } finally {
+      setPhotoBusyId(null);
+    }
+  }
+
+  function requestDeletePhoto(image: ProductImage) {
+    if (editing === "new" || !editing) return;
+    const productId = editing.id;
+    setConfirmDialog({
+      title: "Delete this photo?",
+      message: "This permanently removes the photo from Supabase Storage. This cannot be undone.",
+      confirmLabel: "Delete Photo",
+      successMessage: "Photo deleted.",
+      focusProductId: productId,
+      action: async () => {
+        await deleteCatalogImageAsAdmin(productId, image.id);
       },
     });
   }
@@ -344,7 +432,7 @@ export default function AdminCatalogManager() {
     setConfirmBusy(true);
     try {
       await confirmDialog.action();
-      await load();
+      await load(confirmDialog.focusProductId);
       setConfirmDialog(null);
       showToast(confirmDialog.successMessage, "success");
     } catch (actionError) {
@@ -589,9 +677,9 @@ export default function AdminCatalogManager() {
       ) : null}
 
       {editing ? (
-        <div className={styles.overlay} role="presentation" onMouseDown={() => !saving && setEditing(null)}>
+        <div className={styles.overlay} role="presentation" onMouseDown={() => !saving && closeEditor()}>
           <form onSubmit={(event) => { event.preventDefault(); void saveProduct(); }} aria-busy={saving} className={styles.editor} role="dialog" aria-modal="true" aria-labelledby="product-editor-title" onMouseDown={(event) => event.stopPropagation()}>
-            <div className={styles.editorHeader}><div><p>PRODUCT EDITOR</p><h2 id="product-editor-title">{editing === "new" ? "Add Product" : `Edit ${editing.name}`}</h2></div><Button variant="none" type="button" onClick={() => setEditing(null)} disabled={saving}>Close</Button></div>
+            <div className={styles.editorHeader}><div><p>PRODUCT EDITOR</p><h2 id="product-editor-title">{editing === "new" ? "Add Product" : `Edit ${editing.name}`}</h2></div><Button variant="none" type="button" onClick={closeEditor} disabled={saving}>Close</Button></div>
             <div className={styles.formGrid}>
               <label><span>Product name *</span><input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
               <label><span>Brand</span><input value={form.brand} onChange={(event) => setForm({ ...form, brand: event.target.value })} /></label>
@@ -602,14 +690,54 @@ export default function AdminCatalogManager() {
               <label><span>Discount percent</span><input type="number" min="0" max="90" step="1" value={form.discountPercent} onChange={(event) => setForm({ ...form, discountPercent: Number(event.target.value) })} /></label>
               <label><span>Discount label</span><input value={form.discountLabel} placeholder="Example: Weekday special" onChange={(event) => setForm({ ...form, discountLabel: event.target.value })} /></label>
               <label><span>Active rental units</span><input type="number" min="0" max="1000" value={form.totalUnits} onChange={(event) => setForm({ ...form, totalUnits: Number(event.target.value) })} /><small>Booked units cannot be removed.</small></label>
-              <label><span>Catalog image</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setImageFile(event.target.files?.[0] ?? null)} /><small>Optional for now. JPG, PNG, or WebP up to 10 MB.</small></label>
+              {editing !== "new" ? (
+                <div className={`${styles.wide} ${styles.gallerySection}`}>
+                  <span className={styles.galleryLabel}>Product photos</span>
+                  {editing.images.length === 0 ? (
+                    <div className={styles.galleryEmpty}>
+                      <Image src="/images/product-placeholder.png" alt="No photos uploaded yet" width={64} height={64} />
+                      <p>No photos uploaded yet.</p>
+                    </div>
+                  ) : (
+                    <div className={styles.galleryGrid}>
+                      {editing.images.map((image) => (
+                        <div key={image.id} className={styles.galleryItem}>
+                          <div className={styles.galleryThumbWrap}>
+                            <Image src={image.url} alt={image.altText || "Product photo"} fill sizes="140px" className={styles.galleryThumb} />
+                            {image.isPrimary ? <span className={styles.galleryPrimaryBadge}>Main</span> : null}
+                            {photoBusyId === image.id ? <div className={styles.galleryThumbBusy}><Spinner size={20} /></div> : null}
+                          </div>
+                          <div className={styles.galleryItemActions}>
+                            {!image.isPrimary ? (
+                              <Button variant="none" type="button" className={styles.galleryLinkButton} disabled={photoBusyId !== null} onClick={() => void setMainPhoto(image.id)}>Set as main</Button>
+                            ) : null}
+                            <Button variant="none" type="button" className={styles.galleryLinkButton} disabled={photoBusyId !== null} onClick={() => triggerReplacePhoto(image.id)}>Replace</Button>
+                            <Button variant="none" type="button" className={`${styles.galleryLinkButton} ${styles.dangerText}`} disabled={photoBusyId !== null} onClick={() => requestDeletePhoto(image)}>Delete</Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <Button variant="none" type="button" className={styles.galleryAddButton} disabled={photoBusyId !== null} onClick={triggerAddPhoto}>+ Add photos</Button>
+                  <small>JPG, PNG, or WebP up to 10 MB each. Changes save immediately.</small>
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className={styles.srOnly}
+                    onChange={(event) => void handlePhotoFileSelected(event.target.files?.[0] ?? null)}
+                  />
+                </div>
+              ) : (
+                <label><span>Catalog image</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setImageFile(event.target.files?.[0] ?? null)} /><small>Optional for now. JPG, PNG, or WebP up to 10 MB. Add more photos after creating the product.</small></label>
+              )}
               <label className={styles.wide}><span>Short description</span><input maxLength={300} value={form.shortDescription ?? ""} onChange={(event) => setForm({ ...form, shortDescription: event.target.value })} /></label>
               <label className={styles.wide}><span>Detailed description</span><textarea rows={4} maxLength={3000} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label>
               <label className={styles.wide}><span>Features / specifications</span><textarea rows={5} value={specificationsText} placeholder={"Storage: 256 GB\nColor: Natural Titanium\nCharging: USB-C"} onChange={(event) => setSpecificationsText(event.target.value)} /><small>One per line using Feature: Value.</small></label>
               <label className={styles.wide}><span>Included accessories</span><textarea rows={5} value={includedText} placeholder="One included item per line" onChange={(event) => setIncludedText(event.target.value)} /></label>
               <label className={styles.checkbox}><input type="checkbox" checked={form.isFeatured} onChange={(event) => setForm({ ...form, isFeatured: event.target.checked })} /><span>Feature this product on the storefront</span></label>
             </div>
-            <div className={styles.editorActions}><Button variant="none" type="button" onClick={() => setEditing(null)} disabled={saving}>Cancel</Button><Button variant="primary" type="submit" loading={saving} loadingText="Saving...">Save Product</Button></div>
+            <div className={styles.editorActions}><Button variant="none" type="button" onClick={closeEditor} disabled={saving}>Cancel</Button><Button variant="primary" type="submit" loading={saving} loadingText="Saving...">Save Product</Button></div>
           </form>
         </div>
       ) : null}

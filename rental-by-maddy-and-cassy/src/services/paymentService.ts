@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Tables } from "@/src/lib/supabase/database.types";
-import type { BookingReceipt, PaymentOption, PaymentRecord } from "@/src/types/payment";
+import type { BookingReceipt, PaymentOption, PaymentRecord, PaymentReviewerName } from "@/src/types/payment";
 import type { BalancePaymentPreference } from "@/src/types/booking";
 
 export type { PaymentOption };
@@ -118,6 +118,7 @@ export function mapPaymentSubmission(row: PaymentSubmissionRow): PaymentRecord {
     providerMetadata: (row.provider_metadata as Record<string, unknown>) ?? {},
     reviewNotes: row.review_notes ?? undefined,
     reviewedBy: row.reviewed_by ?? undefined,
+    reviewerName: (row.reviewer_name as PaymentReviewerName | null) ?? undefined,
     reviewedAt: row.reviewed_at ?? undefined,
     submittedAt: row.submitted_at,
     completedAt: row.completed_at ?? undefined,
@@ -158,13 +159,14 @@ export async function reviewManualPayment(
   bookingId: string,
   paymentId: string,
   status: "verified" | "rejected",
+  reviewerName: PaymentReviewerName,
   reason?: string,
 ): Promise<void> {
   const response = await fetch(`/api/admin/bookings/${encodeURIComponent(bookingId)}/payments`, {
     method: "PATCH",
     credentials: "same-origin",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ paymentId, status, reason }),
+    body: JSON.stringify({ paymentId, status, reviewerName, reason }),
   });
   const body = (await response.json().catch(() => null)) as { error?: unknown } | null;
   if (!response.ok) {

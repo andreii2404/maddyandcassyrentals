@@ -562,6 +562,7 @@ export type Database = {
           review_notes: string | null
           reviewed_at: string | null
           reviewed_by: string | null
+          reviewer_name: string | null
           stage: Database["public"]["Enums"]["payment_stage"]
           status: Database["public"]["Enums"]["payment_submission_status"]
           submitted_at: string
@@ -584,6 +585,7 @@ export type Database = {
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          reviewer_name?: string | null
           stage: Database["public"]["Enums"]["payment_stage"]
           status?: Database["public"]["Enums"]["payment_submission_status"]
           submitted_at?: string
@@ -606,6 +608,7 @@ export type Database = {
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          reviewer_name?: string | null
           stage?: Database["public"]["Enums"]["payment_stage"]
           status?: Database["public"]["Enums"]["payment_submission_status"]
           submitted_at?: string

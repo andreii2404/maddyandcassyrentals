@@ -73,7 +73,7 @@ export async function fulfillVerifiedPayment(
     ...((payment.provider_metadata as Record<string, unknown>) ?? {}),
     ...(input.providerMetadata ?? {}),
   };
-  await admin
+  const { data: updatedPayment, error: verifyError } = await admin
     .from("booking_payment_submissions")
     .update({
       status: "verified",
@@ -83,7 +83,18 @@ export async function fulfillVerifiedPayment(
       reviewed_at: now,
       completed_at: now,
     })
-    .eq("id", payment.id);
+    .eq("id", payment.id)
+    .select("status")
+    .single();
+
+  // Every downstream effect below (receipt, notification, auto-confirm) assumes the
+  // payment is actually verified in the database. Without this check, a failed write
+  // left the row at status "submitted" while the admin UI still reported success --
+  // the payment looked verified everywhere except the one column every balance and
+  // status calculation actually reads.
+  if (verifyError || !updatedPayment || updatedPayment.status !== "verified") {
+    throw new Error(verifyError?.message ?? "PAYMENT_VERIFICATION_WRITE_FAILED");
+  }
 
   const receiptId = crypto.randomUUID();
   const receiptNumber = documentNumber("OR", booking.bookingRef, receiptId);

@@ -19,7 +19,9 @@ import { resolveAccountName } from "@/src/lib/accountDisplay";
 import Spinner from "@/components/ui/Spinner";
 import StatusBadge from "@/components/status-badge/StatusBadge";
 import styles from "./userDetail.module.css";
-import AccountManagementPanel from "@/components/admin/AccountManagementPanel";
+
+const DELETED_BY_OPTIONS = ["Maddy", "Cassy"] as const;
+type DeletedBy = (typeof DELETED_BY_OPTIONS)[number];
 
 interface UserDetailData {
   account: UserProfile;
@@ -42,9 +44,16 @@ export default function AdminUserDetail({ uid }: { uid: string }) {
   const { showToast } = useToast();
   const [data, setData] = useState<UserDetailData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [confirmationOpen, setConfirmationOpen] = useState(false);
-  const [confirmationText, setConfirmationText] = useState("");
+  const [deleteStep, setDeleteStep] = useState<"closed" | "fields" | "confirm">("closed");
+  const [deletedBy, setDeletedBy] = useState<DeletedBy | "">("");
+  const [reason, setReason] = useState("");
   const [deleting, setDeleting] = useState(false);
+
+  function resetDeleteFlow() {
+    setDeleteStep("closed");
+    setDeletedBy("");
+    setReason("");
+  }
 
   useEffect(() => {
     let active = true;
@@ -69,11 +78,11 @@ export default function AdminUserDetail({ uid }: { uid: string }) {
   }, [uid]);
 
   async function handleDeleteAccount() {
-    if (!user || confirmationText !== "DELETE") return;
+    if (!user || !deletedBy || !reason.trim()) return;
 
     setDeleting(true);
     try {
-      await deleteCustomerAccountAsAdmin(uid);
+      await deleteCustomerAccountAsAdmin(uid, { deletedBy, reason: reason.trim() });
       showToast("The customer account has been deleted.", "success");
       router.replace("/admin/users");
       router.refresh();
@@ -181,10 +190,6 @@ export default function AdminUserDetail({ uid }: { uid: string }) {
             <dt>Registered</dt>
             <dd>{formatDate(account.createdAt)}</dd>
           </div>
-          <div>
-            <dt>User ID</dt>
-            <dd className={styles.uid}>{account.id}</dd>
-          </div>
         </dl>
       </section>
 
@@ -251,11 +256,6 @@ export default function AdminUserDetail({ uid }: { uid: string }) {
         )}
       </section>
 
-      <AccountManagementPanel
-        account={account}
-        isAdministrator={isAdministrator}
-      />
-
       <section
         className={`${styles.dangerZone} ${isAdministrator ? styles.protectedZone : ""}`}
         aria-labelledby="account-removal-heading"
@@ -271,37 +271,70 @@ export default function AdminUserDetail({ uid }: { uid: string }) {
           </p>
         </div>
 
-        {!isAdministrator && !confirmationOpen ? (
+        {!isAdministrator && deleteStep === "closed" ? (
           <Button variant="none"
             type="button"
             className={styles.deleteButton}
-            onClick={() => setConfirmationOpen(true)}
+            onClick={() => setDeleteStep("fields")}
           >
             Delete Account
           </Button>
         ) : null}
 
-        {!isAdministrator && confirmationOpen ? (
+        {!isAdministrator && deleteStep === "fields" ? (
           <div className={styles.confirmation} role="alertdialog" aria-modal="true">
-            <p>
-              This action cannot be undone. Type <strong>DELETE</strong> to confirm.
-            </p>
-            <label htmlFor="delete-account-confirmation">Confirmation</label>
-            <input
-              id="delete-account-confirmation"
-              value={confirmationText}
-              onChange={(event) => setConfirmationText(event.target.value)}
-              autoComplete="off"
+            <p>This action cannot be undone. Both fields are required to continue.</p>
+            <label htmlFor="delete-account-deleted-by">Deleted by</label>
+            <select
+              id="delete-account-deleted-by"
+              value={deletedBy}
+              onChange={(event) => setDeletedBy(event.target.value as DeletedBy)}
+              disabled={deleting}
+            >
+              <option value="">Select who is deleting this account</option>
+              {DELETED_BY_OPTIONS.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+            <label htmlFor="delete-account-reason">Reason for deletion</label>
+            <textarea
+              id="delete-account-reason"
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              rows={3}
               disabled={deleting}
             />
             <div className={styles.confirmationActions}>
               <Button variant="none"
                 type="button"
                 className={styles.cancelButton}
-                onClick={() => {
-                  setConfirmationOpen(false);
-                  setConfirmationText("");
-                }}
+                onClick={resetDeleteFlow}
+                disabled={deleting}
+              >
+                Cancel
+              </Button>
+              <Button variant="none"
+                type="button"
+                className={styles.confirmDeleteButton}
+                onClick={() => setDeleteStep("confirm")}
+                disabled={!deletedBy || !reason.trim() || deleting}
+              >
+                Continue
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        {!isAdministrator && deleteStep === "confirm" ? (
+          <div className={styles.confirmation} role="alertdialog" aria-modal="true">
+            <p>Are you sure you want to delete this customer account?</p>
+            <div className={styles.confirmationActions}>
+              <Button variant="none"
+                type="button"
+                className={styles.cancelButton}
+                onClick={() => setDeleteStep("fields")}
                 disabled={deleting}
               >
                 Cancel
@@ -310,9 +343,9 @@ export default function AdminUserDetail({ uid }: { uid: string }) {
                 type="button"
                 className={styles.confirmDeleteButton}
                 onClick={handleDeleteAccount}
-                disabled={confirmationText !== "DELETE" || deleting}
+                disabled={deleting}
               >
-                {deleting ? "Deleting..." : "Permanently Delete"}
+                {deleting ? "Deleting..." : "Yes, Permanently Delete"}
               </Button>
             </div>
           </div>

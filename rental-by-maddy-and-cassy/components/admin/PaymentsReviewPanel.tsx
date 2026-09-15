@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useToast } from "@/components/ui/ToastProvider";
 import { recordInPersonBalance, reviewManualPayment } from "@/src/services/paymentService";
 import type { Booking } from "@/src/types/booking";
-import type { PaymentRecord, PaymentStage } from "@/src/types/payment";
+import type { PaymentRecord, PaymentReviewerName, PaymentStage } from "@/src/types/payment";
 import styles from "./PaymentsReviewPanel.module.css";
 
 function money(value: number): string {
@@ -57,6 +57,7 @@ export default function PaymentsReviewPanel({
   const [recordReference, setRecordReference] = useState("");
   const [recordNotes, setRecordNotes] = useState("");
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  const [reviewerName, setReviewerName] = useState<PaymentReviewerName | "">("");
 
   const needsReview = payments.filter((p) => p.status === "submitted" || p.status === "under_review");
   const reviewed = payments.filter((p) => p.status !== "submitted" && p.status !== "under_review");
@@ -79,7 +80,7 @@ export default function PaymentsReviewPanel({
     }
   }
 
-  async function saveReview(payment: PaymentRecord, status: "verified" | "rejected") {
+  async function saveReview(payment: PaymentRecord, status: "verified" | "rejected", reviewer: PaymentReviewerName) {
     if (activeId !== null || recording) return;
     const rejectionReason = status === "rejected" ? reason.trim() : "";
     if (status === "rejected" && !rejectionReason) {
@@ -88,7 +89,7 @@ export default function PaymentsReviewPanel({
     }
     setActiveId(payment.id);
     try {
-      await reviewManualPayment(bookingId, payment.id, status, rejectionReason || undefined);
+      await reviewManualPayment(bookingId, payment.id, status, reviewer, rejectionReason || undefined);
       setReason("");
       setRejectingId(null);
       await onUpdated();
@@ -103,9 +104,12 @@ export default function PaymentsReviewPanel({
   async function confirmPendingAction() {
     if (!pendingAction) return;
     const action = pendingAction;
+    if (action.kind !== "recordBalance" && !reviewerName) return;
     setPendingAction(null);
-    if (action.kind === "verify") await saveReview(action.payment, "verified");
-    else if (action.kind === "reject") await saveReview(action.payment, "rejected");
+    const reviewer = reviewerName;
+    setReviewerName("");
+    if (action.kind === "verify" && reviewer) await saveReview(action.payment, "verified", reviewer);
+    else if (action.kind === "reject" && reviewer) await saveReview(action.payment, "rejected", reviewer);
     else await saveInPersonPayment();
   }
 
@@ -207,12 +211,12 @@ export default function PaymentsReviewPanel({
 
               {payment.status === "verified" ? (
                 <dl className={styles.reviewInfo}>
-                  <div><dt>Approved By</dt><dd>{payment.reviewedByName || "Admin"}</dd></div>
+                  <div><dt>Approved By</dt><dd>{payment.reviewerName || payment.reviewedByName || "Admin"}</dd></div>
                   <div><dt>Approved Date &amp; Time</dt><dd>{formatDate(payment.reviewedAt)}</dd></div>
                 </dl>
               ) : payment.status === "rejected" ? (
                 <dl className={styles.reviewInfo}>
-                  <div><dt>Rejected By</dt><dd>{payment.reviewedByName || "Admin"}</dd></div>
+                  <div><dt>Rejected By</dt><dd>{payment.reviewerName || payment.reviewedByName || "Admin"}</dd></div>
                   <div><dt>Rejection Reason</dt><dd>{payment.reviewNotes || "-"}</dd></div>
                   <div><dt>Rejected Date &amp; Time</dt><dd>{formatDate(payment.reviewedAt)}</dd></div>
                 </dl>
@@ -229,7 +233,7 @@ export default function PaymentsReviewPanel({
                     <Button variant="none"
                       type="button"
                       className={styles.approveButton}
-                      onClick={() => setPendingAction({ kind: "verify", payment })}
+                      onClick={() => { setPendingAction({ kind: "verify", payment }); setReviewerName(""); }}
                       disabled={activeId !== null}
                     >
                       {isSaving && !isRejecting ? "Saving..." : "Verify payment"}
@@ -266,7 +270,7 @@ export default function PaymentsReviewPanel({
                     <Button variant="none"
                       type="button"
                       className={styles.sendButton}
-                      onClick={() => setPendingAction({ kind: "reject", payment })}
+                      onClick={() => { setPendingAction({ kind: "reject", payment }); setReviewerName(""); }}
                       disabled={isSaving || !reason.trim()}
                     >
                       {isSaving ? "Sending..." : "Send rejection"}
@@ -280,7 +284,7 @@ export default function PaymentsReviewPanel({
       </div>
 
       {pendingAction ? (
-        <Modal title="Confirm action" onClose={() => setPendingAction(null)}>
+        <Modal title="Confirm action" onClose={() => { setPendingAction(null); setReviewerName(""); }}>
           <div className={styles.confirmBody}>
             <p>
               {pendingAction.kind === "verify"
@@ -289,11 +293,31 @@ export default function PaymentsReviewPanel({
                 ? "Are you sure you want to reject this payment?"
                 : "Is this payment information final?"}
             </p>
+            {pendingAction.kind !== "recordBalance" ? (
+              <label className={styles.reviewerField}>
+                <span>{pendingAction.kind === "verify" ? "Approved by" : "Rejected by"}</span>
+                <select
+                  value={reviewerName}
+                  onChange={(event) => setReviewerName(event.target.value as PaymentReviewerName)}
+                  autoFocus
+                >
+                  <option value="">Select…</option>
+                  <option value="Maddy">Maddy</option>
+                  <option value="Cassy">Cassy</option>
+                </select>
+              </label>
+            ) : null}
             <div className={styles.confirmActions}>
-              <Button variant="none" type="button" onClick={() => setPendingAction(null)}>
+              <Button variant="none" type="button" onClick={() => { setPendingAction(null); setReviewerName(""); }}>
                 Cancel
               </Button>
-              <Button variant="none" type="button" className={styles.confirmButton} onClick={() => void confirmPendingAction()}>
+              <Button
+                variant="none"
+                type="button"
+                className={styles.confirmButton}
+                onClick={() => void confirmPendingAction()}
+                disabled={pendingAction.kind !== "recordBalance" && !reviewerName}
+              >
                 Confirm
               </Button>
             </div>
