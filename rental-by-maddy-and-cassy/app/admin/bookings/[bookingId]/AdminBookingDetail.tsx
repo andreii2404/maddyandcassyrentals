@@ -19,7 +19,7 @@ import {
   updateAdminBookingStatus,
 } from "@/src/services/adminBookingService";
 import { getUserProfile } from "@/src/services/userService";
-import { getBookingPayments, getBookingReceipts, sendBookingReceiptEmail } from "@/src/services/paymentService";
+import { getBookingPayments, getBookingReceipts } from "@/src/services/paymentService";
 import type { BookingStatus, UserProfile } from "@/src/types/database";
 import type { BookingDocument, RequirementReviewStatus, RequirementsStatus } from "@/src/types/booking";
 import type { PaymentRecord, BookingReceipt } from "@/src/types/payment";
@@ -133,7 +133,6 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   const [countersignAcknowledged, setCountersignAcknowledged] = useState(false);
   const [countersigning, setCountersigning] = useState(false);
   const [countersignConfirmationOpen, setCountersignConfirmationOpen] = useState(false);
-  const [sendingReceiptId, setSendingReceiptId] = useState<string | null>(null);
   const [sendingConfirmationEmail, setSendingConfirmationEmail] = useState(false);
   const [confirmationEmailSentAt, setConfirmationEmailSentAt] = useState<string | null>(null);
   const [activeStep, setActiveStep] = useState<AdminReviewStep>("customer");
@@ -213,22 +212,6 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
         },
       };
     });
-  }
-
-  async function handleSendReceiptEmail(receipt: BookingReceipt) {
-    setSendingReceiptId(receipt.id);
-    try {
-      const result = await sendBookingReceiptEmail(bookingId, receipt.id);
-      await loadDetails();
-      showToast(`Receipt sent successfully to ${result.emailedTo}.`, "success");
-    } catch (sendError) {
-      showToast(
-        sendError instanceof Error ? sendError.message : "The receipt email could not be sent.",
-        "error",
-      );
-    } finally {
-      setSendingReceiptId(null);
-    }
   }
 
   function requestStatusAction() {
@@ -904,42 +887,40 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                 <div><dt>Payment Attempts</dt><dd>{payments.length}</dd></div>
                 <div><dt>Receipts</dt><dd>{receipts.length}</dd></div>
               </dl>
-              {receipts.some((receipt) => receipt.documentPath) ? (
-                <div className={styles.receiptList}>
-                  {receipts.filter((receipt) => receipt.documentPath).map((receipt) => {
-                    const linkedPayment = receipt.paymentSubmissionId
-                      ? payments.find((p) => p.id === receipt.paymentSubmissionId)
-                      : undefined;
-                    const paymentVerified = linkedPayment ? linkedPayment.status === "verified" : amountPaid > 0;
-                    const sending = sendingReceiptId === receipt.id;
-                    return (
-                      <div key={receipt.id} className={styles.receiptRow}>
-                        <Button variant="none" type="button" onClick={() => openPrivateFile("receipts", receipt.documentPath!)}>
-                          <span className={styles.receiptIcon}>PDF</span>
-                          <span><strong>{receipt.receiptNumber ?? receipt.id.slice(0, 8)}</strong><small>Open Receipt</small></span>
-                          <span aria-hidden="true">↗</span>
-                        </Button>
-                        <div className={styles.receiptEmailAction}>
-                          <Button variant="none"
-                            type="button"
-                            className={styles.sendReceiptButton}
-                            disabled={!paymentVerified || sending}
-                            onClick={() => handleSendReceiptEmail(receipt)}
-                            title={paymentVerified ? "Email the official receipt to the customer" : "Payment must be verified before the receipt can be emailed"}
-                          >
-                            {sending ? "Sending..." : "Send Receipt to Email"}
-                          </Button>
-                          {receipt.emailedAt ? (
-                            <span className={styles.receiptSentBadge}>
-                              Receipt sent {formatDate(receipt.emailedAt, true)}
-                            </span>
-                          ) : null}
-                        </div>
-                      </div>
-                    );
-                  })}
+              <div className={styles.proofsReceiptsHeader}><span>Proofs / Receipts</span></div>
+              {payments.some((payment) => payment.proofStorageBucket && payment.proofStoragePath) || receipts.some((receipt) => receipt.documentPath) ? (
+                <div className={styles.proofsReceiptsGrid}>
+                  {payments.filter((payment) => payment.proofStorageBucket && payment.proofStoragePath).map((payment) => (
+                    <Button
+                      key={`proof-${payment.id}`}
+                      variant="none"
+                      type="button"
+                      className={styles.proofCard}
+                      onClick={() => openPrivateFile(
+                        payment.proofStorageBucket as Parameters<typeof getBookingFileUrl>[1],
+                        payment.proofStoragePath!,
+                      )}
+                    >
+                      <span className={styles.receiptIcon}>PROOF</span>
+                      <span><strong>{formatStatus(payment.stage)}</strong><small>Open Proof</small></span>
+                      <span aria-hidden="true">↗</span>
+                    </Button>
+                  ))}
+                  {receipts.filter((receipt) => receipt.documentPath).map((receipt) => (
+                    <Button
+                      key={`receipt-${receipt.id}`}
+                      variant="none"
+                      type="button"
+                      className={styles.proofCard}
+                      onClick={() => openPrivateFile("receipts", receipt.documentPath!)}
+                    >
+                      <span className={styles.receiptIcon}>PDF</span>
+                      <span><strong>{receipt.receiptNumber ?? receipt.id.slice(0, 8)}</strong><small>Open Receipt</small></span>
+                      <span aria-hidden="true">↗</span>
+                    </Button>
+                  ))}
                 </div>
-              ) : <p className={styles.emptyRecord}>No customer-facing receipt has been issued yet.</p>}
+              ) : <p className={styles.emptyRecord}>No payment proofs or receipts are available yet.</p>}
               <PaymentsReviewPanel
                 bookingId={bookingId}
                 booking={booking}

@@ -63,7 +63,7 @@ export default function PaymentProofModal({
   const [saving, setSaving] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<"verified" | "rejected" | null>(null);
-  const [reviewerName, setReviewerName] = useState<PaymentReviewerName | "">("");
+  const [reviewerName, setReviewerName] = useState<PaymentReviewerName>("");
 
   useEffect(() => {
     let active = true;
@@ -86,8 +86,9 @@ export default function PaymentProofModal({
   async function handleReview(status: "verified" | "rejected") {
     if (saving) return;
     const rejectionReason = status === "rejected" ? reason.trim() : "";
-    if (!reviewerName) {
-      setReviewError("Choose who approved or rejected this payment.");
+    const reviewer = reviewerName.trim();
+    if (!reviewer) {
+      setReviewError("Enter who approved or rejected this payment.");
       return;
     }
     if (status === "rejected" && !rejectionReason) {
@@ -97,7 +98,7 @@ export default function PaymentProofModal({
     setSaving(true);
     setReviewError(null);
     try {
-      await reviewManualPayment(payment.bookingId, payment.id, status, reviewerName, rejectionReason || undefined);
+      await reviewManualPayment(payment.bookingId, payment.id, status, reviewer, rejectionReason || undefined);
       setReason("");
       setPendingAction(null);
       setReviewerName("");
@@ -254,7 +255,7 @@ export default function PaymentProofModal({
             setReviewError(null);
           }}
           onConfirm={() => void handleReview(pendingAction)}
-          confirmDisabled={!reviewerName || (pendingAction === "rejected" && !reason.trim())}
+          confirmDisabled={!reviewerName.trim() || (pendingAction === "rejected" && !reason.trim())}
           busy={saving}
           error={reviewError}
         >
@@ -274,15 +275,15 @@ export default function PaymentProofModal({
           ) : null}
           <label>
             <span>{pendingAction === "verified" ? "Approved by" : "Rejected by"}</span>
-            <select
+            <input
+              type="text"
               value={reviewerName}
-              onChange={(event) => setReviewerName(event.target.value as PaymentReviewerName)}
+              onChange={(event) => setReviewerName(event.target.value)}
+              maxLength={120}
+              placeholder="Enter the reviewer's full name"
+              required
               disabled={saving}
-            >
-              <option value="">Select…</option>
-              <option value="Maddy">Maddy</option>
-              <option value="Cassy">Cassy</option>
-            </select>
+            />
           </label>
         </ConfirmModal>
       ) : null}

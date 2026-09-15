@@ -56,7 +56,7 @@ export default function PaymentsReviewPanel({
   const [recordReference, setRecordReference] = useState("");
   const [recordNotes, setRecordNotes] = useState("");
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
-  const [reviewerName, setReviewerName] = useState<PaymentReviewerName | "">("");
+  const [reviewerName, setReviewerName] = useState<PaymentReviewerName>("");
 
   const needsReview = payments.filter((p) => p.status === "submitted" || p.status === "under_review");
   const reviewed = payments.filter((p) => p.status !== "submitted" && p.status !== "under_review");
@@ -102,9 +102,9 @@ export default function PaymentsReviewPanel({
   async function confirmPendingAction() {
     if (!pendingAction) return;
     const action = pendingAction;
-    if (action.kind !== "recordBalance" && !reviewerName) return;
+    const reviewer = reviewerName.trim();
+    if (action.kind !== "recordBalance" && !reviewer) return;
     setPendingAction(null);
-    const reviewer = reviewerName;
     setReviewerName("");
     if (action.kind === "verify" && reviewer) await saveReview(action.payment, "verified", reviewer);
     else if (action.kind === "reject" && reviewer) await saveReview(action.payment, "rejected", reviewer);
@@ -274,7 +274,7 @@ export default function PaymentsReviewPanel({
           confirmDisabled={
             pendingAction.kind === "recordBalance"
               ? false
-              : !reviewerName || (pendingAction.kind === "reject" && !reason.trim())
+              : !reviewerName.trim() || (pendingAction.kind === "reject" && !reason.trim())
           }
         >
           {pendingAction.kind === "reject" ? (
@@ -293,14 +293,14 @@ export default function PaymentsReviewPanel({
           {pendingAction.kind !== "recordBalance" ? (
             <label>
               <span>{pendingAction.kind === "verify" ? "Approved by" : "Rejected by"}</span>
-              <select
+              <input
+                type="text"
                 value={reviewerName}
-                onChange={(event) => setReviewerName(event.target.value as PaymentReviewerName)}
-              >
-                <option value="">Select…</option>
-                <option value="Maddy">Maddy</option>
-                <option value="Cassy">Cassy</option>
-              </select>
+                onChange={(event) => setReviewerName(event.target.value)}
+                maxLength={120}
+                placeholder="Enter the reviewer's full name"
+                required
+              />
             </label>
           ) : null}
         </ConfirmModal>

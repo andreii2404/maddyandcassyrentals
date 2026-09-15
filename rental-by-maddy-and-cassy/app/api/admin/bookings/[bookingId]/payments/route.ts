@@ -8,7 +8,7 @@ import { bookingTrackingPath } from "@/src/lib/bookingAccess";
 export const runtime = "nodejs";
 
 const REVIEW_STATUSES = new Set(["verified", "rejected"]);
-const REVIEWER_NAMES = new Set(["Maddy", "Cassy"]);
+const MAX_REVIEWER_NAME_LENGTH = 120;
 
 export async function POST(request: Request, { params }: { params: Promise<{ bookingId: string }> }) {
   try {
@@ -116,10 +116,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
       return NextResponse.json({ error: "Choose a valid payment review action." }, { status: 400 });
     }
     const status = rawStatus as "verified" | "rejected";
-    if (typeof rawReviewerName !== "string" || !REVIEWER_NAMES.has(rawReviewerName)) {
-      return NextResponse.json({ error: "Choose who approved or rejected this payment." }, { status: 400 });
+    const trimmedReviewerName = typeof rawReviewerName === "string" ? rawReviewerName.trim() : "";
+    if (!trimmedReviewerName) {
+      return NextResponse.json({ error: "Enter the name of who approved or rejected this payment." }, { status: 400 });
     }
-    const reviewerName = rawReviewerName as "Maddy" | "Cassy";
+    if (trimmedReviewerName.length > MAX_REVIEWER_NAME_LENGTH) {
+      return NextResponse.json({ error: `The reviewer name must be ${MAX_REVIEWER_NAME_LENGTH} characters or fewer.` }, { status: 400 });
+    }
+    const reviewerName = trimmedReviewerName;
     if (status === "rejected" && !reason) {
       return NextResponse.json({ error: "Add a reason for the rejection." }, { status: 400 });
     }

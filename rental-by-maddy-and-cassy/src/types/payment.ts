@@ -18,8 +18,8 @@ export type PaymentStage = Database["public"]["Enums"]["payment_stage"];
  */
 export type PaymentOption = "deposit_50" | "full" | "balance";
 
-/** Who actually approved/rejected a payment proof, chosen explicitly by the reviewing admin. */
-export type PaymentReviewerName = "Maddy" | "Cassy";
+/** Full name of whoever actually approved/rejected a payment proof, typed explicitly by the reviewing admin. */
+export type PaymentReviewerName = string;
 
 /** One row of public.booking_payment_submissions. */
 export interface PaymentRecord {
@@ -43,7 +43,7 @@ export interface PaymentRecord {
   reviewedBy?: string;
   /** Display name of the admin named in reviewedBy, resolved via a profiles lookup where available. */
   reviewedByName?: string;
-  /** Explicitly chosen Maddy/Cassy approver or rejecter; takes precedence over reviewedByName when set. */
+  /** Full name manually entered by the approving/rejecting admin; takes precedence over reviewedByName when set. */
   reviewerName?: PaymentReviewerName;
   reviewedAt?: string;
   submittedAt: string;
