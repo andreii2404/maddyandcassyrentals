@@ -15,6 +15,14 @@
 .panelHeader h2 { font-size:1rem; }
 .panelHeader p { margin-top:.25rem; color:var(--color-charcoal); font-size:.76rem; }
 .searchInput { width:min(280px,100%); padding:.6rem .85rem; border:1px solid var(--color-border); border-radius:999px; background:var(--color-white); font-size:.78rem; }
+.pillTabsRow { display:flex; flex-wrap:wrap; gap:.5rem; padding:1rem 1.2rem .5rem; border-bottom:1px solid var(--color-border); background:var(--color-background); }
+.statusTabs { display:flex; flex-wrap:wrap; padding:.22rem; border:1px solid var(--color-border); border-radius:999px; background:var(--color-white); gap:.15rem; }
+.statusTabs button { display:flex; align-items:center; min-height:40px; padding:.4rem .65rem; border:0; border-radius:999px; background:transparent; color:var(--color-charcoal); font:inherit; font-size:.67rem; font-weight:700; gap:.35rem; cursor:pointer; transition:background-color 140ms ease, color 140ms ease, transform 140ms ease; }
+.statusTabs button:hover:not(.activeTab) { background:var(--color-background-soft); color:var(--color-primary); }
+.statusTabs button:active { transform:translateY(1px); }
+.statusTabs button span { display:grid; min-width:20px; height:20px; padding:0 .3rem; border-radius:999px; background:rgba(154,89,101,.1); place-items:center; font-size:.6rem; }
+.statusTabs .activeTab { background:var(--color-primary); color:var(--color-white); }
+.statusTabs .activeTab span { background:rgba(255,255,255,.2); }
 .filterBar { display:flex; align-items:flex-end; flex-wrap:wrap; gap:.75rem; padding:1rem 1.2rem; border-bottom:1px solid var(--color-border); background:var(--color-background); }
 .filterField { display:flex; flex-direction:column; gap:.3rem; font-size:.68rem; font-weight:700; letter-spacing:.03em; text-transform:uppercase; color:var(--color-charcoal); }
 .filterField select { padding:.5rem .6rem; border:1px solid var(--color-border); border-radius:var(--radius-control); background:var(--color-white); font:inherit; font-size:.78rem; font-weight:400; text-transform:none; letter-spacing:normal; color:var(--color-charcoal); min-height:38px; }
@@ -23,7 +31,7 @@
 .clearFiltersButton:active:not(:disabled) { transform:translateY(1px); }
 .clearFiltersButton:disabled { cursor:not-allowed; opacity:.45; }
 .filterBar .searchInput { margin-left:auto; }
-@media(max-width:620px){.filterBar{align-items:stretch}.filterField{flex:1 1 140px}.filterBar .searchInput{margin-left:0; width:100%;}}
+@media(max-width:620px){.pillTabsRow{align-items:stretch;flex-direction:column}.statusTabs{width:100%;overflow-x:auto}.filterBar{align-items:stretch}.filterField{flex:1 1 140px}.filterBar .searchInput{margin-left:0; width:100%;}}
 .pagination { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.75rem; padding:.85rem 1.1rem; border-top:1px solid var(--color-border); background:var(--color-background); color:var(--color-charcoal); font-size:.72rem; }
 .paginationControls { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
 .pageSizeLabel { display:flex; align-items:center; gap:.4rem; font-size:.72rem; color:var(--color-charcoal); }

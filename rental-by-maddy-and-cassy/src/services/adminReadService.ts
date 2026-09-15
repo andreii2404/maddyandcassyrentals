@@ -19,6 +19,10 @@ export interface PaymentMetricsSummary {
   verifiedRevenue: number;
   successfulPayments: number;
   pendingCheckouts: number;
+  /** Counts for the Status pill tabs — see app/admin/payments/page.tsx. */
+  statusCounts: { all: number; verified: number; unverified: number; rejected: number };
+  /** Counts for the Payment Type pill tabs. "fullPayment" and "other" both read the "other" stage — see the comment on PaymentRecordsFilters.stage. */
+  stageCounts: { all: number; fullPayment: number; downPayment: number; balance: number; other: number };
 }
 
 /** Payment Records filter bar options — see app/admin/payments/page.tsx. */
@@ -131,14 +135,25 @@ export async function getPaymentMetricsSummary(
 ): Promise<PaymentMetricsSummary> {
   const { data, error } = await supabase
     .from("booking_payment_submissions")
-    .select("status, declared_amount");
+    .select("status, declared_amount, stage");
   if (error) throw new Error(error.message);
   const rows = data ?? [];
   const verified = rows.filter((row) => row.status === "verified");
+  const unverified = rows.filter((row) => row.status === "submitted" || row.status === "under_review");
+  const rejected = rows.filter((row) => row.status === "rejected");
+  const otherStage = rows.filter((row) => row.stage === "other").length;
   return {
     verifiedRevenue: verified.reduce((sum, row) => sum + row.declared_amount, 0),
     successfulPayments: verified.length,
-    pendingCheckouts: rows.filter((row) => row.status === "submitted" || row.status === "under_review").length,
+    pendingCheckouts: unverified.length,
+    statusCounts: { all: rows.length, verified: verified.length, unverified: unverified.length, rejected: rejected.length },
+    stageCounts: {
+      all: rows.length,
+      fullPayment: otherStage,
+      downPayment: rows.filter((row) => row.stage === "down_payment").length,
+      balance: rows.filter((row) => row.stage === "balance").length,
+      other: otherStage,
+    },
   };
 }
 

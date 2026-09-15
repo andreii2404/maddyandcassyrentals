@@ -116,6 +116,8 @@ export interface AdminPaymentsData {
     verifiedRevenue: number;
     successfulPayments: number;
     pendingCheckouts: number;
+    statusCounts: { all: number; verified: number; unverified: number; rejected: number };
+    stageCounts: { all: number; fullPayment: number; downPayment: number; balance: number; other: number };
   };
 }
 

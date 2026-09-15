@@ -273,6 +273,7 @@ export default function AdminPaymentsPage() {
       let pendingDelta = 0;
       let successfulDelta = 0;
       let revenueDelta = 0;
+      let rejectedDelta = 0;
       const payments = current.payments.map((candidate) => {
         if (candidate.id !== proofPayment.id) return candidate;
         if (candidate.status === "submitted" || candidate.status === "under_review") {
@@ -280,6 +281,8 @@ export default function AdminPaymentsPage() {
           if (status === "verified") {
             successfulDelta += 1;
             revenueDelta += candidate.amount;
+          } else {
+            rejectedDelta += 1;
           }
         }
         return {
@@ -294,9 +297,16 @@ export default function AdminPaymentsPage() {
         ...current,
         payments,
         metrics: {
+          ...current.metrics,
           verifiedRevenue: current.metrics.verifiedRevenue + revenueDelta,
           successfulPayments: current.metrics.successfulPayments + successfulDelta,
           pendingCheckouts: current.metrics.pendingCheckouts + pendingDelta,
+          statusCounts: {
+            ...current.metrics.statusCounts,
+            unverified: current.metrics.statusCounts.unverified + pendingDelta,
+            verified: current.metrics.statusCounts.verified + successfulDelta,
+            rejected: current.metrics.statusCounts.rejected + rejectedDelta,
+          },
         },
       };
     });
@@ -362,43 +372,67 @@ export default function AdminPaymentsPage() {
                   <p>Manual GCash submissions and their review status.</p>
                 </div>
               </div>
+              <div className={styles.pillTabsRow}>
+                <div className={styles.statusTabs} aria-label="Filter by payment status">
+                  {STATUS_FILTER_OPTIONS.map((option) => {
+                    const isActive = (filters.status ?? "all") === option.value;
+                    const count =
+                      option.value === "all"
+                        ? paymentsData.metrics.statusCounts.all
+                        : paymentsData.metrics.statusCounts[option.value];
+                    return (
+                      <Button variant="none"
+                        key={option.value}
+                        type="button"
+                        className={isActive ? styles.activeTab : ""}
+                        aria-pressed={isActive}
+                        onClick={() =>
+                          updateFilter(
+                            "status",
+                            option.value === "all" ? undefined : (option.value as AdminPaymentsFilters["status"]),
+                          )
+                        }
+                      >
+                        {option.label}
+                        <span>{count}</span>
+                      </Button>
+                    );
+                  })}
+                </div>
+                <div className={styles.statusTabs} aria-label="Filter by payment type">
+                  {STAGE_FILTER_OPTIONS.map((option) => {
+                    const isActive = (filters.stage ?? "all") === option.value;
+                    const count =
+                      option.value === "all"
+                        ? paymentsData.metrics.stageCounts.all
+                        : option.value === "full_payment"
+                        ? paymentsData.metrics.stageCounts.fullPayment
+                        : option.value === "down_payment"
+                        ? paymentsData.metrics.stageCounts.downPayment
+                        : option.value === "balance"
+                        ? paymentsData.metrics.stageCounts.balance
+                        : paymentsData.metrics.stageCounts.other;
+                    return (
+                      <Button variant="none"
+                        key={option.value}
+                        type="button"
+                        className={isActive ? styles.activeTab : ""}
+                        aria-pressed={isActive}
+                        onClick={() =>
+                          updateFilter(
+                            "stage",
+                            option.value === "all" ? undefined : (option.value as AdminPaymentsFilters["stage"]),
+                          )
+                        }
+                      >
+                        {option.label}
+                        <span>{count}</span>
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
               <div className={styles.filterBar}>
-                <label className={styles.filterField}>
-                  <span>Status</span>
-                  <select
-                    value={filters.status ?? "all"}
-                    onChange={(event) =>
-                      updateFilter(
-                        "status",
-                        event.target.value === "all" ? undefined : (event.target.value as AdminPaymentsFilters["status"]),
-                      )
-                    }
-                  >
-                    {STATUS_FILTER_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className={styles.filterField}>
-                  <span>Payment Type</span>
-                  <select
-                    value={filters.stage ?? "all"}
-                    onChange={(event) =>
-                      updateFilter(
-                        "stage",
-                        event.target.value === "all" ? undefined : (event.target.value as AdminPaymentsFilters["stage"]),
-                      )
-                    }
-                  >
-                    {STAGE_FILTER_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
                 <label className={styles.filterField}>
                   <span>Account Type</span>
                   <select
