@@ -369,6 +369,7 @@
 
 .actionPanel {
   display: grid;
+  margin-top: 0.85rem;
   padding: 0.9rem;
   grid-template-columns: 1fr;
   gap: 1rem;
@@ -487,8 +488,13 @@
 
 .actionChoiceGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.7rem;
+}
+
+.actionChoiceGridSingle {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .secondaryActions {
@@ -1127,7 +1133,8 @@
 
 .finalReviewBlockHeading > span,
 .completionStatusHeading > div > span,
-.customerNotification > div > span {
+.customerNotification > div > span,
+.pendingRequirementsHeading > span {
   color: var(--color-primary);
   font-size: 0.62rem;
   font-weight: 900;
@@ -1214,7 +1221,8 @@
 }
 
 .completionStatusHeading h2,
-.customerNotification h2 {
+.customerNotification h2,
+.pendingRequirementsHeading h2 {
   margin: 0.18rem 0 0.25rem;
   font-size: 1rem;
   letter-spacing: -0.02em;
@@ -1236,6 +1244,23 @@
   color: var(--color-text-primary);
   font-size: 0.62rem;
   white-space: nowrap;
+}
+
+.pendingRequirements {
+  display: grid;
+  margin-top: 0.85rem;
+  padding: 0.85rem;
+  border: 1px solid var(--color-light-gray);
+  border-radius: 14px;
+  background: var(--color-white);
+  gap: 0.65rem;
+}
+
+.pendingRequirementsHeading p {
+  margin: 0;
+  color: var(--color-charcoal);
+  font-size: 0.68rem;
+  line-height: 1.45;
 }
 
 .finalChecklist {

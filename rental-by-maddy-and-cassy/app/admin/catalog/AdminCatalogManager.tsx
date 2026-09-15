@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/Button";
+import ConfirmModal from "@/components/ui/ConfirmModal";
 import Link from "next/link";
 import { useToast } from "@/components/ui/ToastProvider";
 import Spinner from "@/components/ui/Spinner";
@@ -54,11 +55,10 @@ const blankCategory: CatalogCategoryInput = { name: "", description: "", sortOrd
 const UNITS_PAGE_SIZE = 10;
 const CATALOG_PAGE_SIZE = 10;
 
-type CatalogTab = "catalog" | "categories" | "units" | "reviews" | "pricing";
+type CatalogTab = "catalog" | "units" | "reviews" | "pricing";
 
 const catalogTabs: { value: CatalogTab; label: string }[] = [
   { value: "catalog", label: "Complete Catalog" },
-  { value: "categories", label: "Product Categories" },
   { value: "units", label: "Inventory Units" },
   { value: "reviews", label: "Reviews & Pricing" },
   { value: "pricing", label: "Recent Pricing Updates" },
@@ -78,6 +78,66 @@ function parseSpecificationLines(value: string): Record<string, string> {
     specifications[line.slice(0, separator).trim()] = line.slice(separator + 1).trim();
   }
   return specifications;
+}
+
+interface ProductFieldSnapshot {
+  name: string;
+  brand: string;
+  category: string;
+  status: ProductStatus;
+  dailyRate: number;
+  refundableDeposit: number;
+  discountPercent: number;
+  discountLabel: string;
+  totalUnits: number;
+  shortDescription: string;
+  description: string;
+  specificationsText: string;
+  includedText: string;
+  isFeatured: boolean;
+}
+
+interface ProductFieldChange {
+  label: string;
+  detail: string;
+}
+
+function capitalizeStatus(status: string): string {
+  return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+function describeProductChanges(before: ProductFieldSnapshot, after: ProductFieldSnapshot): ProductFieldChange[] {
+  const changes: ProductFieldChange[] = [];
+  const addText = (label: string, previous: string, next: string) => {
+    if (previous !== next) changes.push({ label, detail: `${previous.trim() || "(none)"} → ${next.trim() || "(none)"}` });
+  };
+  addText("Product Name", before.name, after.name);
+  addText("Brand", before.brand, after.brand);
+  addText("Category", before.category, after.category);
+  if (before.status !== after.status) {
+    changes.push({ label: "Catalog Status", detail: `${capitalizeStatus(before.status)} → ${capitalizeStatus(after.status)}` });
+  }
+  if (before.dailyRate !== after.dailyRate) {
+    changes.push({ label: "Regular Daily Price", detail: `${formatMoney(before.dailyRate)} → ${formatMoney(after.dailyRate)}` });
+  }
+  if (before.refundableDeposit !== after.refundableDeposit) {
+    changes.push({ label: "Non-refundable Deposit", detail: `${formatMoney(before.refundableDeposit)} → ${formatMoney(after.refundableDeposit)}` });
+  }
+  if (before.discountPercent !== after.discountPercent) {
+    changes.push({ label: "Discount %", detail: `${before.discountPercent}% → ${after.discountPercent}%` });
+  }
+  addText("Discount Label", before.discountLabel, after.discountLabel);
+  if (before.totalUnits !== after.totalUnits) {
+    changes.push({ label: "Active Rental Units", detail: `${before.totalUnits} → ${after.totalUnits}` });
+  }
+  addText("Short Description", before.shortDescription, after.shortDescription);
+  if (before.description !== after.description) changes.push({ label: "Detailed Description", detail: "updated" });
+  if (before.specificationsText !== after.specificationsText) changes.push({ label: "Specifications", detail: "updated" });
+  if (before.includedText !== after.includedText) changes.push({ label: "Included Accessories", detail: "updated" });
+  if (before.isFeatured !== after.isFeatured) {
+    changes.push({ label: "Storefront Feature", detail: `${before.isFeatured ? "Yes" : "No"} → ${after.isFeatured ? "Yes" : "No"}` });
+  }
+  return changes;
 }
 
 export default function AdminCatalogManager() {
@@ -105,6 +165,13 @@ export default function AdminCatalogManager() {
     { type: "add" } | { type: "replace"; imageId: string } | null
   >(null);
   const [photoBusyId, setPhotoBusyId] = useState<string | null>(null);
+  const [productSnapshot, setProductSnapshot] = useState<ProductFieldSnapshot | null>(null);
+  const [productSaveConfirm, setProductSaveConfirm] = useState<
+    { kind: "create" } | { kind: "update"; changes: ProductFieldChange[] } | null
+  >(null);
+  const [replaceConfirmImageId, setReplaceConfirmImageId] = useState<string | null>(null);
+  const [setMainConfirmImage, setSetMainConfirmImage] = useState<ProductImage | null>(null);
+  const [categoriesModalOpen, setCategoriesModalOpen] = useState(false);
   const [categoryEditing, setCategoryEditing] = useState<AdminCatalogCategory | "new" | null>(null);
   const [categoryForm, setCategoryForm] = useState<CatalogCategoryInput>(blankCategory);
   const [unitEditing, setUnitEditing] = useState<AdminInventoryUnit | null>(null);
@@ -195,6 +262,8 @@ export default function AdminCatalogManager() {
   function openEditor(product?: Product) {
     if (product) {
       setEditing(product);
+      const includedTextValue = product.included.join("\n");
+      const specificationsTextValue = Object.entries(product.specs).map(([key, value]) => `${key}: ${value}`).join("\n");
       setForm({
         name: product.name,
         brand: product.brand ?? "",
@@ -210,23 +279,86 @@ export default function AdminCatalogManager() {
         isFeatured: product.isFeatured,
         status: product.status,
       });
-      setIncludedText(product.included.join("\n"));
-      setSpecificationsText(Object.entries(product.specs).map(([key, value]) => `${key}: ${value}`).join("\n"));
+      setIncludedText(includedTextValue);
+      setSpecificationsText(specificationsTextValue);
+      setProductSnapshot({
+        name: product.name,
+        brand: product.brand ?? "",
+        category: product.category,
+        status: product.status,
+        dailyRate: product.dailyRate,
+        refundableDeposit: product.refundableDeposit,
+        discountPercent: product.discountPercent,
+        discountLabel: product.discountLabel ?? "",
+        totalUnits: product.totalUnits,
+        shortDescription: product.shortDescription ?? "",
+        description: product.description ?? "",
+        specificationsText: specificationsTextValue,
+        includedText: includedTextValue,
+        isFeatured: product.isFeatured,
+      });
     } else {
       setEditing("new");
       setForm({ ...blankForm, category: categories[0]?.name ?? "" });
       setIncludedText("");
       setSpecificationsText("");
+      setProductSnapshot(null);
     }
     setImageFile(null);
     setPendingPhotoAction(null);
     setPhotoBusyId(null);
+    setProductSaveConfirm(null);
   }
 
   function closeEditor() {
     setEditing(null);
     setPendingPhotoAction(null);
     setPhotoBusyId(null);
+    setProductSnapshot(null);
+    setProductSaveConfirm(null);
+  }
+
+  function requestSaveProduct() {
+    if (saving) return;
+    if (!editing) return;
+    if (!form.name.trim()) {
+      showToast("Product name is required.", "error");
+      return;
+    }
+    if (!form.category) {
+      showToast("Choose a category for this product.", "error");
+      return;
+    }
+    if (!(form.dailyRate > 0)) {
+      showToast("Enter a regular daily price greater than zero.", "error");
+      return;
+    }
+    if (editing === "new" || !productSnapshot) {
+      setProductSaveConfirm({ kind: "create" });
+      return;
+    }
+    const currentSnapshot: ProductFieldSnapshot = {
+      name: form.name,
+      brand: form.brand ?? "",
+      category: form.category,
+      status: form.status,
+      dailyRate: form.dailyRate,
+      refundableDeposit: form.refundableDeposit,
+      discountPercent: form.discountPercent,
+      discountLabel: form.discountLabel ?? "",
+      totalUnits: form.totalUnits,
+      shortDescription: form.shortDescription ?? "",
+      description: form.description,
+      specificationsText,
+      includedText,
+      isFeatured: form.isFeatured,
+    };
+    const changes = describeProductChanges(productSnapshot, currentSnapshot);
+    if (changes.length === 0) {
+      showToast("No changes to save.", "error");
+      return;
+    }
+    setProductSaveConfirm({ kind: "update", changes });
   }
 
   async function saveProduct() {
@@ -290,6 +422,10 @@ export default function AdminCatalogManager() {
     photoInputRef.current?.click();
   }
 
+  function requestReplacePhoto(imageId: string) {
+    setReplaceConfirmImageId(imageId);
+  }
+
   async function handlePhotoFileSelected(file: File | null) {
     const action = pendingPhotoAction;
     setPendingPhotoAction(null);
@@ -326,6 +462,10 @@ export default function AdminCatalogManager() {
     } finally {
       setPhotoBusyId(null);
     }
+  }
+
+  function requestSetMainPhoto(image: ProductImage) {
+    setSetMainConfirmImage(image);
   }
 
   function requestDeletePhoto(image: ProductImage) {
@@ -494,6 +634,7 @@ export default function AdminCatalogManager() {
             <span className={styles.srOnly}>Status</span>
             <select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value as typeof statusFilter); setCatalogPage(1); }}><option value="all">All statuses</option><option value="active">Active</option><option value="draft">Draft</option><option value="inactive">Inactive</option><option value="archived">Archived</option></select>
           </label>
+          <Button variant="none" type="button" className={styles.addButton} onClick={() => setCategoriesModalOpen(true)}>Manage Categories</Button>
           <Button variant="none" type="button" className={styles.addButton} onClick={() => openEditor()}>+ Add Product</Button>
         </div>
       </section>
@@ -571,27 +712,6 @@ export default function AdminCatalogManager() {
             </div>
           </nav>
         ) : null}
-      </section>
-      </div>
-      ) : null}
-
-      {activeTab === "categories" ? (
-      <div id="catalog-panel-categories" role="tabpanel" aria-labelledby="catalog-tab-categories">
-      <section className={styles.section} aria-labelledby="categories-heading">
-        <div className={styles.sectionHeading}>
-          <div><p>CATEGORIES</p><h2 id="categories-heading">Product Categories</h2></div>
-          <Button variant="none" type="button" onClick={() => openCategoryEditor()}>Add Category</Button>
-        </div>
-        <div className={styles.tableWrap}>
-          {categories.length === 0 ? <div className={styles.emptySmall}>No categories yet. Add one to organize the catalog.</div> : (
-          <table><thead><tr><th>Name</th><th>Description</th><th>Products</th><th>Order</th><th>Actions</th></tr></thead>
-            <tbody>{categories.map((category) => <tr key={category.id}>
-              <td data-label="Name"><strong>{category.name}</strong></td><td data-label="Description">{category.description || "No description"}</td><td data-label="Products">{category.productCount}</td><td data-label="Order">{category.sortOrder}</td>
-              <td data-label="Actions"><div className={styles.tableActions}><Button variant="none" type="button" onClick={() => openCategoryEditor(category)}>Edit</Button><Button variant="none" type="button" className={styles.dangerText} onClick={() => requestRemoveCategory(category)}>Delete</Button></div></td>
-            </tr>)}</tbody>
-          </table>
-          )}
-        </div>
       </section>
       </div>
       ) : null}
@@ -678,67 +798,136 @@ export default function AdminCatalogManager() {
 
       {editing ? (
         <div className={styles.overlay} role="presentation" onMouseDown={() => !saving && closeEditor()}>
-          <form onSubmit={(event) => { event.preventDefault(); void saveProduct(); }} aria-busy={saving} className={styles.editor} role="dialog" aria-modal="true" aria-labelledby="product-editor-title" onMouseDown={(event) => event.stopPropagation()}>
+          <form onSubmit={(event) => { event.preventDefault(); requestSaveProduct(); }} aria-busy={saving} className={styles.editor} role="dialog" aria-modal="true" aria-labelledby="product-editor-title" onMouseDown={(event) => event.stopPropagation()}>
             <div className={styles.editorHeader}><div><p>PRODUCT EDITOR</p><h2 id="product-editor-title">{editing === "new" ? "Add Product" : `Edit ${editing.name}`}</h2></div><Button variant="none" type="button" onClick={closeEditor} disabled={saving}>Close</Button></div>
-            <div className={styles.formGrid}>
-              <label><span>Product name *</span><input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
-              <label><span>Brand</span><input value={form.brand} onChange={(event) => setForm({ ...form, brand: event.target.value })} /></label>
-              <label><span>Category *</span><select required value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })}><option value="" disabled>Choose category</option>{categories.map((category) => <option key={category.id}>{category.name}</option>)}</select></label>
-              <label><span>Catalog status</span><select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value as ProductStatus })}><option value="active">Active</option><option value="draft">Draft</option><option value="inactive">Inactive</option><option value="archived">Archived</option></select></label>
-              <label><span>Regular daily price (PHP) *</span><input type="number" min="1" step="0.01" value={form.dailyRate} onChange={(event) => setForm({ ...form, dailyRate: Number(event.target.value) })} /></label>
-              <label><span>Non-refundable deposit (PHP)</span><input type="number" min="0" step="0.01" value={form.refundableDeposit} onChange={(event) => setForm({ ...form, refundableDeposit: Number(event.target.value) })} /></label>
-              <label><span>Discount percent</span><input type="number" min="0" max="90" step="1" value={form.discountPercent} onChange={(event) => setForm({ ...form, discountPercent: Number(event.target.value) })} /></label>
-              <label><span>Discount label</span><input value={form.discountLabel} placeholder="Example: Weekday special" onChange={(event) => setForm({ ...form, discountLabel: event.target.value })} /></label>
-              <label><span>Active rental units</span><input type="number" min="0" max="1000" value={form.totalUnits} onChange={(event) => setForm({ ...form, totalUnits: Number(event.target.value) })} /><small>Booked units cannot be removed.</small></label>
-              {editing !== "new" ? (
-                <div className={`${styles.wide} ${styles.gallerySection}`}>
-                  <span className={styles.galleryLabel}>Product photos</span>
-                  {editing.images.length === 0 ? (
-                    <div className={styles.galleryEmpty}>
-                      <Image src="/images/product-placeholder.png" alt="No photos uploaded yet" width={64} height={64} />
-                      <p>No photos uploaded yet.</p>
+            <div className={styles.formSections}>
+              <div className={styles.formSection}>
+                <h3 className={styles.formSectionTitle}>Basic Information</h3>
+                <div className={styles.formGrid}>
+                  <label><span>Product name *</span><input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
+                  <label><span>Brand</span><input value={form.brand} onChange={(event) => setForm({ ...form, brand: event.target.value })} /></label>
+                  <label><span>Category *</span><select required value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })}><option value="" disabled>Choose category</option>{categories.map((category) => <option key={category.id}>{category.name}</option>)}</select></label>
+                  <label><span>Catalog status</span><select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value as ProductStatus })}><option value="active">Active</option><option value="draft">Draft</option><option value="inactive">Inactive</option><option value="archived">Archived</option></select></label>
+                </div>
+              </div>
+
+              <div className={styles.formSection}>
+                <h3 className={styles.formSectionTitle}>Pricing</h3>
+                <div className={styles.formGrid}>
+                  <label><span>Regular daily price (PHP) *</span><input type="number" min="1" step="0.01" value={form.dailyRate} onChange={(event) => setForm({ ...form, dailyRate: Number(event.target.value) })} /></label>
+                  <label><span>Non-refundable deposit (PHP)</span><input type="number" min="0" step="0.01" value={form.refundableDeposit} onChange={(event) => setForm({ ...form, refundableDeposit: Number(event.target.value) })} /></label>
+                  <label><span>Discount percent</span><input type="number" min="0" max="90" step="1" value={form.discountPercent} onChange={(event) => setForm({ ...form, discountPercent: Number(event.target.value) })} /></label>
+                  <label><span>Discount label</span><input value={form.discountLabel} placeholder="Example: Weekday special" onChange={(event) => setForm({ ...form, discountLabel: event.target.value })} /></label>
+                </div>
+              </div>
+
+              <div className={styles.formSection}>
+                <h3 className={styles.formSectionTitle}>Inventory</h3>
+                <div className={styles.formGrid}>
+                  <label className={styles.wide}><span>Active rental units</span><input type="number" min="0" max="1000" value={form.totalUnits} onChange={(event) => setForm({ ...form, totalUnits: Number(event.target.value) })} /><small>Booked units cannot be removed.</small></label>
+                </div>
+              </div>
+
+              <div className={styles.formSection}>
+                <h3 className={styles.formSectionTitle}>Product Photos</h3>
+                <div className={styles.formGrid}>
+                  {editing !== "new" ? (
+                    <div className={`${styles.wide} ${styles.gallerySection}`}>
+                      <span className={styles.galleryLabel}>Product photos</span>
+                      {editing.images.length === 0 ? (
+                        <div className={styles.galleryEmpty}>
+                          <Image src="/images/product-placeholder.png" alt="No photos uploaded yet" width={64} height={64} />
+                          <p>No photos uploaded yet.</p>
+                        </div>
+                      ) : (
+                        <div className={styles.galleryGrid}>
+                          {editing.images.map((image) => (
+                            <div key={image.id} className={styles.galleryItem}>
+                              <div className={styles.galleryThumbWrap}>
+                                <Image src={image.url} alt={image.altText || "Product photo"} fill sizes="140px" className={styles.galleryThumb} />
+                                {image.isPrimary ? <span className={styles.galleryPrimaryBadge}>Main</span> : null}
+                                {photoBusyId === image.id ? <div className={styles.galleryThumbBusy}><Spinner size={20} /></div> : null}
+                              </div>
+                              <div className={styles.galleryItemActions}>
+                                {!image.isPrimary ? (
+                                  <Button variant="none" type="button" className={styles.galleryLinkButton} disabled={photoBusyId !== null} onClick={() => requestSetMainPhoto(image)}>Set as main</Button>
+                                ) : null}
+                                <Button variant="none" type="button" className={styles.galleryLinkButton} disabled={photoBusyId !== null} onClick={() => requestReplacePhoto(image.id)}>Replace</Button>
+                                <Button variant="none" type="button" className={`${styles.galleryLinkButton} ${styles.dangerText}`} disabled={photoBusyId !== null} onClick={() => requestDeletePhoto(image)}>Delete</Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <Button variant="none" type="button" className={styles.galleryAddButton} disabled={photoBusyId !== null} onClick={triggerAddPhoto}>+ Add photos</Button>
+                      <small>JPG, PNG, or WebP up to 10 MB each. Changes save immediately.</small>
+                      <input
+                        ref={photoInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className={styles.srOnly}
+                        onChange={(event) => void handlePhotoFileSelected(event.target.files?.[0] ?? null)}
+                      />
                     </div>
                   ) : (
-                    <div className={styles.galleryGrid}>
-                      {editing.images.map((image) => (
-                        <div key={image.id} className={styles.galleryItem}>
-                          <div className={styles.galleryThumbWrap}>
-                            <Image src={image.url} alt={image.altText || "Product photo"} fill sizes="140px" className={styles.galleryThumb} />
-                            {image.isPrimary ? <span className={styles.galleryPrimaryBadge}>Main</span> : null}
-                            {photoBusyId === image.id ? <div className={styles.galleryThumbBusy}><Spinner size={20} /></div> : null}
-                          </div>
-                          <div className={styles.galleryItemActions}>
-                            {!image.isPrimary ? (
-                              <Button variant="none" type="button" className={styles.galleryLinkButton} disabled={photoBusyId !== null} onClick={() => void setMainPhoto(image.id)}>Set as main</Button>
-                            ) : null}
-                            <Button variant="none" type="button" className={styles.galleryLinkButton} disabled={photoBusyId !== null} onClick={() => triggerReplacePhoto(image.id)}>Replace</Button>
-                            <Button variant="none" type="button" className={`${styles.galleryLinkButton} ${styles.dangerText}`} disabled={photoBusyId !== null} onClick={() => requestDeletePhoto(image)}>Delete</Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                    <label className={styles.wide}><span>Catalog image</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setImageFile(event.target.files?.[0] ?? null)} /><small>Optional for now. JPG, PNG, or WebP up to 10 MB. Add more photos after creating the product.</small></label>
                   )}
-                  <Button variant="none" type="button" className={styles.galleryAddButton} disabled={photoBusyId !== null} onClick={triggerAddPhoto}>+ Add photos</Button>
-                  <small>JPG, PNG, or WebP up to 10 MB each. Changes save immediately.</small>
-                  <input
-                    ref={photoInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    className={styles.srOnly}
-                    onChange={(event) => void handlePhotoFileSelected(event.target.files?.[0] ?? null)}
-                  />
                 </div>
-              ) : (
-                <label><span>Catalog image</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setImageFile(event.target.files?.[0] ?? null)} /><small>Optional for now. JPG, PNG, or WebP up to 10 MB. Add more photos after creating the product.</small></label>
-              )}
-              <label className={styles.wide}><span>Short description</span><input maxLength={300} value={form.shortDescription ?? ""} onChange={(event) => setForm({ ...form, shortDescription: event.target.value })} /></label>
-              <label className={styles.wide}><span>Detailed description</span><textarea rows={4} maxLength={3000} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label>
-              <label className={styles.wide}><span>Features / specifications</span><textarea rows={5} value={specificationsText} placeholder={"Storage: 256 GB\nColor: Natural Titanium\nCharging: USB-C"} onChange={(event) => setSpecificationsText(event.target.value)} /><small>One per line using Feature: Value.</small></label>
-              <label className={styles.wide}><span>Included accessories</span><textarea rows={5} value={includedText} placeholder="One included item per line" onChange={(event) => setIncludedText(event.target.value)} /></label>
-              <label className={styles.checkbox}><input type="checkbox" checked={form.isFeatured} onChange={(event) => setForm({ ...form, isFeatured: event.target.checked })} /><span>Feature this product on the storefront</span></label>
+              </div>
+
+              <div className={styles.formSection}>
+                <h3 className={styles.formSectionTitle}>Product Details</h3>
+                <div className={styles.formGrid}>
+                  <label className={styles.wide}><span>Short description</span><input maxLength={300} value={form.shortDescription ?? ""} onChange={(event) => setForm({ ...form, shortDescription: event.target.value })} /></label>
+                  <label className={styles.wide}><span>Detailed description</span><textarea rows={4} maxLength={3000} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label>
+                </div>
+              </div>
+
+              <div className={styles.formSection}>
+                <h3 className={styles.formSectionTitle}>Specifications</h3>
+                <div className={styles.formGrid}>
+                  <label className={styles.wide}><span>Features / specifications</span><textarea rows={5} value={specificationsText} placeholder={"Storage: 256 GB\nColor: Natural Titanium\nCharging: USB-C"} onChange={(event) => setSpecificationsText(event.target.value)} /><small>One per line using Feature: Value.</small></label>
+                </div>
+              </div>
+
+              <div className={styles.formSection}>
+                <h3 className={styles.formSectionTitle}>Included Accessories</h3>
+                <div className={styles.formGrid}>
+                  <label className={styles.wide}><span>Included accessories</span><textarea rows={5} value={includedText} placeholder="One included item per line" onChange={(event) => setIncludedText(event.target.value)} /></label>
+                </div>
+              </div>
+
+              <div className={styles.formSection}>
+                <h3 className={styles.formSectionTitle}>Storefront Settings</h3>
+                <div className={styles.formGrid}>
+                  <label className={styles.checkbox}><input type="checkbox" checked={form.isFeatured} onChange={(event) => setForm({ ...form, isFeatured: event.target.checked })} /><span>Feature this product on the storefront</span></label>
+                </div>
+              </div>
             </div>
             <div className={styles.editorActions}><Button variant="none" type="button" onClick={closeEditor} disabled={saving}>Cancel</Button><Button variant="primary" type="submit" loading={saving} loadingText="Saving...">Save Product</Button></div>
           </form>
+        </div>
+      ) : null}
+
+      {categoriesModalOpen ? (
+        <div className={styles.overlay} role="presentation" onMouseDown={() => setCategoriesModalOpen(false)}>
+          <section className={styles.editor} role="dialog" aria-modal="true" aria-labelledby="categories-modal-title" onMouseDown={(event) => event.stopPropagation()}>
+            <div className={styles.editorHeader}><div><p>CATEGORIES</p><h2 id="categories-modal-title">Manage Categories</h2></div><Button variant="none" type="button" onClick={() => setCategoriesModalOpen(false)}>Close</Button></div>
+            <div className={styles.sectionHeading}>
+              <span>{categories.length} categories</span>
+              <Button variant="none" type="button" onClick={() => openCategoryEditor()}>Add Category</Button>
+            </div>
+            <div className={styles.tableWrap}>
+              {categories.length === 0 ? <div className={styles.emptySmall}>No categories yet. Add one to organize the catalog.</div> : (
+              <table><thead><tr><th>Name</th><th>Description</th><th>Products</th><th>Order</th><th>Actions</th></tr></thead>
+                <tbody>{categories.map((category) => <tr key={category.id}>
+                  <td data-label="Name"><strong>{category.name}</strong></td><td data-label="Description">{category.description || "No description"}</td><td data-label="Products">{category.productCount}</td><td data-label="Order">{category.sortOrder}</td>
+                  <td data-label="Actions"><div className={styles.tableActions}><Button variant="none" type="button" onClick={() => openCategoryEditor(category)}>Edit</Button><Button variant="none" type="button" className={styles.dangerText} onClick={() => requestRemoveCategory(category)}>Delete</Button></div></td>
+                </tr>)}</tbody>
+              </table>
+              )}
+            </div>
+          </section>
         </div>
       ) : null}
 
@@ -769,16 +958,70 @@ export default function AdminCatalogManager() {
         </div>
       ) : null}
       {confirmDialog ? (
-        <div className={styles.overlay} role="presentation" onMouseDown={() => !confirmBusy && setConfirmDialog(null)}>
-          <section className={styles.smallEditor} role="alertdialog" aria-modal="true" aria-labelledby="confirm-dialog-title" aria-describedby="confirm-dialog-message" onMouseDown={(event) => event.stopPropagation()}>
-            <div className={styles.editorHeader}><div><p>PLEASE CONFIRM</p><h2 id="confirm-dialog-title">{confirmDialog.title}</h2></div><Button variant="none" type="button" onClick={() => setConfirmDialog(null)} disabled={confirmBusy}>Close</Button></div>
-            <p id="confirm-dialog-message" className={styles.protectedNotice}>{confirmDialog.message}</p>
-            <div className={styles.editorActions}>
-              <Button variant="none" type="button" onClick={() => setConfirmDialog(null)} disabled={confirmBusy}>Cancel</Button>
-              <Button variant="none" type="button" className={styles.danger} onClick={() => void runConfirmedAction()} disabled={confirmBusy}>{confirmBusy ? "Working..." : confirmDialog.confirmLabel}</Button>
-            </div>
-          </section>
-        </div>
+        <ConfirmModal
+          title={confirmDialog.title}
+          description={confirmDialog.message}
+          confirmLabel={confirmDialog.confirmLabel}
+          busyLabel="Working..."
+          tone="danger"
+          onCancel={() => setConfirmDialog(null)}
+          onConfirm={() => void runConfirmedAction()}
+          busy={confirmBusy}
+        />
+      ) : null}
+
+      {productSaveConfirm ? (
+        <ConfirmModal
+          title={productSaveConfirm.kind === "create" ? "Create New Product" : "Save Product Changes"}
+          description={
+            productSaveConfirm.kind === "create"
+              ? "Are you sure you want to create this product?"
+              : "Are you sure you want to save these product changes?"
+          }
+          confirmLabel="Confirm & Save"
+          busyLabel="Saving..."
+          busy={saving}
+          onCancel={() => setProductSaveConfirm(null)}
+          onConfirm={() => void saveProduct()}
+        >
+          {productSaveConfirm.kind === "update" ? (
+            <ul className={styles.changeList}>
+              {productSaveConfirm.changes.map((change) => (
+                <li key={change.label}><strong>{change.label}:</strong> {change.detail}</li>
+              ))}
+            </ul>
+          ) : null}
+        </ConfirmModal>
+      ) : null}
+
+      {replaceConfirmImageId ? (
+        <ConfirmModal
+          title="Replace this photo?"
+          description="This uploads a new photo and permanently replaces the current one in Supabase Storage."
+          confirmLabel="Choose New Photo"
+          onCancel={() => setReplaceConfirmImageId(null)}
+          onConfirm={() => {
+            const imageId = replaceConfirmImageId;
+            setReplaceConfirmImageId(null);
+            if (imageId) triggerReplacePhoto(imageId);
+          }}
+        />
+      ) : null}
+
+      {setMainConfirmImage ? (
+        <ConfirmModal
+          title="Set as main photo?"
+          description="This photo will become the main image shown for this product across the storefront."
+          confirmLabel="Set as Main"
+          busyLabel="Updating..."
+          busy={photoBusyId === setMainConfirmImage.id}
+          onCancel={() => setSetMainConfirmImage(null)}
+          onConfirm={() => {
+            const image = setMainConfirmImage;
+            setSetMainConfirmImage(null);
+            if (image) void setMainPhoto(image.id);
+          }}
+        />
       ) : null}
     </div>
   );

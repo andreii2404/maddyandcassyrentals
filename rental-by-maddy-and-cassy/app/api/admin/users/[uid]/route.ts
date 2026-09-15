@@ -9,8 +9,6 @@ function errorResponse(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
 }
 
-const DELETED_BY_OPTIONS = new Set(["Maddy", "Cassy"]);
-
 export async function DELETE(request: Request, { params }: { params: Promise<{ uid: string }> }) {
   const { uid: targetUid } = await params;
   if (!targetUid || targetUid.length > 128) return errorResponse("The selected account is invalid.", 400);
@@ -20,8 +18,8 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ u
     | null;
   const deletedBy = typeof body?.deletedBy === "string" ? body.deletedBy.trim() : "";
   const reason = typeof body?.reason === "string" ? body.reason.trim() : "";
-  if (!DELETED_BY_OPTIONS.has(deletedBy)) {
-    return errorResponse("Select who is deleting this account.", 400);
+  if (!deletedBy) {
+    return errorResponse("Enter the name of who is deleting this account.", 400);
   }
   if (!reason) {
     return errorResponse("Enter a reason for deleting this account.", 400);

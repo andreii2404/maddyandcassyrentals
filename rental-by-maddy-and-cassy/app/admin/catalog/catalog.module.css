@@ -137,6 +137,10 @@
 .wide { grid-column:1/-1; }
 .formGrid .checkbox { align-items:center; flex-direction:row; grid-column:1/-1; }
 .formGrid .checkbox input { width:auto; }
+.formSections { display:flex; flex-direction:column; gap:1.3rem; }
+.formSection { display:flex; flex-direction:column; gap:.85rem; }
+.formSection+.formSection { padding-top:1.3rem; border-top:1px solid var(--color-border); }
+.formSectionTitle { margin:0; color:var(--color-primary); font-size:.7rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
 .editorActions { display:flex; justify-content:flex-end; gap:.7rem; margin-top:1.2rem; }
 .editorActions button { padding:.55rem .9rem; border:1px solid var(--color-border); border-radius: var(--radius-control); background:var(--color-white); cursor:pointer; min-height:var(--control-height); transition:background-color 140ms ease, border-color 140ms ease, transform 140ms ease; }
 .editorActions button:hover:not(:disabled) { border-color:var(--color-dusty-rose); background:var(--color-background-soft); transform:translateY(-1px); }
@@ -145,6 +149,8 @@
 .editorActions .danger { border-color:var(--color-status-red-border); background:var(--color-status-red-bg); color:var(--color-status-red); font-weight:700; }
 .editorActions .danger:hover:not(:disabled) { background:#f7dcd8; }
 .protectedNotice { margin:0 0 1rem; padding:.75rem .85rem; border:1px solid #f0d484; border-radius:12px; background:#fff8e4; color:#684b00; font-size:.75rem; line-height:1.5; }
+.changeList { margin:0; padding-left:1.15rem; display:flex; flex-direction:column; gap:.5rem; color:var(--color-text-primary); font-size:.85rem; line-height:1.4; }
+.changeList strong { color:var(--color-charcoal); }
 
 /* Product photo gallery inside the View/Edit modal: thumbnail grid with per-photo
    set-main/replace/delete actions, plus an add-photos control and empty state. */

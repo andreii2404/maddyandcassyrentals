@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
+import ConfirmModal from "@/components/ui/ConfirmModal";
 import Spinner from "@/components/ui/Spinner";
 import { useToast } from "@/components/ui/ToastProvider";
 import { createClient } from "@/src/lib/supabase/client";
@@ -58,11 +59,10 @@ export default function PaymentProofModal({
   const { showToast } = useToast();
   const [url, setUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isRejecting, setIsRejecting] = useState(false);
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
-  const [pendingStatus, setPendingStatus] = useState<"verified" | "rejected" | null>(null);
+  const [pendingAction, setPendingAction] = useState<"verified" | "rejected" | null>(null);
   const [reviewerName, setReviewerName] = useState<PaymentReviewerName | "">("");
 
   useEffect(() => {
@@ -99,8 +99,7 @@ export default function PaymentProofModal({
     try {
       await reviewManualPayment(payment.bookingId, payment.id, status, reviewerName, rejectionReason || undefined);
       setReason("");
-      setIsRejecting(false);
-      setPendingStatus(null);
+      setPendingAction(null);
       setReviewerName("");
       await onReviewed?.(status, rejectionReason || undefined);
       showToast(status === "verified" ? "Payment approved." : "Payment proof rejected.", "success");
@@ -206,128 +205,87 @@ export default function PaymentProofModal({
             </dl>
           ) : actionable ? (
             <div className={styles.reviewActions}>
-              {pendingStatus ? (
-                <div className={styles.confirmPanel}>
-                  <p>
-                    {pendingStatus === "verified"
-                      ? "Are you sure you want to approve this payment?"
-                      : "Are you sure you want to reject this payment?"}
-                  </p>
-                  <label className={styles.reviewerField}>
-                    <span>{pendingStatus === "verified" ? "Approved by" : "Rejected by"}</span>
-                    <select
-                      value={reviewerName}
-                      onChange={(event) => setReviewerName(event.target.value as PaymentReviewerName)}
-                      disabled={saving}
-                      autoFocus
-                    >
-                      <option value="">Select…</option>
-                      <option value="Maddy">Maddy</option>
-                      <option value="Cassy">Cassy</option>
-                    </select>
-                  </label>
-                  <div>
-                    <Button
-                      variant="none"
-                      type="button"
-                      className={styles.cancelButton}
-                      onClick={() => {
-                        setPendingStatus(null);
-                        setReviewerName("");
-                        setReviewError(null);
-                      }}
-                      disabled={saving}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      variant="none"
-                      type="button"
-                      className={pendingStatus === "verified" ? styles.confirmApproveButton : styles.sendButton}
-                      onClick={() => void handleReview(pendingStatus)}
-                      disabled={saving || !reviewerName}
-                    >
-                      {saving ? "Saving…" : "Confirm"}
-                    </Button>
-                  </div>
-                </div>
-              ) : !isRejecting ? (
-                <>
-                  <Button
-                    variant="none"
-                    type="button"
-                    className={styles.approveButton}
-                    onClick={() => {
-                      setPendingStatus("verified");
-                      setReviewerName("");
-                      setReviewError(null);
-                    }}
-                    disabled={saving}
-                  >
-                    Approve
-                  </Button>
-                  <Button
-                    variant="none"
-                    type="button"
-                    className={styles.rejectButton}
-                    onClick={() => {
-                      setIsRejecting(true);
-                      setReason("");
-                      setReviewError(null);
-                    }}
-                    disabled={saving}
-                  >
-                    Reject
-                  </Button>
-                </>
-              ) : (
-                <div className={styles.rejectEditor}>
-                  <label>
-                    <span>Why is this payment proof being rejected?</span>
-                    <textarea
-                      rows={3}
-                      maxLength={1000}
-                      value={reason}
-                      onChange={(event) => setReason(event.target.value)}
-                      placeholder="Example: The reference number doesn't match any transaction we received."
-                      autoFocus
-                    />
-                  </label>
-                  <div>
-                    <Button
-                      variant="none"
-                      type="button"
-                      className={styles.cancelButton}
-                      onClick={() => {
-                        setIsRejecting(false);
-                        setReason("");
-                        setReviewError(null);
-                      }}
-                      disabled={saving}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      variant="none"
-                      type="button"
-                      className={styles.sendButton}
-                      onClick={() => {
-                        setPendingStatus("rejected");
-                        setReviewerName("");
-                        setReviewError(null);
-                      }}
-                      disabled={saving || !reason.trim()}
-                    >
-                      Continue
-                    </Button>
-                  </div>
-                </div>
-              )}
-              {reviewError ? <p className={styles.reviewError}>{reviewError}</p> : null}
+              <Button
+                variant="none"
+                type="button"
+                className={styles.approveButton}
+                onClick={() => {
+                  setPendingAction("verified");
+                  setReviewerName("");
+                  setReviewError(null);
+                }}
+                disabled={saving}
+              >
+                Approve
+              </Button>
+              <Button
+                variant="none"
+                type="button"
+                className={styles.rejectButton}
+                onClick={() => {
+                  setPendingAction("rejected");
+                  setReason("");
+                  setReviewerName("");
+                  setReviewError(null);
+                }}
+                disabled={saving}
+              >
+                Reject
+              </Button>
             </div>
           ) : null}
         </div>
       </div>
+      {pendingAction ? (
+        <ConfirmModal
+          title={pendingAction === "verified" ? "Approve Payment" : "Reject Payment"}
+          description={
+            pendingAction === "verified"
+              ? "Are you sure you want to approve this payment?"
+              : "Are you sure you want to reject this payment?"
+          }
+          confirmLabel="Confirm"
+          busyLabel="Saving…"
+          tone={pendingAction === "rejected" ? "danger" : "default"}
+          onCancel={() => {
+            setPendingAction(null);
+            setReviewerName("");
+            setReason("");
+            setReviewError(null);
+          }}
+          onConfirm={() => void handleReview(pendingAction)}
+          confirmDisabled={!reviewerName || (pendingAction === "rejected" && !reason.trim())}
+          busy={saving}
+          error={reviewError}
+        >
+          {pendingAction === "rejected" ? (
+            <label>
+              <span>Why is this payment proof being rejected?</span>
+              <textarea
+                rows={3}
+                maxLength={1000}
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+                placeholder="Example: The reference number doesn't match any transaction we received."
+                disabled={saving}
+                autoFocus
+              />
+            </label>
+          ) : null}
+          <label>
+            <span>{pendingAction === "verified" ? "Approved by" : "Rejected by"}</span>
+            <select
+              value={reviewerName}
+              onChange={(event) => setReviewerName(event.target.value as PaymentReviewerName)}
+              disabled={saving}
+            >
+              <option value="">Select…</option>
+              <option value="Maddy">Maddy</option>
+              <option value="Cassy">Cassy</option>
+            </select>
+          </label>
+        </ConfirmModal>
+      ) : null}
     </Modal>
   );
 }
