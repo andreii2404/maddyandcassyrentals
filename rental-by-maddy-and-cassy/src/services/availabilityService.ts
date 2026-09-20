@@ -91,6 +91,7 @@ export async function getTimeAvailability(
   pickupAt: Date,
   requestedUnits = 1,
   rentalDays = 1,
+  variant?: string,
 ): Promise<TimeAvailability> {
   const supabase = createPublicClient();
   const { data, error } = await supabase.rpc("get_product_multi_day_time_availability", {
@@ -98,6 +99,7 @@ export async function getTimeAvailability(
     p_pickup_at: pickupAt.toISOString(),
     p_quantity: requestedUnits,
     p_rental_days: rentalDays,
+    p_variant: variant?.trim() || undefined,
   });
 
   if (error) throw new Error(error.message);
@@ -121,13 +123,13 @@ export async function getTimeAvailability(
  * create_multi_item_booking RPC re-checks (and locks) at submission time.
  */
 export async function checkBatchTimeAvailability(
-  items: { productId: string; quantity: number }[],
+  items: { productId: string; quantity: number; variant?: string }[],
   pickupAt: Date,
   rentalDays: number,
 ): Promise<Map<string, TimeAvailability>> {
   const entries = await Promise.all(
-    items.map(async ({ productId, quantity }) =>
-      [productId, await getTimeAvailability(productId, pickupAt, quantity, rentalDays)] as const,
+    items.map(async ({ productId, quantity, variant }) =>
+      [productId, await getTimeAvailability(productId, pickupAt, quantity, rentalDays, variant)] as const,
     ),
   );
   const result = new Map<string, TimeAvailability>();

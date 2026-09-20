@@ -8,6 +8,7 @@ import { useCart } from "@/hooks/useCart";
 import { useToast } from "@/components/ui/ToastProvider";
 import { Button } from "@/components/ui/Button";
 import styles from "./ReserveAction.module.css";
+import { isVariantSelectable } from "@/src/lib/variantInventory";
 
 interface ReserveActionProps {
   product: Product;
@@ -22,7 +23,9 @@ export default function ReserveAction({ product, units, selectedColor, awaitingC
   const router = useRouter();
   const { addItem } = useCart();
   const { showToast } = useToast();
-  const unavailable = units.totalUnits <= 0;
+  const unavailable = units.totalUnits <= 0 || (
+    product.colorOptions.length > 0 && selectedColor !== null && !isVariantSelectable(product, selectedColor)
+  );
   const locked = unavailable || awaitingColor;
   const color = selectedColor?.trim() || undefined;
 
@@ -62,7 +65,7 @@ export default function ReserveAction({ product, units, selectedColor, awaitingC
 
       {unavailable ? (
         <p className={styles.error} role="status">
-          This item does not currently have an active rental unit.
+          {color ? `${color} is currently unavailable.` : "This item does not currently have an active rental unit."}
         </p>
       ) : awaitingColor ? (
         <p className={styles.hint} role="status">

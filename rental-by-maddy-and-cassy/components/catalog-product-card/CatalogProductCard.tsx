@@ -11,6 +11,7 @@ import HeartIcon from "@/components/icons/HeartIcon";
 import { useCart } from "@/hooks/useCart";
 import { useToast } from "@/components/ui/ToastProvider";
 import styles from "./CatalogProductCard.module.css";
+import { getVariantQuantityLimit } from "@/src/lib/variantInventory";
 
 interface CatalogProductCardProps {
   product: Product;
@@ -42,6 +43,11 @@ export default function CatalogProductCard({
   const unavailable = units.totalUnits <= 0 || units.availableUnits <= 0;
   const level = getAvailabilityLevel(units.availableUnits, units.totalUnits);
   const availabilityText = unavailable ? "Fully booked" : `${units.availableUnits} available`;
+  const catalogColor = product.colorOptions.length === 1 ? product.colorOptions[0] : undefined;
+  const requiresColorChoice = product.colorOptions.length > 1;
+  const canAddConfiguredVariant = !requiresColorChoice && (
+    product.colorOptions.length === 0 || getVariantQuantityLimit(product, catalogColor) > 0
+  );
 
   const galleryImages = useMemo(() => {
     const urls = Array.from(new Set(product.images.map((image) => image.url).filter(Boolean)));
@@ -162,14 +168,14 @@ export default function CatalogProductCard({
 
         <div className={styles.actions}>
           <Link
-            href={`${detailsHref}/reserve`}
+            href={requiresColorChoice ? detailsHref : `${detailsHref}/reserve${catalogColor ? `?color=${encodeURIComponent(catalogColor)}` : ""}`}
             className={`${styles.reserveButton} ${unavailable ? styles.reserveDisabled : ""}`}
             aria-disabled={unavailable}
             onClick={(event) => {
               if (unavailable) event.preventDefault();
             }}
           >
-            {unavailable ? "Unavailable" : ctaLabel}
+            {unavailable ? "Unavailable" : requiresColorChoice ? "Choose color" : ctaLabel}
           </Link>
 
           <div className={styles.secondaryActions}>
@@ -179,13 +185,13 @@ export default function CatalogProductCard({
             <Button variant="none"
               type="button"
               className={styles.cartButton}
-              disabled={unavailable}
+              disabled={unavailable || !canAddConfiguredVariant}
               onClick={() => {
-                addItem(product.id);
-                showToast(`${product.name} added to your rental cart.`, "success");
+                addItem(product.id, 1, catalogColor);
+                showToast(`${product.name}${catalogColor ? ` (${catalogColor})` : ""} added to your rental cart.`, "success");
               }}
             >
-              + Add to Cart
+              {requiresColorChoice ? "Choose color" : "+ Add to Cart"}
             </Button>
           </div>
         </div>

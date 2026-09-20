@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState, type KeyboardEvent } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
@@ -61,31 +61,33 @@ const PANEL_HASHES: Record<BookingPanel, string> = {
   updates: "#booking-notifications",
 };
 
+const PANEL_ORDER: BookingPanel[] = ["overview", "progress", "documents", "updates"];
+
 function getRequirementGuidance(status: string): string {
   switch (status) {
     case "approved":
-      return "Your identity documents have been reviewed and accepted.";
+      return "Approved and ready for the next step.";
     case "pending_review":
-      return "Your documents are with the team for review. No action is needed right now.";
+      return "Under review. No action needed right now.";
     case "rejected":
-      return "One or more documents need to be corrected. See the review notes below.";
+      return "Correct the flagged document below.";
     default:
-      return "Submit the requested verification documents to continue.";
+      return "Submit verification documents to continue.";
   }
 }
 
 function getAgreementGuidance(status: string): string {
   switch (status) {
     case "completed":
-      return "The rental agreement has all required signatures and is ready to view.";
+      return "Signed and ready to view.";
     case "awaiting_business_signature":
-      return "Your part is complete—no action is needed from you. An administrator will finish reviewing your documents, countersign the agreement, and notify you when the final PDF is ready.";
+      return "Your signature is complete. The business is finalizing the agreement.";
     case "awaiting_customer_signature":
-      return "Review and sign the rental agreement to continue your booking.";
+      return "Review and sign to continue.";
     case "rejected":
-      return "The agreement needs attention. Please contact the business for assistance.";
+      return "Needs attention. Contact the business for help.";
     default:
-      return "Your agreement will be prepared after the required booking steps.";
+      return "Prepared after the earlier steps are complete.";
   }
 }
 
@@ -128,6 +130,29 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
   function selectPanel(panel: BookingPanel) {
     setActivePanel(panel);
     window.history.replaceState(null, "", PANEL_HASHES[panel]);
+  }
+
+  function focusPanelTab(panel: BookingPanel) {
+    window.requestAnimationFrame(() => document.getElementById(`booking-tab-${panel}`)?.focus());
+  }
+
+  function handlePanelKeyDown(event: KeyboardEvent<HTMLButtonElement>, panel: BookingPanel) {
+    const currentIndex = PANEL_ORDER.indexOf(panel);
+    const nextIndex = event.key === "ArrowRight"
+      ? (currentIndex + 1) % PANEL_ORDER.length
+      : event.key === "ArrowLeft"
+        ? (currentIndex - 1 + PANEL_ORDER.length) % PANEL_ORDER.length
+        : event.key === "Home"
+          ? 0
+          : event.key === "End"
+            ? PANEL_ORDER.length - 1
+            : -1;
+
+    if (nextIndex < 0) return;
+    event.preventDefault();
+    const nextPanel = PANEL_ORDER[nextIndex];
+    selectPanel(nextPanel);
+    focusPanelTab(nextPanel);
   }
 
   const loadDetails = useCallback(async () => {
@@ -222,8 +247,8 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
       label: "Payment",
       value: hasVerifiedPayment ? "Verified" : "Not yet verified",
       help: hasVerifiedPayment
-        ? "Your payment was securely verified and recorded."
-        : "Complete or resume your secure payment to reserve the selected dates.",
+        ? "Verified and recorded."
+        : "Submit payment proof to reserve these dates.",
       state: hasVerifiedPayment ? "complete" : "current",
     },
     {
@@ -254,8 +279,8 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
       label: "Confirmation",
       value: COMPLETED_BOOKING_STATUSES.has(booking.status) ? "Confirmed" : "In progress",
       help: COMPLETED_BOOKING_STATUSES.has(booking.status)
-        ? "The booking is confirmed. Follow the tracker above for pickup or delivery updates."
-        : "The business confirms the booking after payment, documents, and agreement are complete.",
+        ? "Confirmed. See updates for pickup or delivery."
+        : "Confirmation follows the steps above.",
       state: COMPLETED_BOOKING_STATUSES.has(booking.status) ? "complete" : "upcoming",
     },
   ] as const;
@@ -264,6 +289,9 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
   const issuedReceipts = receipts.filter((receipt) => Boolean(receipt.documentPath));
   const agreementDocumentPath = agreement?.finalDocumentPath ?? agreement?.generatedDocumentPath;
   const documentCount = documents.length + issuedReceipts.length + (agreementDocumentPath ? 1 : 0);
+  const rentalStart = formatManilaDateTime(new Date(booking.startDate));
+  const rentalEnd = formatManilaDateTime(new Date(booking.endDate));
+  const durationLabel = booking.dayCount === 1 ? "22 hours" : `${booking.dayCount} days`;
 
   return (
     <div className={styles.wrapper}>
@@ -273,10 +301,10 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
 
       {justRecovered ? (
         <div className={styles.confirmationBanner} role="status">
-          <h2>Guest booking access restored.</h2>
+          <h2>Guest access restored.</h2>
           <p>
-            This browser can now securely track <strong>{booking.bookingRef}</strong>. Save your
-            reference, checkout email, and mobile number in case you need to restore access again.
+            This browser can now securely track <strong>{booking.bookingRef}</strong>. Keep your
+            checkout details nearby if you need to restore access.
           </p>
         </div>
       ) : justSubmitted ? (
@@ -284,21 +312,18 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
           <h2>Your reservation is secured and submitted successfully.</h2>
           <p>
             {isDemoPayment
-              ? "This booking completed the development payment flow. No real money was processed. The business can now test document review and confirmation."
-              : "Your GCash payment proof has been submitted. Once our team verifies it, we'll review your verification documents and signed agreement, then mark the booking Confirmed."}
+              ? "Demo payment recorded. No real money was processed."
+              : "Your GCash proof was submitted for review. We will update your booking after verification."}
           </p>
           <p className={styles.paymentNote}>
-            Your invoice, official receipt, verified proof of payment, and signed rental agreement
-            are available under Documents below. If you selected the 50% option, you can pay the
-            remaining balance from this tracking page.
+            Invoices, receipts, agreements, and balance payment are available from Documents and Overview.
           </p>
         </div>
       ) : hasVerifiedPayment ? (
         <div className={styles.confirmationBanner}>
           <h2>Payment verified — your dates are reserved.</h2>
           <p>
-            Your payment for booking <strong>{booking.bookingRef}</strong> has been verified.{" "}
-            {formatManilaDateTime(new Date(booking.startDate))} to {formatManilaDateTime(new Date(booking.endDate))} is reserved for you.
+            Payment for <strong>{booking.bookingRef}</strong> is verified. Your rental dates are reserved.
           </p>
           <p className={styles.paymentNote}>
             Your official receipt is available under Documents below.
@@ -313,16 +338,14 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
             <p className={styles.sectionEyebrow}>GUEST TRACKING</p>
             <h2 id="guest-access-heading">No customer account is required.</h2>
             <p>
-              This secure page remains available in the browser used for checkout through payment,
-              review, confirmation, pickup or delivery, and completion. Keep <strong>{booking.bookingRef}</strong>
+              This secure page stays available in the checkout browser through completion. Keep <strong>{booking.bookingRef}</strong>
               and do not clear this site&apos;s data until the rental is finished.
             </p>
           </div>
           <div className={styles.guestPerksNote}>
             <strong>Want perks on future rentals?</strong>
             <span>
-              Customer accounts receive birthday-month and 11th-rental rewards. Guest bookings do
-              not earn either perk, and creating an account is completely optional.
+              Accounts receive birthday-month and 11th-rental rewards. Guest bookings do not earn either perk.
             </span>
             {booking.status === "returned" ? (
               <Link href="/sign-up">Create an Account</Link>
@@ -338,7 +361,12 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
           <div>
             <p className={styles.eyebrow}>BOOKING DETAILS <span>•</span> {booking.bookingRef}</p>
             <h1 className={styles.heading}>{bookingHeadline(booking.items)}</h1>
-            <p>Created {new Date(booking.createdAt).toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" })}</p>
+            <div className={styles.headerDates} aria-label="Rental dates">
+              <span><small>Pickup</small><strong>{rentalStart}</strong></span>
+              <span className={styles.headerDateArrow} aria-hidden="true">→</span>
+              <span><small>Return</small><strong>{rentalEnd}</strong></span>
+            </div>
+            <p className={styles.createdDate}>Created {new Date(booking.createdAt).toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" })}</p>
           </div>
           <div className={styles.headerStatusGroup}>
             <span className={`${styles.liveStatus} ${styles[liveStatus]}`}>
@@ -351,36 +379,36 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
       </header>
 
         <nav className={styles.sectionNav} aria-label="Booking detail sections" role="tablist">
-          <Button variant="none" type="button" role="tab" aria-selected={activePanel === "overview"} onClick={() => selectPanel("overview")}>
-            <span>01</span><strong>Overview</strong><small>Rental &amp; payment</small>
-          </Button>
-          <Button variant="none" type="button" role="tab" aria-selected={activePanel === "progress"} onClick={() => selectPanel("progress")}>
-            <span>02</span><strong>Progress</strong><small>{completedSteps} of {processSteps.length} steps</small>
-          </Button>
-          <Button variant="none" type="button" role="tab" aria-selected={activePanel === "documents"} onClick={() => selectPanel("documents")}>
-            <span>03</span><strong>Documents</strong><small>{documentCount} available</small>
-          </Button>
-          <Button variant="none" type="button" role="tab" aria-selected={activePanel === "updates"} onClick={() => selectPanel("updates")}>
-            <span>04</span><strong>Updates</strong><small>Live notifications</small>
-          </Button>
-        </nav>
+           <Button id="booking-tab-overview" variant="none" type="button" role="tab" aria-controls="booking-overview" aria-selected={activePanel === "overview"} tabIndex={activePanel === "overview" ? 0 : -1} onKeyDown={(event) => handlePanelKeyDown(event, "overview")} onClick={() => selectPanel("overview")}>
+             <span>01</span><strong>Overview</strong><small>Dates &amp; payment</small>
+           </Button>
+           <Button id="booking-tab-progress" variant="none" type="button" role="tab" aria-controls="process-completion" aria-selected={activePanel === "progress"} tabIndex={activePanel === "progress" ? 0 : -1} onKeyDown={(event) => handlePanelKeyDown(event, "progress")} onClick={() => selectPanel("progress")}>
+             <span>02</span><strong>Progress</strong><small>Manage booking</small>
+           </Button>
+           <Button id="booking-tab-documents" variant="none" type="button" role="tab" aria-controls="booking-documents" aria-selected={activePanel === "documents"} tabIndex={activePanel === "documents" ? 0 : -1} onKeyDown={(event) => handlePanelKeyDown(event, "documents")} onClick={() => selectPanel("documents")}>
+             <span>03</span><strong>Documents</strong><small>Files &amp; records</small>
+           </Button>
+           <Button id="booking-tab-updates" variant="none" type="button" role="tab" aria-controls="booking-notifications" aria-selected={activePanel === "updates"} tabIndex={activePanel === "updates" ? 0 : -1} onKeyDown={(event) => handlePanelKeyDown(event, "updates")} onClick={() => selectPanel("updates")}>
+             <span>04</span><strong>Updates</strong><small>Live messages</small>
+           </Button>
+         </nav>
 
-      <section className={styles.quickTracker} aria-label="Booking process summary">
-        <div className={styles.quickTrackerHeading}>
+      <section className={styles.bookingStepper} aria-labelledby="booking-stepper-heading">
+        <div className={styles.stepperHeading}>
           <div>
-            <p>BOOKING PROGRESS</p>
-            <strong>{completionPercentage}% complete</strong>
+            <p>BOOKING PATH</p>
+            <h2 id="booking-stepper-heading">{completedSteps} of {processSteps.length} steps complete</h2>
           </div>
-          <div className={styles.quickProgressTrack} aria-label={`${completionPercentage}% complete`}>
-            <span style={{ width: `${completionPercentage}%` }} />
-          </div>
-          <Button variant="none" type="button" onClick={() => selectPanel("progress")}>View full tracker →</Button>
+          <strong>{completionPercentage}%</strong>
         </div>
-        <ol>
+        <div className={styles.stepperProgressTrack} aria-label={`${completionPercentage}% complete`}>
+            <span style={{ width: `${completionPercentage}%` }} />
+        </div>
+        <ol className={styles.stepperList}>
           {processSteps.map((step, index) => (
             <li key={step.label} className={styles[step.state]}>
-              <span aria-hidden="true">{step.state === "complete" ? "✓" : index + 1}</span>
-              <div><strong>{step.label}</strong><small>{step.value}</small></div>
+              <span className={styles.stepMarker} aria-hidden="true">{step.state === "complete" ? "✓" : index + 1}</span>
+              <div className={styles.stepContent}><strong>{step.label}</strong><span>{step.value}</span><small>{step.help}</small></div>
             </li>
           ))}
         </ol>
@@ -389,6 +417,8 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
       <div
         id="booking-overview"
         role="tabpanel"
+        aria-labelledby="booking-tab-overview"
+        tabIndex={0}
         className={styles.panelContent}
         hidden={activePanel !== "overview"}
       >
@@ -402,41 +432,42 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
             <Link href="/catalog" className={styles.browseLink}>Browse more rentals</Link>
           </div>
 
-          <div className={styles.logisticsCard}>
-            <dl className={styles.logisticsGrid}>
-              <div>
-                <dt>Pickup</dt>
-                <dd>{formatManilaDateTime(new Date(booking.startDate))}</dd>
-              </div>
-              <div>
-                <dt>Return</dt>
-                <dd>{formatManilaDateTime(new Date(booking.endDate))}</dd>
-              </div>
-              <div>
-                <dt>Duration</dt>
-                <dd>{booking.dayCount === 1 ? "22 hours" : `${booking.dayCount} days`}</dd>
-              </div>
-              <div>
-                <dt>Fulfillment</dt>
-                <dd>{booking.fulfillmentMethod === "pickup" ? "Pickup" : "Delivery"}</dd>
-              </div>
-              <div>
-                <dt>Location</dt>
-                <dd>{booking.location ?? (booking.fulfillmentMethod === "pickup" ? "Business pickup point" : "Address pending")}</dd>
-              </div>
-            </dl>
-          </div>
+           <section className={styles.logisticsCard} aria-labelledby="rental-dates-heading">
+             <div className={styles.datesHeading}>
+               <div>
+                 <p>RENTAL DATES</p>
+                 <h3 id="rental-dates-heading">Your reserved time</h3>
+               </div>
+               <span className={styles.dateDuration}>{durationLabel}</span>
+             </div>
+             <div className={styles.dateSummary}>
+               <div><span>Pickup</span><strong>{rentalStart}</strong></div>
+               <span className={styles.dateArrow} aria-hidden="true">→</span>
+               <div><span>Return</span><strong>{rentalEnd}</strong></div>
+             </div>
+             <details className={styles.disclosure}>
+               <summary>More information</summary>
+               <dl className={styles.logisticsGrid}>
+                 <div><dt>Duration</dt><dd>{durationLabel}</dd></div>
+                 <div><dt>Fulfillment</dt><dd>{booking.fulfillmentMethod === "pickup" ? "Pickup" : "Delivery"}</dd></div>
+                 <div><dt>Location</dt><dd>{booking.location ?? (booking.fulfillmentMethod === "pickup" ? "Business pickup point" : "Address pending")}</dd></div>
+               </dl>
+             </details>
+           </section>
 
-          <BookingItemsSummary
-            currency={booking.productSnapshot.currency || "PHP"}
-            items={itemsSummary.items}
-            unitsExpected={itemsSummary.unitsExpected}
-            subtotal={booking.rentalSubtotal}
-            discountAmount={booking.specialDiscountAmount}
-            depositAmount={booking.refundableDeposit}
-            fees={booking.deliveryFee + (booking.pickupConvenienceFee ?? 0)}
-            grandTotal={booking.totalAmount}
-          />
+           <details className={styles.disclosureCard}>
+             <summary>View booking details</summary>
+             <BookingItemsSummary
+               currency={booking.productSnapshot.currency || "PHP"}
+               items={itemsSummary.items}
+               unitsExpected={itemsSummary.unitsExpected}
+               subtotal={booking.rentalSubtotal}
+               discountAmount={booking.specialDiscountAmount}
+               depositAmount={booking.refundableDeposit}
+               fees={booking.deliveryFee + (booking.pickupConvenienceFee ?? 0)}
+               grandTotal={booking.totalAmount}
+             />
+           </details>
 
           {booking.requirementsStatus === "not_submitted" ? (
             <section className={styles.continueCard}>
@@ -477,46 +508,18 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
       <div
         id="process-completion"
         role="tabpanel"
+        aria-labelledby="booking-tab-progress"
+        tabIndex={0}
         className={styles.panelContent}
         hidden={activePanel !== "progress"}
       >
-      <section className={styles.processSection}>
-        <div className={styles.processHeader}>
-          <div>
-            <p className={styles.sectionEyebrow}>PROCESS COMPLETION</p>
-            <h2>Know what is done and what comes next</h2>
-            <span>{completedSteps} of {processSteps.length} essential steps complete</span>
-          </div>
-          <strong>{completionPercentage}%</strong>
-        </div>
-        <div className={styles.progressTrack} aria-label={`${completionPercentage}% complete`}>
-          <span style={{ width: `${completionPercentage}%` }} />
-        </div>
-        <ol className={styles.processGrid}>
-          {processSteps.map((step, index) => (
-            <li key={step.label} className={styles[step.state]}>
-              <div className={styles.stepTopline}>
-                <span className={styles.stepIcon} aria-hidden="true">
-                  {step.state === "complete" ? "✓" : index + 1}
-                </span>
-                <span className={styles.stepState}>
-                  {step.state === "complete" ? "Complete" : step.state === "attention" ? "Action needed" : step.state === "current" ? "In progress" : "Upcoming"}
-                </span>
-              </div>
-              <h3>{step.label}</h3>
-              <strong>{step.value}</strong>
-              <p>{step.help}</p>
-            </li>
-          ))}
-        </ol>
-      </section>
-
       <CustomerBookingManagement
         booking={booking}
         payments={payments}
         documents={documents}
         agreement={agreement}
         statusHistory={statusHistory}
+        showTimeline={false}
         onUpdated={loadDetails}
       />
 
@@ -529,6 +532,9 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
               {document.reviewNotes || "Please contact the business for details on this rejection."}
             </p>
           ))}
+          <Button href="#booking-documents" variant="secondary" onClick={() => { selectPanel("documents"); focusPanelTab("documents"); }}>
+            Open Documents to resubmit
+          </Button>
         </section>
       ) : null}
       </div>
@@ -536,6 +542,8 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
       <div
         id="booking-documents"
         role="tabpanel"
+        aria-labelledby="booking-tab-documents"
+        tabIndex={0}
         className={styles.panelContent}
         hidden={activePanel !== "documents"}
       >
@@ -617,6 +625,8 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
       <div
         id="booking-notifications"
         role="tabpanel"
+        aria-labelledby="booking-tab-updates"
+        tabIndex={0}
         className={styles.panelContent}
         hidden={activePanel !== "updates"}
       >

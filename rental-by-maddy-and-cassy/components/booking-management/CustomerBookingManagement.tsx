@@ -35,6 +35,7 @@ interface Props {
   documents: BookingDocument[];
   agreement: AgreementDoc | null;
   statusHistory: StatusHistoryEntry[];
+  showTimeline?: boolean;
   onUpdated: () => Promise<void>;
 }
 
@@ -61,6 +62,7 @@ export default function CustomerBookingManagement({
   documents,
   agreement,
   statusHistory,
+  showTimeline = true,
   onUpdated,
 }: Props) {
   const { showToast } = useToast();
@@ -91,6 +93,22 @@ export default function CustomerBookingManagement({
   const milestones = getBookingMilestones(booking);
   const rejectionReason = booking.status === "rejected" ? getRejectionReason(statusHistory) : undefined;
   const parsedRejection = rejectionReason ? parseDeclineNote(rejectionReason) : undefined;
+  const statusActivity = statusHistory.length ? (
+    <details className={styles.activity}>
+      <summary>View detailed status activity ({statusHistory.length})</summary>
+      <ol>
+        {statusHistory.map((entry) => (
+          <li key={entry.id}>
+            <div>
+              <strong>{entry.fromStatus ? `${formatStatus(entry.fromStatus)} → ` : ""}{formatStatus(entry.toStatus)}</strong>
+              <small>{formatDateTime(entry.createdAt)}</small>
+            </div>
+            {entry.note ? <p>{entry.note}</p> : null}
+          </li>
+        ))}
+      </ol>
+    </details>
+  ) : null;
 
   async function handleEditSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -194,7 +212,7 @@ export default function CustomerBookingManagement({
         </dl>
       </section>
 
-      <section className={styles.timelineSection} aria-labelledby="tracking-heading">
+      {showTimeline ? <section className={styles.timelineSection} aria-labelledby="tracking-heading">
         <div className={styles.sectionHeading}>
           <div><p>BOOKING TRACKER</p><h2 id="tracking-heading">From request to completion</h2></div>
           <span>{milestones.filter((milestone) => milestone.completed).length} of {milestones.length} milestones</span>
@@ -215,23 +233,10 @@ export default function CustomerBookingManagement({
           ))}
         </ol>
 
-        {statusHistory.length ? (
-          <details className={styles.activity}>
-            <summary>View detailed status activity ({statusHistory.length})</summary>
-            <ol>
-              {statusHistory.map((entry) => (
-                <li key={entry.id}>
-                  <div>
-                    <strong>{entry.fromStatus ? `${formatStatus(entry.fromStatus)} → ` : ""}{formatStatus(entry.toStatus)}</strong>
-                    <small>{formatDateTime(entry.createdAt)}</small>
-                  </div>
-                  {entry.note ? <p>{entry.note}</p> : null}
-                </li>
-              ))}
-            </ol>
-          </details>
-        ) : null}
-      </section>
+        {statusActivity}
+      </section> : null}
+
+      {!showTimeline ? statusActivity : null}
 
       <section className={styles.management} aria-labelledby="manage-booking-heading">
         <div className={styles.sectionHeading}>

@@ -9,6 +9,7 @@ import { useCart } from "@/hooks/useCart";
 import { useInventoryMap } from "@/hooks/useInventory";
 import { Button } from "@/components/ui/Button";
 import styles from "./cart.module.css";
+import { getVariantQuantityLimit } from "@/src/lib/variantInventory";
 
 function money(value: number): string {
   return `PHP ${value.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -48,8 +49,13 @@ export default function CartView({ products }: { products: Product[] }) {
   // availableUnits -- availability depends on rental dates the customer
   // hasn't chosen yet (checkout's own availability check handles that).
   const oversubscribedLine = cartLines
-    .map((line) => ({ line, units: unitsByProductId.get(line.product.id) ?? defaultsById[line.product.id] }))
-    .find(({ line, units }) => line.quantity > units.totalUnits);
+    .map((line) => ({
+      line,
+      limit: line.product.colorOptions.length > 0
+        ? getVariantQuantityLimit(line.product, line.color)
+        : (unitsByProductId.get(line.product.id) ?? defaultsById[line.product.id]).totalUnits,
+    }))
+    .find(({ line, limit }) => limit <= 0 || line.quantity > limit);
 
   return (
     <section className={styles.page} aria-labelledby="cart-heading">
@@ -80,7 +86,10 @@ export default function CartView({ products }: { products: Product[] }) {
             </div>
             {cartLines.map(({ product, quantity, color }) => {
               const units = unitsByProductId.get(product.id) ?? defaultsById[product.id];
-              const maxQuantity = Math.max(1, Math.min(10, units.totalUnits));
+              const variantLimit = product.colorOptions.length > 0
+                ? getVariantQuantityLimit(product, color)
+                : units.totalUnits;
+              const maxQuantity = Math.max(1, Math.min(10, variantLimit));
               const lineRental = product.pricePerDay * quantity;
               const lineDiscount = Math.max(0, product.listPricePerDay - product.pricePerDay) * quantity;
               const lineImage = color
@@ -103,7 +112,11 @@ export default function CartView({ products }: { products: Product[] }) {
                     {color ? <p className={styles.meta}>Color: <strong>{color}</strong></p> : null}
                     <p className={styles.rate}>{money(product.pricePerDay)} <span>per unit / day</span></p>
                     {lineDiscount > 0 ? <p className={styles.discount}>You save {money(lineDiscount)} per rental day</p> : null}
-                    <p className={styles.stock}>{units.totalUnits} active {units.totalUnits === 1 ? "unit" : "units"}; dates are checked during checkout.</p>
+                    <p className={styles.stock}>
+                      {variantLimit > 0
+                        ? `${variantLimit} active ${variantLimit === 1 ? "unit" : "units"}${color ? ` in ${color}` : ""}; dates are checked during checkout.`
+                        : `${color ?? "This variant"} is unavailable.`}
+                    </p>
                   </div>
                   <div className={styles.itemControls}>
                     <label htmlFor={`quantity-${product.id}`}>Quantity</label>
@@ -117,7 +130,7 @@ export default function CartView({ products }: { products: Product[] }) {
                         value={quantity}
                         onChange={(event) => updateQuantity(product.id, Math.min(maxQuantity, Number(event.target.value)))}
                       />
-                      <Button variant="none" aria-label={`Increase ${product.name} quantity`} onClick={() => updateQuantity(product.id, quantity + 1)} disabled={quantity >= maxQuantity}>+</Button>
+                      <Button variant="none" aria-label={`Increase ${product.name} quantity`} onClick={() => updateQuantity(product.id, quantity + 1)} disabled={variantLimit <= 0 || quantity >= maxQuantity}>+</Button>
                     </div>
                     <strong>{money(lineRental)} / day</strong>
                     <Button variant="none" className={styles.removeButton} onClick={() => removeItem(product.id)}>Remove</Button>
@@ -148,7 +161,9 @@ export default function CartView({ products }: { products: Product[] }) {
               <>
                 <span className={`${styles.primaryLink} ${styles.primaryLinkDisabled}`} aria-disabled="true">Start checkout</span>
                 <p className={styles.unavailableNote} role="alert">
-                  {oversubscribedLine.line.product.name} only has {oversubscribedLine.units.totalUnits} {oversubscribedLine.units.totalUnits === 1 ? "unit" : "units"} in inventory — lower the quantity to continue.
+                  {oversubscribedLine.limit <= 0
+                    ? `${oversubscribedLine.line.product.name}${oversubscribedLine.line.color ? ` in ${oversubscribedLine.line.color}` : ""} is unavailable — remove it to continue.`
+                    : `${oversubscribedLine.line.product.name}${oversubscribedLine.line.color ? ` in ${oversubscribedLine.line.color}` : ""} only has ${oversubscribedLine.limit} ${oversubscribedLine.limit === 1 ? "unit" : "units"} in inventory — lower the quantity to continue.`}
                 </p>
               </>
             ) : (

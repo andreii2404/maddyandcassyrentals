@@ -119,6 +119,60 @@
   color: var(--color-status-red);
 }
 
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  margin-top: 0.35rem;
+}
+
+.pageNumbers {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+.paginationButton {
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-white);
+  color: var(--color-charcoal);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+}
+
+.paginationButton:hover:not(:disabled),
+.paginationButton:focus-visible {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.paginationButton[aria-current="page"] {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-white);
+}
+
+.paginationButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pageSummary {
+  margin: -0.15rem 0 0;
+  color: var(--color-charcoal);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
 @media (max-width: 560px) {
   .header,
   .card {
@@ -128,5 +182,19 @@
 
   .payment {
     align-items: flex-start;
+  }
+
+  .pagination {
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+
+  .pageNumbers {
+    order: -1;
+    flex-basis: 100%;
+  }
+
+  .paginationButton {
+    flex: 1;
   }
 }

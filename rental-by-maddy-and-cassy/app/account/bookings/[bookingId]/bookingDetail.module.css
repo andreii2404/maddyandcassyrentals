@@ -110,12 +110,10 @@
 
 .bookingHeader {
   overflow: hidden;
-  border: 1px solid rgba(154, 89, 101, 0.14);
-  border-radius: 18px;
-  background:
-    radial-gradient(circle at 92% 0%, rgba(242, 210, 207, 0.72), transparent 38%),
-    linear-gradient(145deg, #fff, #fffaf9);
-  box-shadow: 0 18px 50px rgba(51, 35, 39, 0.06);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: var(--color-white);
+  box-shadow: 0 12px 34px rgba(51, 35, 39, 0.05);
 }
 
 .headerRow {
@@ -123,7 +121,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.8rem 0.95rem;
+  padding: 1.15rem 1.25rem 1.2rem;
 }
 
 .headerStatusGroup {
@@ -133,13 +131,46 @@
   gap: 0.55rem;
 }
 
-.liveStatus { display: inline-flex; min-height: 32px; padding: 0.42rem 0.62rem; border: 1px solid var(--color-light-gray); border-radius: 999px; background: rgba(255,255,255,.88); color: var(--color-charcoal); align-items: center; gap: 0.4rem; font-size: 0.6rem; font-weight: 700; white-space: nowrap; }
+.liveStatus { display: inline-flex; min-height: 32px; padding: 0.42rem 0.62rem; border: 1px solid var(--color-light-gray); border-radius: 999px; background: rgba(255,255,255,.88); color: var(--color-charcoal); align-items: center; gap: 0.4rem; font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
 .liveStatus > span { width: 8px; height: 8px; border-radius: 50%; background: var(--color-status-yellow); }
 .liveStatus.live > span { background: var(--color-status-green); box-shadow: 0 0 0 4px var(--color-status-green-bg); }
 .liveStatus.reconnecting > span { animation: livePulse 1.2s ease-in-out infinite; }
 @keyframes livePulse { 50% { opacity: 0.35; } }
 
-.headerRow > div > p:not(.eyebrow) {
+.headerDates {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-top: 0.85rem;
+}
+
+.headerDates > span:not(.headerDateArrow) {
+  display: grid;
+  gap: 0.12rem;
+}
+
+.headerDates small,
+.dateSummary span {
+  color: var(--color-charcoal);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.headerDates strong {
+  color: var(--color-text-primary);
+  font-size: 0.9rem;
+}
+
+.headerDateArrow,
+.dateArrow {
+  color: var(--color-dusty-rose);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.createdDate {
   margin: 0.45rem 0 0;
   color: var(--color-charcoal);
   font-size: 0.72rem;
@@ -169,11 +200,8 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   overflow: hidden;
-  border: 1px solid rgba(154, 89, 101, 0.14);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 8px 22px rgba(51, 35, 39, 0.07);
-  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.96);
 }
 
 .sectionNav button {
@@ -182,7 +210,7 @@
   min-width: 0;
   gap: 0.05rem 0.48rem;
   align-items: center;
-  padding: 0.55rem 0.65rem;
+  padding: 0.6rem 0.7rem;
   min-height: 44px;
   border: 0;
   border-right: 1px solid rgba(154, 89, 101, 0.08);
@@ -204,68 +232,71 @@
 .sectionNav strong { overflow: hidden; font-size: 0.7rem; text-overflow: ellipsis; white-space: nowrap; }
 .sectionNav small { overflow: hidden; color: #817878; font-size: 0.56rem; text-overflow: ellipsis; white-space: nowrap; }
 
-.quickTracker {
+.bookingStepper {
   display: grid;
-  grid-template-columns: minmax(210px, 0.65fr) minmax(0, 1.35fr);
-  gap: 0.7rem;
-  padding: 0.65rem;
+  gap: 0.85rem;
+  padding: 1rem 1.1rem;
   border: 1px solid var(--color-border);
-  border-radius: 14px;
-  background: white;
+  border-radius: 16px;
+  background: var(--color-white);
 }
 
-.quickTrackerHeading {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.4rem 0.65rem;
+.stepperHeading {
+  display: flex;
   align-items: center;
-  padding: 0.1rem 0.25rem;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
-.quickTrackerHeading p { margin: 0; color: var(--color-primary); font-size: 0.57rem; font-weight: 800; letter-spacing: 0.08em; }
-.quickTrackerHeading strong { display: block; margin-top: 0.08rem; font-size: 0.82rem; }
-.quickTrackerHeading button { padding: 0; border: 0; background: none; color: var(--color-primary); font: inherit; font-size: 0.62rem; font-weight: 750; cursor: pointer; white-space: nowrap; }
+.stepperHeading p,
+.datesHeading p { margin: 0 0 0.22rem; color: var(--color-primary); font-size: 0.61rem; font-weight: 800; letter-spacing: 0.09em; }
+.stepperHeading h2,
+.datesHeading h3 { margin: 0; color: var(--color-text-primary); font-size: 0.95rem; }
+.stepperHeading > strong { color: var(--color-primary); font-size: 1.35rem; letter-spacing: -0.04em; }
 
-.quickProgressTrack {
-  grid-column: 1 / -1;
+.stepperProgressTrack {
   overflow: hidden;
   height: 5px;
   border-radius: 99px;
   background: var(--color-light-gray);
 }
 
-.quickProgressTrack span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--color-primary), var(--color-dusty-rose)); }
+.stepperProgressTrack span { display: block; height: 100%; border-radius: inherit; background: var(--color-primary); transition: width 240ms ease; }
 
-.quickTracker ol {
+.stepperList {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.4rem;
+  gap: 0;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.quickTracker li {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
+.stepperList li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.45rem;
   min-width: 0;
-  padding: 0.45rem;
-  border: 1px solid var(--color-light-gray);
-  border-radius: 10px;
-  background: var(--color-background);
+  padding: 0.2rem 0.8rem 0.2rem 0;
 }
 
-.quickTracker li > span { display: grid; width: 23px; height: 23px; flex: 0 0 auto; place-items: center; border-radius: 50%; background: white; color: var(--color-charcoal); font-size: 0.58rem; font-weight: 800; }
-.quickTracker li > div { display: grid; min-width: 0; }
-.quickTracker li strong,
-.quickTracker li small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.quickTracker li strong { font-size: 0.61rem; }
-.quickTracker li small { color: var(--color-charcoal); font-size: 0.53rem; }
-.quickTracker li.complete { border-color: var(--color-status-green-border); background: var(--color-status-green-bg); }
-.quickTracker li.complete > span { background: var(--color-status-green); color: white; }
-.quickTracker li.current { border-color: var(--color-status-yellow-border); background: var(--color-status-yellow-bg); }
-.quickTracker li.attention { border-color: var(--color-status-red-border); background: var(--color-status-red-bg); }
+.stepperList li:not(:last-child)::after { position: absolute; z-index: 0; top: calc(0.2rem + 14px); right: 0.6rem; left: 29px; height: 1px; background: var(--color-light-gray); content: ""; }
+.stepperList li.complete:not(:last-child)::after { background: var(--color-status-green-border); }
+.stepMarker { position: relative; z-index: 1; display: grid; width: 29px; height: 29px; place-items: center; border: 1px solid var(--color-light-gray); border-radius: 50%; background: var(--color-white); color: var(--color-charcoal); font-size: 0.64rem; font-weight: 800; }
+.complete .stepMarker { border-color: var(--color-status-green); background: var(--color-status-green); color: white; }
+.current .stepMarker { border-color: var(--color-status-yellow); box-shadow: 0 0 0 4px var(--color-status-yellow-bg); }
+.attention .stepMarker { border-color: var(--color-status-red); color: var(--color-status-red); }
+.stepContent { position: relative; z-index: 1; display: grid; align-content: start; gap: 0.12rem; min-width: 0; }
+.stepContent strong,
+.stepContent span,
+.stepContent small { overflow-wrap: anywhere; }
+.stepContent strong { font-size: 0.72rem; }
+.stepContent span { color: var(--color-text-primary); font-size: 0.76rem; font-weight: 700; }
+.stepContent small { color: var(--color-charcoal); font-size: 0.7rem; line-height: 1.4; }
+.complete .stepContent span { color: var(--color-status-green); }
+.current .stepContent span { color: var(--color-status-yellow); }
+.attention .stepContent span { color: var(--color-status-red); }
 
 .panelContent {
   display: grid;
@@ -300,7 +331,6 @@
 
 .overviewColumn,
 .paymentColumn,
-.processSection,
 .resourceSection {
   scroll-margin-top: 100px;
 }
@@ -366,17 +396,106 @@
 }
 
 .logisticsCard {
-  padding: 0.7rem 0.8rem;
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem;
   border: 1px solid var(--color-border);
   border-radius: 16px;
   background: var(--color-white);
 }
+
+.datesHeading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.dateDuration {
+  padding: 0.3rem 0.55rem;
+  border-radius: 999px;
+  background: var(--color-background-soft);
+  color: var(--color-primary);
+  font-size: 0.65rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.dateSummary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.85rem;
+  border-radius: 12px;
+  background: var(--color-background-soft);
+}
+
+.dateSummary > div {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.dateSummary strong {
+  color: var(--color-text-primary);
+  font-size: 0.94rem;
+  line-height: 1.35;
+}
+
+.disclosure,
+.disclosureCard,
+.paymentDetails {
+  border-top: 1px solid var(--color-light-gray);
+}
+
+.disclosure summary,
+.disclosureCard summary,
+.paymentDetails summary {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0;
+  color: var(--color-primary);
+  font-size: 0.7rem;
+  font-weight: 800;
+  cursor: pointer;
+  list-style: none;
+}
+
+.disclosure summary::-webkit-details-marker,
+.disclosureCard summary::-webkit-details-marker,
+.paymentDetails summary::-webkit-details-marker { display: none; }
+
+.disclosure summary::after,
+.disclosureCard summary::after,
+.paymentDetails summary::after { content: "＋"; font-size: 1rem; font-weight: 500; }
+.disclosure[open] summary::after,
+.disclosureCard[open] summary::after,
+.paymentDetails[open] summary::after { content: "−"; }
+
+.disclosure summary:focus-visible,
+.disclosureCard summary:focus-visible,
+.paymentDetails summary:focus-visible { outline: 3px solid rgba(154, 89, 101, 0.24); outline-offset: 3px; border-radius: 4px; }
+
+.disclosureCard {
+  padding: 0 0.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-white);
+}
+
+.disclosureCard summary { padding: 0.75rem 0.85rem; }
+.disclosureCard > :not(summary) { padding: 0 0.85rem 0.85rem; }
 
 .logisticsGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 0.7rem;
   margin: 0;
+  padding: 0.15rem 0 0.2rem;
 }
 
 .logisticsGrid dt {
@@ -414,76 +533,6 @@
   font-weight: 700;
   color: var(--color-text-primary);
 }
-
-.processSection {
-  padding: 0.8rem;
-  border: 1px solid var(--color-border);
-  border-radius: 16px;
-  background: white;
-  box-shadow: 0 12px 34px rgba(40, 32, 34, 0.045);
-}
-
-.processHeader > div > span {
-  display: block;
-  margin-top: 0.35rem;
-  color: var(--color-charcoal);
-  font-size: 0.7rem;
-}
-
-.processHeader > strong {
-  color: var(--color-primary);
-  font-size: 1.8rem;
-  letter-spacing: -0.04em;
-}
-
-.progressTrack {
-  overflow: hidden;
-  height: 7px;
-  margin: 0.7rem 0 0.8rem;
-  border-radius: 999px;
-  background: var(--color-light-gray);
-}
-
-.progressTrack span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, var(--color-primary), var(--color-dusty-rose));
-  transition: width 240ms ease;
-}
-
-.processGrid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.7rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.processGrid li {
-  min-width: 0;
-  padding: 0.65rem;
-  border: 1px solid var(--color-light-gray);
-  border-radius: 14px;
-  background: var(--color-background);
-}
-
-.processGrid li.complete { border-color: var(--color-status-green-border); background: var(--color-status-green-bg); }
-.processGrid li.current { border-color: var(--color-status-yellow-border); background: var(--color-status-yellow-bg); }
-.processGrid li.attention { border-color: var(--color-status-red-border); background: var(--color-status-red-bg); }
-
-.stepTopline { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
-.stepIcon { display: grid; width: 25px; height: 25px; place-items: center; border: 1px solid var(--color-light-gray); border-radius: 50%; background: white; color: var(--color-charcoal); font-size: 0.62rem; font-weight: 800; }
-.complete .stepIcon { border-color: var(--color-status-green); background: var(--color-status-green); color: white; }
-.attention .stepIcon { border-color: var(--color-status-red); color: var(--color-status-red); }
-.stepState { color: #837b7a; font-size: 0.54rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
-.complete .stepState { color: var(--color-status-green); }
-.current .stepState { color: var(--color-status-yellow); }
-.attention .stepState { color: var(--color-status-red); }
-.processGrid h3 { margin: 0.75rem 0 0.2rem; font-size: 0.72rem; }
-.processGrid li > strong { display: block; overflow-wrap: anywhere; font-size: 0.72rem; }
-.processGrid p { margin: 0.35rem 0 0; color: var(--color-charcoal); font-size: 0.61rem; line-height: 1.52; }
 
 .correctionSection {
   display: flex;
@@ -565,7 +614,7 @@
 .documentInfo { min-width: 0; }
 .documentInfo strong { display: block; overflow: hidden; font-size: 0.68rem; text-overflow: ellipsis; white-space: nowrap; }
 .documentInfo small { display: block; margin-top: 0.16rem; color: var(--color-charcoal); font-size: 0.56rem; }
-.documentStatus { padding: 0.28rem 0.46rem; border-radius: 999px; background: var(--color-status-yellow-bg); color: var(--color-status-yellow); font-size: 0.52rem; font-weight: 800; white-space: nowrap; }
+.documentStatus { padding: 0.28rem 0.46rem; border-radius: 999px; background: var(--color-status-yellow-bg); color: var(--color-status-yellow); font-size: 0.7rem; font-weight: 800; white-space: nowrap; }
 .documentStatus.approved { background: var(--color-status-green-bg); color: var(--color-status-green); }
 .documentStatus.rejected { background: var(--color-status-red-bg); color: var(--color-status-red); }
 
@@ -580,14 +629,11 @@
   .bookingWorkspace,
   .resourceGrid { grid-template-columns: 1fr; }
   .paymentColumn { position: static; }
-  .processGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .quickTracker { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 680px) {
   .sectionNav { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; }
   .sectionNav button { min-width: 122px; flex: 1 0 auto; scroll-snap-align: start; }
-  .quickTracker ol { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .continueCard { grid-template-columns: auto minmax(0, 1fr); }
   .continueCard a { grid-column: 1 / -1; width: 100%; }
 }
@@ -596,13 +642,15 @@
   .headerRow,
   .contentHeading,
   .resourceHeading,
-  .processHeader { align-items: flex-start; flex-direction: column; }
+  .datesHeading { align-items: flex-start; flex-direction: column; }
   .headerRow { gap: 1rem; }
   .headerStatusGroup { align-items: flex-start; }
   .browseLink { width: 100%; }
-  .processHeader > strong { font-size: 1.4rem; }
-  .processGrid { grid-template-columns: 1fr; }
-  .documentList button { grid-template-columns: auto minmax(0, 1fr); }
+  .stepperList { grid-template-columns: 1fr; gap: 0.1rem; }
+  .stepperList li { grid-template-columns: auto minmax(0, 1fr); gap: 0.55rem; padding: 0 0 0.85rem; }
+  .stepperList li:not(:last-child)::after { top: 29px; right: auto; bottom: 0; left: 14px; width: 1px; height: auto; }
+  .stepperList li.complete:not(:last-child)::after { background: var(--color-status-green-border); }
+.documentList > li > button { grid-template-columns: auto minmax(0, 1fr); }
   .documentStatus { grid-column: 2; justify-self: start; }
   .sectionNav { top: 64px; }
 }

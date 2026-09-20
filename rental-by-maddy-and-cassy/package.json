@@ -15,7 +15,8 @@
     "test:documents": "tsx --test scripts/testDocumentResubmission.ts",
     "test:auth": "tsx --test scripts/testAuthValidation.ts",
     "test:rental-timing": "tsx --test scripts/testRentalTiming.ts",
-    "verify": "npm run lint && tsc --noEmit && npm run test:payments && npm run test:checkout && npm run test:bookings && npm run test:documents && npm run test:auth && npm run test:rental-timing && npm run build"
+    "test:variant-inventory": "tsx --test scripts/testVariantInventory.ts",
+    "verify": "npm run lint && tsc --noEmit && npm run test:payments && npm run test:checkout && npm run test:bookings && npm run test:documents && npm run test:auth && npm run test:rental-timing && npm run test:variant-inventory && npm run build"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.5.3",

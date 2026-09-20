@@ -1,7 +1,7 @@
 import { createPublicClient } from "@/src/lib/supabase/public";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Tables } from "@/src/lib/supabase/database.types";
-import type { Product, ProductReview } from "@/types/product";
+import type { Product, ProductReview, ProductVariantAvailability } from "@/types/product";
 
 type ProductRow = Tables<"products"> & {
   product_images: Tables<"product_images">[] | null;
@@ -63,13 +63,36 @@ async function fetchApprovedReviews(
   }));
 }
 
+async function fetchVariantAvailability(
+  supabase: SupabaseClient<Database>,
+  productId: string,
+): Promise<ProductVariantAvailability[]> {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabase.rpc("get_product_variant_availability", {
+    p_product_id: productId,
+    p_start_date: today,
+    p_end_date: today,
+  });
+  // Keep existing catalog pages renderable during a rolling deploy where the
+  // application may restart before the variant migration has reached the DB.
+  // The migration-backed RPC is authoritative once present; an empty result
+  // simply makes variant controls fall back to their unavailable state.
+  if (error) return [];
+  return (data ?? []).map((row) => ({
+    variant: row.variant,
+    totalUnits: Number(row.total_units ?? 0),
+    availableUnits: Number(row.available_units ?? 0),
+  }));
+}
+
 async function mapProduct(
   supabase: SupabaseClient<Database>,
   row: ProductRow,
 ): Promise<Product> {
-  const [{ totalUnits, availableUnits }, reviews] = await Promise.all([
+  const [{ totalUnits, availableUnits }, reviews, variantAvailability] = await Promise.all([
     fetchAvailabilitySnapshot(supabase, row.id),
     fetchApprovedReviews(supabase, row.id),
+    fetchVariantAvailability(supabase, row.id),
   ]);
 
   const images = (row.product_images ?? [])
@@ -132,6 +155,7 @@ async function mapProduct(
     specifications,
     images,
     colorOptions,
+    variantAvailability,
     totalUnits,
     availableUnits,
     reservedUnits: Math.max(totalUnits - availableUnits, 0),

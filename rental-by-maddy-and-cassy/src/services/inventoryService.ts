@@ -82,6 +82,7 @@ export interface SubmitBookingInput {
   deliveryFee?: number;
   discountAmount?: number;
   productSnapshot: BookingProductSnapshot;
+  variant?: string;
   customerSnapshot: BookingCustomerSnapshot;
   emergencyContact?: EmergencyContact;
   isGuest?: boolean;
@@ -118,6 +119,7 @@ export async function submitBookingWithDateGuard(
   const { data, error } = await supabase.rpc("create_multi_day_time_based_booking", {
     p_product_id: input.productId,
     p_quantity: input.quantity ?? 1,
+    p_variant: input.variant?.trim() || undefined,
     p_pickup_at: input.pickupAt,
     p_rental_days: input.rentalDays ?? 1,
     p_fulfillment_method: input.fulfillmentMethod,
@@ -140,6 +142,9 @@ export async function submitBookingWithDateGuard(
   });
 
   if (error) {
+    if (error.message.includes("VARIANT_NOT_AVAILABLE") || error.message.includes("NO_VARIANT_AVAILABILITY")) {
+      throw new Error("The selected color is unavailable or does not have enough units.");
+    }
     if (error.message.includes("NO_TIME_AVAILABILITY")) {
       const nextAvailableAt = error.message.match(/NO_TIME_AVAILABILITY:([^\n]+)/)?.[1]?.trim();
       throw new DatesUnavailableError(input.pickupAt, nextAvailableAt);
@@ -173,7 +178,7 @@ export async function submitBookingWithDateGuard(
 }
 
 export interface SubmitMultiItemBookingInput {
-  items: { productId: string; quantity: number }[];
+  items: { productId: string; quantity: number; variant?: string }[];
   pickupAt: string;
   rentalDays: number;
   fulfillmentMethod: FulfillmentMethod;
@@ -212,7 +217,11 @@ export async function submitMultiItemBookingWithDateGuard(
   }
 
   const { data, error } = await supabase.rpc("create_multi_item_booking", {
-    p_items: toJson(input.items.map((item) => ({ productId: item.productId, quantity: item.quantity }))),
+    p_items: toJson(input.items.map((item) => ({
+      productId: item.productId,
+      quantity: item.quantity,
+      ...(item.variant?.trim() ? { variant: item.variant.trim() } : {}),
+    }))),
     p_pickup_at: input.pickupAt,
     p_rental_days: input.rentalDays,
     p_fulfillment_method: input.fulfillmentMethod,
@@ -233,6 +242,9 @@ export async function submitMultiItemBookingWithDateGuard(
   });
 
   if (error) {
+    if (error.message.includes("VARIANT_NOT_AVAILABLE") || error.message.includes("NO_VARIANT_AVAILABILITY")) {
+      throw new Error("One of the selected colors is unavailable or does not have enough units.");
+    }
     const timeMatch = error.message.match(/NO_TIME_AVAILABILITY:([0-9a-fA-F-]{36}):([^\n]*)/);
     if (timeMatch) {
       const [, productId, nextAvailableAt] = timeMatch;

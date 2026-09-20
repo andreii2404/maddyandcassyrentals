@@ -117,8 +117,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
       providerPaymentId: paymentReference,
       paymentMethod: method,
       providerMetadata: { channel: "in_person", recordedBy: user.id, notes },
+      reviewedBy: user.id,
     });
-    await admin.from("booking_payment_submissions").update({ reviewed_by: user.id }).eq("id", paymentId);
     await admin.from("booking_status_history").insert({
       booking_id: bookingId,
       from_status: booking.status,
@@ -184,32 +184,30 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
         providerPaymentId: submission.external_reference || paymentId,
         paymentMethod: submission.payment_method || "gcash",
         providerMetadata: { manualReview: true, reviewedBy: user.id },
+        reviewedBy: user.id,
       });
-      await admin
-        .from("booking_payment_submissions")
-        .update({ reviewed_by: user.id })
-        .eq("id", paymentId);
 
       const booking = await getBookingById(admin, bookingId);
       await admin.from("booking_status_history").insert({
         booking_id: bookingId,
         from_status: booking?.status ?? "pending",
         to_status: booking?.status ?? "pending",
-        note: `Admin verified a GCash payment of PHP ${submission.declared_amount.toLocaleString("en-PH")}.${result.bookingConfirmed ? " Booking auto-confirmed." : ""}`,
+        note: `Admin verified a GCash payment of PHP ${result.appliedAmount.toLocaleString("en-PH")}.${result.bookingConfirmed ? " Booking auto-confirmed." : ""}`,
         changed_by: user.id,
       });
     } else {
-      const now = new Date().toISOString();
-      const { error: updateError } = await admin
-        .from("booking_payment_submissions")
-        .update({
-          status: "rejected",
-          review_notes: reason,
-          reviewed_by: user.id,
-          reviewed_at: now,
-        })
-        .eq("id", paymentId);
-      if (updateError) throw new Error(updateError.message);
+      const { error: updateError } = await admin.rpc("review_manual_payment", {
+        p_booking_id: bookingId,
+        p_payment_id: paymentId,
+        p_status: "rejected",
+        p_reviewed_by: user.id,
+        p_reason: reason,
+      });
+      if (updateError) {
+        throw new Error(
+          `PAYMENT_REVIEW_DATABASE_ERROR${updateError.code ? ` [${updateError.code}]` : ""}: ${updateError.message}`,
+        );
+      }
 
       const booking = await getBookingById(admin, bookingId);
       await admin.from("booking_status_history").insert({
@@ -245,7 +243,25 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
     if (error instanceof RequestSecurityError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    console.error("Payment review failed", error);
-    return NextResponse.json({ error: "The payment review could not be saved." }, { status: 500 });
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes("PAYMENT_ALREADY_REVIEWED")) {
+      return NextResponse.json({ error: "This payment has already been reviewed." }, { status: 409 });
+    }
+    if (message.includes("DUPLICATE_PAYMENT_REFERENCE")) {
+      return NextResponse.json({ error: "This GCash reference number is already attached to a verified payment." }, { status: 409 });
+    }
+    if (message.includes("BOOKING_ALREADY_PAID")) {
+      return NextResponse.json({ error: "This booking is already fully paid." }, { status: 409 });
+    }
+    const errorId = crypto.randomUUID();
+    console.error("Payment review failed", {
+      errorId,
+      requestUrl: request.url,
+      error,
+    });
+    return NextResponse.json(
+      { error: `The payment review could not be saved. Error reference: ${errorId}` },
+      { status: 500 },
+    );
   }
 }

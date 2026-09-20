@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/Button";
 import ReservationFooter from "@/components/reservation/ReservationFooter";
 import styles from "./StepRentalDetails.module.css";
 import { PHILIPPINE_PROVINCES } from "@/src/data/philippineLocations";
+import { getVariantQuantityLimit } from "@/src/lib/variantInventory";
 
 interface StepRentalDetailsProps {
   product: Product;
@@ -38,6 +39,7 @@ interface StepRentalDetailsProps {
   onUpdate: (patch: Partial<ReservationDraft>) => void;
   onContinue: () => void;
   onBack?: () => void;
+  selectedVariant?: string;
 }
 
 export default function StepRentalDetails({
@@ -48,6 +50,7 @@ export default function StepRentalDetails({
   onUpdate,
   onContinue,
   onBack,
+  selectedVariant,
 }: StepRentalDetailsProps) {
   const [disabledDateKeys, setDisabledDateKeys] = useState<Set<string>>(new Set());
   const [confirmedDateKeys, setConfirmedDateKeys] = useState<Set<string>>(new Set());
@@ -56,6 +59,7 @@ export default function StepRentalDetails({
   const [availabilityError, setAvailabilityError] = useState(false);
   const [timeAvailability, setTimeAvailability] = useState<TimeAvailability | null>(null);
   const [nowTick, setNowTick] = useState(() => Date.now());
+  const stockLimit = getVariantQuantityLimit(product, selectedVariant);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNowTick(Date.now()), 30000);
@@ -108,7 +112,7 @@ export default function StepRentalDetails({
     let cancelled = false;
     const timer = window.setTimeout(() => {
       setAvailabilityError(false);
-      getTimeAvailability(product.id, pickupAt, draft.quantity, rentalDays)
+      getTimeAvailability(product.id, pickupAt, draft.quantity, rentalDays, selectedVariant)
         .then((result) => {
           if (cancelled) return;
           setTimeAvailability(result);
@@ -130,7 +134,7 @@ export default function StepRentalDetails({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [draft.fulfillmentMethod, draft.pickupConvenienceFee, draft.pickupTime, draft.quantity, onUpdate, pickupAt, product.id, rentalDays]);
+  }, [draft.fulfillmentMethod, draft.pickupConvenienceFee, draft.pickupTime, draft.quantity, onUpdate, pickupAt, product.id, rentalDays, selectedVariant]);
 
   const isDelivery = draft.fulfillmentMethod === "delivery";
   const hasValidLocation =
@@ -264,7 +268,7 @@ export default function StepRentalDetails({
     setAvailabilityError(false);
     let latestAvailability: TimeAvailability;
     try {
-      latestAvailability = await getTimeAvailability(product.id, pickupAt, draft.quantity, rentalDays);
+      latestAvailability = await getTimeAvailability(product.id, pickupAt, draft.quantity, rentalDays, selectedVariant);
     } catch {
       setChecking(false);
       setAvailabilityError(true);
@@ -491,11 +495,11 @@ export default function StepRentalDetails({
                   id="rentalQuantity"
                   type="number"
                   min={1}
-                  max={Math.max(1, timeAvailability?.availableUnits ?? units.totalUnits)}
+                  max={Math.max(1, Math.min(stockLimit, timeAvailability?.availableUnits ?? stockLimit))}
                   value={draft.quantity}
-                  onChange={(event) => onUpdate({ quantity: Math.max(1, Math.min(Math.max(1, units.totalUnits), Number(event.target.value) || 1)) })}
+                  onChange={(event) => onUpdate({ quantity: Math.max(1, Math.min(Math.max(1, stockLimit), Number(event.target.value) || 1)) })}
                 />
-                <Button variant="icon" size="sm" aria-label="Increase rental quantity" onClick={() => onUpdate({ quantity: draft.quantity + 1 })} disabled={draft.quantity >= units.totalUnits}>+</Button>
+                <Button variant="icon" size="sm" aria-label="Increase rental quantity" onClick={() => onUpdate({ quantity: draft.quantity + 1 })} disabled={stockLimit <= 0 || draft.quantity >= Math.min(stockLimit, timeAvailability?.availableUnits ?? stockLimit)}>+</Button>
               </div>
             </div>
           </section>

@@ -29,7 +29,7 @@ import styles from "./StepRentalDetails.module.css";
 import { PHILIPPINE_PROVINCES } from "@/src/data/philippineLocations";
 
 interface StepCartRentalDetailsProps {
-  lines: { product: Product; quantity: number }[];
+  lines: { product: Product; quantity: number; color?: string }[];
   draft: ReservationDraft;
   pricing: MultiItemReservationPricing;
   onUpdate: (patch: Partial<ReservationDraft>) => void;
@@ -124,7 +124,7 @@ export default function StepCartRentalDetails({
     const timer = window.setTimeout(() => {
       setAvailabilityError(false);
       checkBatchTimeAvailability(
-        lines.map((line) => ({ productId: line.product.id, quantity: line.quantity })),
+        lines.map((line) => ({ productId: line.product.id, quantity: line.quantity, variant: line.color })),
         pickupAt,
         rentalDays,
       )
@@ -292,7 +292,7 @@ export default function StepCartRentalDetails({
     let latest: Map<string, TimeAvailability>;
     try {
       latest = await checkBatchTimeAvailability(
-        lines.map((line) => ({ productId: line.product.id, quantity: line.quantity })),
+        lines.map((line) => ({ productId: line.product.id, quantity: line.quantity, variant: line.color })),
         pickupAt,
         rentalDays,
       );

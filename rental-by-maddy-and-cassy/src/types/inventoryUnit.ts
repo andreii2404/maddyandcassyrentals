@@ -11,6 +11,7 @@ export interface InventoryUnit {
   id: string;
   productId: string;
   unitCode: string;
+  variant?: string;
   serialNumber?: string;
   lifecycleStatus: InventoryUnitLifecycleStatus;
   conditionNotes?: string;

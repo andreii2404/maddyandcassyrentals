@@ -41,6 +41,7 @@ import {
 import type { RewardProgress } from "@/src/lib/promotions";
 import { manilaTimeInputValue } from "@/src/lib/rentalTiming";
 import styles from "../catalog/[id]/reserve/reserve.module.css";
+import { getVariantQuantityLimit } from "@/src/lib/variantInventory";
 
 const STEP_LABELS = [
   "Rental Details",
@@ -98,6 +99,10 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
     Map<string, AgreementLineItem["units"]>
   >(new Map());
   const [resumeMismatch, setResumeMismatch] = useState<string | null>(null);
+  const inventoryIssue = lines.find((line) => {
+    const limit = getVariantQuantityLimit(line.product, line.color);
+    return limit <= 0 || line.quantity > limit;
+  });
 
   const progressKey = reservationProgressKey(user!.id, CART_PROGRESS_SLUG);
 
@@ -452,6 +457,21 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
       <section className={styles.checkoutGate}>
         <h1>Reservation and cart don&apos;t match.</h1>
         <p>{resumeMismatch}</p>
+        <Link href="/cart" className={styles.backToCart}>← Back to rental cart</Link>
+      </section>
+    );
+  }
+
+  if (inventoryIssue && !bookingId) {
+    const limit = getVariantQuantityLimit(inventoryIssue.product, inventoryIssue.color);
+    return (
+      <section className={styles.checkoutGate}>
+        <h1>Update your cart before checkout.</h1>
+        <p>
+          {limit <= 0
+            ? `${inventoryIssue.product.name}${inventoryIssue.color ? ` in ${inventoryIssue.color}` : ""} is unavailable.`
+            : `${inventoryIssue.product.name}${inventoryIssue.color ? ` in ${inventoryIssue.color}` : ""} has only ${limit} available ${limit === 1 ? "unit" : "units"}.`}
+        </p>
         <Link href="/cart" className={styles.backToCart}>← Back to rental cart</Link>
       </section>
     );

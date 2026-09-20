@@ -168,24 +168,27 @@ export default function BookingPaymentPanel({
         </div>
       ) : null}
 
-      <dl className={styles.breakdown}>
-        <div><dt>Rental subtotal</dt><dd>{money(booking.rentalSubtotal)}</dd></div>
-        {booking.birthdayDiscountAmount > 0 ? (
-          <div><dt>Birthday month perk</dt><dd>-{money(booking.birthdayDiscountAmount)}</dd></div>
-        ) : null}
-        {booking.loyaltyDiscountAmount > 0 ? (
-          <div><dt>11th-rental loyalty reward</dt><dd>-{money(booking.loyaltyDiscountAmount)}</dd></div>
-        ) : null}
-        <div><dt>Non-refundable deposit</dt><dd>{money(booking.refundableDeposit)}</dd></div>
-        {booking.deliveryFee > 0 ? <div><dt>Delivery fee</dt><dd>{money(booking.deliveryFee)}</dd></div> : null}
-        <div><dt>Online fees</dt><dd>Free</dd></div>
-      </dl>
+      <details className={styles.paymentDetails}>
+        <summary>View payment details</summary>
+        <dl className={styles.breakdown}>
+          <div><dt>Rental subtotal</dt><dd>{money(booking.rentalSubtotal)}</dd></div>
+          {booking.birthdayDiscountAmount > 0 ? (
+            <div><dt>Birthday month perk</dt><dd>-{money(booking.birthdayDiscountAmount)}</dd></div>
+          ) : null}
+          {booking.loyaltyDiscountAmount > 0 ? (
+            <div><dt>11th-rental loyalty reward</dt><dd>-{money(booking.loyaltyDiscountAmount)}</dd></div>
+          ) : null}
+          <div><dt>Non-refundable deposit</dt><dd>{money(booking.refundableDeposit)}</dd></div>
+          {booking.deliveryFee > 0 ? <div><dt>Delivery fee</dt><dd>{money(booking.deliveryFee)}</dd></div> : null}
+          <div><dt>Online fees</dt><dd>Free</dd></div>
+        </dl>
 
-      <div className={styles.trustRow} aria-label="Payment information">
-        <div><strong>GCash</strong><span>Manual transfer</span></div>
-        <div><strong>{amountPaid > 0 ? "Recorded" : "Reviewed"}</strong><span>{amountPaid > 0 ? "Payment saved" : "Verified by our team"}</span></div>
-        <div><strong>{paymentStatus === "paid" ? "Ready" : "Manual"}</strong><span>{paymentStatus === "paid" ? "Receipt available" : "Status updates"}</span></div>
-      </div>
+        <div className={styles.trustRow} aria-label="Payment information">
+          <div><strong>GCash</strong><span>Manual transfer</span></div>
+          <div><strong>{amountPaid > 0 ? "Recorded" : "Reviewed"}</strong><span>{amountPaid > 0 ? "Payment saved" : "Verified by our team"}</span></div>
+          <div><strong>{paymentStatus === "paid" ? "Ready" : "Manual"}</strong><span>{paymentStatus === "paid" ? "Receipt available" : "Status updates"}</span></div>
+        </div>
+      </details>
 
       {paymentStatus === "paid" ? (
         <p className={styles.message}>
@@ -242,8 +245,11 @@ export default function BookingPaymentPanel({
             </div>
           ) : null}
 
-          {showGcashForm ? <form className={styles.paymentForm} onSubmit={(event) => { event.preventDefault(); void handleSubmit(); }} noValidate aria-busy={submitting}>
-          <GcashRecipientCard compact />
+          {showGcashForm ? (
+            <details className={styles.paymentAction}>
+              <summary>{paymentStatus === "partially_paid" ? "Submit remaining payment" : "Submit payment proof"}</summary>
+              <form className={styles.paymentForm} onSubmit={(event) => { event.preventDefault(); void handleSubmit(); }} noValidate aria-busy={submitting}>
+              <GcashRecipientCard compact />
 
           <div className={formStyles.field}>
             <label className={formStyles.label} htmlFor="panel-pay-reference">
@@ -303,7 +309,9 @@ export default function BookingPaymentPanel({
           <Button variant="primary" className={styles.submitButton} type="submit" loading={submitting} loadingText="Submitting payment…" disabled={savingPreference}>
             Submit Payment Proof
           </Button>
-          </form> : null}
+              </form>
+            </details>
+          ) : null}
         </>
       ) : (
         <p className={styles.message}>Payment is unavailable because this booking is no longer active.</p>

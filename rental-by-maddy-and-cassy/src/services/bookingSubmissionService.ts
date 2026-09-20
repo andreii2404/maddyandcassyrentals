@@ -62,6 +62,7 @@ export async function createBookingReservation(
   const result = await submitBookingWithDateGuard(supabase, {
     productId: product.id,
     quantity: draft.quantity,
+    variant: selectedColor?.trim() || undefined,
     pickupAt: startDate.toISOString(),
     rentalDays,
     fulfillmentMethod,
@@ -127,7 +128,11 @@ export async function createMultiItemBookingReservation(
   const customerNotes = colorNotes ? `Color choice — ${colorNotes}` : undefined;
 
   const result = await submitMultiItemBookingWithDateGuard(supabase, {
-    items: lines.map((line) => ({ productId: line.product.id, quantity: line.quantity })),
+    items: lines.map((line) => ({
+      productId: line.product.id,
+      quantity: line.quantity,
+      variant: line.color?.trim() || undefined,
+    })),
     pickupAt: startDate.toISOString(),
     rentalDays,
     fulfillmentMethod,

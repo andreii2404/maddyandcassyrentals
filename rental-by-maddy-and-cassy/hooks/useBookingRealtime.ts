@@ -56,6 +56,16 @@ export function useBookingRealtime({
         { event: "*", schema: "public", table: "bookings", filter: `id=eq.${bookingId}` },
         refresh,
       );
+      channel = channel.on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "booking_payment_submissions",
+          filter: `booking_id=eq.${bookingId}`,
+        },
+        refresh,
+      );
     } else {
       channel = channel.on(
         "postgres_changes",

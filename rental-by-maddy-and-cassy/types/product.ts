@@ -19,6 +19,12 @@ export interface ProductImage {
   isPrimary: boolean;
 }
 
+export interface ProductVariantAvailability {
+  variant: string;
+  totalUnits: number;
+  availableUnits: number;
+}
+
 /**
  * public.products + public.product_images + public.product_availability_summary.
  * Alongside the schema-accurate fields, this keeps a handful of UI-ergonomic
@@ -50,6 +56,8 @@ export interface Product {
   images: ProductImage[];
   /** Selectable color variants (from specifications.colors), empty when single-color. */
   colorOptions: string[];
+  /** Physical inventory counts for each selectable color. */
+  variantAvailability: ProductVariantAvailability[];
   totalUnits: number;
   availableUnits: number;
   reservedUnits: number;

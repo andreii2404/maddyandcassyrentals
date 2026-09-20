@@ -496,6 +496,7 @@ export type Database = {
           product_id: string
           product_name_snapshot: string
           quantity: number
+          selected_variant: string | null
           updated_at: string
         }
         Insert: {
@@ -507,6 +508,7 @@ export type Database = {
           product_id: string
           product_name_snapshot: string
           quantity?: number
+          selected_variant?: string | null
           updated_at?: string
         }
         Update: {
@@ -518,6 +520,7 @@ export type Database = {
           product_id?: string
           product_name_snapshot?: string
           quantity?: number
+          selected_variant?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -562,6 +565,7 @@ export type Database = {
           review_notes: string | null
           reviewed_at: string | null
           reviewed_by: string | null
+          reviewer_name: string | null
           stage: Database["public"]["Enums"]["payment_stage"]
           status: Database["public"]["Enums"]["payment_submission_status"]
           submitted_at: string
@@ -584,6 +588,7 @@ export type Database = {
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          reviewer_name?: string | null
           stage: Database["public"]["Enums"]["payment_stage"]
           status?: Database["public"]["Enums"]["payment_submission_status"]
           submitted_at?: string
@@ -606,6 +611,7 @@ export type Database = {
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          reviewer_name?: string | null
           stage?: Database["public"]["Enums"]["payment_stage"]
           status?: Database["public"]["Enums"]["payment_submission_status"]
           submitted_at?: string
@@ -1194,6 +1200,7 @@ export type Database = {
           serial_number: string | null
           unit_code: string
           updated_at: string
+          variant: string | null
         }
         Insert: {
           acquired_at?: string | null
@@ -1206,6 +1213,7 @@ export type Database = {
           serial_number?: string | null
           unit_code: string
           updated_at?: string
+          variant?: string | null
         }
         Update: {
           acquired_at?: string | null
@@ -1218,6 +1226,7 @@ export type Database = {
           serial_number?: string | null
           unit_code?: string
           updated_at?: string
+          variant?: string | null
         }
         Relationships: [
           {
@@ -2045,6 +2054,7 @@ export type Database = {
           p_province?: string
           p_quantity?: number
           p_rental_days?: number
+          p_variant?: string
         }
         Returns: Database["public"]["Tables"]["bookings"]["Row"]
       }
@@ -2114,6 +2124,7 @@ export type Database = {
           p_product_id: string
           p_quantity?: number
           p_rental_days?: number
+          p_variant?: string
         }
         Returns: {
           available_units: number
@@ -2133,6 +2144,14 @@ export type Database = {
           review_id: string
         }[]
       }
+      get_product_variant_availability: {
+        Args: { p_end_date: string; p_product_id: string; p_start_date: string }
+        Returns: {
+          available_units: number
+          total_units: number
+          variant: string
+        }[]
+      }
       is_active_admin: { Args: never; Returns: boolean }
       log_audit_event: {
         Args: {
@@ -2145,6 +2164,20 @@ export type Database = {
           p_previous_values?: Json
         }
         Returns: string
+      }
+      review_manual_payment: {
+        Args: {
+          p_booking_id: string
+          p_payment_id: string
+          p_payment_method?: string
+          p_provider_metadata?: Json
+          p_provider_payment_id?: string
+          p_reason?: string
+          p_reviewed_by?: string
+          p_reviewer_name?: string
+          p_status: string
+        }
+        Returns: Json
       }
       system_confirm_booking: {
         Args: { p_booking_id: string; p_note?: string }

@@ -42,6 +42,7 @@ import {
 import type { RewardProgress } from "@/src/lib/promotions";
 import { manilaTimeInputValue } from "@/src/lib/rentalTiming";
 import styles from "./reserve.module.css";
+import { getVariantQuantityLimit } from "@/src/lib/variantInventory";
 
 const STEP_LABELS = [
   "Rental Details",
@@ -230,11 +231,12 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
     if (params.get("cartItem") !== product.id) return;
     const cartItem = cartItems.find((item) => item.productId === product.id);
     if (!cartItem) return;
-    const quantity = Math.min(Math.max(1, cartItem.quantity), Math.max(1, units.totalUnits));
+    const quantityLimit = getVariantQuantityLimit(product, cartItem.color ?? bookingColor);
+    const quantity = Math.min(Math.max(1, cartItem.quantity), Math.max(1, quantityLimit));
     // Sync the persisted browser cart into the editable reservation draft.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setDraft((current) => current.quantity === quantity ? current : { ...current, quantity });
-  }, [cartItems, product.id, units.totalUnits]);
+  }, [bookingColor, cartItems, product]);
 
   useEffect(() => {
     if (!user) return;
@@ -458,6 +460,26 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
     finalAmount: pricing.finalAmount,
   };
 
+  if (product.colorOptions.length > 0 && !bookingColor) {
+    return (
+      <section className={styles.checkoutGate}>
+        <h1>Choose an available color first.</h1>
+        <p>Select a color on the product details page before starting this reservation.</p>
+        <Link href={`/catalog/${product.id}#reserve`} className={styles.backToCart}>← Back to product details</Link>
+      </section>
+    );
+  }
+
+  if (bookingColor && getVariantQuantityLimit(product, bookingColor) <= 0) {
+    return (
+      <section className={styles.checkoutGate}>
+        <h1>{bookingColor} is unavailable.</h1>
+        <p>Choose another available color before starting this reservation.</p>
+        <Link href={`/catalog/${product.id}#reserve`} className={styles.backToCart}>← Back to product details</Link>
+      </section>
+    );
+  }
+
   return (
     <div className={styles.wrapper}>
       <header className={styles.reserveHeader}>
@@ -567,6 +589,7 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
             onUpdate={updateDraft}
             onBack={() => goToStep(1)}
             onContinue={() => goToStep(3)}
+            selectedVariant={bookingColor}
           />
         ) : null}
 

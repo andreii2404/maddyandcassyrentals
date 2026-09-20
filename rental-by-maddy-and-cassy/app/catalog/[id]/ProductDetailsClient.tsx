@@ -13,6 +13,7 @@ import ImageGallery from "@/components/image-gallery/ImageGallery";
 import ProductTabs from "@/components/product-tabs/ProductTabs";
 import SimilarProducts from "@/components/similar-products/SimilarProducts";
 import { useInventoryMap } from "@/hooks/useInventory";
+import { findVariantAvailability, isVariantSelectable } from "@/src/lib/variantInventory";
 import styles from "./details.module.css";
 
 interface ProductDetailsClientProps {
@@ -47,8 +48,10 @@ export default function ProductDetailsClient({
   // Multi-color products require an explicit color choice before the customer
   // can reserve or add to cart. Until a swatch is clicked, only the primary
   // catalog photo is shown as a teaser -- never a mix of color variants.
-  const [selectedColor, setSelectedColor] = useState<string | null>(null);
-  const needsColorChoice = product.colorOptions.length > 1;
+  const [selectedColor, setSelectedColor] = useState<string | null>(
+    product.colorOptions.length === 1 ? product.colorOptions[0] : null,
+  );
+  const needsColorChoice = product.colorOptions.length > 0;
   const hasChosenColor = !needsColorChoice || selectedColor !== null;
   const activeColor =
     selectedColor && product.images.some((image) => image.color === selectedColor)
@@ -96,28 +99,29 @@ export default function ProductDetailsClient({
             <div className={styles.colorPicker} role="group" aria-label={`Choose a color for ${product.name}`}>
               <span className={styles.colorPickerLabel}>Color</span>
               {product.colorOptions.map((color) => {
-                const hasPhotos = product.images.some((image) => image.color === color);
+                const variant = findVariantAvailability(product, color);
+                const selectable = isVariantSelectable(product, color);
                 return (
                   <Button variant="none"
                     key={color}
                     type="button"
                     aria-pressed={activeColor === color}
-                    disabled={!hasPhotos}
-                    title={hasPhotos ? `Show ${color} photos` : `${color} photos coming soon`}
+                    disabled={!selectable}
+                    title={selectable ? `Select ${color}` : `${color} is unavailable`}
                     className={[
                       styles.colorButton,
                       activeColor === color ? styles.colorButtonActive : "",
-                      hasPhotos ? "" : styles.colorButtonSoon,
+                      selectable ? "" : styles.colorButtonSoon,
                     ].filter(Boolean).join(" ")}
                     onClick={() => setSelectedColor(color)}
                   >
-                    {color}{hasPhotos ? "" : " · soon"}
+                    {color}{selectable ? ` · ${variant?.totalUnits ?? 0} available` : " · Unavailable"}
                   </Button>
                 );
               })}
               <span className={styles.colorHint} role="status">
                 {hasChosenColor
-                  ? `Showing ${activeColor ?? selectedColor} photos`
+                  ? `${selectedColor} selected`
                   : "Select a color to see its photos before reserving."}
               </span>
             </div>
@@ -203,7 +207,7 @@ export default function ProductDetailsClient({
               <ReserveAction
                 product={product}
                 units={units}
-                selectedColor={activeColor}
+                selectedColor={selectedColor}
                 awaitingColor={needsColorChoice && !hasChosenColor}
               />
             </section>
