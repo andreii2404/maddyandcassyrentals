@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/Button";
+import ConfirmModal from "@/components/ui/ConfirmModal";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -19,7 +20,6 @@ import { resolveAccountName } from "@/src/lib/accountDisplay";
 import Spinner from "@/components/ui/Spinner";
 import StatusBadge from "@/components/status-badge/StatusBadge";
 import styles from "./userDetail.module.css";
-import AccountManagementPanel from "@/components/admin/AccountManagementPanel";
 
 interface UserDetailData {
   account: UserProfile;
@@ -42,9 +42,16 @@ export default function AdminUserDetail({ uid }: { uid: string }) {
   const { showToast } = useToast();
   const [data, setData] = useState<UserDetailData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [confirmationOpen, setConfirmationOpen] = useState(false);
-  const [confirmationText, setConfirmationText] = useState("");
+  const [deleteStep, setDeleteStep] = useState<"closed" | "fields" | "confirm">("closed");
+  const [deletedBy, setDeletedBy] = useState("");
+  const [reason, setReason] = useState("");
   const [deleting, setDeleting] = useState(false);
+
+  function resetDeleteFlow() {
+    setDeleteStep("closed");
+    setDeletedBy("");
+    setReason("");
+  }
 
   useEffect(() => {
     let active = true;
@@ -69,11 +76,11 @@ export default function AdminUserDetail({ uid }: { uid: string }) {
   }, [uid]);
 
   async function handleDeleteAccount() {
-    if (!user || confirmationText !== "DELETE") return;
+    if (!user || !deletedBy.trim() || !reason.trim()) return;
 
     setDeleting(true);
     try {
-      await deleteCustomerAccountAsAdmin(uid);
+      await deleteCustomerAccountAsAdmin(uid, { deletedBy: deletedBy.trim(), reason: reason.trim() });
       showToast("The customer account has been deleted.", "success");
       router.replace("/admin/users");
       router.refresh();
@@ -181,10 +188,6 @@ export default function AdminUserDetail({ uid }: { uid: string }) {
             <dt>Registered</dt>
             <dd>{formatDate(account.createdAt)}</dd>
           </div>
-          <div>
-            <dt>User ID</dt>
-            <dd className={styles.uid}>{account.id}</dd>
-          </div>
         </dl>
       </section>
 
@@ -251,11 +254,6 @@ export default function AdminUserDetail({ uid }: { uid: string }) {
         )}
       </section>
 
-      <AccountManagementPanel
-        account={account}
-        isAdministrator={isAdministrator}
-      />
-
       <section
         className={`${styles.dangerZone} ${isAdministrator ? styles.protectedZone : ""}`}
         aria-labelledby="account-removal-heading"
@@ -271,53 +269,64 @@ export default function AdminUserDetail({ uid }: { uid: string }) {
           </p>
         </div>
 
-        {!isAdministrator && !confirmationOpen ? (
+        {!isAdministrator ? (
           <Button variant="none"
             type="button"
             className={styles.deleteButton}
-            onClick={() => setConfirmationOpen(true)}
+            onClick={() => setDeleteStep("fields")}
           >
             Delete Account
           </Button>
         ) : null}
+      </section>
 
-        {!isAdministrator && confirmationOpen ? (
-          <div className={styles.confirmation} role="alertdialog" aria-modal="true">
-            <p>
-              This action cannot be undone. Type <strong>DELETE</strong> to confirm.
-            </p>
-            <label htmlFor="delete-account-confirmation">Confirmation</label>
+      {!isAdministrator && deleteStep === "fields" ? (
+        <ConfirmModal
+          title="Delete Customer Account"
+          description="This action cannot be undone. Both fields are required to continue."
+          confirmLabel="Continue"
+          onCancel={resetDeleteFlow}
+          onConfirm={() => setDeleteStep("confirm")}
+          confirmDisabled={!deletedBy.trim() || !reason.trim()}
+          busy={deleting}
+        >
+          <label htmlFor="delete-account-deleted-by">
+            <span>Deleted by</span>
             <input
-              id="delete-account-confirmation"
-              value={confirmationText}
-              onChange={(event) => setConfirmationText(event.target.value)}
-              autoComplete="off"
+              id="delete-account-deleted-by"
+              type="text"
+              value={deletedBy}
+              onChange={(event) => setDeletedBy(event.target.value)}
+              placeholder="Enter your name"
+              required
               disabled={deleting}
             />
-            <div className={styles.confirmationActions}>
-              <Button variant="none"
-                type="button"
-                className={styles.cancelButton}
-                onClick={() => {
-                  setConfirmationOpen(false);
-                  setConfirmationText("");
-                }}
-                disabled={deleting}
-              >
-                Cancel
-              </Button>
-              <Button variant="none"
-                type="button"
-                className={styles.confirmDeleteButton}
-                onClick={handleDeleteAccount}
-                disabled={confirmationText !== "DELETE" || deleting}
-              >
-                {deleting ? "Deleting..." : "Permanently Delete"}
-              </Button>
-            </div>
-          </div>
-        ) : null}
-      </section>
+          </label>
+          <label htmlFor="delete-account-reason">
+            <span>Reason for deletion</span>
+            <textarea
+              id="delete-account-reason"
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              rows={3}
+              disabled={deleting}
+            />
+          </label>
+        </ConfirmModal>
+      ) : null}
+
+      {!isAdministrator && deleteStep === "confirm" ? (
+        <ConfirmModal
+          title="Delete Customer Account"
+          description="Are you sure you want to delete this customer account?"
+          confirmLabel="Yes, Permanently Delete"
+          busyLabel="Deleting..."
+          tone="danger"
+          onCancel={() => setDeleteStep("fields")}
+          onConfirm={handleDeleteAccount}
+          busy={deleting}
+        />
+      ) : null}
     </div>
   );
 }

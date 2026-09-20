@@ -196,8 +196,13 @@ export function formatWhatHappened(log: AdminAuditLog, actorName: string): strin
       return `${actorName} submitted documents for this booking.`;
     case "payment.proof_submitted":
       return `${actorName} submitted proof of payment for this booking.`;
-    case "payment.reviewed":
-      return `${actorName} reviewed a payment submission.`;
+    case "payment.reviewed": {
+      const reviewerName = pickString(newValues.reviewerName);
+      const verb = newValues.status === "verified" ? "approved" : newValues.status === "rejected" ? "rejected" : "reviewed";
+      const who = reviewerName ? ` (${reviewerName})` : "";
+      const base = `${actorName}${who} ${verb} a payment submission.`;
+      return reason ? `${base} Reason: ${reason}` : base;
+    }
     case "payment.verified":
       return `${actorName} verified a payment.`;
     case "payment.receipt_emailed":
@@ -208,8 +213,11 @@ export function formatWhatHappened(log: AdminAuditLog, actorName: string): strin
       return `${actorName} signed the rental agreement on behalf of the business.`;
     case "account.updated":
       return `${actorName} updated account information.`;
-    case "account.deleted":
-      return `${actorName} deleted an account.`;
+    case "account.deleted": {
+      const deletedBy = pickString(metadata.deletedBy);
+      const base = deletedBy ? `${deletedBy} deleted an account.` : `${actorName} deleted an account.`;
+      return reason ? `${base} Reason: ${reason}` : base;
+    }
     case "catalog.product_created":
       return `${actorName} added a new product to the catalog.`;
     case "catalog.product_updated":

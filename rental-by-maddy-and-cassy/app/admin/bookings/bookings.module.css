@@ -120,9 +120,13 @@
 }
 
 .summaryCard {
-  display: grid;
-  min-height: 112px;
-  padding: 0.95rem;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  height: 100%;
+  min-height: 120px;
+  padding: 1rem;
   border: 1px solid var(--color-light-gray);
   border-radius: 16px;
   background: white;
@@ -135,8 +139,8 @@
 .summaryCard:hover { transform: translateY(-2px); border-color: var(--color-dusty-rose); }
 .summaryCardActive { border-color: var(--color-primary); background: linear-gradient(145deg, white, var(--color-background-soft)); box-shadow: 0 10px 24px rgba(154,89,101,0.08); }
 .summaryCard span { color: var(--color-charcoal); font-size: 0.65rem; font-weight: 750; letter-spacing: 0.05em; text-transform: uppercase; }
-.summaryCard strong { margin-top: 0.18rem; font-size: 1.55rem; letter-spacing: -0.04em; }
-.summaryCard small { align-self: end; color: #837b7a; font-size: 0.6rem; }
+.summaryCard strong { margin-top: 0.3rem; font-size: 1.55rem; letter-spacing: -0.04em; }
+.summaryCard small { margin-top: auto; padding-top: 0.5rem; color: #837b7a; font-size: 0.6rem; }
 
 .toolbar {
   padding: 1.2rem 1.3rem;
@@ -188,7 +192,7 @@
 
 .table th,
 .table td {
-  padding: 0.45rem 0.4rem;
+  padding: 0.6rem 0.65rem;
   border-bottom: 1px solid var(--color-light-gray);
   color: var(--color-charcoal);
   font-size: 0.72rem;
@@ -208,18 +212,18 @@
 }
 
 /* Column sizing so the full table fits the page width without horizontal scroll. */
-.table th:nth-child(1) { width: 9%; }   /* Booking */
-.table th:nth-child(2) { width: 16%; }  /* Customer */
-.table th:nth-child(3) { width: 7%; }   /* Account Type */
-.table th:nth-child(4) { width: 13%; }  /* Rental Item */
-.table th:nth-child(5) { width: 10%; }  /* Dates */
-.table th:nth-child(6) { width: 14%; }  /* Status */
-.table th:nth-child(7) { width: 13%; }  /* Fulfillment Update */
-.table th:nth-child(8) { width: 9%; }   /* Submitted */
-.table th:nth-child(9) { width: 9%; }   /* Action */
+.table th:nth-child(1) { width: 12%; }  /* Booking */
+.table th:nth-child(2) { width: 18%; }  /* Customer */
+.table th:nth-child(3) { width: 8%; }   /* Account Type */
+.table th:nth-child(4) { width: 15%; }  /* Rental Item */
+.table th:nth-child(5) { width: 11%; }  /* Dates */
+.table th:nth-child(6) { width: 15%; }  /* Status */
+.table th:nth-child(7) { width: 14%; }  /* Fulfillment Update */
+.table th:nth-child(8) { width: 7%; }   /* Submitted */
 
 .table td[data-label="Status"],
-.table td[data-label="Account Type"] {
+.table td[data-label="Account Type"],
+.table td[data-label="Booking"] {
   white-space: nowrap;
 }
 
@@ -284,48 +288,19 @@
   word-break: break-word;
 }
 
-.bookingLink,
-.openLink {
+.bookingLink {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
   color: var(--color-primary);
   font-weight: 700;
   text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .bookingLink:hover {
   text-decoration: underline;
-}
-
-.actionCell {
-  position: sticky;
-  right: 0;
-  z-index: 1;
-  background: var(--color-white);
-  text-align: center;
-}
-
-.table tbody tr.row:hover .actionCell {
-  background: #fbf2f1;
-}
-
-.openLink {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 0;
-  padding: 0.34rem 0.6rem;
-  border: 1px solid var(--color-primary);
-  border-radius: 999px;
-  background: var(--color-primary);
-  color: var(--color-white);
-  font-size: 0.68rem;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.openLink:hover {
-  background: var(--color-primary-dark, var(--color-primary));
-  opacity: 0.9;
-  text-decoration: none;
 }
 
 .loading {
@@ -527,18 +502,7 @@
     max-width: none;
   }
 
-  .actionCell {
-    position: static;
-    box-shadow: none;
-    background: transparent;
-    margin-top: 0.5rem;
-  }
-
-  .table tbody tr.row:hover .actionCell {
-    background: transparent;
-  }
-
-  .openLink {
-    width: 100%;
+  .table td[data-label="Booking"] {
+    white-space: normal;
   }
 }

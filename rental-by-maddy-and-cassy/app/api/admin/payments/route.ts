@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { enforceRateLimit, requireActiveAdmin, RequestSecurityError } from "@/src/lib/server/requestSecurity";
-import { getPaymentRecordsPage, getPaymentMetricsSummary } from "@/src/services/adminReadService";
+import {
+  getPaymentRecordsPage,
+  getPaymentMetricsSummary,
+  type PaymentRecordsFilters,
+} from "@/src/services/adminReadService";
 
 export const runtime = "nodejs";
 
@@ -17,6 +21,31 @@ function parsePage(raw: string | null): number {
   return Number.isFinite(value) && value >= 1 ? Math.floor(value) : 1;
 }
 
+function parseEnum<T extends string>(raw: string | null, allowed: readonly T[]): T | undefined {
+  return allowed.includes(raw as T) ? (raw as T) : undefined;
+}
+
+function parseFilters(url: URL): PaymentRecordsFilters {
+  const status = parseEnum(url.searchParams.get("status"), ["verified", "unverified", "rejected"] as const);
+  const stageParam = url.searchParams.get("stage");
+  // "full_payment" is a client-only distinction — the schema stores it as "other".
+  const stage = parseEnum(stageParam === "full_payment" ? "other" : stageParam, [
+    "down_payment",
+    "balance",
+    "other",
+  ] as const);
+  const accountType = parseEnum(url.searchParams.get("accountType"), ["with_account", "guest"] as const);
+  const bookingStatus = parseEnum(url.searchParams.get("bookingStatus"), [
+    "pending",
+    "approved",
+    "returned",
+    "cancelled",
+  ] as const);
+  const proof = parseEnum(url.searchParams.get("proof"), ["with_proof", "no_proof"] as const);
+  const sort = parseEnum(url.searchParams.get("sort"), ["newest", "oldest"] as const);
+  return { status, stage, accountType, bookingStatus, proof, sort };
+}
+
 export async function GET(request: Request): Promise<NextResponse> {
   try {
     enforceRateLimit(request, "admin-payments-read", 60, 60_000);
@@ -26,9 +55,10 @@ export async function GET(request: Request): Promise<NextResponse> {
     const page = parsePage(url.searchParams.get("page"));
     const pageSize = parsePageSize(url.searchParams.get("pageSize"));
     const search = url.searchParams.get("search") ?? undefined;
+    const filters = parseFilters(url);
 
     const [{ records, total }, metrics] = await Promise.all([
-      getPaymentRecordsPage(supabase, { page, pageSize, search }),
+      getPaymentRecordsPage(supabase, { page, pageSize, search, filters }),
       getPaymentMetricsSummary(supabase),
     ]);
 

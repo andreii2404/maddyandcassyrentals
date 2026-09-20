@@ -313,7 +313,9 @@
   font-weight: 700;
 }
 
-.confirmation input {
+.confirmation input,
+.confirmation select,
+.confirmation textarea {
   width: 100%;
   padding: 0.65rem 0.75rem;
   border: 1px solid var(--color-status-red-border);
@@ -323,9 +325,12 @@
   font: inherit;
   font-size: 0.8rem;
   outline: none;
+  resize: vertical;
 }
 
-.confirmation input:focus {
+.confirmation input:focus,
+.confirmation select:focus,
+.confirmation textarea:focus {
   border-color: var(--color-status-red);
   box-shadow: 0 0 0 3px rgba(180, 66, 66, 0.14);
 }

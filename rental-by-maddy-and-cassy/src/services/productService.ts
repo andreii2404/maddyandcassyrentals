@@ -337,6 +337,41 @@ export async function uploadCatalogImage(
   return { storagePath: body.storagePath, url: body.url };
 }
 
+export async function deleteCatalogImageAsAdmin(productId: string, imageId: string): Promise<void> {
+  return adminJsonRequest(
+    `/api/admin/catalog/${encodeURIComponent(productId)}/images/${encodeURIComponent(imageId)}`,
+    "DELETE",
+  );
+}
+
+export async function setPrimaryCatalogImageAsAdmin(productId: string, imageId: string): Promise<void> {
+  return adminJsonRequest(
+    `/api/admin/catalog/${encodeURIComponent(productId)}/images/${encodeURIComponent(imageId)}`,
+    "PATCH",
+    { isPrimary: true },
+  );
+}
+
+export async function replaceCatalogImageAsAdmin(
+  productId: string,
+  imageId: string,
+  file: File,
+): Promise<{ storagePath: string; url: string }> {
+  const form = new FormData();
+  form.set("image", file);
+  const response = await fetch(
+    `/api/admin/catalog/${encodeURIComponent(productId)}/images/${encodeURIComponent(imageId)}`,
+    { method: "PUT", credentials: "same-origin", body: form },
+  );
+  const body = (await response.json().catch(() => null)) as
+    | { storagePath?: string; url?: string; error?: string }
+    | null;
+  if (!response.ok || !body?.storagePath || !body.url) {
+    throw new Error(body?.error || "The product image could not be replaced.");
+  }
+  return { storagePath: body.storagePath, url: body.url };
+}
+
 export interface PriceHistoryEntry {
   id: string;
   productId: string;

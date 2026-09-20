@@ -1,8 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/Button";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
+import ConfirmModal from "@/components/ui/ConfirmModal";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/src/lib/supabase/client";
 import {
@@ -19,7 +19,7 @@ import {
   updateAdminBookingStatus,
 } from "@/src/services/adminBookingService";
 import { getUserProfile } from "@/src/services/userService";
-import { getBookingPayments, getBookingReceipts, sendBookingReceiptEmail } from "@/src/services/paymentService";
+import { getBookingPayments, getBookingReceipts } from "@/src/services/paymentService";
 import type { BookingStatus, UserProfile } from "@/src/types/database";
 import type { BookingDocument, RequirementReviewStatus, RequirementsStatus } from "@/src/types/booking";
 import type { PaymentRecord, BookingReceipt } from "@/src/types/payment";
@@ -27,10 +27,7 @@ import Spinner from "@/components/ui/Spinner";
 import StatusBadge from "@/components/status-badge/StatusBadge";
 import GuestBadge from "@/components/status-badge/GuestBadge";
 import { useToast } from "@/components/ui/ToastProvider";
-import {
-  getBookingLiveStatusLabel,
-  useBookingRealtime,
-} from "@/hooks/useBookingRealtime";
+import { useBookingRealtime } from "@/hooks/useBookingRealtime";
 import styles from "./bookingDetail.module.css";
 import RequirementsReviewPanel from "@/components/admin/RequirementsReviewPanel";
 import PaymentsReviewPanel from "@/components/admin/PaymentsReviewPanel";
@@ -135,14 +132,10 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   const [businessSignerName, setBusinessSignerName] = useState("");
   const [countersignAcknowledged, setCountersignAcknowledged] = useState(false);
   const [countersigning, setCountersigning] = useState(false);
-  const [statusConfirmationOpen, setStatusConfirmationOpen] = useState(false);
   const [countersignConfirmationOpen, setCountersignConfirmationOpen] = useState(false);
-  const [sendingReceiptId, setSendingReceiptId] = useState<string | null>(null);
   const [sendingConfirmationEmail, setSendingConfirmationEmail] = useState(false);
   const [confirmationEmailSentAt, setConfirmationEmailSentAt] = useState<string | null>(null);
   const [activeStep, setActiveStep] = useState<AdminReviewStep>("customer");
-  const confirmationDialogRef = useRef<HTMLDivElement>(null);
-  const countersignDialogRef = useRef<HTMLDivElement>(null);
 
   const loadDetails = useCallback(async () => {
     try {
@@ -169,7 +162,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
     void loadDetails();
   }, [loadDetails]);
 
-  const liveStatus = useBookingRealtime({ bookingId, onChange: loadDetails });
+  useBookingRealtime({ bookingId, onChange: loadDetails });
 
   const actions = useMemo(
     () => (state ? ADMIN_BOOKING_ACTIONS[state.details.booking.status] : []),
@@ -179,44 +172,6 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   const selectedAction = actions.find((action) => action.status === selectedStatus);
   const isDeclineAction = selectedAction?.status === "rejected";
   const declineIncomplete = isDeclineAction && (!declineReason || note.trim().length < 5);
-
-  useEffect(() => {
-    if (!statusConfirmationOpen) return;
-    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    confirmationDialogRef.current?.focus();
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && !updating) setStatusConfirmationOpen(false);
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = previousOverflow;
-      previousFocus?.focus();
-    };
-  }, [statusConfirmationOpen, updating]);
-
-  useEffect(() => {
-    if (!countersignConfirmationOpen) return;
-    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    countersignDialogRef.current?.focus();
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && !countersigning) setCountersignConfirmationOpen(false);
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = previousOverflow;
-      previousFocus?.focus();
-    };
-  }, [countersignConfirmationOpen, countersigning]);
 
   async function openPrivateFile(bucket: Parameters<typeof getBookingFileUrl>[1], path: string) {
     const previewWindow = window.open("", "_blank");
@@ -259,22 +214,6 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
     });
   }
 
-  async function handleSendReceiptEmail(receipt: BookingReceipt) {
-    setSendingReceiptId(receipt.id);
-    try {
-      const result = await sendBookingReceiptEmail(bookingId, receipt.id);
-      await loadDetails();
-      showToast(`Receipt sent successfully to ${result.emailedTo}.`, "success");
-    } catch (sendError) {
-      showToast(
-        sendError instanceof Error ? sendError.message : "The receipt email could not be sent.",
-        "error",
-      );
-    } finally {
-      setSendingReceiptId(null);
-    }
-  }
-
   function requestStatusAction() {
     if (!state || !selectedStatus || !selectedAction) return;
     if (isDeclineAction) {
@@ -290,7 +229,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
       showToast("Please add administrator notes for this action.", "error");
       return;
     }
-    setStatusConfirmationOpen(true);
+    void confirmStatusAction();
   }
 
   async function confirmStatusAction() {
@@ -313,7 +252,6 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
           "error",
         );
         await loadDetails();
-        setStatusConfirmationOpen(false);
         setSelectedStatus("");
         setNote("");
         setDeclineReason("");
@@ -323,7 +261,6 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
       const noteToSend = isDeclineAction ? formatDeclineNote(declineReason, note) : note;
       const updateResult = await updateAdminBookingStatus(bookingId, selectedStatus, noteToSend);
       await loadDetails();
-      setStatusConfirmationOpen(false);
       setSelectedStatus("");
       setNote("");
       setDeclineReason("");
@@ -368,18 +305,22 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
     }
   }
 
-  async function handleCancellationDecision(decision: "approved" | "rejected") {
+  function requestCancellationDecision(decision: "approved" | "rejected") {
     const request = state?.details.booking.cancellationRequest;
     if (!request || request.status !== "pending") return;
+    setCancellationDecision(decision);
+  }
+
+  async function confirmCancellationDecision() {
+    const request = state?.details.booking.cancellationRequest;
+    const decision = cancellationDecision;
+    if (!request || request.status !== "pending" || !decision) return;
     if (decision === "rejected" && cancellationNote.trim().length < 5) {
       showToast("Add a short explanation when rejecting a cancellation request.", "error");
       return;
     }
-    const label = decision === "approved" ? "approve" : "reject";
-    if (!window.confirm(`Are you sure you want to ${label} this cancellation request?`)) return;
 
     setReviewingCancellation(true);
-    setCancellationDecision(decision);
     try {
       await reviewAdminCancellationRequest(
         bookingId,
@@ -562,7 +503,6 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   ];
   const remainingChecks = reviewChecks.filter((check) => !check.ready).length;
   const primaryAction = actions.find((action) => action.tone !== "danger") ?? null;
-  const alternativeActions = actions.filter((action) => action.status !== primaryAction?.status);
   const bookingApproved = ["approved", "confirmed", "ready_for_release", "released"].includes(booking.status);
   const finalDecisionLabel = booking.status === "pending"
     ? remainingChecks === 0 ? "Ready for Approval" : "Pending"
@@ -583,12 +523,6 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   const finalActionTitle = primaryAction?.status === "approved" || primaryAction?.status === "confirmed"
     ? "Approve / Confirm Booking"
     : primaryAction?.label ?? "Booking decision recorded";
-  const unresolvedChecks = reviewChecks
-    .filter((check) => !check.ready)
-    .map((check) => `${check.label}: ${check.detail}`);
-  const remainingActionSummary = unresolvedChecks.length
-    ? unresolvedChecks.join("; ")
-    : "No checklist items need attention before the next booking action.";
 
   const stepState: Record<AdminReviewStep, ReviewState> = {
     customer: email !== "-" && phone !== "-" ? "complete" : "not-started",
@@ -650,10 +584,6 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
           </p>
         </div>
         <div className={styles.headerActions}>
-          <span className={`${styles.liveStatus} ${styles[liveStatus]}`}>
-            <span aria-hidden="true" />
-            {getBookingLiveStatusLabel(liveStatus)}
-          </span>
           <div className={styles.headerStatus}>
             <small>Current status</small>
             <StatusBadge status={booking.status} />
@@ -673,35 +603,34 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
         <article className={styles.bookingSnapshot}>
           <div className={styles.snapshotTopline}>
             <span>Booking summary</span>
-            <div className={styles.snapshotStatus}>
-              <small>Current status</small>
-              <StatusBadge status={booking.status} />
-            </div>
           </div>
           <h2>{bookingHeadline(booking.items)}</h2>
           <p className={styles.rentalWindow}>
             {formatDate(booking.startDate)} — {formatDate(booking.endDate)}
             <span>{booking.dayCount} day{booking.dayCount === 1 ? "" : "s"} · {totalUnits} unit{totalUnits === 1 ? "" : "s"}</span>
           </p>
-           <dl className={styles.snapshotFacts}>
-             <div>
-               <dt>Customer</dt>
-               <dd className={styles.customerNameRow}>{fullName}</dd>
-             </div>
-             <div><dt>Contact</dt><dd>{phone}<small>{email}</small></dd></div>
-             <div><dt>Account type</dt><dd>{accountTypeLabel}</dd></div>
-             <div><dt>Rental item</dt><dd>{bookingHeadline(booking.items)}</dd></div>
-             <div><dt>Rental dates</dt><dd>{formatDate(booking.startDate)} — {formatDate(booking.endDate)}</dd></div>
-             <div><dt>Duration</dt><dd>{booking.dayCount} day{booking.dayCount === 1 ? "" : "s"}</dd></div>
-             <div><dt>Quantity / units</dt><dd>{totalUnits} unit{totalUnits === 1 ? "" : "s"}</dd></div>
-             <div><dt>Fulfillment</dt><dd>{fulfillmentLabel}<small>{booking.location || "Location not provided"}</small></dd></div>
-             <div><dt>Payment status</dt><dd>{paymentStatusLabel}<small>{amountPaid > 0 ? `PHP ${amountPaid.toLocaleString("en-PH")} verified` : "No verified payment"}</small></dd></div>
-             <div><dt>Payment type</dt><dd>{paymentTypeLabel}<small>{remainingBalance > 0.01 ? `PHP ${remainingBalance.toLocaleString("en-PH")} remaining` : "Fully paid"}</small></dd></div>
-             <div><dt>Total</dt><dd>{totalAmount}</dd></div>
-             {remainingBalance > 0.01 ? <div><dt>Remaining balance</dt><dd>PHP {remainingBalance.toLocaleString("en-PH")}</dd></div> : null}
-             <div><dt>Current status</dt><dd>{formatStatus(booking.status)}<small>{getFulfillmentProgressLabel(booking.status, booking.fulfillmentMethod)}</small></dd></div>
-             <div><dt>Created</dt><dd>{formatDate(booking.createdAt, true)}</dd></div>
-           </dl>
+          <details className={styles.collapsibleBlock}>
+            <summary className={styles.expandLabel}>View full booking details</summary>
+            <dl className={styles.snapshotFacts}>
+              <div>
+                <dt>Customer</dt>
+                <dd className={styles.customerNameRow}>{fullName}</dd>
+              </div>
+              <div><dt>Contact</dt><dd>{phone}<small>{email}</small></dd></div>
+              <div><dt>Account type</dt><dd>{accountTypeLabel}</dd></div>
+              <div><dt>Rental item</dt><dd>{bookingHeadline(booking.items)}</dd></div>
+              <div><dt>Rental dates</dt><dd>{formatDate(booking.startDate)} — {formatDate(booking.endDate)}</dd></div>
+              <div><dt>Duration</dt><dd>{booking.dayCount} day{booking.dayCount === 1 ? "" : "s"}</dd></div>
+              <div><dt>Quantity / units</dt><dd>{totalUnits} unit{totalUnits === 1 ? "" : "s"}</dd></div>
+              <div><dt>Fulfillment</dt><dd>{fulfillmentLabel}<small>{booking.location || "Location not provided"}</small></dd></div>
+              <div><dt>Payment status</dt><dd>{paymentStatusLabel}<small>{amountPaid > 0 ? `PHP ${amountPaid.toLocaleString("en-PH")} verified` : "No verified payment"}</small></dd></div>
+              <div><dt>Payment type</dt><dd>{paymentTypeLabel}<small>{remainingBalance > 0.01 ? `PHP ${remainingBalance.toLocaleString("en-PH")} remaining` : "Fully paid"}</small></dd></div>
+              <div><dt>Total</dt><dd>{totalAmount}</dd></div>
+              {remainingBalance > 0.01 ? <div><dt>Remaining balance</dt><dd>PHP {remainingBalance.toLocaleString("en-PH")}</dd></div> : null}
+              <div><dt>Current status</dt><dd>{formatStatus(booking.status)}<small>{getFulfillmentProgressLabel(booking.status, booking.fulfillmentMethod)}</small></dd></div>
+              <div><dt>Created</dt><dd>{formatDate(booking.createdAt, true)}</dd></div>
+            </dl>
+          </details>
           <div className={styles.summaryChecklist}>
             <div className={styles.summaryChecklistHead}>
               <span>Review checklist</span>
@@ -760,33 +689,22 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
           </div>
           {cancellationRequest.status === "pending" ? (
             <div className={styles.cancellationDecisionControls}>
-              <label className={styles.noteField}>
-                <span>Response to customer{cancellationDecision === "rejected" ? " (required for rejection)" : " (optional)"}</span>
-                <textarea
-                  value={cancellationNote}
-                  onChange={(event) => setCancellationNote(event.target.value)}
-                  rows={3}
-                  maxLength={1000}
-                  placeholder="Explain the decision or any next steps"
-                  disabled={reviewingCancellation}
-                />
-              </label>
               <div className={styles.cancellationDecisionButtons}>
                 <Button variant="none"
                   type="button"
                   className={styles.cancellationRejectButton}
-                  onClick={() => void handleCancellationDecision("rejected")}
+                  onClick={() => requestCancellationDecision("rejected")}
                   disabled={reviewingCancellation}
                 >
-                  {reviewingCancellation && cancellationDecision === "rejected" ? "Rejecting..." : "Reject request"}
+                  Reject request
                 </Button>
                 <Button variant="none"
                   type="button"
                   className={styles.cancellationApproveButton}
-                  onClick={() => void handleCancellationDecision("approved")}
+                  onClick={() => requestCancellationDecision("approved")}
                   disabled={reviewingCancellation}
                 >
-                  {reviewingCancellation && cancellationDecision === "approved" ? "Approving..." : "Approve cancellation"}
+                  Approve cancellation
                 </Button>
               </div>
             </div>
@@ -796,6 +714,32 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
             </p>
           )}
         </section>
+      ) : null}
+
+      {cancellationRequest && cancellationRequest.status === "pending" && cancellationDecision ? (
+        <ConfirmModal
+          title={cancellationDecision === "approved" ? "Approve Cancellation Request" : "Reject Cancellation Request"}
+          description={`Are you sure you want to ${cancellationDecision === "approved" ? "approve" : "reject"} this cancellation request?`}
+          confirmLabel={cancellationDecision === "approved" ? "Yes, Approve Cancellation" : "Yes, Reject Request"}
+          busyLabel={cancellationDecision === "approved" ? "Approving..." : "Rejecting..."}
+          tone="danger"
+          onCancel={() => { setCancellationDecision(""); setCancellationNote(""); }}
+          onConfirm={() => void confirmCancellationDecision()}
+          confirmDisabled={cancellationDecision === "rejected" && cancellationNote.trim().length < 5}
+          busy={reviewingCancellation}
+        >
+          <label className={styles.noteField}>
+            <span>Response to customer{cancellationDecision === "rejected" ? " (required for rejection)" : " (optional)"}</span>
+            <textarea
+              value={cancellationNote}
+              onChange={(event) => setCancellationNote(event.target.value)}
+              rows={3}
+              maxLength={1000}
+              placeholder="Explain the decision or any next steps"
+              disabled={reviewingCancellation}
+            />
+          </label>
+        </ConfirmModal>
       ) : null}
 
       <nav id="admin-workspace-nav" className={styles.stepNav} aria-label="Booking review steps" role="tablist">
@@ -943,42 +887,40 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                 <div><dt>Payment Attempts</dt><dd>{payments.length}</dd></div>
                 <div><dt>Receipts</dt><dd>{receipts.length}</dd></div>
               </dl>
-              {receipts.some((receipt) => receipt.documentPath) ? (
-                <div className={styles.receiptList}>
-                  {receipts.filter((receipt) => receipt.documentPath).map((receipt) => {
-                    const linkedPayment = receipt.paymentSubmissionId
-                      ? payments.find((p) => p.id === receipt.paymentSubmissionId)
-                      : undefined;
-                    const paymentVerified = linkedPayment ? linkedPayment.status === "verified" : amountPaid > 0;
-                    const sending = sendingReceiptId === receipt.id;
-                    return (
-                      <div key={receipt.id} className={styles.receiptRow}>
-                        <Button variant="none" type="button" onClick={() => openPrivateFile("receipts", receipt.documentPath!)}>
-                          <span className={styles.receiptIcon}>PDF</span>
-                          <span><strong>{receipt.receiptNumber ?? receipt.id.slice(0, 8)}</strong><small>Open Receipt</small></span>
-                          <span aria-hidden="true">↗</span>
-                        </Button>
-                        <div className={styles.receiptEmailAction}>
-                          <Button variant="none"
-                            type="button"
-                            className={styles.sendReceiptButton}
-                            disabled={!paymentVerified || sending}
-                            onClick={() => handleSendReceiptEmail(receipt)}
-                            title={paymentVerified ? "Email the official receipt to the customer" : "Payment must be verified before the receipt can be emailed"}
-                          >
-                            {sending ? "Sending..." : "Send Receipt to Email"}
-                          </Button>
-                          {receipt.emailedAt ? (
-                            <span className={styles.receiptSentBadge}>
-                              Receipt sent {formatDate(receipt.emailedAt, true)}
-                            </span>
-                          ) : null}
-                        </div>
-                      </div>
-                    );
-                  })}
+              <div className={styles.proofsReceiptsHeader}><span>Proofs / Receipts</span></div>
+              {payments.some((payment) => payment.proofStorageBucket && payment.proofStoragePath) || receipts.some((receipt) => receipt.documentPath) ? (
+                <div className={styles.proofsReceiptsGrid}>
+                  {payments.filter((payment) => payment.proofStorageBucket && payment.proofStoragePath).map((payment) => (
+                    <Button
+                      key={`proof-${payment.id}`}
+                      variant="none"
+                      type="button"
+                      className={styles.proofCard}
+                      onClick={() => openPrivateFile(
+                        payment.proofStorageBucket as Parameters<typeof getBookingFileUrl>[1],
+                        payment.proofStoragePath!,
+                      )}
+                    >
+                      <span className={styles.receiptIcon}>PROOF</span>
+                      <span><strong>{formatStatus(payment.stage)}</strong><small>Open Proof</small></span>
+                      <span aria-hidden="true">↗</span>
+                    </Button>
+                  ))}
+                  {receipts.filter((receipt) => receipt.documentPath).map((receipt) => (
+                    <Button
+                      key={`receipt-${receipt.id}`}
+                      variant="none"
+                      type="button"
+                      className={styles.proofCard}
+                      onClick={() => openPrivateFile("receipts", receipt.documentPath!)}
+                    >
+                      <span className={styles.receiptIcon}>PDF</span>
+                      <span><strong>{receipt.receiptNumber ?? receipt.id.slice(0, 8)}</strong><small>Open Receipt</small></span>
+                      <span aria-hidden="true">↗</span>
+                    </Button>
+                  ))}
                 </div>
-              ) : <p className={styles.emptyRecord}>No customer-facing receipt has been issued yet.</p>}
+              ) : <p className={styles.emptyRecord}>No payment proofs or receipts are available yet.</p>}
               <PaymentsReviewPanel
                 bookingId={bookingId}
                 booking={booking}
@@ -1013,20 +955,23 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                 </div>
 
                 {agreement ? <>
-                  <ol className={styles.signatureSteps}>
-                    <li className={customerSignature ? styles.stepComplete : styles.stepCurrent}>
-                      <span>{customerSignature ? "✓" : "1"}</span>
-                      <div><strong>Customer Signature</strong><small>{customerSignature ? `${customerSignature.signerName} · ${formatDate(customerSignature.signedAt, true)}` : "Waiting for customer"}</small></div>
-                    </li>
-                    <li className={businessSignature ? styles.stepComplete : customerSignature ? styles.stepCurrent : styles.stepUpcoming}>
-                      <span>{businessSignature ? "✓" : "2"}</span>
-                      <div><strong>Business Countersignature</strong><small>{businessSignature ? `${businessSignature.signerName} · ${formatDate(businessSignature.signedAt, true)}` : customerSignature ? "Admin reviews and countersigns" : "Available after customer signs"}</small></div>
-                    </li>
-                    <li className={agreement.finalDocumentPath ? styles.stepComplete : styles.stepUpcoming}>
-                      <span>{agreement.finalDocumentPath ? "✓" : "3"}</span>
-                      <div><strong>Final Agreement PDF</strong><small>{agreement.finalDocumentPath ? "Ready for admin and customer" : "Created after both signatures"}</small></div>
-                    </li>
-                  </ol>
+                  <div className={styles.signatureStatusRow}>
+                    <div className={`${styles.signatureStatusCard} ${customerSignature ? styles.signatureStatusComplete : styles.signatureStatusCurrent}`}>
+                      <span className={styles.signatureStatusBadge}>{customerSignature ? "Complete" : "In progress"}</span>
+                      <strong>Customer Signature</strong>
+                      <small>{customerSignature ? `${customerSignature.signerName} · ${formatDate(customerSignature.signedAt, true)}` : "Waiting for customer"}</small>
+                    </div>
+                    <div className={`${styles.signatureStatusCard} ${businessSignature ? styles.signatureStatusComplete : customerSignature ? styles.signatureStatusCurrent : styles.signatureStatusPending}`}>
+                      <span className={styles.signatureStatusBadge}>{businessSignature ? "Complete" : customerSignature ? "In progress" : "Pending"}</span>
+                      <strong>Business Countersignature</strong>
+                      <small>{businessSignature ? `${businessSignature.signerName} · ${formatDate(businessSignature.signedAt, true)}` : customerSignature ? "Admin reviews and countersigns" : "Available after customer signs"}</small>
+                    </div>
+                    <div className={`${styles.signatureStatusCard} ${agreement.finalDocumentPath ? styles.signatureStatusComplete : styles.signatureStatusPending}`}>
+                      <span className={styles.signatureStatusBadge}>{agreement.finalDocumentPath ? "Complete" : "Pending"}</span>
+                      <strong>Final Agreement PDF</strong>
+                      <small>{agreement.finalDocumentPath ? "Ready for admin and customer" : "Created after both signatures"}</small>
+                    </div>
+                  </div>
 
                   {agreement.status === "awaiting_business_signature" ? (
                     <div className={styles.countersignPanel}>
@@ -1035,42 +980,58 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                         <h4>Review, countersign, and finalize</h4>
                         <p>The customer has completed their part. Verify the payment and all required documents, then enter the authorized business signer&apos;s name.</p>
                       </div>
-                      <div className={styles.readinessChecks}>
-                        <span className={amountPaid > 0 ? styles.ready : styles.notReady}>{amountPaid > 0 ? "✓" : "!"} Payment verified</span>
-                        <span className={booking.requirementsStatus === "approved" ? styles.ready : styles.notReady}>{booking.requirementsStatus === "approved" ? "✓" : "!"} Documents approved</span>
-                        <span className={customerSignature ? styles.ready : styles.notReady}>{customerSignature ? "✓" : "!"} Customer signed</span>
+                      <div className={styles.countersignGroup}>
+                        <span>1 · Review requirements</span>
+                        <div className={styles.readinessChecks}>
+                          <span className={amountPaid > 0 ? styles.ready : styles.notReady}>{amountPaid > 0 ? "✓" : "!"} Payment Verified</span>
+                          <span className={booking.requirementsStatus === "approved" ? styles.ready : styles.notReady}>{booking.requirementsStatus === "approved" ? "✓" : "!"} Documents Approved</span>
+                          <span className={customerSignature ? styles.ready : styles.notReady}>{customerSignature ? "✓" : "!"} Customer Signed</span>
+                        </div>
+                        {!canCountersignAgreement ? (
+                          <p className={styles.blockedMessage}>Complete every check above before the business countersignature becomes available.</p>
+                        ) : null}
                       </div>
-                      {!canCountersignAgreement ? (
-                        <p className={styles.blockedMessage}>Complete every check above before the business countersignature becomes available.</p>
-                      ) : null}
-                      <label className={styles.signerField}>
-                        <span>Authorized business signer&apos;s complete name</span>
-                        <input
-                          value={businessSignerName}
-                          onChange={(event) => setBusinessSignerName(event.target.value)}
-                          maxLength={120}
-                          placeholder="Enter the person signing for Maddy & Cassy"
-                          disabled={!canCountersignAgreement || countersigning}
-                        />
-                      </label>
-                      <label className={styles.authorizationCheck}>
-                        <input
-                          type="checkbox"
-                          checked={countersignAcknowledged}
-                          onChange={(event) => setCountersignAcknowledged(event.target.checked)}
-                          disabled={!canCountersignAgreement || countersigning}
-                        />
-                        <span>I confirm that I am authorized to countersign this rental agreement for Rental by Maddy &amp; Cassy.</span>
-                      </label>
-                      <Button variant="none"
-                        type="button"
-                        className={styles.countersignButton}
-                        onClick={requestCountersignAgreement}
-                        disabled={!canCountersignAgreement || !businessSignerName.trim() || !countersignAcknowledged || countersigning}
-                      >
-                        {countersigning ? "Finalizing agreement..." : "Countersign & Finalize Agreement"}
-                      </Button>
-                      <small className={styles.legalNote}>This records the administrator, signer name, timestamp, IP address, and finalized PDF in the audit trail.</small>
+
+                      <div className={styles.signerAndAuthGroup}>
+                        <div className={styles.countersignGroup}>
+                          <span>2 · Authorized Business Signer</span>
+                          <label className={styles.signerField}>
+                            <input
+                              value={businessSignerName}
+                              onChange={(event) => setBusinessSignerName(event.target.value)}
+                              maxLength={120}
+                              placeholder="Enter the person signing for Maddy & Cassy"
+                              disabled={!canCountersignAgreement || countersigning}
+                            />
+                          </label>
+                        </div>
+
+                        <div className={styles.countersignGroup}>
+                          <span>3 · Authorization Confirmation</span>
+                          <label className={styles.authorizationCheck}>
+                            <input
+                              type="checkbox"
+                              checked={countersignAcknowledged}
+                              onChange={(event) => setCountersignAcknowledged(event.target.checked)}
+                              disabled={!canCountersignAgreement || countersigning}
+                            />
+                            <span>I confirm that I am authorized to countersign this rental agreement for Rental by Maddy &amp; Cassy.</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      <div className={styles.countersignGroup}>
+                        <span>4 · Finalize Agreement</span>
+                        <Button variant="none"
+                          type="button"
+                          className={styles.countersignButton}
+                          onClick={requestCountersignAgreement}
+                          disabled={!canCountersignAgreement || !businessSignerName.trim() || !countersignAcknowledged || countersigning}
+                        >
+                          {countersigning ? "Finalizing agreement..." : "Countersign & Finalize Agreement"}
+                        </Button>
+                        <small className={styles.legalNote}>This records the administrator, signer name, timestamp, IP address, and finalized PDF in the audit trail.</small>
+                      </div>
                     </div>
                   ) : null}
 
@@ -1103,32 +1064,42 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
               <span>Booking Summary</span>
               <p>All important booking, customer, payment, fulfillment, and status details in one place.</p>
             </div>
-            <div className={styles.finalReviewSummary} aria-label="Final review booking summary">
-              <div><span>Booking Number</span><strong>{booking.bookingRef}</strong></div>
-              <div><span>Customer</span><strong>{fullName}</strong></div>
-              <div><span>Account Type</span><strong>{accountTypeLabel}</strong></div>
-              <div><span>Contact</span><strong>{phone}<small>{email}</small></strong></div>
-              <div><span>Rental Item</span><strong>{bookingHeadline(booking.items)}<small>{totalUnits} unit{totalUnits === 1 ? "" : "s"}</small></strong></div>
-              <div><span>Rental Dates</span><strong>{formatDate(booking.startDate)} - {formatDate(booking.endDate)}</strong></div>
-              <div><span>Duration</span><strong>{booking.dayCount} day{booking.dayCount === 1 ? "" : "s"}</strong></div>
-              <div><span>Verification Status</span><strong>{REQUIREMENTS_STATUS_LABELS[booking.requirementsStatus] ?? formatStatus(booking.requirementsStatus)}</strong></div>
-              <div><span>Payment Status</span><strong>{paymentStatusLabel}</strong></div>
-              <div><span>Fulfillment</span><strong>{fulfillmentLabel}<small>{booking.location || "Location not provided"}</small></strong></div>
-              <div><span>Payment Type</span><strong>{paymentTypeLabel}</strong></div>
-              <div><span>Amount Paid</span><strong>PHP {amountPaid.toLocaleString("en-PH")}</strong></div>
-              <div><span>Remaining Balance</span><strong>PHP {remainingBalance.toLocaleString("en-PH")}</strong></div>
-              <div><span>Agreement Status</span><strong>{AGREEMENT_STATUS_LABELS[booking.agreementStatus] ?? formatStatus(booking.agreementStatus)}</strong></div>
-              <div><span>Inventory Status</span><strong>{inventoryReady ? "Reserved" : `${totalAssignedUnits}/${totalUnits} reserved`}</strong></div>
-              <div><span>Current Booking Status</span><strong>{formatStatus(booking.status)}</strong></div>
-            </div>
+            <details className={styles.collapsibleBlock}>
+              <summary className={styles.expandLabel}>View full booking record</summary>
+              <div className={styles.finalReviewSummary} aria-label="Final review booking summary">
+                <div><span>Booking Number</span><strong>{booking.bookingRef}</strong></div>
+                <div><span>Customer</span><strong>{fullName}</strong></div>
+                <div><span>Account Type</span><strong>{accountTypeLabel}</strong></div>
+                <div><span>Contact</span><strong>{phone}<small>{email}</small></strong></div>
+                <div><span>Rental Item</span><strong>{bookingHeadline(booking.items)}<small>{totalUnits} unit{totalUnits === 1 ? "" : "s"}</small></strong></div>
+                <div><span>Rental Dates</span><strong>{formatDate(booking.startDate)} - {formatDate(booking.endDate)}</strong></div>
+                <div><span>Duration</span><strong>{booking.dayCount} day{booking.dayCount === 1 ? "" : "s"}</strong></div>
+                <div><span>Verification Status</span><strong>{REQUIREMENTS_STATUS_LABELS[booking.requirementsStatus] ?? formatStatus(booking.requirementsStatus)}</strong></div>
+                <div><span>Payment Status</span><strong>{paymentStatusLabel}</strong></div>
+                <div><span>Fulfillment</span><strong>{fulfillmentLabel}<small>{booking.location || "Location not provided"}</small></strong></div>
+                <div><span>Payment Type</span><strong>{paymentTypeLabel}</strong></div>
+                <div><span>Amount Paid</span><strong>PHP {amountPaid.toLocaleString("en-PH")}</strong></div>
+                <div><span>Remaining Balance</span><strong>PHP {remainingBalance.toLocaleString("en-PH")}</strong></div>
+                <div><span>Agreement Status</span><strong>{AGREEMENT_STATUS_LABELS[booking.agreementStatus] ?? formatStatus(booking.agreementStatus)}</strong></div>
+                <div><span>Inventory Status</span><strong>{inventoryReady ? "Reserved" : `${totalAssignedUnits}/${totalUnits} reserved`}</strong></div>
+                <div><span>Current Booking Status</span><strong>{formatStatus(booking.status)}</strong></div>
+              </div>
+            </details>
             <section className={`${styles.completionStatus} ${styles[`completionStatus${finalDecisionTone[0].toUpperCase()}${finalDecisionTone.slice(1)}`]}`} aria-labelledby="completion-status-heading">
               <div className={styles.completionStatusHeading}>
                 <div>
-                  <span>Completion Status</span>
+                  <span>Booking Readiness Summary</span>
                   <h2 id="completion-status-heading">{finalDecisionLabel}</h2>
                   <p>{isClosedRecord ? "This decision is recorded. The booking history remains available below." : remainingChecks > 0 ? "The items below still need attention before the booking can move forward." : "All four review areas are complete for the next booking decision."}</p>
                 </div>
                 <strong>{remainingChecks === 0 ? "4 / 4 complete" : `${4 - remainingChecks} / 4 complete`}</strong>
+              </div>
+            </section>
+            <section className={styles.pendingRequirements} aria-labelledby="pending-requirements-heading">
+              <div className={styles.pendingRequirementsHeading}>
+                <span>Pending Requirements</span>
+                <h2 id="pending-requirements-heading">Review status by area</h2>
+                <p>Each area must be ready before the booking can move to its next decision.</p>
               </div>
               <div className={styles.finalChecklist} aria-label="Final completion checklist">
                 {reviewChecks.map((check) => (
@@ -1143,10 +1114,6 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
               <p className={styles.finalRecordNote}>
                 This is a closed booking record. Historical steps and actions remain available for reference; no further booking action is available.
               </p>
-            ) : remainingChecks > 0 ? (
-              <p className={styles.finalReviewWarning}>
-                Still needs attention: {remainingActionSummary}.
-              </p>
             ) : null}
             <div className={styles.actionPanel} aria-labelledby="booking-action-heading">
               <div className={styles.actionIntro}>
@@ -1156,74 +1123,17 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
               </div>
               {actions.length ? (
                 <div className={styles.actionControls}>
-                  <div className={styles.actionChoiceGrid} aria-label="Available booking actions">
-                    {primaryAction ? renderActionChoice(primaryAction) : null}
+                  <div className={`${styles.actionChoiceGrid} ${actions.length === 1 ? styles.actionChoiceGridSingle : ""}`} aria-label="Available booking actions">
+                    {actions.map(renderActionChoice)}
                   </div>
-                  {alternativeActions.length ? (
-                    <div className={styles.secondaryActions}>
-                      <div className={styles.secondaryActionsHeading}>
-                        <span>Other available actions</span>
-                        <small>{alternativeActions.length}</small>
-                      </div>
-                      <div className={styles.actionChoiceGrid}>
-                        {alternativeActions.map(renderActionChoice)}
-                      </div>
-                    </div>
-                  ) : null}
                   {actions.some((action) => action.status === "released") && !handoverPaymentReady ? (
                     <p className={styles.choosePrompt}>Handover is protected: the remaining balance must be recorded before “Released to Customer” becomes available.</p>
                   ) : null}
-                  {selectedAction ? (
-                    <div className={`${styles.actionConfirmation} ${selectedAction.tone === "danger" ? styles.dangerConfirmation : ""}`}>
-                      <div>
-                        <small>Selected action</small>
-                        <h3>{selectedAction.label}</h3>
-                        <p>{selectedAction.description}</p>
-                      </div>
-                      {isDeclineAction ? (
-                        <>
-                          <label className={styles.noteField}>
-                            <span>Decline reason (required)</span>
-                            <select value={declineReason} onChange={(event) => setDeclineReason(event.target.value)} disabled={updating}>
-                              <option value="" disabled>Select a reason</option>
-                              {DECLINE_REASON_OPTIONS.map((reason) => (
-                                <option key={reason} value={reason}>{reason}</option>
-                              ))}
-                            </select>
-                          </label>
-                          <label className={styles.noteField}>
-                            <span>Explanation for the customer (required)</span>
-                            <textarea
-                              value={note}
-                              onChange={(event) => setNote(event.target.value)}
-                              rows={3}
-                              maxLength={1000}
-                              placeholder="Describe exactly what was found and what the customer needs to know"
-                              disabled={updating}
-                            />
-                          </label>
-                        </>
-                      ) : (
-                        <label className={styles.noteField}>
-                          <span>Message to customer{selectedAction.requiresNote ? " (required)" : " (optional)"}</span>
-                          <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={3} maxLength={1000} placeholder={selectedAction.requiresNote ? "Explain the reason clearly before continuing" : "Add a helpful update or handover instruction"} disabled={updating} />
-                        </label>
-                      )}
-                      <div className={styles.confirmationActions}>
-                        <Button variant="none" type="button" className={styles.cancelSelectionButton} onClick={() => { setSelectedStatus(""); setNote(""); setDeclineReason(""); }} disabled={updating}>Choose another action</Button>
-                        <Button variant="none"
-                          type="button"
-                          className={`${styles.applyButton} ${selectedAction.tone === "danger" ? styles.dangerButton : ""}`}
-                          onClick={requestStatusAction}
-                          disabled={updating || (isDeclineAction ? declineIncomplete : (selectedAction.requiresNote && !note.trim()))}
-                        >
-                          {updating ? "Updating customer..." : `Confirm ${selectedAction.label}`}
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className={styles.choosePrompt}>Choose an action card to review its customer message before confirming.</p>
-                  )}
+                  <p className={styles.choosePrompt}>
+                    {selectedAction
+                      ? `Reviewing "${selectedAction.label}" — complete the confirmation popup to apply it.`
+                      : "Choose an action card to review its customer message before confirming."}
+                  </p>
                 </div>
               ) : <p className={styles.terminalNotice}>This booking is complete or closed. No further actions are available.</p>}
             </div>
@@ -1260,98 +1170,77 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
         </section>
       </div>
 
-      {statusConfirmationOpen && selectedAction ? (
-        <div
-          className={styles.confirmationOverlay}
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget && !updating) setStatusConfirmationOpen(false);
-          }}
+      {selectedAction ? (
+        <ConfirmModal
+          title={selectedAction.label}
+          description={<>Apply this update to booking <strong>{booking.bookingRef}</strong>? {selectedAction.description}</>}
+          confirmLabel={`Yes, ${selectedAction.label}`}
+          busyLabel="Updating booking..."
+          tone={selectedAction.tone === "danger" ? "danger" : "default"}
+          onCancel={() => { setSelectedStatus(""); setNote(""); setDeclineReason(""); }}
+          onConfirm={requestStatusAction}
+          confirmDisabled={isDeclineAction ? declineIncomplete : (selectedAction.requiresNote && !note.trim())}
+          busy={updating}
         >
-          <div
-            ref={confirmationDialogRef}
-            className={`${styles.confirmationDialog} ${selectedAction.tone === "danger" ? styles.confirmationDialogDanger : ""}`}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="status-confirmation-title"
-            aria-describedby="status-confirmation-description"
-            tabIndex={-1}
-          >
-            <div className={styles.confirmationBrand}>
-              <Image src="/images/maddy-cassy-rentals-logo.png" alt="" width={48} height={48} />
-              <div><span>RENTAL BY</span><strong>Maddy &amp; Cassy</strong></div>
-            </div>
-            <div className={styles.confirmationIcon} aria-hidden="true">{selectedAction.tone === "danger" ? "!" : "✓"}</div>
-            <div className={styles.confirmationCopy}>
-              <span>Confirm booking update</span>
-              <h2 id="status-confirmation-title">{selectedAction.label}</h2>
-              <p id="status-confirmation-description">Apply this update to booking <strong>{booking.bookingRef}</strong>?</p>
-              <div className={styles.confirmationSummary}>
-                <strong>{selectedAction.description}</strong>
-                <span><strong>Booking:</strong> {booking.bookingRef}</span>
-                <span><strong>Customer:</strong> {fullName}</span>
-                <span><strong>Rental:</strong> {bookingHeadline(booking.items)}</span>
-                <span><strong>Current status:</strong> {formatStatus(booking.status)}</span>
-                {isDeclineAction ? (
-                  <>
-                    <span><strong>Reason:</strong> {declineReason}</span>
-                    <span><strong>Explanation shown to customer:</strong> {note.trim()}</span>
-                  </>
-                ) : null}
-                <span>The customer&apos;s account and booking timeline will update immediately.</span>
-              </div>
-            </div>
-            <div className={styles.dialogActions}>
-              <Button variant="none" type="button" className={styles.dialogCancelButton} onClick={() => setStatusConfirmationOpen(false)} disabled={updating}>Not yet</Button>
-              <Button variant="none" type="button" className={`${styles.dialogConfirmButton} ${selectedAction.tone === "danger" ? styles.dialogDangerButton : ""}`} onClick={() => void confirmStatusAction()} disabled={updating}>
-                {updating ? "Updating booking..." : `Yes, ${selectedAction.label}`}
-              </Button>
-            </div>
+          {isDeclineAction ? (
+            <>
+              <label>
+                <span>Decline reason (required)</span>
+                <select value={declineReason} onChange={(event) => setDeclineReason(event.target.value)} disabled={updating}>
+                  <option value="" disabled>Select a reason</option>
+                  {DECLINE_REASON_OPTIONS.map((reason) => (
+                    <option key={reason} value={reason}>{reason}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>Explanation for the customer (required)</span>
+                <textarea
+                  value={note}
+                  onChange={(event) => setNote(event.target.value)}
+                  rows={3}
+                  maxLength={1000}
+                  placeholder="Describe exactly what was found and what the customer needs to know"
+                  disabled={updating}
+                />
+              </label>
+            </>
+          ) : (
+            <label>
+              <span>Message to customer{selectedAction.requiresNote ? " (required)" : " (optional)"}</span>
+              <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={3} maxLength={1000} placeholder={selectedAction.requiresNote ? "Explain the reason clearly before continuing" : "Add a helpful update or handover instruction"} disabled={updating} />
+            </label>
+          )}
+          <div className={styles.confirmationSummary}>
+            <span><strong>Booking:</strong> {booking.bookingRef}</span>
+            <span><strong>Customer:</strong> {fullName}</span>
+            <span><strong>Rental:</strong> {bookingHeadline(booking.items)}</span>
+            <span><strong>Current status:</strong> {formatStatus(booking.status)}</span>
+            <span>The customer&apos;s account and booking timeline will update immediately.</span>
           </div>
-        </div>
+        </ConfirmModal>
       ) : null}
 
       {countersignConfirmationOpen ? (
-        <div
-          className={styles.confirmationOverlay}
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget && !countersigning) setCountersignConfirmationOpen(false);
-          }}
+        <ConfirmModal
+          title="Finalize Rental Agreement?"
+          description="Are you sure you want to countersign and finalize this rental agreement?"
+          confirmLabel="Finalize Agreement"
+          busyLabel="Finalizing agreement..."
+          tone="danger"
+          onCancel={() => setCountersignConfirmationOpen(false)}
+          onConfirm={() => void confirmCountersignAgreement()}
+          busy={countersigning}
         >
-          <div
-            ref={countersignDialogRef}
-            className={`${styles.confirmationDialog} ${styles.confirmationDialogDanger}`}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="countersign-confirmation-title"
-            aria-describedby="countersign-confirmation-description"
-            tabIndex={-1}
-          >
-            <div className={styles.confirmationBrand}>
-              <Image src="/images/maddy-cassy-rentals-logo.png" alt="" width={48} height={48} />
-              <div><span>RENTAL BY</span><strong>Maddy &amp; Cassy</strong></div>
-            </div>
-            <div className={styles.confirmationIcon} aria-hidden="true">!</div>
-            <div className={styles.confirmationCopy}>
-              <span>Confirm agreement finalization</span>
-              <h2 id="countersign-confirmation-title">Countersign &amp; Finalize Agreement</h2>
-              <p id="countersign-confirmation-description">Are you sure you want to countersign and finalize this rental agreement?</p>
-              <div className={styles.confirmationSummary}>
-                <strong>Signing as {businessSignerName.trim()}</strong>
-                <span><strong>Booking:</strong> {booking.bookingRef}</span>
-                <span><strong>Customer:</strong> {fullName}</span>
-                <span><strong>Rental:</strong> {bookingHeadline(booking.items)}</span>
-                <span><strong>Current status:</strong> {formatStatus(booking.status)}</span>
-                <span>This action is permanent and cannot be undone. The final PDF will be generated and made available to the customer immediately.</span>
-              </div>
-            </div>
-            <div className={styles.dialogActions}>
-              <Button variant="none" type="button" className={styles.dialogCancelButton} onClick={() => setCountersignConfirmationOpen(false)} disabled={countersigning}>Cancel</Button>
-              <Button variant="none" type="button" className={`${styles.dialogConfirmButton} ${styles.dialogDangerButton}`} onClick={() => void confirmCountersignAgreement()} disabled={countersigning}>
-                {countersigning ? "Finalizing agreement..." : "Yes, Finalize Agreement"}
-              </Button>
-            </div>
+          <div className={styles.confirmationSummary}>
+            <strong>Signing as {businessSignerName.trim()}</strong>
+            <span><strong>Booking:</strong> {booking.bookingRef}</span>
+            <span><strong>Customer:</strong> {fullName}</span>
+            <span><strong>Rental:</strong> {bookingHeadline(booking.items)}</span>
+            <span><strong>Current status:</strong> {formatStatus(booking.status)}</span>
+            <span>This action is permanent and cannot be undone. The final PDF will be generated and made available to the customer immediately.</span>
           </div>
-        </div>
+        </ConfirmModal>
       ) : null}
     </div>
   );

@@ -13,6 +13,18 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ u
   const { uid: targetUid } = await params;
   if (!targetUid || targetUid.length > 128) return errorResponse("The selected account is invalid.", 400);
 
+  const body = (await request.json().catch(() => null)) as
+    | { deletedBy?: unknown; reason?: unknown }
+    | null;
+  const deletedBy = typeof body?.deletedBy === "string" ? body.deletedBy.trim() : "";
+  const reason = typeof body?.reason === "string" ? body.reason.trim() : "";
+  if (!deletedBy) {
+    return errorResponse("Enter the name of who is deleting this account.", 400);
+  }
+  if (!reason) {
+    return errorResponse("Enter a reason for deleting this account.", 400);
+  }
+
   try {
     const { supabase, user } = await requireActiveAdmin();
     if (user.id === targetUid) {
@@ -53,7 +65,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ u
       p_action: "account.deleted",
       p_entity_type: "user",
       p_entity_id: targetUid,
-      p_metadata: { bookingHistoryPreserved: true },
+      p_metadata: { deletedBy, reason, bookingHistoryPreserved: true },
     });
 
     return NextResponse.json({ deleted: true, uid: targetUid, bookingHistoryPreserved: true });

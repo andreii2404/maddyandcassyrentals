@@ -12,4 +12,36 @@
 .verified { background:var(--color-status-green-bg); color:var(--color-status-green); }
 .rejected { background:var(--color-status-red-bg); color:var(--color-status-red); }
 .void { background:var(--color-light-gray); color:var(--color-charcoal); }
-@media(max-width:520px){.details{grid-template-columns:1fr}}
+.reviewSection { display:grid; gap:.7rem; padding:.9rem; border:1px solid var(--color-border); border-radius:14px; background:var(--color-background); }
+.reviewHeader { display:flex; align-items:center; justify-content:space-between; gap:.6rem; }
+.reviewHeader>span:first-child { color:var(--color-charcoal); font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; }
+.reviewDetails { display:grid; gap:.55rem; margin:0; }
+.reviewDetails div { display:grid; gap:.15rem; }
+.reviewDetails dt { margin:0; color:var(--color-charcoal); font-size:.66rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; }
+.reviewDetails dd { margin:0; font-size:.85rem; color:var(--color-text-primary); overflow-wrap:anywhere; }
+.reviewActions { display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:center; gap:.6rem; }
+.approveButton,.rejectButton { min-height:40px; padding:.5rem .9rem; border-radius:var(--radius-control); font:inherit; font-size:.75rem; font-weight:800; cursor:pointer; transition:transform 140ms ease; }
+.approveButton { border:1px solid var(--color-status-green-border); background:var(--color-status-green-bg); color:var(--color-status-green); }
+.rejectButton { border:1px solid var(--color-status-red-border); background:var(--color-status-red-bg); color:var(--color-status-red); }
+.approveButton:hover:not(:disabled),.rejectButton:hover:not(:disabled) { transform:translateY(-1px); }
+.approveButton:disabled,.rejectButton:disabled { opacity:.55; cursor:not-allowed; }
+.rejectEditor { display:grid; flex:1 1 100%; gap:.6rem; padding:.75rem; border:1px solid var(--color-status-red-border); border-radius:11px; background:var(--color-status-red-bg); }
+.rejectEditor label { display:grid; gap:.3rem; }
+.rejectEditor label span { color:var(--color-status-red); font-size:.68rem; font-weight:800; }
+.rejectEditor textarea { width:100%; padding:.6rem .65rem; border:1px solid var(--color-status-red-border); border-radius:9px; outline:0; background:var(--color-white); color:var(--color-text-primary); font:inherit; font-size:.78rem; line-height:1.5; resize:vertical; }
+.rejectEditor textarea:focus { border-color:var(--color-status-red); box-shadow:0 0 0 3px rgba(170,65,65,.1); }
+.rejectEditor>div { display:flex; justify-content:flex-end; gap:.45rem; }
+.cancelButton { min-height:38px; padding:.45rem .8rem; border:1px solid var(--color-light-gray); border-radius:var(--radius-control); background:var(--color-white); color:var(--color-charcoal); font:inherit; font-size:.72rem; font-weight:700; cursor:pointer; }
+.sendButton { min-height:38px; padding:.45rem .8rem; border:1px solid var(--color-status-red); border-radius:var(--radius-control); background:var(--color-status-red); color:var(--color-white); font:inherit; font-size:.72rem; font-weight:800; cursor:pointer; }
+.sendButton:disabled,.cancelButton:disabled { opacity:.55; cursor:not-allowed; }
+.reviewError { flex:1 1 100%; margin:0; color:var(--color-status-red); font-size:.72rem; }
+.confirmPanel { display:grid; flex:1 1 100%; gap:.6rem; padding:.75rem; border:1px solid var(--color-border); border-radius:11px; background:var(--color-background); }
+.confirmPanel p { margin:0; font-size:.8rem; color:var(--color-text-primary); }
+.confirmPanel>div { display:flex; justify-content:flex-end; gap:.45rem; }
+.reviewerField { display:grid; gap:.3rem; }
+.reviewerField span { color:var(--color-charcoal); font-size:.68rem; font-weight:800; text-transform:uppercase; letter-spacing:.03em; }
+.reviewerField select { width:100%; padding:.55rem .6rem; border:1px solid var(--color-light-gray); border-radius:9px; outline:0; background:var(--color-white); color:var(--color-text-primary); font:inherit; font-size:.78rem; }
+.reviewerField select:focus { border-color:var(--color-primary); box-shadow:0 0 0 3px rgba(154,89,101,.12); }
+.confirmApproveButton { min-height:38px; padding:.45rem .8rem; border:1px solid var(--color-status-green-border); border-radius:var(--radius-control); background:var(--color-status-green-bg); color:var(--color-status-green); font:inherit; font-size:.72rem; font-weight:800; cursor:pointer; }
+.confirmApproveButton:disabled { opacity:.55; cursor:not-allowed; }
+@media(max-width:520px){.details{grid-template-columns:1fr}.rejectEditor>div,.confirmPanel>div{flex-direction:column-reverse}.cancelButton,.sendButton,.confirmApproveButton{width:100%}}

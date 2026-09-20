@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Tables } from "@/src/lib/supabase/database.types";
-import type { BookingReceipt, PaymentOption, PaymentRecord } from "@/src/types/payment";
+import type { BookingReceipt, PaymentOption, PaymentRecord, PaymentReviewerName } from "@/src/types/payment";
 import type { BalancePaymentPreference } from "@/src/types/booking";
 
 export type { PaymentOption };
@@ -118,6 +118,7 @@ export function mapPaymentSubmission(row: PaymentSubmissionRow): PaymentRecord {
     providerMetadata: (row.provider_metadata as Record<string, unknown>) ?? {},
     reviewNotes: row.review_notes ?? undefined,
     reviewedBy: row.reviewed_by ?? undefined,
+    reviewerName: (row.reviewer_name as PaymentReviewerName | null) ?? undefined,
     reviewedAt: row.reviewed_at ?? undefined,
     submittedAt: row.submitted_at,
     completedAt: row.completed_at ?? undefined,
@@ -136,7 +137,21 @@ export async function getBookingPayments(
     .eq("booking_id", bookingId)
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
-  return (data ?? []).map((row) => mapPaymentSubmission(row as PaymentSubmissionRow));
+  const rows = (data ?? []) as PaymentSubmissionRow[];
+
+  const reviewerIds = Array.from(new Set(rows.map((row) => row.reviewed_by).filter((id): id is string => Boolean(id))));
+  const { data: reviewers } = reviewerIds.length
+    ? await supabase.from("profiles").select("id, display_name, contact_email").in("id", reviewerIds)
+    : { data: [] };
+  const reviewerById = new Map((reviewers ?? []).map((profile) => [profile.id, profile]));
+
+  return rows.map((row) => {
+    const reviewer = row.reviewed_by ? reviewerById.get(row.reviewed_by) : undefined;
+    return {
+      ...mapPaymentSubmission(row),
+      reviewedByName: reviewer?.display_name?.trim() || reviewer?.contact_email?.trim() || undefined,
+    };
+  });
 }
 
 /** Admin decision on a manually submitted GCash proof of payment. */
@@ -144,13 +159,14 @@ export async function reviewManualPayment(
   bookingId: string,
   paymentId: string,
   status: "verified" | "rejected",
+  reviewerName: PaymentReviewerName,
   reason?: string,
 ): Promise<void> {
   const response = await fetch(`/api/admin/bookings/${encodeURIComponent(bookingId)}/payments`, {
     method: "PATCH",
     credentials: "same-origin",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ paymentId, status, reason }),
+    body: JSON.stringify({ paymentId, status, reviewerName, reason }),
   });
   const body = (await response.json().catch(() => null)) as { error?: unknown } | null;
   if (!response.ok) {
@@ -189,23 +205,6 @@ export async function recordInPersonBalance(
   const body = (await response.json().catch(() => null)) as { error?: unknown } | null;
   if (!response.ok) {
     throw new Error(typeof body?.error === "string" ? body.error : "The in-person payment could not be recorded.");
-  }
-}
-
-export async function setBookingPayLaterOverride(
-  bookingId: string,
-  allowed: boolean,
-  note?: string,
-): Promise<void> {
-  const response = await fetch(`/api/admin/bookings/${encodeURIComponent(bookingId)}/payments`, {
-    method: "POST",
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "set_pay_later", allowed, note }),
-  });
-  const body = (await response.json().catch(() => null)) as { error?: unknown } | null;
-  if (!response.ok) {
-    throw new Error(typeof body?.error === "string" ? body.error : "The pay-later exception could not be saved.");
   }
 }
 

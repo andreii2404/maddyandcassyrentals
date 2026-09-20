@@ -261,7 +261,6 @@ export default function AdminBookingsList() {
                   <th>Status</th>
                   <th>Fulfillment Update</th>
                   <th>Submitted</th>
-                  <th className={styles.actionCell} aria-label="Open booking" />
                 </tr>
               </thead>
               <tbody>
@@ -321,11 +320,6 @@ export default function AdminBookingsList() {
                         <small>{booking.fulfillmentMethod === "delivery" ? "Delivery" : "Pickup"}</small>
                       </td>
                       <td data-label="Submitted">{formatDate(booking.createdAt)}</td>
-                      <td data-label="Action" className={styles.actionCell}>
-                        <Link href={href} className={styles.openLink} onClick={stopRowNav}>
-                          Review
-                        </Link>
-                      </td>
                     </tr>
                   );
                 })}

@@ -8,22 +8,34 @@ export type BookingLiveStatus = "connecting" | "live" | "reconnecting";
 interface UseBookingRealtimeOptions {
   bookingId?: string;
   customerId?: string;
+  /**
+   * When set, subscribes to every listed table (all events, unfiltered) instead of the
+   * default single `bookings` row/table subscription below. Used by admin-wide views that
+   * need to react to more than one table (e.g. payments, which spans bookings and
+   * booking_payment_submissions).
+   */
+  tables?: string[];
   enabled?: boolean;
   onChange: () => void | Promise<void>;
 }
 
 /**
- * Keeps booking views synchronized through Supabase Postgres Changes. A quiet
+ * Keeps admin/booking views synchronized through Supabase Postgres Changes. A quiet
  * polling/focus fallback covers sleeping tabs and temporary WebSocket outages.
  */
 export function useBookingRealtime({
   bookingId,
   customerId,
+  tables,
   enabled = true,
   onChange,
 }: UseBookingRealtimeOptions): BookingLiveStatus {
   const [status, setStatus] = useState<BookingLiveStatus>("connecting");
   const onChangeRef = useRef(onChange);
+  // Callers typically pass a fresh `tables` array literal each render; keying the
+  // subscription effect off this joined string (rather than the array itself) avoids
+  // tearing down and reopening the channel every render.
+  const tablesKey = tables?.join(",");
 
   useEffect(() => {
     onChangeRef.current = onChange;
@@ -47,10 +59,14 @@ export function useBookingRealtime({
       }, 180);
     };
 
-    const suffix = bookingId ?? customerId ?? "admin";
+    const suffix = bookingId ?? customerId ?? tables?.join("-") ?? "admin";
     let channel = supabase.channel(`booking-live-${suffix}-${Math.random().toString(36).slice(2)}`);
 
-    if (bookingId) {
+    if (tables?.length) {
+      for (const table of tables) {
+        channel = channel.on("postgres_changes", { event: "*", schema: "public", table }, refresh);
+      }
+    } else if (bookingId) {
       channel = channel.on(
         "postgres_changes",
         { event: "*", schema: "public", table: "bookings", filter: `id=eq.${bookingId}` },
@@ -107,7 +123,8 @@ export function useBookingRealtime({
       document.removeEventListener("visibilitychange", refreshOnFocus);
       void supabase.removeChannel(channel);
     };
-  }, [bookingId, customerId, enabled]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- tablesKey is the stable proxy for `tables`
+  }, [bookingId, customerId, tablesKey, enabled]);
 
   return status;
 }

@@ -116,6 +116,8 @@ export interface AdminPaymentsData {
     verifiedRevenue: number;
     successfulPayments: number;
     pendingCheckouts: number;
+    statusCounts: { all: number; verified: number; unverified: number; rejected: number };
+    stageCounts: { all: number; fullPayment: number; downPayment: number; balance: number; other: number };
   };
 }
 
@@ -149,16 +151,33 @@ export async function getAdminAuditLogs(): Promise<AdminAuditLog[]> {
   return data.logs;
 }
 
+export interface AdminPaymentsFilters {
+  status?: "verified" | "unverified" | "rejected";
+  stage?: "full_payment" | "down_payment" | "balance" | "other";
+  accountType?: "with_account" | "guest";
+  bookingStatus?: "pending" | "approved" | "returned" | "cancelled";
+  proof?: "with_proof" | "no_proof";
+  sort?: "newest" | "oldest";
+}
+
 export function getAdminPayments(params: {
   page: number;
   pageSize: number;
   search?: string;
+  filters?: AdminPaymentsFilters;
 }): Promise<AdminPaymentsData> {
   const query = new URLSearchParams({
     page: String(params.page),
     pageSize: String(params.pageSize),
   });
   if (params.search) query.set("search", params.search);
+  const filters = params.filters;
+  if (filters?.status) query.set("status", filters.status);
+  if (filters?.stage) query.set("stage", filters.stage);
+  if (filters?.accountType) query.set("accountType", filters.accountType);
+  if (filters?.bookingStatus) query.set("bookingStatus", filters.bookingStatus);
+  if (filters?.proof) query.set("proof", filters.proof);
+  if (filters?.sort) query.set("sort", filters.sort);
   return getAdminData(`/api/admin/payments?${query.toString()}`);
 }
 
