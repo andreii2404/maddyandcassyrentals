@@ -12,6 +12,7 @@ import {
   getAdminDashboard,
   type AdminDashboardData,
 } from "@/src/services/operationsService";
+import { friendlyMessage } from "@/src/lib/friendlyMessage";
 import styles from "./admin.module.css";
 
 const PAGE_SIZE = 10;
@@ -183,7 +184,7 @@ export default function AdminDashboard() {
         if (active) {
           setError(
             loadError instanceof Error
-              ? loadError.message
+              ? friendlyMessage(loadError.message, "error")
               : "We couldn't load the dashboard. Please refresh the page and try again.",
           );
         }

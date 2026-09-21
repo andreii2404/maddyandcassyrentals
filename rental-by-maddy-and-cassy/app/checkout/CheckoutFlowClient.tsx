@@ -17,6 +17,7 @@ import StepCartPaymentSubmission, {
 } from "@/components/reservation/StepCartPaymentSubmission";
 import StepBookingConfirmation from "@/components/reservation/StepBookingConfirmation";
 import { useToast } from "@/components/ui/ToastProvider";
+import { friendlyMessage } from "@/src/lib/friendlyMessage";
 import { createEmptyDraft, formatCustomerLocation, getDayCount, parseCustomerAddress, type ReservationDraft } from "@/src/types/reservationDraft";
 import {
   createMultiItemBookingReservation,
@@ -242,7 +243,10 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
         if (cancelled) return;
         setCheckingPayment(false);
         setPaymentError(
-          error instanceof Error ? error.message : "This reservation could not be resumed.",
+          friendlyMessage(
+            error instanceof Error ? error.message : "This reservation could not be resumed.",
+            "error",
+          ),
         );
         return;
       }
@@ -323,9 +327,12 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
       } catch (error) {
         if (cancelled) return;
         setUnitsCheckError(
-          error instanceof Error
-            ? error.message
-            : "We couldn't confirm your assigned units. Please try again.",
+          friendlyMessage(
+            error instanceof Error
+              ? error.message
+              : "We couldn't confirm your assigned units. Please try again.",
+            "error",
+          ),
         );
       }
     }
@@ -384,7 +391,10 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
       goToStep(4);
     } catch (error) {
       setPaymentError(
-        error instanceof Error ? error.message : "We couldn't submit your payment details. Please try again.",
+        friendlyMessage(
+          error instanceof Error ? error.message : "We couldn't submit your payment details. Please try again.",
+          "error",
+        ),
       );
     } finally {
       setOpeningPayment(false);
@@ -694,7 +704,12 @@ export default function CheckoutFlowClient(props: CheckoutFlowClientProps) {
                 try {
                   await startGuestCheckout();
                 } catch (error) {
-                  setGuestError(error instanceof Error ? error.message : "Guest checkout could not be started.");
+                  setGuestError(
+                    friendlyMessage(
+                      error instanceof Error ? error.message : "Guest checkout could not be started.",
+                      "error",
+                    ),
+                  );
                   setStartingGuest(false);
                 }
               }}

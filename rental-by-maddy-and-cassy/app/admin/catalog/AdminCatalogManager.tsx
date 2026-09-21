@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import Link from "next/link";
 import { useToast } from "@/components/ui/ToastProvider";
+import { friendlyMessage } from "@/src/lib/friendlyMessage";
 import Spinner from "@/components/ui/Spinner";
 import {
   createCatalogCategoryAsAdmin,
@@ -205,7 +206,12 @@ export default function AdminCatalogManager() {
         );
       }
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "The catalog could not be loaded.");
+      setError(
+        friendlyMessage(
+          loadError instanceof Error ? loadError.message : "The catalog could not be loaded.",
+          "error",
+        ),
+      );
     }
   }, []);
 
@@ -322,15 +328,15 @@ export default function AdminCatalogManager() {
     if (saving) return;
     if (!editing) return;
     if (!form.name.trim()) {
-      showToast("Product name is required.", "error");
+      showToast("Product name is required.", "warning");
       return;
     }
     if (!form.category) {
-      showToast("Choose a category for this product.", "error");
+      showToast("Choose a category for this product.", "warning");
       return;
     }
     if (!(form.dailyRate > 0)) {
-      showToast("Enter a regular daily price greater than zero.", "error");
+      showToast("Enter a regular daily price greater than zero.", "warning");
       return;
     }
     if (editing === "new" || !productSnapshot) {
@@ -355,7 +361,7 @@ export default function AdminCatalogManager() {
     };
     const changes = describeProductChanges(productSnapshot, currentSnapshot);
     if (changes.length === 0) {
-      showToast("No changes to save.", "error");
+      showToast("No changes to save.", "info");
       return;
     }
     setProductSaveConfirm({ kind: "update", changes });
@@ -365,15 +371,15 @@ export default function AdminCatalogManager() {
     if (saving) return;
     if (!editing) return;
     if (!form.name.trim()) {
-      showToast("Product name is required.", "error");
+      showToast("Product name is required.", "warning");
       return;
     }
     if (!form.category) {
-      showToast("Choose a category for this product.", "error");
+      showToast("Choose a category for this product.", "warning");
       return;
     }
     if (!(form.dailyRate > 0)) {
-      showToast("Enter a regular daily price greater than zero.", "error");
+      showToast("Enter a regular daily price greater than zero.", "warning");
       return;
     }
     setSaving(true);
@@ -496,7 +502,7 @@ export default function AdminCatalogManager() {
     if (saving) return;
     if (!categoryEditing) return;
     if (!categoryForm.name.trim()) {
-      showToast("Category name is required.", "error");
+      showToast("Category name is required.", "warning");
       return;
     }
     setSaving(true);
@@ -540,7 +546,7 @@ export default function AdminCatalogManager() {
     if (saving) return;
     if (!unitEditing || !unitForm) return;
     if (!unitForm.unitCode.trim()) {
-      showToast("Unit code is required.", "error");
+      showToast("Unit code is required.", "warning");
       return;
     }
     setSaving(true);

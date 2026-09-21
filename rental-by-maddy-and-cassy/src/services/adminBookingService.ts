@@ -114,6 +114,21 @@ export async function updateAdminBookingStatus(
   };
 }
 
+/** Asks the server to reject the booking if it reached the requirements step with no documents submitted. Returns true when it did. */
+export async function autoRejectBookingForMissingRequirements(bookingId: string): Promise<boolean> {
+  const response = await fetch(`/api/admin/bookings/${encodeURIComponent(bookingId)}/auto-reject`, {
+    method: "POST",
+    credentials: "same-origin",
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "The booking could not be rejected automatically."));
+  }
+
+  const body = (await response.json()) as { rejected?: boolean };
+  return body.rejected === true;
+}
+
 export async function sendAdminBookingConfirmationEmail(
   bookingId: string,
 ): Promise<{ emailedTo: string }> {

@@ -843,15 +843,9 @@
 }
 
 .headerStatus {
-  display: grid;
-  min-height: 32px;
-  padding: 0.3rem 0.55rem;
-  border: 1px solid var(--color-light-gray);
-  border-radius: 11px;
-  background: var(--color-white);
-  align-content: center;
-  justify-items: start;
-  gap: 0.14rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .headerStatus small {
@@ -1530,17 +1524,6 @@
   font-weight: 700;
 }
 
-.expandLabel::after {
-  display: inline-block;
-  margin-left: 0.35rem;
-  content: "↓";
-  transition: transform 160ms ease;
-}
-
-.detailSection[open] .expandLabel::after {
-  transform: rotate(180deg);
-}
-
 .collapsibleBlock {
   margin-top: 0.75rem;
   padding-top: 0.75rem;
@@ -1557,10 +1540,6 @@
 
 .collapsibleBlock > summary.expandLabel::-webkit-details-marker {
   display: none;
-}
-
-.collapsibleBlock[open] > summary.expandLabel::after {
-  transform: rotate(180deg);
 }
 
 .collapsibleBlock > .snapshotFacts,
@@ -1995,7 +1974,7 @@
 .proofsReceiptsHeader { margin-top: 0.9rem; }
 .proofsReceiptsHeader span { color: var(--color-primary); font-size: 0.55rem; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase; }
 .proofsReceiptsGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0.5rem; margin-top: 0.5rem; }
-.proofCard { display: grid; width: 100%; min-height: 44px; grid-template-columns: auto minmax(0,1fr) auto; gap: 0.55rem; align-items: center; padding: 0.55rem 0.62rem; border: 1px solid var(--color-light-gray); border-radius: var(--radius-control); background: #fff; color: var(--color-text-primary); text-align: left; cursor: pointer; transition: border-color 140ms ease, background-color 140ms ease, transform 140ms ease; }
+.proofCard { display: grid; width: 100%; min-height: 44px; grid-template-columns: auto minmax(0,1fr); gap: 0.55rem; align-items: center; padding: 0.55rem 0.62rem; border: 1px solid var(--color-light-gray); border-radius: var(--radius-control); background: #fff; color: var(--color-text-primary); text-align: left; cursor: pointer; transition: border-color 140ms ease, background-color 140ms ease, transform 140ms ease; }
 .proofCard:hover { border-color: var(--color-dusty-rose); background: var(--color-background-soft); transform: translateY(-1px); }
 .proofCard:active { transform: translateY(1px); }
 .receiptIcon { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 8px; background: var(--color-background-soft); color: var(--color-primary); font-size: 0.5rem; font-weight: 900; }
@@ -2003,7 +1982,6 @@
 .proofCard strong,.proofCard small { display: block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .proofCard strong { font-size: 0.62rem; }
 .proofCard small { margin-top: 0.12rem; color: var(--color-charcoal); font-size: 0.52rem; }
-.proofCard > span:last-child { color: var(--color-primary); font-weight: 800; }
 .emptyRecord { margin: 1rem 0 0; padding: 0.8rem; border: 1px dashed var(--color-dusty-rose); border-radius: 10px; color: var(--color-charcoal); font-size: 0.64rem; line-height: 1.5; }
 
 .timeline {
@@ -2070,6 +2048,18 @@
   padding: 1.5rem 1.2rem;
   color: var(--color-charcoal);
   font-size: 0.82rem;
+}
+
+.emptyRejected {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--color-status-red-border);
+  border-radius: 12px;
+  background: var(--color-status-red-bg);
+  color: var(--color-status-red);
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.5;
 }
 
 .loading {

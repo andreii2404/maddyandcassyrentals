@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Spinner from "@/components/ui/Spinner";
 import { useToast } from "@/components/ui/ToastProvider";
+import { friendlyMessage } from "@/src/lib/friendlyMessage";
 import { moderateProductReviewAsAdmin } from "@/src/services/productService";
 import {
   getAdminReviews,
@@ -69,7 +70,7 @@ export default function AdminReviewsManager() {
     } catch (loadError) {
       setError(
         loadError instanceof Error
-          ? loadError.message
+          ? friendlyMessage(loadError.message, "error")
           : "Customer feedback could not be loaded.",
       );
     } finally {

@@ -36,6 +36,7 @@ const STATUS_OPTIONS: Array<{ value: "" | BookingStatus; label: string }> = [
   { value: "released", label: "Released" },
   { value: "returned", label: "Returned" },
   { value: "cancelled", label: "Cancelled" },
+  { value: "rejected", label: "Rejected" },
 ];
 
 type AccountTypeFilter = "all" | "account" | "guest";

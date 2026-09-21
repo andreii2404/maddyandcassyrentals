@@ -114,7 +114,7 @@ export default function CustomerBookingManagement({
     event.preventDefault();
     if (saving || cancelling || !canEdit) return;
     if (fulfillmentMethod === "delivery" && (!location.trim() || !cityMunicipality.trim() || !province.trim())) {
-      showToast("Enter the complete street/barangay, city or municipality, and province.", "error");
+      showToast("Enter the complete street/barangay, city or municipality, and province.", "warning");
       return;
     }
     setSaving(true);
@@ -140,7 +140,7 @@ export default function CustomerBookingManagement({
     event.preventDefault();
     if (cancelling || saving || !canCancel) return;
     if (!CANCELLATION_REASON_OPTIONS.includes(cancelReason as (typeof CANCELLATION_REASON_OPTIONS)[number])) {
-      showToast("Choose a reason for cancelling this booking.", "error");
+      showToast("Choose a reason for cancelling this booking.", "warning");
       return;
     }
     setCancelConfirmationOpen(true);

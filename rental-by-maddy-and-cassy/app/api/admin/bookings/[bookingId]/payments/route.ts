@@ -239,7 +239,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
       error,
     });
     return NextResponse.json(
-      { error: `The payment review could not be saved. Error reference: ${errorId}` },
+      { error: "We couldn't save the payment review. Please try again." },
       { status: 500 },
     );
   }

@@ -10,6 +10,7 @@ import PaymentProofModal, { type PaymentWithProof } from "@/components/admin/Pay
 import { useAuth } from "@/hooks/useAuth";
 import { useBookingRealtime } from "@/hooks/useBookingRealtime";
 import { resolveAccountName } from "@/src/lib/accountDisplay";
+import { friendlyMessage } from "@/src/lib/friendlyMessage";
 import {
   getAdminPayments,
   type AdminPaymentsData,
@@ -286,7 +287,12 @@ export default function AdminPaymentsPage() {
       setPaymentsError(null);
     } catch (loadError) {
       if (latestRequestRef.current !== requestId) return;
-      setPaymentsError(loadError instanceof Error ? loadError.message : "Payment activity could not be loaded.");
+      setPaymentsError(
+        friendlyMessage(
+          loadError instanceof Error ? loadError.message : "Payment activity could not be loaded.",
+          "error",
+        ),
+      );
     }
   }, [user, paymentsPage, paymentsPageSize, appliedSearch, filters]);
 

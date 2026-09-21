@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/Button";
 import ConfirmModal from "@/components/ui/ConfirmModal";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/src/lib/supabase/client";
 import {
@@ -12,6 +12,7 @@ import {
 } from "@/src/services/bookingDetailService";
 import {
   ADMIN_BOOKING_ACTIONS,
+  autoRejectBookingForMissingRequirements,
   countersignBookingAgreement,
   downloadAdminBookingPdf,
   reviewAdminCancellationRequest,
@@ -32,9 +33,13 @@ import styles from "./bookingDetail.module.css";
 import RequirementsReviewPanel from "@/components/admin/RequirementsReviewPanel";
 import PaymentsReviewPanel from "@/components/admin/PaymentsReviewPanel";
 import {
+  AUTO_REJECT_DECLINE_DETAILS,
   DECLINE_REASON_OPTIONS,
   formatDeclineNote,
   getFulfillmentProgressLabel,
+  getRejectionReason,
+  PAYMENT_PROOF_SUBMITTED_STATUSES,
+  shouldAutoRejectForMissingRequirements,
 } from "@/src/lib/bookingManagement";
 import BookingItemsSummary from "@/components/booking-summary/BookingItemsSummary";
 import { bookingHeadline, bookingItemsSummaryData } from "@/src/lib/bookingDisplay";
@@ -164,6 +169,35 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
 
   useBookingRealtime({ bookingId, onChange: loadDetails });
 
+  // A pending booking that reached the requirements step with no documents
+  // submitted is rejected immediately. The server re-checks eligibility, and
+  // each booking is only attempted once per page visit.
+  const autoRejectAttemptedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!state) return;
+    const { booking: loadedBooking } = state.details;
+    const shouldReject = shouldAutoRejectForMissingRequirements({
+      status: loadedBooking.status,
+      requirementsStatus: loadedBooking.requirementsStatus,
+      paymentProofSubmitted: state.payments.some((payment) =>
+        (PAYMENT_PROOF_SUBMITTED_STATUSES as readonly string[]).includes(payment.status),
+      ),
+    });
+    if (!shouldReject || autoRejectAttemptedFor.current === loadedBooking.id) return;
+    autoRejectAttemptedFor.current = loadedBooking.id;
+
+    void (async () => {
+      try {
+        if (await autoRejectBookingForMissingRequirements(loadedBooking.id)) {
+          await loadDetails();
+          showToast(AUTO_REJECT_DECLINE_DETAILS, "info");
+        }
+      } catch {
+        showToast("This booking could not be rejected automatically. Please refresh and try again.", "error");
+      }
+    })();
+  }, [state, loadDetails, showToast]);
+
   const actions = useMemo(
     () => (state ? ADMIN_BOOKING_ACTIONS[state.details.booking.status] : []),
     [state],
@@ -218,15 +252,15 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
     if (!state || !selectedStatus || !selectedAction) return;
     if (isDeclineAction) {
       if (!declineReason) {
-        showToast("Select a decline reason before continuing.", "error");
+        showToast("Select a decline reason before continuing.", "warning");
         return;
       }
       if (note.trim().length < 5) {
-        showToast("Add a short explanation of what was found before continuing.", "error");
+        showToast("Add a short explanation of what was found before continuing.", "warning");
         return;
       }
     } else if (selectedAction.requiresNote && !note.trim()) {
-      showToast("Please add administrator notes for this action.", "error");
+      showToast("Please add administrator notes for this action.", "warning");
       return;
     }
     void confirmStatusAction();
@@ -249,7 +283,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
       if (!freshActions.some((action) => action.status === selectedStatus)) {
         showToast(
           "This booking's status changed since the page loaded. Details have been refreshed — please review and try again.",
-          "error",
+          "warning",
         );
         await loadDetails();
         setSelectedStatus("");
@@ -267,9 +301,9 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
       if (updateResult.emailRequired && !updateResult.emailSent) {
         showToast(
           updateResult.emailReason === "not_configured"
-            ? `Booking updated: ${selectedAction.label}. Add the booking email settings in Vercel to send customer emails.`
-            : `Booking updated: ${selectedAction.label}. The customer email could not be delivered; please contact the customer directly.`,
-          "error",
+            ? `Booking updated: ${selectedAction.label}. The customer wasn't emailed because booking emails aren't set up yet, so please contact the customer directly.`
+            : `Booking updated: ${selectedAction.label}. We couldn't email the customer, so please contact them directly.`,
+          "warning",
         );
       } else {
         showToast(
@@ -316,7 +350,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
     const decision = cancellationDecision;
     if (!request || request.status !== "pending" || !decision) return;
     if (decision === "rejected" && cancellationNote.trim().length < 5) {
-      showToast("Add a short explanation when rejecting a cancellation request.", "error");
+      showToast("Add a short explanation when rejecting a cancellation request.", "warning");
       return;
     }
 
@@ -366,11 +400,11 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
 
   function requestCountersignAgreement() {
     if (!businessSignerName.trim()) {
-      showToast("Enter the authorized business signer's complete name.", "error");
+      showToast("Enter the authorized business signer's complete name.", "warning");
       return;
     }
     if (!countersignAcknowledged) {
-      showToast("Confirm that you are authorized to countersign for the business.", "error");
+      showToast("Confirm that you are authorized to countersign for the business.", "warning");
       return;
     }
     setCountersignConfirmationOpen(true);
@@ -461,6 +495,11 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   const requirementsAttention = booking.requirementsStatus === "rejected" || documents.some((document) => document.reviewStatus === "rejected");
   const paymentAttention = payments.some((payment) => payment.status === "rejected") && amountPaid < booking.totalAmount - 0.01;
   const agreementAttention = booking.agreementStatus === "rejected";
+  const autoRejectedForRequirements =
+    booking.status === "rejected" && Boolean(getRejectionReason(statusHistory)?.includes(AUTO_REJECT_DECLINE_DETAILS));
+  const requirementsEmptyMessage = autoRejectedForRequirements
+    ? AUTO_REJECT_DECLINE_DETAILS
+    : "No required documents have been submitted for this booking.";
   const reviewChecks = [
     {
       label: "Payment",
@@ -557,7 +596,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
         aria-pressed={selected}
         disabled={updating || blockedByBalance}
       >
-        <span className={styles.actionChoiceIcon} aria-hidden="true">{action.tone === "danger" ? "!" : "→"}</span>
+        <span className={styles.actionChoiceIcon} aria-hidden="true">{action.tone === "danger" ? "!" : "✓"}</span>
         <span className={styles.actionChoiceCopy}>
           <small>{action.tone === "danger" ? "Close booking" : action.status === primaryAction?.status ? "Recommended next step" : "Alternative action"}</small>
           <strong>{action.label}</strong>
@@ -867,7 +906,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                 )}
                 onReviewed={handleDocumentReviewed}
               />
-            </> : <p className={styles.empty}>Requirements have not been submitted for this booking.</p>}
+            </> : <p className={autoRejectedForRequirements ? styles.emptyRejected : styles.empty} role={autoRejectedForRequirements ? "status" : undefined}>{requirementsEmptyMessage}</p>}
           </div>
         </section>
 
@@ -903,7 +942,6 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                     >
                       <span className={styles.receiptIcon}>PROOF</span>
                       <span><strong>{formatStatus(payment.stage)}</strong><small>Open Proof</small></span>
-                      <span aria-hidden="true">↗</span>
                     </Button>
                   ))}
                   {receipts.filter((receipt) => receipt.documentPath).map((receipt) => (
@@ -916,7 +954,6 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                     >
                       <span className={styles.receiptIcon}>PDF</span>
                       <span><strong>{receipt.receiptNumber ?? receipt.id.slice(0, 8)}</strong><small>Open Receipt</small></span>
-                      <span aria-hidden="true">↗</span>
                     </Button>
                   ))}
                 </div>

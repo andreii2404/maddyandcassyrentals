@@ -18,6 +18,7 @@ import StepPaymentSubmission, {
 } from "@/components/reservation/StepPaymentSubmission";
 import StepBookingConfirmation from "@/components/reservation/StepBookingConfirmation";
 import { useToast } from "@/components/ui/ToastProvider";
+import { friendlyMessage } from "@/src/lib/friendlyMessage";
 import { createEmptyDraft, formatCustomerLocation, getDayCount, parseCustomerAddress, type ReservationDraft } from "@/src/types/reservationDraft";
 import {
   createBookingReservation,
@@ -261,7 +262,10 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
         if (cancelled) return;
         setCheckingPayment(false);
         setPaymentError(
-          error instanceof Error ? error.message : "This reservation could not be resumed.",
+          friendlyMessage(
+            error instanceof Error ? error.message : "This reservation could not be resumed.",
+            "error",
+          ),
         );
         return;
       }
@@ -332,9 +336,12 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
       } catch (error) {
         if (cancelled) return;
         setUnitsCheckError(
-          error instanceof Error
-            ? error.message
-            : "We couldn't confirm your assigned unit. Please try again.",
+          friendlyMessage(
+            error instanceof Error
+              ? error.message
+              : "We couldn't confirm your assigned unit. Please try again.",
+            "error",
+          ),
         );
       }
     }
@@ -393,7 +400,10 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
       goToStep(4);
     } catch (error) {
       setPaymentError(
-        error instanceof Error ? error.message : "We couldn't submit your payment details. Please try again.",
+        friendlyMessage(
+          error instanceof Error ? error.message : "We couldn't submit your payment details. Please try again.",
+          "error",
+        ),
       );
     } finally {
       setOpeningPayment(false);
@@ -710,7 +720,12 @@ export default function ReserveFlowClient(props: ReserveFlowClientProps) {
                 try {
                   await startGuestCheckout();
                 } catch (error) {
-                  setGuestError(error instanceof Error ? error.message : "Guest checkout could not be started.");
+                  setGuestError(
+                    friendlyMessage(
+                      error instanceof Error ? error.message : "Guest checkout could not be started.",
+                      "error",
+                    ),
+                  );
                   setStartingGuest(false);
                 }
               }}

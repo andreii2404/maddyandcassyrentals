@@ -88,7 +88,7 @@ export default function RequirementsReviewPanel({
   ) {
     const rejectionReason = status === "rejected" ? reason.trim() : "";
     if (status === "rejected" && !rejectionReason) {
-      showToast("Explain what the customer needs to correct before sending the request.", "error");
+      showToast("Explain what the customer needs to correct before sending the request.", "warning");
       return;
     }
 

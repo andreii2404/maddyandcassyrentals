@@ -14,6 +14,7 @@ import {
 import { getAllUsers } from "@/src/services/userService";
 import type { UserProfile } from "@/src/types/database";
 import { resolveAccountName } from "@/src/lib/accountDisplay";
+import { friendlyMessage } from "@/src/lib/friendlyMessage";
 import {
   formatActorRole,
   formatAuditAction,
@@ -71,7 +72,10 @@ export default function AdminAuditPage() {
       .catch((loadError: unknown) => {
         if (active) {
           setError(
-            loadError instanceof Error ? loadError.message : "Audit history could not be loaded.",
+            friendlyMessage(
+              loadError instanceof Error ? loadError.message : "Audit history could not be loaded.",
+              "error",
+            ),
           );
         }
       });

@@ -98,37 +98,37 @@ function CustomerProfileEditor({
     if (!user || saving) return;
 
     if (draft.displayName.trim().length < 2) {
-      showToast("Please enter your full name.", "error");
+      showToast("Please enter your full name.", "warning");
       return;
     }
 
     if (!isValidPhoneNumber(draft.phoneNumber)) {
-      showToast(`Phone number must contain exactly ${PHONE_DIGIT_COUNT} digits.`, "error");
+      showToast(`Phone number must contain exactly ${PHONE_DIGIT_COUNT} digits.`, "warning");
       return;
     }
 
     if (draft.birthDate && new Date(`${draft.birthDate}T00:00:00`) > new Date()) {
-      showToast("Birth date cannot be in the future.", "error");
+      showToast("Birth date cannot be in the future.", "warning");
       return;
     }
 
     if (draft.birthDate && !isAtLeastMinimumAge(draft.birthDate)) {
-      showToast(UNDERAGE_ERROR_MESSAGE, "error");
+      showToast(UNDERAGE_ERROR_MESSAGE, "warning");
       return;
     }
 
     if (!draft.fullAddress.trim()) {
-      showToast("Full address is required.", "error");
+      showToast("Full address is required.", "warning");
       return;
     }
 
     if (!isValidProfileUrl(draft.facebookLink.trim(), ["facebook.com", "fb.com"])) {
-      showToast("Enter a valid Facebook profile link.", "error");
+      showToast("Enter a valid Facebook profile link.", "warning");
       return;
     }
 
     if (!isValidProfileUrl(draft.instagramLink.trim(), ["instagram.com"])) {
-      showToast("Enter a valid Instagram profile link.", "error");
+      showToast("Enter a valid Instagram profile link.", "warning");
       return;
     }
 

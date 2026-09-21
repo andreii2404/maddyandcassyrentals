@@ -32,11 +32,11 @@ export default function AccountManagementPanel({
   async function save() {
     if (saving) return;
     if (form.displayName.trim().length < 2) {
-      showToast("Enter the account holder's full name.", "error");
+      showToast("Enter the account holder's full name.", "warning");
       return;
     }
     if (!isValidPhoneNumber(form.phoneNumber)) {
-      showToast(`Phone number must contain exactly ${PHONE_DIGIT_COUNT} digits.`, "error");
+      showToast(`Phone number must contain exactly ${PHONE_DIGIT_COUNT} digits.`, "warning");
       return;
     }
     setSaving(true);

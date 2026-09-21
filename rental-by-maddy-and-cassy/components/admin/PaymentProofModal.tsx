@@ -6,6 +6,7 @@ import Modal from "@/components/ui/Modal";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import Spinner from "@/components/ui/Spinner";
 import { useToast } from "@/components/ui/ToastProvider";
+import { friendlyMessage } from "@/src/lib/friendlyMessage";
 import { createClient } from "@/src/lib/supabase/client";
 import { getBookingFileUrl } from "@/src/services/bookingDetailService";
 import { reviewManualPayment } from "@/src/services/paymentService";
@@ -106,7 +107,10 @@ export default function PaymentProofModal({
       showToast(status === "verified" ? "Payment approved." : "Payment proof rejected.", "success");
     } catch (reviewException) {
       const message =
-        reviewException instanceof Error ? reviewException.message : "The payment review could not be saved.";
+        friendlyMessage(
+          reviewException instanceof Error ? reviewException.message : "The payment review could not be saved.",
+          "error",
+        );
       setReviewError(message);
       showToast(message, "error");
     } finally {

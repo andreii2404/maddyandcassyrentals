@@ -86,6 +86,30 @@ export function formatDeclineNote(reason: string, details: string): string {
   return `Decline reason: ${reason}\nDetails: ${details.trim()}`;
 }
 
+/** Payment submission states that mean the customer has reached the requirements step (mirrors the document-submit API gate). */
+export const PAYMENT_PROOF_SUBMITTED_STATUSES = ["submitted", "under_review", "verified"] as const;
+
+/** Decline reason and explanation recorded when a booking is rejected for missing requirements. */
+export const AUTO_REJECT_DECLINE_REASON = "Incomplete Documents";
+export const AUTO_REJECT_DECLINE_DETAILS =
+  "Required documents were not submitted. This booking was automatically rejected.";
+
+/**
+ * True when a pending booking has reached the requirements step (payment proof
+ * sent) and no required documents have been submitted. There is no grace period.
+ */
+export function shouldAutoRejectForMissingRequirements(input: {
+  status: BookingStatus;
+  requirementsStatus: Booking["requirementsStatus"];
+  paymentProofSubmitted: boolean;
+}): boolean {
+  return (
+    input.status === "pending" &&
+    input.requirementsStatus === "not_submitted" &&
+    input.paymentProofSubmitted
+  );
+}
+
 export interface ParsedDeclineNote {
   reason: string;
   details: string;

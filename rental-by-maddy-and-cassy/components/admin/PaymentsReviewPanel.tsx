@@ -83,7 +83,7 @@ export default function PaymentsReviewPanel({
     if (activeId !== null || recording) return;
     const rejectionReason = status === "rejected" ? reason.trim() : "";
     if (status === "rejected" && !rejectionReason) {
-      showToast("Explain why this payment proof is being rejected.", "error");
+      showToast("Explain why this payment proof is being rejected.", "warning");
       return;
     }
     setActiveId(payment.id);

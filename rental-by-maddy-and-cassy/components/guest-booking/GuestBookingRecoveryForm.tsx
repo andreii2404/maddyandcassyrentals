@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { normalizeEmail, normalizePhoneInput, PHONE_DIGIT_COUNT } from "@/src/lib/authValidation";
 import { startGuestCheckout } from "@/src/services/authService";
+import { friendlyMessage } from "@/src/lib/friendlyMessage";
 import styles from "./GuestBookingRecoveryForm.module.css";
 
 interface GuestBookingRecoveryFormProps {
@@ -68,7 +69,7 @@ export default function GuestBookingRecoveryForm({
     } catch (recoveryError) {
       setError(
         recoveryError instanceof Error
-          ? recoveryError.message
+          ? friendlyMessage(recoveryError.message, "error")
           : "Guest booking access could not be restored.",
       );
       setSubmitting(false);
