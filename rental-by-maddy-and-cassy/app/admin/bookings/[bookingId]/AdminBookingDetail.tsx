@@ -318,7 +318,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
       } else if (selectedAction.status === "approved") {
         setApprovalEmailFailed(false);
         setConfirmationEmailSentAt(new Date().toISOString());
-        showToast("Booking approved. The confirmation email was sent to the customer.", "success");
+        showToast("Booking approved. Confirmation email sent successfully.", "success");
       } else {
         showToast(
           `${selectedAction.label} completed.${updateResult.emailSent ? " The customer was emailed automatically." : ""}`,
