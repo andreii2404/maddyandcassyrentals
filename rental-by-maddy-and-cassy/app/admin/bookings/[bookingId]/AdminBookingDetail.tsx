@@ -339,16 +339,11 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
     setSendingConfirmationEmail(true);
     if (fromPopup) setApprovalEmailPopupError(null);
     try {
-      const result = await sendAdminBookingConfirmationEmail(bookingId);
+      await sendAdminBookingConfirmationEmail(bookingId);
       setConfirmationEmailSentAt(new Date().toISOString());
       setApprovalEmailFailed(false);
       setApprovalEmailPopupOpen(false);
-      showToast(
-        fromPopup
-          ? "Booking approved. The confirmation email was sent to the customer."
-          : `Confirmation email sent to ${result.emailedTo}.`,
-        "success",
-      );
+      showToast("Confirmation email sent successfully.", "success");
     } catch (sendError) {
       const message = sendError instanceof Error
         ? sendError.message
@@ -1210,7 +1205,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                   type="button"
                   className={styles.sendConfirmationButton}
                   onClick={() => void handleSendBookingConfirmationEmail()}
-                  disabled={!bookingApproved || email === "-" || sendingConfirmationEmail}
+                  disabled={!bookingApproved || sendingConfirmationEmail}
                 >
                   {sendingConfirmationEmail ? "Sending email..." : "Resend Email"}
                 </Button>

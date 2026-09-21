@@ -21,6 +21,16 @@ export function isBookingEmailConfigured(): boolean {
   return Boolean(process.env.RESEND_API_KEY?.trim() && process.env.BOOKING_EMAIL_FROM?.trim());
 }
 
+/**
+ * Names (never values) of the server settings a booking email needs but that are
+ * empty. Server-console diagnostics only: admins never see these names.
+ */
+export function missingBookingEmailSettings(): string[] {
+  return ["RESEND_API_KEY", "BOOKING_EMAIL_FROM", "SUPABASE_SECRET_KEY"].filter(
+    (name) => !process.env[name]?.trim(),
+  );
+}
+
 export async function sendBookingStatusEmail(
   details: BookingStatusEmailDetails,
 ): Promise<BookingStatusEmailResult> {
@@ -59,12 +69,18 @@ export async function sendBookingStatusEmail(
       cache: "no-store",
     });
 
-    const payload = (await response.json().catch(() => null)) as { id?: unknown } | null;
+    const payload = (await response.json().catch(() => null)) as
+      | { id?: unknown; name?: unknown; message?: unknown }
+      | null;
     if (!response.ok || typeof payload?.id !== "string") {
+      // Logged for whoever operates the server (an unverified sender domain, for
+      // example, shows up here as a 403). It is never sent back to the browser.
       console.error("Booking status email provider rejected the request", {
         bookingId: details.bookingId,
         status: details.status,
         providerStatus: response.status,
+        providerError: typeof payload?.name === "string" ? payload.name : undefined,
+        providerMessage: typeof payload?.message === "string" ? payload.message : undefined,
       });
       return { sent: false, reason: "provider_error" };
     }

@@ -3,6 +3,7 @@ import "server-only";
 import { buildApprovalEmailDetails } from "@/src/lib/bookingApprovalEmailDetails";
 import {
   isBookingEmailConfigured,
+  missingBookingEmailSettings,
   sendBookingStatusEmail,
   type BookingStatusEmailResult,
 } from "@/src/lib/server/bookingStatusEmail";
@@ -41,8 +42,9 @@ export async function sendBookingApprovalEmail({
   resend = false,
 }: SendBookingApprovalEmailOptions): Promise<BookingApprovalEmailOutcome> {
   try {
-    if (!isBookingEmailConfigured()) {
-      console.error("Booking emails are not configured. Set RESEND_API_KEY and BOOKING_EMAIL_FROM.");
+    const missingSettings = missingBookingEmailSettings();
+    if (!isBookingEmailConfigured() || missingSettings.length > 0) {
+      console.error("Booking emails are not configured. Set the missing server settings.", { missingSettings });
       return { sent: false, reason: "not_configured" };
     }
 
