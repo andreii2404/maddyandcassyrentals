@@ -17,6 +17,7 @@ import {
 import { isDuplicateReviewError } from "../src/lib/reviewSubmission";
 import { buildBookingStatusEmail } from "../src/lib/bookingStatusEmailContent";
 import { bookingTrackingPath } from "../src/lib/bookingAccess";
+import { buildApprovalEmailDetails } from "../src/lib/bookingApprovalEmailDetails";
 
 function booking(status: Booking["status"], method: Booking["fulfillmentMethod"] = "pickup"): Booking {
   return {
@@ -215,4 +216,84 @@ test("approval and completion emails contain the booking reference and safe cust
   });
   assert.match(completed.subject, /completed/i);
   assert.match(completed.text, /leave a review/i);
+});
+
+test("approval confirmation email lists every booking detail the customer needs", () => {
+  const approvedBooking: Booking = {
+    ...booking("approved", "delivery"),
+    startDate: "2026-09-12T01:00:00.000Z", // 9:00 AM Manila
+    endDate: "2026-09-13T23:00:00.000Z", // 7:00 AM Manila
+    dayCount: 2,
+    totalAmount: 2500,
+    location: "12 Rizal St",
+    cityMunicipality: "Makati",
+    approvedAt: "2026-09-10T08:00:00.000Z",
+    customerSnapshot: { fullName: "Andrei <Test> Cruz", email: "guest@example.com", phone: "", address: "", facebookLink: "", instagramLink: "" },
+  };
+  const details = buildApprovalEmailDetails({
+    booking: {
+      ...approvedBooking,
+      items: [
+        ...approvedBooking.items,
+        { ...approvedBooking.items[0], bookingItemId: "item-2", productName: "Tripod", quantity: 2 },
+      ],
+    },
+    payments: [
+      { declaredAmount: 1000, status: "verified" },
+      { declaredAmount: 900, status: "rejected" },
+    ],
+    origin: "https://rentals.example.com",
+    deliveryKey: "key",
+  });
+
+  assert.equal(details.customerEmail, "guest@example.com");
+  assert.equal(details.paymentStatus, "Partially Paid");
+  assert.equal(details.remainingBalance, "PHP 1,500");
+  assert.equal(details.bookingStatus, "Approved");
+  assert.match(details.pickupDateTime ?? "", /9:00/);
+  assert.match(details.returnDateTime ?? "", /7:00/);
+  assert.equal(details.pickupLocation, "12 Rizal St, Makati");
+
+  const email = buildBookingStatusEmail(details);
+  for (const expected of [
+    "BK-TEST", "Test Phone × 1", "Tripod × 2", "Partially Paid", "Approved",
+    "DELIVERY DATE &amp; TIME", "RETURN DATE &amp; TIME", "Important reminders",
+    "Pay the remaining balance before handover", "Complete the rental agreement",
+  ]) {
+    assert.ok(email.html.includes(expected), `html should include ${expected}`);
+  }
+  assert.ok(email.html.includes("Andrei &lt;Test&gt; Cruz"));
+  assert.ok(!email.html.includes("<Test>"));
+  assert.match(email.text, /Customer: Andrei <Test> Cruz/);
+  assert.match(email.text, /Rental item\(s\): Test Phone × 1, Tripod × 2/);
+  assert.match(email.text, /Return date and time: /);
+  assert.match(email.text, /Booking status: Approved/);
+  assert.match(email.text, /- Pay the remaining balance before handover\./);
+});
+
+test("approval email targets guest bookings and never leaks technical wording", () => {
+  const guest = buildApprovalEmailDetails({
+    booking: {
+      ...booking("approved"),
+      isGuestCheckout: true,
+      customerSnapshot: { fullName: "", email: "  ", phone: "", address: "", facebookLink: "", instagramLink: "" },
+      requirementsStatus: "approved",
+      agreementStatus: "completed",
+      totalAmount: 1000,
+    },
+    payments: [{ declaredAmount: 1000, status: "verified" }],
+    fallbackEmail: " account@example.com ",
+    origin: "https://rentals.example.com",
+    deliveryKey: "key",
+  });
+
+  assert.equal(guest.customerEmail, "account@example.com");
+  assert.equal(guest.customerName, "Customer");
+  assert.equal(guest.paymentStatus, "Paid");
+  assert.equal(guest.remainingAction, undefined);
+  assert.equal(guest.bookingUrl, "https://rentals.example.com/guest/bookings/booking-id");
+
+  const email = buildBookingStatusEmail(guest);
+  assert.match(email.html, /Guest checkout/);
+  assert.doesNotMatch(`${email.subject}${email.html}${email.text}`, /RESEND|api key|not configured|undefined|NaN/i);
 });

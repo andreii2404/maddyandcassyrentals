@@ -140,6 +140,10 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   const [countersignConfirmationOpen, setCountersignConfirmationOpen] = useState(false);
   const [sendingConfirmationEmail, setSendingConfirmationEmail] = useState(false);
   const [confirmationEmailSentAt, setConfirmationEmailSentAt] = useState<string | null>(null);
+  // True from the moment an approval's confirmation email fails until a resend succeeds.
+  const [approvalEmailFailed, setApprovalEmailFailed] = useState(false);
+  const [approvalEmailPopupOpen, setApprovalEmailPopupOpen] = useState(false);
+  const [approvalEmailPopupError, setApprovalEmailPopupError] = useState<string | null>(null);
   const [activeStep, setActiveStep] = useState<AdminReviewStep>("customer");
 
   const loadDetails = useCallback(async () => {
@@ -299,12 +303,22 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
       setNote("");
       setDeclineReason("");
       if (updateResult.emailRequired && !updateResult.emailSent) {
-        showToast(
-          updateResult.emailReason === "not_configured"
-            ? `Booking updated: ${selectedAction.label}. The customer wasn't emailed because booking emails aren't set up yet, so please contact the customer directly.`
-            : `Booking updated: ${selectedAction.label}. We couldn't email the customer, so please contact them directly.`,
-          "warning",
-        );
+        if (selectedAction.status === "approved") {
+          // The approval itself is saved. "Booking approved" is only announced once the
+          // email also went out, so a failure gets the retry popup instead.
+          setApprovalEmailFailed(true);
+          setApprovalEmailPopupError(null);
+          setApprovalEmailPopupOpen(true);
+        } else {
+          showToast(
+            `${selectedAction.label} completed, but the customer email could not be sent. Please contact them directly.`,
+            "warning",
+          );
+        }
+      } else if (selectedAction.status === "approved") {
+        setApprovalEmailFailed(false);
+        setConfirmationEmailSentAt(new Date().toISOString());
+        showToast("Booking approved. The confirmation email was sent to the customer.", "success");
       } else {
         showToast(
           `${selectedAction.label} completed.${updateResult.emailSent ? " The customer was emailed automatically." : ""}`,
@@ -321,19 +335,26 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
     }
   }
 
-  async function handleSendBookingConfirmationEmail() {
+  async function handleSendBookingConfirmationEmail(fromPopup = false) {
     setSendingConfirmationEmail(true);
+    if (fromPopup) setApprovalEmailPopupError(null);
     try {
       const result = await sendAdminBookingConfirmationEmail(bookingId);
       setConfirmationEmailSentAt(new Date().toISOString());
-      showToast(`Booking confirmation sent to ${result.emailedTo}.`, "success");
-    } catch (sendError) {
+      setApprovalEmailFailed(false);
+      setApprovalEmailPopupOpen(false);
       showToast(
-        sendError instanceof Error
-          ? sendError.message
-          : "The booking confirmation email could not be sent.",
-        "error",
+        fromPopup
+          ? "Booking approved. The confirmation email was sent to the customer."
+          : `Confirmation email sent to ${result.emailedTo}.`,
+        "success",
       );
+    } catch (sendError) {
+      const message = sendError instanceof Error
+        ? sendError.message
+        : "The confirmation email could not be sent. Please try again.";
+      if (fromPopup) setApprovalEmailPopupError(message);
+      else showToast(message, "error");
     } finally {
       setSendingConfirmationEmail(false);
     }
@@ -1177,8 +1198,12 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
             <section className={`${styles.customerNotification} ${bookingApproved ? styles.customerNotificationApproved : ""}`} aria-labelledby="customer-notification-heading">
               <div>
                 <span>Customer Notification</span>
-                <h2 id="customer-notification-heading">{bookingApproved ? "Booking Approved" : "Confirmation email available after approval"}</h2>
-                <p>{bookingApproved ? `Send the approved booking summary directly to ${email === "-" ? "the customer" : email}. The email includes the booking number, rental details, dates, payment status, fulfillment method, and any remaining action.` : "Complete the approval step before sending the customer a booking confirmation email."}</p>
+                <h2 id="customer-notification-heading">{bookingApproved ? (approvalEmailFailed ? "Confirmation Email Not Sent" : "Booking Approved") : "Confirmation email sent after approval"}</h2>
+                <p>{bookingApproved
+                  ? approvalEmailFailed
+                    ? `The booking is approved, but ${email === "-" ? "the customer" : email} has not received the confirmation email yet. Use Resend Email to try again.`
+                    : `The approval confirmation email is sent automatically. If ${email === "-" ? "the customer" : email} did not receive it, use Resend Email to send it again.`
+                  : "The customer receives a confirmation email automatically as soon as the booking is approved."}</p>
               </div>
               <div className={styles.customerNotificationAction}>
                 <Button variant="none"
@@ -1187,7 +1212,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                   onClick={() => void handleSendBookingConfirmationEmail()}
                   disabled={!bookingApproved || email === "-" || sendingConfirmationEmail}
                 >
-                  {sendingConfirmationEmail ? "Sending confirmation..." : "Send Booking Confirmation to Email"}
+                  {sendingConfirmationEmail ? "Sending email..." : "Resend Email"}
                 </Button>
                 {confirmationEmailSentAt ? <small>Last sent {formatDate(confirmationEmailSentAt, true)}</small> : null}
               </div>
@@ -1256,6 +1281,20 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
             <span>The customer&apos;s account and booking timeline will update immediately.</span>
           </div>
         </ConfirmModal>
+      ) : null}
+
+      {approvalEmailPopupOpen ? (
+        <ConfirmModal
+          title="Confirmation Email Not Sent"
+          description="Booking approved, but the confirmation email could not be sent. Please try sending it again."
+          confirmLabel="Resend Email"
+          busyLabel="Sending email..."
+          cancelLabel="Close"
+          onCancel={() => setApprovalEmailPopupOpen(false)}
+          onConfirm={() => void handleSendBookingConfirmationEmail(true)}
+          error={approvalEmailPopupError}
+          busy={sendingConfirmationEmail}
+        />
       ) : null}
 
       {countersignConfirmationOpen ? (

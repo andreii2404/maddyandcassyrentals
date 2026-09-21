@@ -8,11 +8,19 @@ export interface BookingStatusEmailDetails {
   customerName: string;
   customerEmail: string;
   productName?: string;
+  /** Every rented item, listed one per line in the approval email. */
+  items?: { name: string; quantity: number }[];
   status: EmailBookingStatus;
   statusChangedAt: string;
   bookingUrl: string;
   isGuest?: boolean;
   rentalDates?: string;
+  /** Pre-formatted, e.g. "Sep 12, 2026, 9:00 AM". */
+  pickupDateTime?: string;
+  returnDateTime?: string;
+  pickupLocation?: string;
+  /** Human-readable booking status, e.g. "Approved". */
+  bookingStatus?: string;
   paymentStatus?: string;
   amountPaid?: string;
   remainingBalance?: string;
@@ -48,7 +56,7 @@ export function buildBookingStatusEmail(details: BookingStatusEmailDetails) {
   const eyebrow = approved ? "BOOKING APPROVED" : "RENTAL COMPLETED";
   const heading = approved ? `Good news, ${name}!` : `Thank you, ${name}!`;
   const introduction = approved
-    ? `Your request for <strong>${item}</strong> has been approved. Your reserved dates are now moving through the remaining booking requirements.`
+    ? `Your booking for <strong>${item}</strong> has been approved. Here is everything you need for your rental — please keep this email handy.`
     : `We have recorded the return of <strong>${item}</strong>. Booking <strong>${reference}</strong> is now complete.`;
   const nextTitle = approved ? "What happens next" : "Your completed rental";
   const nextCopy = approved
@@ -59,25 +67,64 @@ export function buildBookingStatusEmail(details: BookingStatusEmailDetails) {
       ? "Your payment records, receipt, invoice, and completed rental remain available in the secure guest tracker on the browser used for checkout."
       : "Your booking history, payment records, receipt, and invoice remain available in your account. You can also share a review to help future renters choose with confidence.";
   const buttonLabel = approved ? "Continue booking" : "View completed rental";
+  const handoverLabel = details.fulfillmentMethod?.toLowerCase() === "delivery" ? "Delivery" : "Pickup";
+  const itemLines = (details.items ?? []).map((item) => `${item.name} × ${item.quantity}`);
   const summaryRows = [
+    approved ? ["CUSTOMER", details.customerName.trim()] : undefined,
+    approved && itemLines.length ? ["RENTAL ITEMS", itemLines.join("\n")] : undefined,
     ["RENTAL DATES", details.rentalDates],
+    approved ? [`${handoverLabel.toUpperCase()} DATE & TIME`, details.pickupDateTime] : undefined,
+    approved ? ["RETURN DATE & TIME", details.returnDateTime] : undefined,
+    approved ? [`${handoverLabel.toUpperCase()} LOCATION`, details.pickupLocation] : undefined,
     ["PAYMENT STATUS", details.paymentStatus],
     ["AMOUNT PAID", details.amountPaid],
     ["REMAINING BALANCE", details.remainingBalance],
     ["FULFILLMENT", details.fulfillmentMethod],
-  ].filter((row): row is [string, string] => Boolean(row[1]));
+    approved ? ["BOOKING STATUS", details.bookingStatus] : undefined,
+  ].filter((row): row is [string, string] => Boolean(row?.[1]));
   const summaryHtml = summaryRows.length
     ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${summaryRows
         .map(
-          ([label, value]) => `<tr><td style="padding:7px 0;color:#8b7d80;font-size:12px;font-weight:700;letter-spacing:.8px;text-transform:uppercase">${label}</td><td align="right" style="padding:7px 0;color:#292425;font-size:14px;font-weight:700">${escapeHtml(value)}</td></tr>`,
+          ([label, value]) => `<tr><td valign="top" style="padding:7px 12px 7px 0;color:#8b7d80;font-size:12px;font-weight:700;letter-spacing:.8px;text-transform:uppercase">${escapeHtml(label)}</td><td align="right" style="padding:7px 0;color:#292425;font-size:14px;font-weight:700">${escapeHtml(value).replaceAll("\n", "<br>")}</td></tr>`,
         )
         .join("")}</table>`
     : "";
-  const remainingActionCopy = details.remainingAction
-    ? ` Remaining action: ${details.remainingAction}.`
+  const reminders = approved
+    ? [
+        ...(details.remainingAction
+          ? details.remainingAction.split(/;\s*/).filter(Boolean).map((action) => `${action}.`)
+          : []),
+        `Please have your booking number (${details.bookingReference}) ready when you ${handoverLabel === "Delivery" ? "receive" : "collect"} your rental.`,
+        `Return your rental${details.returnDateTime ? ` by ${details.returnDateTime}` : " on the return date and time above"}, in the same condition you received it.`,
+        "Need to change something? Reply to this email and we will be happy to help.",
+      ]
+    : [];
+  const remindersHtml = reminders.length
+    ? `<h2 style="margin:22px 0 8px;font-size:18px;color:#292425">Important reminders</h2><ul style="margin:0 0 24px;padding-left:20px;color:#655c5e;font-size:14px;line-height:1.7">${reminders.map((reminder) => `<li>${escapeHtml(reminder)}</li>`).join("")}</ul>`
     : "";
   const text = approved
-    ? `Good news, ${firstName(details.customerName)}! Booking ${details.bookingReference} for ${details.productName || "your selected rental"} has been approved.${details.rentalDates ? ` Rental dates: ${details.rentalDates}.` : ""}${details.paymentStatus ? ` Payment status: ${details.paymentStatus}.` : ""}${details.amountPaid ? ` Amount paid: ${details.amountPaid}.` : ""}${details.remainingBalance ? ` Remaining balance: ${details.remainingBalance}.` : ""}${details.fulfillmentMethod ? ` Fulfillment: ${details.fulfillmentMethod}.` : ""}${remainingActionCopy} Complete any remaining payment, verification document, and rental agreement steps${isGuest ? " in the same browser used for guest checkout" : ""} here: ${details.bookingUrl}`
+    ? [
+        `Good news, ${firstName(details.customerName)}! Booking ${details.bookingReference} for ${details.productName || "your selected rental"} has been approved.`,
+        "",
+        "Booking summary",
+        `Customer: ${details.customerName.trim() || "Customer"}`,
+        `Booking number: ${details.bookingReference}`,
+        ...(itemLines.length ? [`Rental item(s): ${itemLines.join(", ")}`] : []),
+        ...(details.rentalDates ? [`Rental dates: ${details.rentalDates}`] : []),
+        ...(details.pickupDateTime ? [`${handoverLabel} date and time: ${details.pickupDateTime}`] : []),
+        ...(details.returnDateTime ? [`Return date and time: ${details.returnDateTime}`] : []),
+        ...(details.pickupLocation ? [`${handoverLabel} location: ${details.pickupLocation}`] : []),
+        ...(details.paymentStatus ? [`Payment status: ${details.paymentStatus}`] : []),
+        ...(details.amountPaid ? [`Amount paid: ${details.amountPaid}`] : []),
+        ...(details.remainingBalance ? [`Remaining balance: ${details.remainingBalance}`] : []),
+        ...(details.fulfillmentMethod ? [`Fulfillment: ${details.fulfillmentMethod}`] : []),
+        ...(details.bookingStatus ? [`Booking status: ${details.bookingStatus}`] : []),
+        "",
+        "Important reminders",
+        ...reminders.map((reminder) => `- ${reminder}`),
+        "",
+        `View your booking${isGuest ? " in the same browser used for guest checkout" : ""}: ${details.bookingUrl}`,
+      ].join("\n")
     : `Thank you, ${firstName(details.customerName)}! The return for booking ${details.bookingReference} (${details.productName || "your rental"}) has been recorded and the rental is complete. View your receipt, invoice, booking history, or leave a review${isGuest ? " in the same browser used for guest checkout" : ""} here: ${details.bookingUrl}`;
 
   const html = `<!doctype html>
@@ -107,7 +154,8 @@ export function buildBookingStatusEmail(details: BookingStatusEmailDetails) {
           ${summaryHtml ? `<tr><td style="padding:4px 34px 12px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fffaf8;border:1px solid #f0e4e0;border-radius:16px"><tr><td style="padding:14px 20px">${summaryHtml}</td></tr></table></td></tr>` : ""}
           <tr><td style="padding:16px 34px 34px">
             <h2 style="margin:0 0 8px;font-size:18px;color:#292425">${nextTitle}</h2>
-            <p style="margin:0 0 24px;color:#655c5e;font-size:14px;line-height:1.7">${nextCopy}${approved && details.remainingAction ? ` <strong>Remaining action:</strong> ${escapeHtml(details.remainingAction)}.` : ""}</p>
+            <p style="margin:0;color:#655c5e;font-size:14px;line-height:1.7">${nextCopy}</p>
+            ${remindersHtml || '<div style="height:24px"></div>'}
             <a href="${bookingUrl}" style="display:inline-block;background:#a75e6d;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 22px;border-radius:12px">${buttonLabel}</a>
             ${isGuest ? '<p style="margin:18px 0 0;color:#8b7d80;font-size:12px;line-height:1.6"><strong>Guest checkout:</strong> no account is required. For your privacy, this link opens the booking through the temporary session stored in the browser used at checkout. Guest bookings do not earn birthday or loyalty perks.</p>' : ''}
           </td></tr>

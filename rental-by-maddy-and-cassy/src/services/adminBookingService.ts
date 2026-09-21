@@ -92,7 +92,7 @@ export async function updateAdminBookingStatus(
   bookingId: string,
   status: BookingStatus,
   note: string,
-): Promise<{ emailRequired: boolean; emailSent: boolean | null; emailReason: string | null }> {
+): Promise<{ emailRequired: boolean; emailSent: boolean | null }> {
   const response = await fetch(`/api/admin/bookings/${encodeURIComponent(bookingId)}`, {
     method: "PATCH",
     credentials: "same-origin",
@@ -105,12 +105,11 @@ export async function updateAdminBookingStatus(
   }
 
   const body = (await response.json()) as {
-    customerEmail?: { required?: boolean; sent?: boolean | null; reason?: string | null };
+    customerEmail?: { required?: boolean; sent?: boolean | null };
   };
   return {
     emailRequired: body.customerEmail?.required === true,
     emailSent: body.customerEmail?.sent ?? null,
-    emailReason: body.customerEmail?.reason ?? null,
   };
 }
 
@@ -132,16 +131,23 @@ export async function autoRejectBookingForMissingRequirements(bookingId: string)
 export async function sendAdminBookingConfirmationEmail(
   bookingId: string,
 ): Promise<{ emailedTo: string }> {
-  const response = await fetch(
-    `/api/admin/bookings/${encodeURIComponent(bookingId)}/confirmation-email`,
-    {
-      method: "POST",
-      credentials: "same-origin",
-    },
-  );
+  const failureMessage = "The confirmation email could not be sent. Please try again.";
+  let response: Response;
+  try {
+    response = await fetch(
+      `/api/admin/bookings/${encodeURIComponent(bookingId)}/confirmation-email`,
+      {
+        method: "POST",
+        credentials: "same-origin",
+      },
+    );
+  } catch {
+    // A dropped connection would otherwise surface the browser's raw "Failed to fetch".
+    throw new Error(failureMessage);
+  }
 
   if (!response.ok) {
-    throw new Error(await getErrorMessage(response, "The booking confirmation email could not be sent."));
+    throw new Error(await getErrorMessage(response, failureMessage));
   }
 
   const body = (await response.json()) as { emailedTo?: unknown };

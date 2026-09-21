@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { type EmailBookingStatus } from "@/src/lib/bookingStatusEmailContent";
+import { sendBookingApprovalEmail } from "@/src/lib/server/bookingApprovalEmail";
 import { sendBookingStatusEmail } from "@/src/lib/server/bookingStatusEmail";
 import { enforceRateLimit, requireActiveAdmin, RequestSecurityError } from "@/src/lib/server/requestSecurity";
 import { createAdminClient } from "@/src/lib/supabase/admin";
@@ -101,9 +102,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
     }
 
     let customerEmailSent: boolean | null = null;
-    let customerEmailReason: string | null = null;
 
-    if (isEmailBookingStatus(targetStatus)) {
+    if (targetStatus === "approved") {
+      // The approval is already saved at this point. sendBookingApprovalEmail never
+      // throws, so a failed email is reported back without undoing the approval.
+      const outcome = await sendBookingApprovalEmail({
+        bookingId,
+        origin: new URL(request.url).origin,
+      });
+      customerEmailSent = outcome.sent;
+    } else if (isEmailBookingStatus(targetStatus)) {
       const admin = createAdminClient();
       const [{ data: profile }, { data: items }, { data: bookingAccess }] = await Promise.all([
         admin
@@ -129,7 +137,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
         customerEmail = authUser.user?.email?.trim() ?? "";
       }
 
-      const changedAt = targetStatus === "approved" ? data.approved_at : data.returned_at;
+      const changedAt = data.returned_at;
       const emailResult = await sendBookingStatusEmail({
         bookingId,
         bookingReference: data.booking_reference,
@@ -144,7 +152,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
         isGuest: bookingAccess?.is_guest_checkout === true,
       });
       customerEmailSent = emailResult.sent;
-      customerEmailReason = emailResult.reason ?? null;
     }
 
     return NextResponse.json({
@@ -152,8 +159,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
       bookingId,
       status: data.status,
       customerEmail: isEmailBookingStatus(targetStatus)
-        ? { required: true, sent: customerEmailSent, reason: customerEmailReason }
-        : { required: false, sent: null, reason: null },
+        ? { required: true, sent: customerEmailSent }
+        : { required: false, sent: null },
     });
   } catch (error) {
     if (error instanceof RequestSecurityError) return errorResponse(error.message, error.status);
