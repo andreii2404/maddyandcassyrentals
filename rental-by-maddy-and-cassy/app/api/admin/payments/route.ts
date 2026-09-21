@@ -25,6 +25,13 @@ function parseEnum<T extends string>(raw: string | null, allowed: readonly T[]):
   return allowed.includes(raw as T) ? (raw as T) : undefined;
 }
 
+/** Accepts only a real calendar day formatted YYYY-MM-DD; anything else is ignored. */
+function parseDay(raw: string | null): string | undefined {
+  if (!raw || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return undefined;
+  const parsed = new Date(`${raw}T00:00:00Z`);
+  return Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== raw ? undefined : raw;
+}
+
 function parseFilters(url: URL): PaymentRecordsFilters {
   const status = parseEnum(url.searchParams.get("status"), ["verified", "unverified", "rejected"] as const);
   const stageParam = url.searchParams.get("stage");
@@ -42,8 +49,10 @@ function parseFilters(url: URL): PaymentRecordsFilters {
     "cancelled",
   ] as const);
   const proof = parseEnum(url.searchParams.get("proof"), ["with_proof", "no_proof"] as const);
+  const dateFrom = parseDay(url.searchParams.get("dateFrom"));
+  const dateTo = parseDay(url.searchParams.get("dateTo"));
   const sort = parseEnum(url.searchParams.get("sort"), ["newest", "oldest"] as const);
-  return { status, stage, accountType, bookingStatus, proof, sort };
+  return { status, stage, accountType, bookingStatus, proof, dateFrom, dateTo, sort };
 }
 
 export async function GET(request: Request): Promise<NextResponse> {

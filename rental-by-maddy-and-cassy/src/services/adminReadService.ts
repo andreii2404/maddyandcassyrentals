@@ -34,7 +34,23 @@ export interface PaymentRecordsFilters {
   accountType?: "with_account" | "guest";
   bookingStatus?: "pending" | "approved" | "returned" | "cancelled";
   proof?: "with_proof" | "no_proof";
+  /** Inclusive submission-date range as YYYY-MM-DD, read as Asia/Manila calendar days. */
+  dateFrom?: string;
+  dateTo?: string;
   sort?: "newest" | "oldest";
+}
+
+const MANILA_UTC_OFFSET = "+08:00";
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/** Start of the given Manila calendar day as a UTC ISO timestamp. */
+function manilaDayStartIso(day: string): string {
+  return new Date(`${day}T00:00:00${MANILA_UTC_OFFSET}`).toISOString();
+}
+
+/** Start of the day after the given Manila calendar day — an exclusive upper bound. */
+function manilaNextDayStartIso(day: string): string {
+  return new Date(Date.parse(`${day}T00:00:00${MANILA_UTC_OFFSET}`) + MS_PER_DAY).toISOString();
 }
 
 /** Escapes a user-supplied search term for safe use inside a PostgREST ilike/or() filter string. */
@@ -95,6 +111,9 @@ export async function getPaymentRecordsPage(
   else if (filters.accountType === "with_account") query = query.eq("bookings.is_guest_checkout", false);
 
   if (filters.bookingStatus) query = query.eq("bookings.status", filters.bookingStatus);
+
+  if (filters.dateFrom) query = query.gte("created_at", manilaDayStartIso(filters.dateFrom));
+  if (filters.dateTo) query = query.lt("created_at", manilaNextDayStartIso(filters.dateTo));
 
   const { data, error, count } = await query.range(from, to);
   if (error) throw new Error(error.message);

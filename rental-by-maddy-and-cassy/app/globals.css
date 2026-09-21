@@ -26,6 +26,9 @@
   --color-status-red: #9a5965;
   --color-status-red-bg: rgba(242, 210, 207, 0.95);
   --color-status-red-border: rgba(154, 89, 101, 0.25);
+  --color-danger: #c0392b;
+  --color-danger-bg: rgba(192, 57, 43, 0.08);
+  --color-danger-border: rgba(192, 57, 43, 0.4);
 
   --color-calendar-available: #2f7a4d;
   --color-calendar-available-bg: rgba(47, 122, 77, 0.12);

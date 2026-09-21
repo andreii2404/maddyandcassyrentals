@@ -26,57 +26,57 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 1.1rem;
+  margin-bottom: 1.6rem;
 }
 
 .eyebrow {
-  margin: 0 0 0.35rem;
+  margin: 0 0 0.4rem;
   color: var(--color-primary);
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
 }
 
 .pageHeader h1 {
   margin: 0;
-  font-size: clamp(1.5rem, 2.6vw, 2rem);
+  font-size: clamp(1.55rem, 2.6vw, 2.05rem);
   letter-spacing: -0.025em;
 }
 
 .pageHeader p:not(.eyebrow) {
-  margin: 0.45rem 0 0;
+  margin: 0.5rem 0 0;
   color: var(--color-charcoal);
   font-size: 0.92rem;
 }
 
 .sectionLabel {
-  margin: 0 0 0.55rem;
+  margin: 0 0 0.75rem;
   color: var(--color-charcoal);
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-/* Priority metrics: the actionable cards (Pending Reviews, Active Bookings,
-   Failed Payments, Verified Revenue) get the most visual weight and are
-   fully clickable. */
+/* Priority metrics: the actionable cards get the most visual weight and are
+   fully clickable. Only cards that need the admin's attention (.urgent) get a
+   soft red border; everything else keeps the neutral theme border. */
 .priorityMetrics {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 0.75rem;
-  margin-bottom: 1.15rem;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
 }
 
 .priorityCard {
   display: flex;
-  min-height: 138px;
-  padding: 1rem 1.1rem;
+  min-height: 176px;
+  padding: 1.15rem 1.25rem 1.25rem;
   flex-direction: column;
   border: 1px solid var(--color-light-gray);
-  border-radius: 18px;
+  border-radius: 16px;
   background: var(--color-white);
-  box-shadow: 0 10px 28px rgba(36, 36, 36, 0.05);
+  box-shadow: 0 8px 24px rgba(36, 36, 36, 0.05);
   color: inherit;
   text-decoration: none;
   transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
@@ -86,7 +86,7 @@
 .priorityCard:focus-visible {
   transform: translateY(-2px);
   border-color: var(--color-dusty-rose);
-  box-shadow: 0 14px 32px rgba(36, 36, 36, 0.1);
+  box-shadow: 0 14px 32px rgba(36, 36, 36, 0.09);
 }
 
 .priorityCard:focus-visible {
@@ -95,12 +95,12 @@
 }
 
 .priorityCard.urgent {
-  background: linear-gradient(160deg, var(--color-white) 45%, var(--color-status-red-bg) 145%);
+  border-color: var(--color-danger-border);
 }
 
 .priorityCard.urgent:hover,
 .priorityCard.urgent:focus-visible {
-  border-color: var(--color-status-red-border);
+  border-color: var(--color-danger);
 }
 
 .priorityLabel {
@@ -114,10 +114,10 @@
 }
 
 .priorityFlag {
-  padding: 0.16rem 0.55rem;
+  padding: 0.18rem 0.6rem;
   border-radius: 999px;
-  background: var(--color-status-red-bg);
-  color: var(--color-status-red);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
   font-size: 0.6rem;
   font-weight: 700;
   letter-spacing: 0.03em;
@@ -126,27 +126,57 @@
 }
 
 .priorityCard strong {
-  margin: 0.5rem 0 0.2rem;
+  margin: 0.6rem 0 0.25rem;
   color: var(--color-text-primary);
-  font-size: 1.9rem;
+  font-size: 2rem;
   line-height: 1;
   letter-spacing: -0.02em;
 }
 
 .priorityCaption {
+  margin-bottom: 1rem;
   color: var(--color-charcoal);
-  font-size: 0.76rem;
+  font-size: 0.78rem;
 }
 
+/* The action inside each card is styled as a button. It is a span because the
+   whole card is already a link, and a link cannot contain another link. */
 .priorityCta {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 0.3rem;
+  justify-content: center;
+  min-height: 40px;
   margin-top: auto;
-  padding-top: 0.65rem;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--color-light-gray);
+  border-radius: var(--radius-control);
+  background: var(--color-white);
+  color: var(--color-text-primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+
+.priorityCard:hover .priorityCta,
+.priorityCard:focus-visible .priorityCta {
+  border-color: var(--color-dusty-rose);
   color: var(--color-primary);
-  font-size: 0.76rem;
-  font-weight: 700;
+}
+
+.priorityCard.urgent .priorityCta {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-white);
+}
+
+.priorityCard.urgent:hover .priorityCta,
+.priorityCard.urgent:focus-visible .priorityCta {
+  border-color: var(--color-primary-hover);
+  background: var(--color-primary-hover);
+  color: var(--color-white);
+  box-shadow: 0 8px 22px rgba(154, 89, 101, 0.28);
 }
 
 /* Secondary metrics: informational stats, kept visually quieter than the
@@ -156,14 +186,14 @@
 .secondaryMetrics {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 0.6rem;
-  margin-bottom: 1.1rem;
+  gap: 0.85rem;
+  margin-bottom: 1.75rem;
 }
 
 .secondaryCard {
   display: flex;
-  min-height: 96px;
-  padding: 0.8rem 0.9rem;
+  min-height: 100px;
+  padding: 0.9rem 1rem;
   flex-direction: column;
   border: 1px solid var(--color-light-gray);
   border-radius: 14px;
@@ -190,7 +220,7 @@ a.secondaryCard:focus-visible {
 }
 
 .secondaryCard strong {
-  margin: 0.32rem 0 0.15rem;
+  margin: 0.35rem 0 0.2rem;
   color: var(--color-text-primary);
   font-size: 1.25rem;
   line-height: 1.15;
@@ -204,23 +234,85 @@ a.secondaryCard:focus-visible {
 
 .panel {
   overflow: hidden;
+  margin-bottom: 1.5rem;
   border: 1px solid var(--color-light-gray);
-  border-radius: 18px;
+  border-radius: 16px;
   background: var(--color-white);
-  box-shadow: 0 10px 28px rgba(36, 36, 36, 0.04);
+  box-shadow: 0 8px 24px rgba(36, 36, 36, 0.04);
+}
+
+.panel:last-child {
+  margin-bottom: 0;
+}
+
+/* Soft red border for a section that has items waiting on the admin. */
+.panelAttention {
+  border-color: var(--color-danger-border);
 }
 
 .panelHeader {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 0.85rem 1rem;
-  border-bottom: 1px solid var(--color-light-gray);
+  gap: 0.85rem 1rem;
+  padding: 1rem 1.25rem;
+}
+
+/* The divider only exists while the section is open (a collapsed section's
+   body is hidden, so it has no border to draw). */
+.panelHeader + div {
+  border-top: 1px solid var(--color-light-gray);
+}
+
+.panelTitle {
+  min-width: 0;
+  flex: 1 1 260px;
+}
+
+.panelTitleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.65rem;
+}
+
+.panelHeader h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.panelHeader p {
+  margin: 0.3rem 0 0;
+  color: var(--color-charcoal);
+  font-size: 0.8rem;
+}
+
+.panelActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.countBadge {
+  padding: 0.16rem 0.6rem;
+  border: 1px solid var(--color-light-gray);
+  border-radius: 999px;
+  background: var(--color-background-soft);
+  color: var(--color-charcoal);
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.countBadgeAttention {
+  border-color: var(--color-danger-border);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
 }
 
 .cancellationPanel {
-  margin-bottom: 1.1rem;
   scroll-margin-top: 1rem;
 }
 
@@ -232,29 +324,6 @@ a.secondaryCard:focus-visible {
 .cancellationTable td:nth-child(4) {
   min-width: 160px;
   max-width: 280px;
-}
-
-.panelHeader h2 {
-  margin: 0;
-  font-size: 1.08rem;
-}
-
-.panelHeader p {
-  margin: 0.3rem 0 0;
-  color: var(--color-charcoal);
-  font-size: 0.8rem;
-}
-
-.panelHeader > a {
-  color: var(--color-primary);
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.panelHeader > a:hover {
-  text-decoration: underline;
 }
 
 .tableWrapper {
@@ -269,7 +338,7 @@ a.secondaryCard:focus-visible {
 
 .table th,
 .table td {
-  padding: 0.68rem 0.8rem;
+  padding: 0.8rem 1rem;
   border-bottom: 1px solid var(--color-light-gray);
   font-size: 0.8rem;
   text-align: left;
@@ -304,6 +373,11 @@ a.secondaryCard:focus-visible {
   outline-offset: -2px;
 }
 
+/* A bookings row that is still waiting on the admin gets a soft red edge. */
+.table tbody tr.needsAttention td:first-child {
+  box-shadow: inset 3px 0 0 var(--color-danger-border);
+}
+
 .bookingLink {
   color: var(--color-primary);
   font-weight: 700;
@@ -332,19 +406,51 @@ a.secondaryCard:focus-visible {
   align-items: center;
   justify-content: center;
   min-width: 78px;
-  padding: 0.42rem 0.9rem;
+  padding: 0.45rem 1rem;
   border: 1px solid var(--color-primary);
-  border-radius: 999px;
+  border-radius: var(--radius-control);
   background: var(--color-primary);
   color: var(--color-white);
-  font-size: 0.7rem;
-  font-weight: 700;
+  font-size: 0.74rem;
+  font-weight: 600;
   white-space: nowrap;
   text-decoration: none;
+  transition: background-color 160ms ease, border-color 160ms ease;
 }
 
 .openLink:hover {
-  opacity: 0.9;
+  border-color: var(--color-primary-hover);
+  background: var(--color-primary-hover);
+}
+
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  padding: 0.85rem 1.25rem;
+  border-top: 1px solid var(--color-light-gray);
+  background: var(--color-background-soft);
+}
+
+.paginationSummary {
+  color: var(--color-charcoal);
+  font-size: 0.78rem;
+}
+
+.paginationControls {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.paginationPage {
+  min-width: 84px;
+  color: var(--color-text-primary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: center;
 }
 
 .loading {
@@ -356,7 +462,7 @@ a.secondaryCard:focus-visible {
 
 .empty {
   margin: 0;
-  padding: 1.25rem 1rem;
+  padding: 1.25rem;
   color: var(--color-charcoal);
 }
 
@@ -399,13 +505,28 @@ a.secondaryCard:focus-visible {
   }
 
   .priorityCard {
-    min-height: 118px;
+    min-height: 150px;
+  }
+
+  .panelHeader {
+    padding: 0.9rem 1rem;
+  }
+
+  .pagination {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0.85rem 1rem;
+  }
+
+  .paginationControls {
+    justify-content: space-between;
   }
 }
 
 @media (max-width: 760px) {
   .tableWrapper {
     overflow-x: visible;
+    padding: 0.75rem 0.75rem 0;
   }
 
   .table thead {
@@ -433,6 +554,14 @@ a.secondaryCard:focus-visible {
     margin-bottom: 0.75rem;
     border: 1px solid var(--color-light-gray);
     border-radius: 14px;
+  }
+
+  .table tbody tr.needsAttention {
+    border-color: var(--color-danger-border);
+  }
+
+  .table tbody tr.needsAttention td:first-child {
+    box-shadow: none;
   }
 
   .table td {

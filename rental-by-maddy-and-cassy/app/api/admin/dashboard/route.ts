@@ -64,7 +64,8 @@ export async function GET(request: Request): Promise<NextResponse> {
 
     // Bookings are already newest-first (getAllBookings orders by created_at desc);
     // bubble pending-review bookings to the top so they stay easy to spot without
-    // losing the newest-first order within each group.
+    // losing the newest-first order within each group. The full list is returned;
+    // the dashboard paginates it (10 per page) on the client.
     const recentBookingsSorted = [...bookings].sort((a, b) => {
       const aPending = a.requirementsStatus === "pending_review" ? 1 : 0;
       const bPending = b.requirementsStatus === "pending_review" ? 1 : 0;
@@ -87,7 +88,7 @@ export async function GET(request: Request): Promise<NextResponse> {
         popularProductBookings: popularProduct?.[1] ?? 0,
       },
       cancellationRequests,
-      recentBookings: recentBookingsSorted.slice(0, 8).map((booking) => ({
+      recentBookings: recentBookingsSorted.map((booking) => ({
         id: booking.id,
         bookingRef: booking.bookingRef,
         customerName: resolveAccountName({

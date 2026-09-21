@@ -157,6 +157,9 @@ export interface AdminPaymentsFilters {
   accountType?: "with_account" | "guest";
   bookingStatus?: "pending" | "approved" | "returned" | "cancelled";
   proof?: "with_proof" | "no_proof";
+  /** Inclusive submission-date range as YYYY-MM-DD (Asia/Manila calendar days). */
+  dateFrom?: string;
+  dateTo?: string;
   sort?: "newest" | "oldest";
 }
 
@@ -177,6 +180,8 @@ export function getAdminPayments(params: {
   if (filters?.accountType) query.set("accountType", filters.accountType);
   if (filters?.bookingStatus) query.set("bookingStatus", filters.bookingStatus);
   if (filters?.proof) query.set("proof", filters.proof);
+  if (filters?.dateFrom) query.set("dateFrom", filters.dateFrom);
+  if (filters?.dateTo) query.set("dateTo", filters.dateTo);
   if (filters?.sort) query.set("sort", filters.sort);
   return getAdminData(`/api/admin/payments?${query.toString()}`);
 }
