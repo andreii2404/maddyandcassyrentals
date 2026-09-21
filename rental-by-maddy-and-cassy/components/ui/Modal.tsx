@@ -9,9 +9,11 @@ interface ModalProps {
   onClose: () => void;
   children: ReactNode;
   describedBy?: string;
+  /** "wide" suits document viewers; every existing dialog keeps the default width. */
+  size?: "default" | "wide";
 }
 
-export default function Modal({ title, onClose, children, describedBy }: ModalProps) {
+export default function Modal({ title, onClose, children, describedBy, size = "default" }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
 
@@ -52,7 +54,7 @@ export default function Modal({ title, onClose, children, describedBy }: ModalPr
     <div className={styles.overlay} onMouseDown={onClose}>
       <div
         ref={dialogRef}
-        className={styles.dialog}
+        className={size === "wide" ? `${styles.dialog} ${styles.dialogWide}` : styles.dialog}
         role="dialog"
         aria-modal="true"
         aria-label={title}

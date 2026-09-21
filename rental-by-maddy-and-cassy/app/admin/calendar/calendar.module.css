@@ -496,3 +496,125 @@
     grid-template-columns: 4.6rem minmax(0, 1fr);
   }
 }
+
+/* Booking search */
+.searchPanel {
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.3rem;
+  border: 1px solid var(--color-light-gray);
+  border-radius: 18px;
+  background: var(--color-white);
+  box-shadow: 0 10px 28px rgba(36, 36, 36, 0.04);
+}
+
+.searchForm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.searchInput {
+  flex: 1 1 260px;
+  min-width: 0;
+  min-height: 42px;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid var(--color-light-gray);
+  border-radius: 11px;
+  background: var(--color-white);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 0.82rem;
+}
+
+.searchInput::placeholder {
+  color: #a09a99;
+}
+
+.searchInput:focus-visible {
+  border-color: var(--color-primary);
+  outline: 2px solid var(--color-dusty-rose);
+  outline-offset: 1px;
+}
+
+.searchButton {
+  min-height: 42px;
+}
+
+.searchSummary {
+  margin: 0.9rem 0 0;
+  color: var(--color-charcoal);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.searchEmpty {
+  margin: 0.9rem 0 0;
+  padding: 1rem;
+  border: 1px dashed var(--color-light-gray);
+  border-radius: 14px;
+  color: var(--color-charcoal);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.resultList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 0.6rem;
+  max-height: 15rem;
+  margin: 0.7rem 0 0;
+  /* Room for the focus ring and hover border, which the scroll container would clip. */
+  padding: 3px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: var(--color-dusty-rose) transparent;
+  scrollbar-width: thin;
+  list-style: none;
+}
+
+.resultItem {
+  display: grid;
+  width: 100%;
+  gap: 0.15rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--color-light-gray);
+  border-radius: 12px;
+  background: var(--color-white);
+  color: var(--color-text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.resultItem:hover {
+  border-color: var(--color-dusty-rose);
+  background: var(--color-background-soft);
+}
+
+.resultItemActive {
+  border-color: var(--color-primary);
+  background: var(--color-blush);
+  box-shadow: 0 0 0 1px var(--color-primary);
+}
+
+.resultName {
+  font-size: 0.9rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.resultDates {
+  color: var(--color-charcoal);
+  font-size: 0.74rem;
+}
+
+@media (max-width: 640px) {
+  .searchPanel {
+    padding: 0.9rem;
+  }
+
+  .searchButton {
+    flex: 1 1 0;
+  }
+}

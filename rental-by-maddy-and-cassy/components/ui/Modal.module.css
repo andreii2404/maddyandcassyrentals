@@ -19,6 +19,15 @@
   box-shadow: 0 20px 60px rgba(36, 36, 36, 0.3);
 }
 
+.dialogWide {
+  max-width: min(1040px, 100%);
+  max-height: 92vh;
+}
+
+.dialogWide .body {
+  padding: 1rem 1.25rem 1.25rem;
+}
+
 .header {
   display: flex;
   align-items: center;

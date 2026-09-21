@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import Spinner from "@/components/ui/Spinner";
 import StatusBadge from "@/components/status-badge/StatusBadge";
@@ -9,6 +9,7 @@ import { getAllBookings } from "@/src/services/bookingService";
 import type { Booking } from "@/src/types/booking";
 import { useBookingRealtime } from "@/hooks/useBookingRealtime";
 import {
+  bookingDateKeys,
   bookingDayRole,
   buildMonthGrid,
   groupBookingsByDate,
@@ -84,6 +85,81 @@ function bookingCountLabel(count: number): string {
   return `${count} ${count === 1 ? "booking" : "bookings"}`;
 }
 
+/** Booking numbers are matched without case, dashes or spaces, so "bk 1a2b3c" finds "BK-1A2B3C". */
+function normalizeBookingNumber(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+/** Shortest booking-number search; anything shorter would match almost every booking. */
+const MIN_BOOKING_NUMBER_LENGTH = 3;
+
+/**
+ * Approved bookings whose customer name or booking number matches the search.
+ * Rentals that are still coming up or in progress come first (soonest first), then past ones.
+ */
+function findMatchingBookings(bookings: Booking[], query: string, todayKey: string): Booking[] {
+  const text = query.trim().toLowerCase();
+  if (!text) return [];
+  const numberQuery = normalizeBookingNumber(text);
+  const words = text.split(/\s+/);
+
+  const matches = bookings.filter((booking) => {
+    if (!isCalendarBooking(booking)) return false;
+    if (
+      numberQuery.length >= MIN_BOOKING_NUMBER_LENGTH &&
+      normalizeBookingNumber(booking.bookingRef).includes(numberQuery)
+    ) {
+      return true;
+    }
+    const name = customerName(booking).toLowerCase();
+    return words.every((word) => name.includes(word));
+  });
+
+  const startOf = (booking: Booking) => bookingDateKeys(booking)[0] ?? "";
+  const endOf = (booking: Booking) => bookingDateKeys(booking).at(-1) ?? "";
+  const upcoming = matches
+    .filter((booking) => endOf(booking) >= todayKey)
+    .sort((a, b) => startOf(a).localeCompare(startOf(b)));
+  const past = matches
+    .filter((booking) => endOf(booking) < todayKey)
+    .sort((a, b) => startOf(b).localeCompare(startOf(a)));
+  return [...upcoming, ...past];
+}
+
+function BookingCard({ booking, roleLabel }: { booking: Booking; roleLabel?: string }) {
+  return (
+    <article className={styles.bookingCard}>
+      <div className={styles.cardTop}>
+        <span className={styles.bookingId}>{booking.bookingRef}</span>
+        <StatusBadge status={booking.status} />
+      </div>
+      <strong className={styles.customer}>{customerName(booking)}</strong>
+      {roleLabel ? <span className={styles.roleTag}>{roleLabel}</span> : null}
+      <dl className={styles.facts}>
+        <div><dt>Rental item</dt><dd>{itemsLabel(booking)}</dd></div>
+        <div><dt>Rental dates</dt><dd>{formatRentalDates(booking)}</dd></div>
+        <div>
+          <dt>{booking.fulfillmentMethod === "delivery" ? "Delivery" : "Pickup"}</dt>
+          <dd>{booking.startDate ? formatManilaDateTime(booking.startDate) : "-"}</dd>
+        </div>
+        <div>
+          <dt>Return</dt>
+          <dd>{booking.endDate ? formatManilaDateTime(booking.endDate) : "-"}</dd>
+        </div>
+      </dl>
+      <Button
+        href={`/admin/bookings/${booking.id}`}
+        variant="primary"
+        size="sm"
+        className={styles.viewButton}
+        aria-label={`View booking details for ${booking.bookingRef}, ${customerName(booking)}`}
+      >
+        View booking details
+      </Button>
+    </article>
+  );
+}
+
 export default function AdminCalendar() {
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -92,6 +168,10 @@ export default function AdminCalendar() {
   const [selectedKey, setSelectedKey] = useState<string>(() => todayDateKey());
   // Tracks which day is expanded, so picking another day collapses the list again.
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  // `searchInput` is what the admin is typing; `appliedQuery` only changes when they press Search.
+  const [searchInput, setSearchInput] = useState("");
+  const [appliedQuery, setAppliedQuery] = useState("");
+  const [focusedBookingId, setFocusedBookingId] = useState<string | null>(null);
 
   const loadBookings = useCallback(async () => {
     try {
@@ -111,10 +191,6 @@ export default function AdminCalendar() {
   useBookingRealtime({ onChange: loadBookings });
 
   const bookingsByDate = useMemo(() => groupBookingsByDate(bookings ?? []), [bookings]);
-  const approvedCount = useMemo(
-    () => (bookings ?? []).filter(isCalendarBooking).length,
-    [bookings],
-  );
   const grid = useMemo(() => buildMonthGrid(cursor.year, cursor.month), [cursor]);
   const selectedBookings = bookingsByDate.get(selectedKey) ?? [];
   const canCollapse = selectedBookings.length > COLLAPSED_BOOKING_LIMIT;
@@ -125,16 +201,53 @@ export default function AdminCalendar() {
       : selectedBookings;
   const hiddenCount = selectedBookings.length - visibleBookings.length;
 
+  // Derived from the latest bookings, so results stay current if a booking changes while searching.
+  const searchResults = useMemo(
+    () => findMatchingBookings(bookings ?? [], appliedQuery, today),
+    [bookings, appliedQuery, today],
+  );
+  const focusedBooking = searchResults.find((booking) => booking.id === focusedBookingId) ?? null;
+
   function goToToday() {
     const key = todayDateKey();
     setToday(key);
     setCursor(monthCursorFromKey(key));
     setSelectedKey(key);
+    setFocusedBookingId(null);
   }
 
   function selectDay(dateKey: string, inMonth: boolean) {
     setSelectedKey(dateKey);
+    setFocusedBookingId(null);
     if (!inMonth) setCursor(monthCursorFromKey(dateKey));
+  }
+
+  /** Shows one booking on the right panel and moves the calendar to its pickup day. */
+  function focusBooking(booking: Booking) {
+    setFocusedBookingId(booking.id);
+    const pickupKey = bookingDateKeys(booking)[0];
+    if (!pickupKey) return;
+    setSelectedKey(pickupKey);
+    setCursor(monthCursorFromKey(pickupKey));
+  }
+
+  function clearSearch() {
+    setSearchInput("");
+    setAppliedQuery("");
+    setFocusedBookingId(null);
+  }
+
+  function handleSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const query = searchInput.trim();
+    if (!query) {
+      clearSearch();
+      return;
+    }
+    setAppliedQuery(query);
+    const [firstMatch] = findMatchingBookings(bookings ?? [], query, today);
+    if (firstMatch) focusBooking(firstMatch);
+    else setFocusedBookingId(null);
   }
 
   return (
@@ -146,7 +259,7 @@ export default function AdminCalendar() {
           <p>See which days have approved rentals. Select a day to view its bookings.</p>
         </div>
         <div className={styles.headerMeta}>
-          <span className={styles.count}>{bookingCountLabel(approvedCount)} approved</span>
+          <span className={styles.count}>{bookingCountLabel(selectedBookings.length)} approved</span>
         </div>
       </header>
 
@@ -155,6 +268,70 @@ export default function AdminCalendar() {
           {error}
           <Button variant="none" type="button" onClick={() => void loadBookings()}>Try again</Button>
         </div>
+      ) : null}
+
+      {bookings ? (
+        <section className={styles.searchPanel} aria-label="Find a booking">
+          <form className={styles.searchForm} onSubmit={handleSearch} role="search">
+            <input
+              type="search"
+              className={styles.searchInput}
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="Search by customer name or booking number"
+              aria-label="Search by customer name or booking number"
+              autoComplete="off"
+            />
+            <Button variant="primary" size="sm" type="submit" className={styles.searchButton}>
+              Search
+            </Button>
+            {searchInput || appliedQuery ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                type="button"
+                className={styles.searchButton}
+                onClick={clearSearch}
+              >
+                Clear Search
+              </Button>
+            ) : null}
+          </form>
+
+          {appliedQuery ? (
+            searchResults.length ? (
+              <>
+                <p className={styles.searchSummary} role="status">
+                  {searchResults.length === 1
+                    ? "1 matching booking"
+                    : `${searchResults.length} matching bookings`}
+                </p>
+                <ul className={styles.resultList}>
+                  {searchResults.map((booking) => {
+                    const isFocused = booking.id === focusedBooking?.id;
+                    return (
+                      <li key={booking.id}>
+                        <Button
+                          variant="none"
+                          type="button"
+                          className={`${styles.resultItem} ${isFocused ? styles.resultItemActive : ""}`}
+                          aria-pressed={isFocused}
+                          onClick={() => focusBooking(booking)}
+                        >
+                          <span className={styles.bookingId}>{booking.bookingRef}</span>
+                          <span className={styles.resultName}>{customerName(booking)}</span>
+                          <span className={styles.resultDates}>{formatRentalDates(booking)}</span>
+                        </Button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
+            ) : (
+              <p className={styles.searchEmpty} role="status">No matching booking found.</p>
+            )
+          ) : null}
+        </section>
       ) : null}
 
       {!bookings && !error ? (
@@ -236,54 +413,34 @@ export default function AdminCalendar() {
 
           <aside className={styles.detailsPanel} aria-labelledby="calendar-day-heading">
             <div className={styles.detailsHeader}>
-              <p className={styles.eyebrow}>SELECTED DAY</p>
+              <p className={styles.eyebrow}>{focusedBooking ? "SELECTED BOOKING" : "SELECTED DAY"}</p>
               <h2 id="calendar-day-heading">{formatDateKey(selectedKey, "long")}</h2>
               <p>
-                {selectedBookings.length
-                  ? `${bookingCountLabel(selectedBookings.length)} on this day`
-                  : "Nothing booked on this day."}
+                {focusedBooking
+                  ? "Showing the booking you searched for. Select a day to see everything booked on it."
+                  : selectedBookings.length
+                    ? `${bookingCountLabel(selectedBookings.length)} on this day`
+                    : "Nothing booked on this day."}
               </p>
             </div>
 
-            {selectedBookings.length ? (
+            {focusedBooking ? (
+              <ul className={styles.bookingList}>
+                <li>
+                  <BookingCard booking={focusedBooking} />
+                </li>
+              </ul>
+            ) : selectedBookings.length ? (
               <>
                 <ul className={styles.bookingList} id="calendar-booking-list">
-                  {visibleBookings.map((booking) => {
-                    const role = bookingDayRole(booking, selectedKey);
-                    return (
-                      <li key={booking.id}>
-                        <article className={styles.bookingCard}>
-                          <div className={styles.cardTop}>
-                            <span className={styles.bookingId}>{booking.bookingRef}</span>
-                            <StatusBadge status={booking.status} />
-                          </div>
-                          <strong className={styles.customer}>{customerName(booking)}</strong>
-                          <span className={styles.roleTag}>{ROLE_LABELS[role]}</span>
-                          <dl className={styles.facts}>
-                            <div><dt>Rental item</dt><dd>{itemsLabel(booking)}</dd></div>
-                            <div><dt>Rental dates</dt><dd>{formatRentalDates(booking)}</dd></div>
-                            <div>
-                              <dt>{booking.fulfillmentMethod === "delivery" ? "Delivery" : "Pickup"}</dt>
-                              <dd>{booking.startDate ? formatManilaDateTime(booking.startDate) : "-"}</dd>
-                            </div>
-                            <div>
-                              <dt>Return</dt>
-                              <dd>{booking.endDate ? formatManilaDateTime(booking.endDate) : "-"}</dd>
-                            </div>
-                          </dl>
-                          <Button
-                            href={`/admin/bookings/${booking.id}`}
-                            variant="primary"
-                            size="sm"
-                            className={styles.viewButton}
-                            aria-label={`View booking details for ${booking.bookingRef}, ${customerName(booking)}`}
-                          >
-                            View booking details
-                          </Button>
-                        </article>
-                      </li>
-                    );
-                  })}
+                  {visibleBookings.map((booking) => (
+                    <li key={booking.id}>
+                      <BookingCard
+                        booking={booking}
+                        roleLabel={ROLE_LABELS[bookingDayRole(booking, selectedKey)]}
+                      />
+                    </li>
+                  ))}
                 </ul>
                 {canCollapse ? (
                   <div className={styles.listFooter}>
