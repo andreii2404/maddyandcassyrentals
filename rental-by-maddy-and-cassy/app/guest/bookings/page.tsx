@@ -8,7 +8,7 @@ import { getBookingsForUser } from "@/src/services/bookingService";
 import type { Booking } from "@/src/types/booking";
 import { bookingHeadline, bookingTotalDailyRate, bookingTotalQuantity } from "@/src/lib/bookingDisplay";
 import { getBookingStatusMessage, getFulfillmentProgressLabel } from "@/src/lib/bookingManagement";
-import { getBookingLiveStatusLabel, useBookingRealtime } from "@/hooks/useBookingRealtime";
+import { useBookingRealtime } from "@/hooks/useBookingRealtime";
 import BookingSummaryCard from "@/components/booking-summary/BookingSummaryCard";
 import StatusBadge from "@/components/status-badge/StatusBadge";
 import Spinner from "@/components/ui/Spinner";
@@ -38,7 +38,7 @@ export default function GuestBookingsPage() {
     void loadBookings();
   }, [loadBookings, user]);
 
-  const liveStatus = useBookingRealtime({
+  useBookingRealtime({
     customerId: user?.is_anonymous ? user.id : undefined,
     enabled: Boolean(user?.is_anonymous),
     onChange: loadBookings,
@@ -85,9 +85,6 @@ export default function GuestBookingsPage() {
           <p>Review every reservation made during this guest session and open its live tracker.</p>
         </div>
         <div className={styles.headerActions}>
-          <span className={`${styles.liveStatus} ${styles[liveStatus]}`}>
-            <span aria-hidden="true" />{getBookingLiveStatusLabel(liveStatus)}
-          </span>
           <Link href="/catalog">Book another rental</Link>
         </div>
       </header>

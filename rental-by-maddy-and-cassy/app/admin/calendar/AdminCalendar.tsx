@@ -1,17 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import Spinner from "@/components/ui/Spinner";
 import StatusBadge from "@/components/status-badge/StatusBadge";
 import { createClient } from "@/src/lib/supabase/client";
 import { getAllBookings } from "@/src/services/bookingService";
 import type { Booking } from "@/src/types/booking";
-import {
-  getBookingLiveStatusLabel,
-  useBookingRealtime,
-} from "@/hooks/useBookingRealtime";
+import { useBookingRealtime } from "@/hooks/useBookingRealtime";
 import {
   bookingDayRole,
   buildMonthGrid,
@@ -27,6 +23,9 @@ import { formatManilaDateTime } from "@/src/lib/rentalTiming";
 import styles from "./calendar.module.css";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/** Booking cards shown for a day before the "Show more bookings" button appears. */
+const COLLAPSED_BOOKING_LIMIT = 3;
 
 const ROLE_LABELS: Record<BookingDayRole, string> = {
   pickup: "Pickup day",
@@ -91,6 +90,8 @@ export default function AdminCalendar() {
   const [today, setToday] = useState(() => todayDateKey());
   const [cursor, setCursor] = useState<MonthCursor>(() => monthCursorFromKey(todayDateKey()));
   const [selectedKey, setSelectedKey] = useState<string>(() => todayDateKey());
+  // Tracks which day is expanded, so picking another day collapses the list again.
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
 
   const loadBookings = useCallback(async () => {
     try {
@@ -107,7 +108,7 @@ export default function AdminCalendar() {
     void loadBookings();
   }, [loadBookings]);
 
-  const liveStatus = useBookingRealtime({ onChange: loadBookings });
+  useBookingRealtime({ onChange: loadBookings });
 
   const bookingsByDate = useMemo(() => groupBookingsByDate(bookings ?? []), [bookings]);
   const approvedCount = useMemo(
@@ -116,6 +117,13 @@ export default function AdminCalendar() {
   );
   const grid = useMemo(() => buildMonthGrid(cursor.year, cursor.month), [cursor]);
   const selectedBookings = bookingsByDate.get(selectedKey) ?? [];
+  const canCollapse = selectedBookings.length > COLLAPSED_BOOKING_LIMIT;
+  const isExpanded = expandedKey === selectedKey;
+  const visibleBookings =
+    canCollapse && !isExpanded
+      ? selectedBookings.slice(0, COLLAPSED_BOOKING_LIMIT)
+      : selectedBookings;
+  const hiddenCount = selectedBookings.length - visibleBookings.length;
 
   function goToToday() {
     const key = todayDateKey();
@@ -138,9 +146,6 @@ export default function AdminCalendar() {
           <p>See which days have approved rentals. Select a day to view its bookings.</p>
         </div>
         <div className={styles.headerMeta}>
-          <span className={`${styles.liveStatus} ${styles[liveStatus]}`}>
-            <span aria-hidden="true" />{getBookingLiveStatusLabel(liveStatus)}
-          </span>
           <span className={styles.count}>{bookingCountLabel(approvedCount)} approved</span>
         </div>
       </header>
@@ -241,40 +246,64 @@ export default function AdminCalendar() {
             </div>
 
             {selectedBookings.length ? (
-              <ul className={styles.bookingList}>
-                {selectedBookings.map((booking) => {
-                  const role = bookingDayRole(booking, selectedKey);
-                  return (
-                    <li key={booking.id}>
-                      <Link
-                        href={`/admin/bookings/${booking.id}`}
-                        className={styles.bookingCard}
-                        aria-label={`Open booking ${booking.bookingRef} for ${customerName(booking)}`}
-                      >
-                        <div className={styles.cardTop}>
-                          <span className={styles.bookingId}>{booking.bookingRef}</span>
-                          <StatusBadge status={booking.status} />
-                        </div>
-                        <strong className={styles.customer}>{customerName(booking)}</strong>
-                        <span className={styles.roleTag}>{ROLE_LABELS[role]}</span>
-                        <dl className={styles.facts}>
-                          <div><dt>Rental item</dt><dd>{itemsLabel(booking)}</dd></div>
-                          <div><dt>Rental dates</dt><dd>{formatRentalDates(booking)}</dd></div>
-                          <div>
-                            <dt>{booking.fulfillmentMethod === "delivery" ? "Delivery" : "Pickup"}</dt>
-                            <dd>{booking.startDate ? formatManilaDateTime(booking.startDate) : "-"}</dd>
+              <>
+                <ul className={styles.bookingList} id="calendar-booking-list">
+                  {visibleBookings.map((booking) => {
+                    const role = bookingDayRole(booking, selectedKey);
+                    return (
+                      <li key={booking.id}>
+                        <article className={styles.bookingCard}>
+                          <div className={styles.cardTop}>
+                            <span className={styles.bookingId}>{booking.bookingRef}</span>
+                            <StatusBadge status={booking.status} />
                           </div>
-                          <div>
-                            <dt>Return</dt>
-                            <dd>{booking.endDate ? formatManilaDateTime(booking.endDate) : "-"}</dd>
-                          </div>
-                        </dl>
-                        <span className={styles.viewLink}>View booking details →</span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
+                          <strong className={styles.customer}>{customerName(booking)}</strong>
+                          <span className={styles.roleTag}>{ROLE_LABELS[role]}</span>
+                          <dl className={styles.facts}>
+                            <div><dt>Rental item</dt><dd>{itemsLabel(booking)}</dd></div>
+                            <div><dt>Rental dates</dt><dd>{formatRentalDates(booking)}</dd></div>
+                            <div>
+                              <dt>{booking.fulfillmentMethod === "delivery" ? "Delivery" : "Pickup"}</dt>
+                              <dd>{booking.startDate ? formatManilaDateTime(booking.startDate) : "-"}</dd>
+                            </div>
+                            <div>
+                              <dt>Return</dt>
+                              <dd>{booking.endDate ? formatManilaDateTime(booking.endDate) : "-"}</dd>
+                            </div>
+                          </dl>
+                          <Button
+                            href={`/admin/bookings/${booking.id}`}
+                            variant="primary"
+                            size="sm"
+                            className={styles.viewButton}
+                            aria-label={`View booking details for ${booking.bookingRef}, ${customerName(booking)}`}
+                          >
+                            View booking details
+                          </Button>
+                        </article>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {canCollapse ? (
+                  <div className={styles.listFooter}>
+                    <span className={styles.listSummary} aria-live="polite">
+                      Showing {visibleBookings.length} of {selectedBookings.length}
+                    </span>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      type="button"
+                      className={styles.toggleButton}
+                      aria-expanded={isExpanded}
+                      aria-controls="calendar-booking-list"
+                      onClick={() => setExpandedKey(isExpanded ? null : selectedKey)}
+                    >
+                      {isExpanded ? "Show less" : `Show more bookings (${hiddenCount})`}
+                    </Button>
+                  </div>
+                ) : null}
+              </>
             ) : (
               <p className={styles.empty}>
                 Pick a highlighted day to see its approved bookings.

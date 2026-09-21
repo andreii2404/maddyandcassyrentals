@@ -18,10 +18,7 @@ import { bookingHeadline, bookingTotalDailyRate, bookingTotalQuantity } from "@/
 import BookingSummaryCard from "@/components/booking-summary/BookingSummaryCard";
 import StatusBadge from "@/components/status-badge/StatusBadge";
 import Spinner from "@/components/ui/Spinner";
-import {
-  getBookingLiveStatusLabel,
-  useBookingRealtime,
-} from "@/hooks/useBookingRealtime";
+import { useBookingRealtime } from "@/hooks/useBookingRealtime";
 import {
   COMPLETED_RENTALS_BEFORE_REWARD,
   LOYALTY_REWARD_RENTAL_NUMBER,
@@ -59,7 +56,7 @@ export default function BookingsListPage() {
     void loadBookings();
   }, [loadBookings]);
 
-  const liveStatus = useBookingRealtime({
+  useBookingRealtime({
     customerId: user?.id,
     enabled: Boolean(user),
     onChange: loadBookings,
@@ -105,9 +102,6 @@ export default function BookingsListPage() {
           <p>Track every request, payment milestone, handover update, and completed rental.</p>
         </div>
         <div className={styles.heroActions}>
-          <span className={`${styles.liveStatus} ${styles[liveStatus]}`}>
-            <span aria-hidden="true" />{getBookingLiveStatusLabel(liveStatus)}
-          </span>
           <Link href="/catalog" className={styles.newBookingLink}>Book another rental <span>→</span></Link>
         </div>
       </header>

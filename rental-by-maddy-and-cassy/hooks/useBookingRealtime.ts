@@ -128,9 +128,3 @@ export function useBookingRealtime({
 
   return status;
 }
-
-export function getBookingLiveStatusLabel(status: BookingLiveStatus): string {
-  if (status === "live") return "Live updates connected";
-  if (status === "reconnecting") return "Reconnecting - auto-refresh active";
-  return "Connecting live updates";
-}

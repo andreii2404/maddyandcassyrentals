@@ -10,10 +10,7 @@ import { getAllUsers } from "@/src/services/userService";
 import type { Booking, BookingStatus, UserProfile } from "@/src/types/database";
 import Spinner from "@/components/ui/Spinner";
 import StatusBadge from "@/components/status-badge/StatusBadge";
-import {
-  getBookingLiveStatusLabel,
-  useBookingRealtime,
-} from "@/hooks/useBookingRealtime";
+import { useBookingRealtime } from "@/hooks/useBookingRealtime";
 import {
   bookingMatchesHistoryFilter,
   getBookingHistoryGroup,
@@ -108,7 +105,7 @@ export default function AdminBookingsList() {
     void loadBookings();
   }, [loadBookings]);
 
-  const liveStatus = useBookingRealtime({ onChange: loadBookings });
+  useBookingRealtime({ onChange: loadBookings });
 
   const usersById = useMemo(() => new Map(users.map((user) => [user.id, user])), [users]);
 
@@ -160,9 +157,6 @@ export default function AdminBookingsList() {
           <p>Review submitted details, verify requirements, and manage rental statuses.</p>
         </div>
         <div className={styles.headerMeta}>
-          <span className={`${styles.liveStatus} ${styles[liveStatus]}`}>
-            <span aria-hidden="true" />{getBookingLiveStatusLabel(liveStatus)}
-          </span>
           <span className={styles.count}>{bookings?.length ?? 0} bookings</span>
           {bookings?.some((booking) => booking.cancellationRequest?.status === "pending") ? (
             <span className={styles.cancellationRequestCount}>

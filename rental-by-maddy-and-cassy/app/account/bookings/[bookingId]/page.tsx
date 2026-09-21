@@ -21,10 +21,7 @@ import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/ToastProvider";
 import CustomerReviewPanel from "@/components/reviews/CustomerReviewPanel";
 import CustomerBookingManagement from "@/components/booking-management/CustomerBookingManagement";
-import {
-  getBookingLiveStatusLabel,
-  useBookingRealtime,
-} from "@/hooks/useBookingRealtime";
+import { useBookingRealtime } from "@/hooks/useBookingRealtime";
 import { bookingHeadline, bookingItemsSummaryData } from "@/src/lib/bookingDisplay";
 import { formatManilaDateTime } from "@/src/lib/rentalTiming";
 import GuestBookingRecoveryForm from "@/components/guest-booking/GuestBookingRecoveryForm";
@@ -182,7 +179,7 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
     void loadDetails();
   }, [loadDetails, user]);
 
-  const liveStatus = useBookingRealtime({
+  useBookingRealtime({
     bookingId: params.bookingId,
     enabled: Boolean(user),
     onChange: loadDetails,
@@ -369,9 +366,6 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
             <p className={styles.createdDate}>Created {new Date(booking.createdAt).toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" })}</p>
           </div>
           <div className={styles.headerStatusGroup}>
-            <span className={`${styles.liveStatus} ${styles[liveStatus]}`}>
-              <span aria-hidden="true" />{getBookingLiveStatusLabel(liveStatus)}
-            </span>
             <StatusBadge status={booking.status} />
           </div>
         </div>
@@ -636,7 +630,6 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
             <p className={styles.sectionEyebrow}>BOOKING UPDATES</p>
             <h2>Notifications</h2>
           </div>
-          <span>Live</span>
         </div>
         <p className={styles.sectionIntro}>See review decisions, confirmation messages, and fulfillment updates in one place.</p>
         <NotificationList uid={user.id} />
