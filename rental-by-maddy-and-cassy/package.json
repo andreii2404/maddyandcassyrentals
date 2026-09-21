@@ -12,6 +12,7 @@
     "test:payments": "tsx --test scripts/testPayments.ts",
     "test:checkout": "tsx --test scripts/testCheckout.ts",
     "test:bookings": "tsx --test scripts/testBookingManagement.ts",
+    "test:calendar": "tsx --test scripts/testBookingCalendar.ts",
     "test:documents": "tsx --test scripts/testDocumentResubmission.ts",
     "test:auth": "tsx --test scripts/testAuthValidation.ts",
     "test:rental-timing": "tsx --test scripts/testRentalTiming.ts",

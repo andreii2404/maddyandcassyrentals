@@ -12,7 +12,10 @@ import styles from "./AdminShell.module.css";
 const navSections = [
   {
     title: "Overview",
-    items: [{ href: "/admin", label: "Dashboard" }],
+    items: [
+      { href: "/admin", label: "Dashboard" },
+      { href: "/admin/calendar", label: "Calendar" },
+    ],
   },
   {
     title: "Rental Management",

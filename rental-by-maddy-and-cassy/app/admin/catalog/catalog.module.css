@@ -63,7 +63,7 @@
 .unitStatus[data-status="active"] { background:var(--color-status-green-bg); }
 .unitStatus[data-status="maintenance"] { background:#fff4d9; }
 .unitStatus[data-status="retired"] { background:var(--color-status-red-bg); }
-.cardBody { display:flex; gap:.55rem; padding:1rem 1.1rem 1.1rem; flex:1; flex-direction:column; }
+.cardBody { container-type:inline-size; display:flex; gap:.55rem; padding:1rem 1.1rem 1.1rem; flex:1; flex-direction:column; }
 .cardHeading { display:flex; flex-direction:column; }
 .card h3,.card p { margin:0; }
 .card h3 { color:var(--color-text-primary); font-size:1.05rem; line-height:1.25; }
@@ -72,10 +72,13 @@
 .priceLine strong { display:flex; align-items:baseline; gap:.2rem; color:var(--color-primary); font-size:1.05rem; }
 .priceLine strong small { color:var(--color-charcoal); font-size:.68rem; font-weight:600; }
 .priceLine span { padding:.22rem .45rem; border-radius:999px; background:var(--color-status-green-bg); color:var(--color-status-green); font-size:.62rem; font-weight:800; }
-.inventoryFacts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.35rem; margin:.2rem 0 0; }
-.inventoryFacts div { min-width:0; padding:.48rem; border-radius:10px; background:var(--color-background); }
-.inventoryFacts dt { color:var(--color-charcoal); font-size:.57rem; text-transform:uppercase; }
-.inventoryFacts dd { margin:.18rem 0 0; font-size:.75rem; font-weight:800; }
+.inventoryFacts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); align-items:stretch; gap:.35rem; margin:.2rem 0 0; }
+.inventoryFacts div { display:flex; min-width:0; flex-direction:column; align-items:center; justify-content:center; gap:.18rem; padding:.55rem .6rem; border-radius:10px; background:var(--color-background); text-align:center; }
+.inventoryFacts dt { color:var(--color-charcoal); font-size:.57rem; line-height:1.3; text-transform:uppercase; }
+.inventoryFacts dd { margin:0; font-size:.75rem; font-weight:800; line-height:1.3; }
+/* When a card is too narrow for three comfortably padded boxes, stack them as equal label/value rows instead of squeezing the labels. */
+@container (max-width:17.75rem){ .inventoryFacts { grid-template-columns:1fr; } .inventoryFacts div { flex-direction:row; justify-content:space-between; padding:.5rem .75rem; text-align:left; } }
+@media(max-width:650px){ .inventoryFacts div { flex-direction:row; justify-content:space-between; padding:.5rem .75rem; text-align:left; } }
 .contentWarning { align-self:flex-start; padding:.26rem .48rem; border-radius:999px; background:#fff4d9; color:#7a5700!important; font-weight:700; }
 .actions { display:flex; flex-direction:column; gap:.5rem; margin-top:auto; padding-top:.75rem; border-top:1px solid var(--color-border); }
 .actionRow { display:flex; flex-wrap:wrap; gap:.5rem; }
