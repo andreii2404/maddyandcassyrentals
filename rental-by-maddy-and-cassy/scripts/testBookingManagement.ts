@@ -269,6 +269,7 @@ test("approval confirmation email lists every booking detail the customer needs"
   assert.match(email.text, /Return date and time: /);
   assert.match(email.text, /Booking status: Approved/);
   assert.match(email.text, /- Pay the remaining balance before handover\./);
+  assert.match(email.html, /signed rental contract PDF is attached/i);
 });
 
 test("approval email targets guest bookings and never leaks technical wording", () => {

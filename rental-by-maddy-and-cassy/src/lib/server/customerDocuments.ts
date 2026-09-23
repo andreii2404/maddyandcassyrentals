@@ -178,6 +178,18 @@ export async function generateAndSaveFinalAgreement(
     }
   }
 
+  let businessSignatureBytes: Uint8Array | undefined;
+  let businessSignatureContentType: string | undefined;
+  if (businessSignature?.signaturePath) {
+    const { data } = await admin.storage
+      .from("agreements")
+      .download(businessSignature.signaturePath);
+    if (data) {
+      businessSignatureBytes = new Uint8Array(await data.arrayBuffer());
+      businessSignatureContentType = data.type;
+    }
+  }
+
   const bytes = await createFinalAgreementPdf({
     bookingRef: booking.bookingRef,
     customerName: booking.customerSnapshot.fullName || customerSignature?.signerName || "Customer",
@@ -199,6 +211,8 @@ export async function generateAndSaveFinalAgreement(
     confirmedAt: formatManilaDate(new Date(), true),
     businessSignerName: businessSignature?.signerName,
     businessSignedAt: businessSignature ? formatManilaDate(businessSignature.signedAt, true) : undefined,
+    businessSignatureBytes,
+    businessSignatureContentType,
   });
   await savePrivatePdf(admin, "agreements", input.storagePath, bytes);
 }

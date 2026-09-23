@@ -56,13 +56,13 @@ export function buildBookingStatusEmail(details: BookingStatusEmailDetails) {
   const eyebrow = approved ? "BOOKING APPROVED" : "RENTAL COMPLETED";
   const heading = approved ? `Good news, ${name}!` : `Thank you, ${name}!`;
   const introduction = approved
-    ? `Your booking for <strong>${item}</strong> has been approved. Here is everything you need for your rental — please keep this email handy.`
+    ? `Your booking for <strong>${item}</strong> has been successfully verified and approved. Your signed rental contract PDF is attached — please keep this email and the contract handy.`
     : `We have recorded the return of <strong>${item}</strong>. Booking <strong>${reference}</strong> is now complete.`;
   const nextTitle = approved ? "What happens next" : "Your completed rental";
   const nextCopy = approved
     ? isGuest
-      ? "Open the secure guest tracker in the same browser used for checkout to finish any remaining payment, verification documents, and agreement steps. No customer account is required."
-      : "Open your booking to finish any remaining payment, verification documents, and rental agreement steps. We will keep your account updated as each requirement is reviewed."
+      ? "Open the secure guest tracker in the same browser used for checkout to follow pickup or delivery updates. No customer account is required."
+      : "Open your booking to follow pickup or delivery updates and keep your signed contract and payment records together."
     : isGuest
       ? "Your payment records, receipt, invoice, and completed rental remain available in the secure guest tracker on the browser used for checkout."
       : "Your booking history, payment records, receipt, and invoice remain available in your account. You can also share a review to help future renters choose with confidence.";

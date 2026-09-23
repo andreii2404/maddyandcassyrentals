@@ -12,6 +12,8 @@ const ACTION_LABELS: Record<string, string> = {
   "booking.cancelled": "Booking cancelled",
   "booking.status_changed": "Booking status updated",
   "booking.details_updated": "Booking details updated",
+  "booking.fulfillment_method_updated": "Pickup or delivery updated",
+  "booking.confirmation_contract_emailed": "Signed contract emailed",
   "booking.multi_day_period_applied": "Multi-day rental period applied",
   "booking.documents_submitted": "Documents submitted",
   "payment.proof_submitted": "Payment proof submitted",
@@ -43,6 +45,7 @@ const ACTOR_LABELS: Record<string, string> = {
 
 const ENTITY_LABELS: Record<string, string> = {
   booking: "Booking",
+  booking_fulfillment: "Pickup or delivery arrangement",
   payment_submission: "Payment proof",
   booking_receipt: "Official receipt",
   booking_agreement: "Rental agreement",
@@ -190,6 +193,10 @@ export function formatWhatHappened(log: AdminAuditLog, actorName: string): strin
     }
     case "booking.details_updated":
       return `${actorName} updated the booking details.`;
+    case "booking.fulfillment_method_updated":
+      return `${actorName} updated the pickup or delivery arrangement.`;
+    case "booking.confirmation_contract_emailed":
+      return `${actorName} emailed the successful booking confirmation and signed contract to the customer.`;
     case "booking.multi_day_period_applied":
       return `${actorName} applied a multi-day rental period to this booking.`;
     case "booking.documents_submitted":
