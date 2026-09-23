@@ -180,6 +180,7 @@ export async function reviewAdminCancellationRequest(
 export async function countersignBookingAgreement(
   bookingId: string,
   signerName: string,
+  signatureDataUrl: string,
 ): Promise<void> {
   const response = await fetch(
     `/api/admin/bookings/${encodeURIComponent(bookingId)}/agreement`,
@@ -187,12 +188,54 @@ export async function countersignBookingAgreement(
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ signerName, acknowledged: true }),
+      body: JSON.stringify({ signerName, signatureDataUrl, acknowledged: true }),
     },
   );
 
   if (!response.ok) {
     throw new Error(await getErrorMessage(response, "The agreement could not be countersigned."));
+  }
+}
+
+export async function downloadFinalAgreementPdf(bookingId: string, bookingReference: string): Promise<void> {
+  const response = await fetch(`/api/admin/bookings/${encodeURIComponent(bookingId)}/agreement`, {
+    credentials: "same-origin",
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "The final signed contract could not be downloaded."));
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `signed-rental-agreement-${bookingReference.replace(/[^a-zA-Z0-9_-]/g, "-")}.pdf`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+export async function updateAdminBookingFulfillment(
+  bookingId: string,
+  input: {
+    method: "pickup" | "delivery";
+    location?: string;
+    cityMunicipality?: string;
+    province?: string;
+  },
+): Promise<void> {
+  const response = await fetch(`/api/admin/bookings/${encodeURIComponent(bookingId)}/fulfillment`, {
+    method: "PATCH",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, "The pickup or delivery setting could not be saved."));
   }
 }
 

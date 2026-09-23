@@ -18,6 +18,16 @@ function errorResponse(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
 }
 
+function decodeSignatureDataUrl(value: unknown): { bytes: Buffer; contentType: "image/png" | "image/jpeg"; extension: "png" | "jpg" } | null {
+  if (typeof value !== "string") return null;
+  const match = /^data:(image\/(?:png|jpeg));base64,([A-Za-z0-9+/=]+)$/.exec(value);
+  if (!match) return null;
+  const bytes = Buffer.from(match[2], "base64");
+  if (!bytes.length || bytes.length > 2 * 1024 * 1024) return null;
+  const contentType = match[1] as "image/png" | "image/jpeg";
+  return { bytes, contentType, extension: contentType === "image/png" ? "png" : "jpg" };
+}
+
 function mapSignature(row: {
   id: string;
   agreement_version_id: string;
@@ -40,6 +50,58 @@ function mapSignature(row: {
   };
 }
 
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ bookingId: string }> },
+) {
+  try {
+    await requireActiveAdmin();
+    const { bookingId } = await params;
+    const admin = createAdminClient();
+    const booking = await getBookingById(admin, bookingId);
+    if (!booking) return errorResponse("The selected booking could not be found.", 404);
+
+    const { data: agreementRow } = await admin
+      .from("booking_agreements")
+      .select("id, status")
+      .eq("booking_id", bookingId)
+      .maybeSingle();
+    if (!agreementRow || agreementRow.status !== "completed") {
+      return errorResponse("The final signed contract is not ready yet.", 409);
+    }
+
+    const { data: version } = await admin
+      .from("agreement_versions")
+      .select("final_document_path")
+      .eq("agreement_id", agreementRow.id)
+      .order("version_number", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!version?.final_document_path) {
+      return errorResponse("The final signed contract PDF could not be found.", 404);
+    }
+
+    const { data: contract, error } = await admin.storage
+      .from("agreements")
+      .download(version.final_document_path);
+    if (error || !contract) throw new Error(error?.message ?? "CONTRACT_DOWNLOAD_FAILED");
+
+    const safeReference = booking.bookingRef.replace(/[^a-zA-Z0-9_-]/g, "-");
+    return new NextResponse(Buffer.from(await contract.arrayBuffer()), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="signed-rental-agreement-${safeReference}.pdf"`,
+        "Cache-Control": "private, no-store",
+      },
+    });
+  } catch (error) {
+    if (error instanceof RequestSecurityError) return errorResponse(error.message, error.status);
+    console.error("Final agreement download failed", error);
+    return errorResponse("The final signed contract could not be downloaded. Please try again.", 500);
+  }
+}
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ bookingId: string }> },
@@ -49,15 +111,19 @@ export async function POST(
     const { user } = await requireActiveAdmin();
     const { bookingId } = await params;
     const body = (await request.json().catch(() => null)) as
-      | { signerName?: unknown; acknowledged?: unknown }
+      | { signerName?: unknown; acknowledged?: unknown; signatureDataUrl?: unknown }
       | null;
     const signerName = typeof body?.signerName === "string" ? body.signerName.trim() : "";
+    const signature = decodeSignatureDataUrl(body?.signatureDataUrl);
 
     if (signerName.length < 2 || signerName.length > 120) {
       return errorResponse("Enter the authorized business signer's complete name.", 400);
     }
     if (body?.acknowledged !== true) {
       return errorResponse("Confirm that you are authorized to countersign this agreement.", 400);
+    }
+    if (!signature) {
+      return errorResponse("Draw or upload the authorized administrator's signature before finalizing the agreement.", 400);
     }
 
     const admin = createAdminClient();
@@ -111,6 +177,16 @@ export async function POST(
     const now = new Date().toISOString();
     let businessSignature = signatureRows?.find((signature) => signature.signer_role === "business");
     if (!businessSignature) {
+      const businessSignaturePath = `${booking.customerId}/${booking.id}/business-signature-${currentVersion.id}.${signature.extension}`;
+      const { error: uploadError } = await admin.storage
+        .from("agreements")
+        .upload(businessSignaturePath, signature.bytes, {
+          contentType: signature.contentType,
+          upsert: true,
+          cacheControl: "0",
+        });
+      if (uploadError) throw new Error(`BUSINESS_SIGNATURE_UPLOAD_FAILED: ${uploadError.message}`);
+
       const { data, error } = await admin
         .from("agreement_signatures")
         .insert({
@@ -118,8 +194,9 @@ export async function POST(
           signer_user_id: user.id,
           signer_role: "business",
           signer_name: signerName,
+          signature_path: businessSignaturePath,
           signature_data: {
-            method: "typed_admin_countersignature",
+            method: "drawn_or_uploaded_admin_signature",
             authorized: true,
           },
           signed_at: now,
@@ -128,7 +205,10 @@ export async function POST(
         })
         .select("*")
         .single();
-      if (error || !data) throw new Error(error?.message ?? "BUSINESS_SIGNATURE_NOT_SAVED");
+      if (error || !data) {
+        await admin.storage.from("agreements").remove([businessSignaturePath]);
+        throw new Error(error?.message ?? "BUSINESS_SIGNATURE_NOT_SAVED");
+      }
       businessSignature = data;
     }
 

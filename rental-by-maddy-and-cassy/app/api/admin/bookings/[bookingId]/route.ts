@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { type EmailBookingStatus } from "@/src/lib/bookingStatusEmailContent";
-import { sendBookingApprovalEmail } from "@/src/lib/server/bookingApprovalEmail";
 import { sendBookingStatusEmail } from "@/src/lib/server/bookingStatusEmail";
 import { enforceRateLimit, requireActiveAdmin, RequestSecurityError } from "@/src/lib/server/requestSecurity";
 import { createAdminClient } from "@/src/lib/supabase/admin";
@@ -22,8 +21,10 @@ function isBookingStatus(value: unknown): value is BookingStatus {
   return typeof value === "string" && (VALID_STATUSES as string[]).includes(value);
 }
 
-function isEmailBookingStatus(status: BookingStatus): status is EmailBookingStatus {
-  return status === "approved" || status === "returned";
+function isAutomaticEmailStatus(status: BookingStatus): status is EmailBookingStatus {
+  // Approval confirmation is intentionally manual: the admin must first verify
+  // payment/documents, countersign, and generate the final contract PDF.
+  return status === "returned";
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ bookingId: string }> }) {
@@ -103,15 +104,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
 
     let customerEmailSent: boolean | null = null;
 
-    if (targetStatus === "approved") {
-      // The approval is already saved at this point. sendBookingApprovalEmail never
-      // throws, so a failed email is reported back without undoing the approval.
-      const outcome = await sendBookingApprovalEmail({
-        bookingId,
-        origin: new URL(request.url).origin,
-      });
-      customerEmailSent = outcome.sent;
-    } else if (isEmailBookingStatus(targetStatus)) {
+    if (isAutomaticEmailStatus(targetStatus)) {
       const admin = createAdminClient();
       const [{ data: profile }, { data: items }, { data: bookingAccess }] = await Promise.all([
         admin
@@ -158,7 +151,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
       success: true,
       bookingId,
       status: data.status,
-      customerEmail: isEmailBookingStatus(targetStatus)
+      customerEmail: isAutomaticEmailStatus(targetStatus)
         ? { required: true, sent: customerEmailSent }
         : { required: false, sent: null },
     });

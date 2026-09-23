@@ -14,9 +14,11 @@ import {
   ADMIN_BOOKING_ACTIONS,
   autoRejectBookingForMissingRequirements,
   countersignBookingAgreement,
+  downloadFinalAgreementPdf,
   downloadAdminBookingPdf,
   reviewAdminCancellationRequest,
   sendAdminBookingConfirmationEmail,
+  updateAdminBookingFulfillment,
   updateAdminBookingStatus,
 } from "@/src/services/adminBookingService";
 import { getUserProfile } from "@/src/services/userService";
@@ -43,6 +45,8 @@ import {
 } from "@/src/lib/bookingManagement";
 import BookingItemsSummary from "@/components/booking-summary/BookingItemsSummary";
 import { bookingHeadline, bookingItemsSummaryData } from "@/src/lib/bookingDisplay";
+import SignaturePad from "@/components/signature-pad/SignaturePad";
+import type { SignatureMethod } from "@/src/types/reservationDraft";
 
 const REQUIREMENTS_STATUS_LABELS: Record<string, string> = {
   not_submitted: "Not Submitted",
@@ -135,15 +139,19 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   const [reviewingCancellation, setReviewingCancellation] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [businessSignerName, setBusinessSignerName] = useState("");
+  const [businessSignatureMethod, setBusinessSignatureMethod] = useState<SignatureMethod>("drawn");
+  const [businessSignatureDataUrl, setBusinessSignatureDataUrl] = useState<string | null>(null);
   const [countersignAcknowledged, setCountersignAcknowledged] = useState(false);
   const [countersigning, setCountersigning] = useState(false);
   const [countersignConfirmationOpen, setCountersignConfirmationOpen] = useState(false);
+  const [downloadingContract, setDownloadingContract] = useState(false);
+  const [adminFulfillmentMethod, setAdminFulfillmentMethod] = useState<"pickup" | "delivery">("pickup");
+  const [adminDeliveryLocation, setAdminDeliveryLocation] = useState("");
+  const [adminDeliveryCity, setAdminDeliveryCity] = useState("");
+  const [adminDeliveryProvince, setAdminDeliveryProvince] = useState("");
+  const [savingFulfillment, setSavingFulfillment] = useState(false);
   const [sendingConfirmationEmail, setSendingConfirmationEmail] = useState(false);
   const [confirmationEmailSentAt, setConfirmationEmailSentAt] = useState<string | null>(null);
-  // True from the moment an approval's confirmation email fails until a resend succeeds.
-  const [approvalEmailFailed, setApprovalEmailFailed] = useState(false);
-  const [approvalEmailPopupOpen, setApprovalEmailPopupOpen] = useState(false);
-  const [approvalEmailPopupError, setApprovalEmailPopupError] = useState<string | null>(null);
   const [activeStep, setActiveStep] = useState<AdminReviewStep>("customer");
 
   const loadDetails = useCallback(async () => {
@@ -160,6 +168,10 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
         getBookingReceipts(supabase, bookingId),
       ]);
       setState({ details, profile, payments, receipts });
+      setAdminFulfillmentMethod(details.booking.fulfillmentMethod);
+      setAdminDeliveryLocation(details.booking.location ?? "");
+      setAdminDeliveryCity(details.booking.cityMunicipality ?? "");
+      setAdminDeliveryProvince(details.booking.province ?? "");
       setError(null);
     } catch {
       setError("The booking details could not be loaded. Please refresh and try again.");
@@ -303,22 +315,15 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
       setNote("");
       setDeclineReason("");
       if (updateResult.emailRequired && !updateResult.emailSent) {
-        if (selectedAction.status === "approved") {
-          // The approval itself is saved. "Booking approved" is only announced once the
-          // email also went out, so a failure gets the retry popup instead.
-          setApprovalEmailFailed(true);
-          setApprovalEmailPopupError(null);
-          setApprovalEmailPopupOpen(true);
-        } else {
-          showToast(
-            `${selectedAction.label} completed, but the customer email could not be sent. Please contact them directly.`,
-            "warning",
-          );
-        }
+        showToast(
+          `${selectedAction.label} completed, but the customer email could not be sent. Please contact them directly.`,
+          "warning",
+        );
       } else if (selectedAction.status === "approved") {
-        setApprovalEmailFailed(false);
-        setConfirmationEmailSentAt(new Date().toISOString());
-        showToast("Booking approved. Confirmation email sent successfully.", "success");
+        showToast(
+          "Booking approved. Finish verification and the business signature, then send the signed contract from Final Review.",
+          "success",
+        );
       } else {
         showToast(
           `${selectedAction.label} completed.${updateResult.emailSent ? " The customer was emailed automatically." : ""}`,
@@ -335,21 +340,17 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
     }
   }
 
-  async function handleSendBookingConfirmationEmail(fromPopup = false) {
+  async function handleSendBookingConfirmationEmail() {
     setSendingConfirmationEmail(true);
-    if (fromPopup) setApprovalEmailPopupError(null);
     try {
       await sendAdminBookingConfirmationEmail(bookingId);
       setConfirmationEmailSentAt(new Date().toISOString());
-      setApprovalEmailFailed(false);
-      setApprovalEmailPopupOpen(false);
-      showToast("Confirmation email sent successfully.", "success");
+      showToast("Booking confirmation and signed contract sent successfully.", "success");
     } catch (sendError) {
       const message = sendError instanceof Error
         ? sendError.message
         : "The confirmation email could not be sent. Please try again.";
-      if (fromPopup) setApprovalEmailPopupError(message);
-      else showToast(message, "error");
+      showToast(message, "error");
     } finally {
       setSendingConfirmationEmail(false);
     }
@@ -423,15 +424,24 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
       showToast("Confirm that you are authorized to countersign for the business.", "warning");
       return;
     }
+    if (!businessSignatureDataUrl) {
+      showToast("Draw or upload the authorized administrator's signature before continuing.", "warning");
+      return;
+    }
     setCountersignConfirmationOpen(true);
   }
 
   async function confirmCountersignAgreement() {
     setCountersigning(true);
     try {
-      await countersignBookingAgreement(bookingId, businessSignerName.trim());
+      await countersignBookingAgreement(
+        bookingId,
+        businessSignerName.trim(),
+        businessSignatureDataUrl ?? "",
+      );
       await loadDetails();
       setCountersignAcknowledged(false);
+      setBusinessSignatureDataUrl(null);
       setCountersignConfirmationOpen(false);
       showToast("Agreement countersigned. The final PDF is ready for the customer.", "success");
     } catch (countersignError) {
@@ -443,6 +453,52 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
       );
     } finally {
       setCountersigning(false);
+    }
+  }
+
+  async function handleDownloadFinalAgreement() {
+    if (!state) return;
+    setDownloadingContract(true);
+    try {
+      await downloadFinalAgreementPdf(bookingId, state.details.booking.bookingRef);
+      showToast("The signed rental contract was downloaded.", "success");
+    } catch (downloadError) {
+      showToast(
+        downloadError instanceof Error ? downloadError.message : "The signed contract could not be downloaded.",
+        "error",
+      );
+    } finally {
+      setDownloadingContract(false);
+    }
+  }
+
+  async function handleSaveFulfillment() {
+    if (adminFulfillmentMethod === "delivery" && (
+      !adminDeliveryLocation.trim() || !adminDeliveryCity.trim() || !adminDeliveryProvince.trim()
+    )) {
+      showToast("Enter the complete delivery address before saving delivery.", "warning");
+      return;
+    }
+    setSavingFulfillment(true);
+    try {
+      await updateAdminBookingFulfillment(bookingId, {
+        method: adminFulfillmentMethod,
+        location: adminFulfillmentMethod === "delivery" ? adminDeliveryLocation.trim() : undefined,
+        cityMunicipality: adminFulfillmentMethod === "delivery" ? adminDeliveryCity.trim() : undefined,
+        province: adminFulfillmentMethod === "delivery" ? adminDeliveryProvince.trim() : undefined,
+      });
+      await loadDetails();
+      showToast(
+        adminFulfillmentMethod === "delivery" ? "Delivery was saved for this booking." : "Pickup was saved for this booking.",
+        "success",
+      );
+    } catch (fulfillmentError) {
+      showToast(
+        fulfillmentError instanceof Error ? fulfillmentError.message : "The pickup or delivery setting could not be saved.",
+        "error",
+      );
+    } finally {
+      setSavingFulfillment(false);
     }
   }
 
@@ -496,12 +552,25 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
       : "Not Started";
   const accountTypeLabel = booking.isGuestCheckout ? "Guest checkout" : "Registered account";
   const fulfillmentLabel = formatStatus(booking.fulfillmentMethod);
+  const bookingApproved = ["approved", "confirmed", "ready_for_release", "released"].includes(booking.status);
   const handoverPaymentReady = amountPaid >= booking.totalAmount - 0.01 || booking.payLaterAllowed;
   const canCountersignAgreement = Boolean(
     agreement?.status === "awaiting_business_signature" &&
     customerSignature &&
     amountPaid > 0 &&
     booking.requirementsStatus === "approved",
+  );
+  const fulfillmentLocked = Boolean(
+    agreement ||
+    ["confirmed", "ready_for_release", "released", "returned", "cancelled", "rejected"].includes(booking.status),
+  );
+  const canSendFinalConfirmation = Boolean(
+    bookingApproved &&
+    booking.requirementsStatus === "approved" &&
+    amountPaid > 0 &&
+    agreement?.status === "completed" &&
+    agreement.finalDocumentPath &&
+    businessSignature,
   );
   const totalUnits = booking.items.reduce((sum, item) => sum + item.quantity, 0);
   const totalAssignedUnits = booking.items.reduce((sum, item) => sum + item.assignedUnitCount, 0);
@@ -558,7 +627,6 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   ];
   const remainingChecks = reviewChecks.filter((check) => !check.ready).length;
   const primaryAction = actions.find((action) => action.tone !== "danger") ?? null;
-  const bookingApproved = ["approved", "confirmed", "ready_for_release", "released"].includes(booking.status);
   const finalDecisionLabel = booking.status === "pending"
     ? remainingChecks === 0 ? "Ready for Approval" : "Pending"
     : booking.status === "returned"
@@ -886,6 +954,42 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
               <div><dt>Handover Method</dt><dd>{formatStatus(booking.fulfillmentMethod)}</dd></div>
               <div><dt>Pickup/Delivery Location</dt><dd>{booking.location || "Not provided"}</dd></div>
             </dl>
+            <section className={styles.fulfillmentEditor} aria-labelledby="fulfillment-editor-heading">
+              <div>
+                <span>ADMIN HANDOVER SETTING</span>
+                <h3 id="fulfillment-editor-heading">Pickup or delivery</h3>
+                <p>Confirm the arrangement before the rental agreement is generated. The contract then locks this setting.</p>
+              </div>
+              <div className={styles.fulfillmentControls}>
+                <label>
+                  <span>Handover method</span>
+                  <select
+                    value={adminFulfillmentMethod}
+                    onChange={(event) => setAdminFulfillmentMethod(event.target.value as "pickup" | "delivery")}
+                    disabled={fulfillmentLocked || savingFulfillment}
+                  >
+                    <option value="pickup">Customer pickup</option>
+                    <option value="delivery">Deliver to customer</option>
+                  </select>
+                </label>
+                {adminFulfillmentMethod === "delivery" ? (
+                  <div className={styles.deliveryAddressFields}>
+                    <label><span>Street / barangay</span><input value={adminDeliveryLocation} onChange={(event) => setAdminDeliveryLocation(event.target.value)} disabled={fulfillmentLocked || savingFulfillment} /></label>
+                    <label><span>City / municipality</span><input value={adminDeliveryCity} onChange={(event) => setAdminDeliveryCity(event.target.value)} disabled={fulfillmentLocked || savingFulfillment} /></label>
+                    <label><span>Province</span><input value={adminDeliveryProvince} onChange={(event) => setAdminDeliveryProvince(event.target.value)} disabled={fulfillmentLocked || savingFulfillment} /></label>
+                  </div>
+                ) : null}
+                <Button
+                  variant="secondary"
+                  type="button"
+                  onClick={() => void handleSaveFulfillment()}
+                  disabled={fulfillmentLocked || savingFulfillment}
+                >
+                  {savingFulfillment ? "Saving..." : "Save handover method"}
+                </Button>
+                {fulfillmentLocked ? <small>This setting is locked because the agreement was generated or the booking has progressed.</small> : null}
+              </div>
+            </section>
             <BookingItemsSummary
               currency="PHP"
               items={itemsSummary.items}
@@ -1060,7 +1164,17 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                         </div>
 
                         <div className={styles.countersignGroup}>
-                          <span>3 · Authorization Confirmation</span>
+                          <span>3 · Administrator Signature</span>
+                          <SignaturePad
+                            method={businessSignatureMethod}
+                            signatureDataUrl={businessSignatureDataUrl}
+                            onMethodChange={setBusinessSignatureMethod}
+                            onSignatureChange={setBusinessSignatureDataUrl}
+                          />
+                        </div>
+
+                        <div className={styles.countersignGroup}>
+                          <span>4 · Authorization Confirmation</span>
                           <label className={styles.authorizationCheck}>
                             <input
                               type="checkbox"
@@ -1074,12 +1188,12 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                       </div>
 
                       <div className={styles.countersignGroup}>
-                        <span>4 · Finalize Agreement</span>
+                        <span>5 · Finalize Agreement</span>
                         <Button variant="none"
                           type="button"
                           className={styles.countersignButton}
                           onClick={requestCountersignAgreement}
-                          disabled={!canCountersignAgreement || !businessSignerName.trim() || !countersignAcknowledged || countersigning}
+                          disabled={!canCountersignAgreement || !businessSignerName.trim() || !businessSignatureDataUrl || !countersignAcknowledged || countersigning}
                         >
                           {countersigning ? "Finalizing agreement..." : "Countersign & Finalize Agreement"}
                         </Button>
@@ -1095,6 +1209,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                       {booking.status === "pending" ? <p className={styles.nextAdminStep}><strong>Next admin step:</strong> Approve the booking first, then confirm it after every checklist item is complete.</p> : null}
                       <div className={styles.agreementButtons}>
                         {agreement.finalDocumentPath ? <Button variant="none" type="button" onClick={() => openPrivateFile("agreements", agreement.finalDocumentPath!)}>Open final agreement</Button> : null}
+                        {agreement.finalDocumentPath ? <Button variant="secondary" type="button" onClick={() => void handleDownloadFinalAgreement()} disabled={downloadingContract}>{downloadingContract ? "Downloading..." : "Download signed contract"}</Button> : null}
                         {customerSignature?.signaturePath ? <Button variant="none" type="button" className={styles.secondaryRecordButton} onClick={() => openPrivateFile("customer-documents", customerSignature.signaturePath!)}>View customer signature</Button> : null}
                       </div>
                     </div>
@@ -1193,23 +1308,22 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
             <section className={`${styles.customerNotification} ${bookingApproved ? styles.customerNotificationApproved : ""}`} aria-labelledby="customer-notification-heading">
               <div>
                 <span>Customer Notification</span>
-                <h2 id="customer-notification-heading">{bookingApproved ? (approvalEmailFailed ? "Confirmation Email Not Sent" : "Booking Approved") : "Confirmation email sent after approval"}</h2>
-                <p>{bookingApproved
-                  ? approvalEmailFailed
-                    ? `The booking is approved, but ${email === "-" ? "the customer" : email} has not received the confirmation email yet. Use Resend Email to try again.`
-                    : `The approval confirmation email is sent automatically. If ${email === "-" ? "the customer" : email} did not receive it, use Resend Email to send it again.`
-                  : "The customer receives a confirmation email automatically as soon as the booking is approved."}</p>
+                <h2 id="customer-notification-heading">{canSendFinalConfirmation ? "Signed contract ready to send" : "Complete the contract first"}</h2>
+                <p>{canSendFinalConfirmation
+                  ? `Send the successful booking confirmation and signed contract PDF to ${email === "-" ? "the customer" : email}. This is a manual final step.`
+                  : "Approve the booking, payment, and documents, then add the administrator signature and generate the final contract PDF."}</p>
               </div>
               <div className={styles.customerNotificationAction}>
                 <Button variant="none"
                   type="button"
                   className={styles.sendConfirmationButton}
                   onClick={() => void handleSendBookingConfirmationEmail()}
-                  disabled={!bookingApproved || sendingConfirmationEmail}
+                  disabled={!canSendFinalConfirmation || sendingConfirmationEmail}
                 >
-                  {sendingConfirmationEmail ? "Sending email..." : "Resend Email"}
+                  {sendingConfirmationEmail ? "Sending contract..." : confirmationEmailSentAt ? "Send Again" : "Send Contract to Email"}
                 </Button>
                 {confirmationEmailSentAt ? <small>Last sent {formatDate(confirmationEmailSentAt, true)}</small> : null}
+                {!canSendFinalConfirmation ? <small>Locked until every required check is complete.</small> : null}
               </div>
             </section>
           </div>
@@ -1278,20 +1392,6 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
         </ConfirmModal>
       ) : null}
 
-      {approvalEmailPopupOpen ? (
-        <ConfirmModal
-          title="Confirmation Email Not Sent"
-          description="Booking approved, but the confirmation email could not be sent. Please try sending it again."
-          confirmLabel="Resend Email"
-          busyLabel="Sending email..."
-          cancelLabel="Close"
-          onCancel={() => setApprovalEmailPopupOpen(false)}
-          onConfirm={() => void handleSendBookingConfirmationEmail(true)}
-          error={approvalEmailPopupError}
-          busy={sendingConfirmationEmail}
-        />
-      ) : null}
-
       {countersignConfirmationOpen ? (
         <ConfirmModal
           title="Finalize Rental Agreement?"
@@ -1309,7 +1409,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
             <span><strong>Customer:</strong> {fullName}</span>
             <span><strong>Rental:</strong> {bookingHeadline(booking.items)}</span>
             <span><strong>Current status:</strong> {formatStatus(booking.status)}</span>
-            <span>This action is permanent and cannot be undone. The final PDF will be generated and made available to the customer immediately.</span>
+            <span>Your signature, name, timestamp, and administrator account will be recorded. The final PDF will be generated and made available for download and email.</span>
           </div>
         </ConfirmModal>
       ) : null}

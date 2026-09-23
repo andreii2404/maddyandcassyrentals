@@ -67,6 +67,8 @@ export interface AgreementPdfInput extends CustomerDocumentBase {
   confirmedAt: string;
   businessSignerName?: string;
   businessSignedAt?: string;
+  businessSignatureBytes?: Uint8Array;
+  businessSignatureContentType?: string;
 }
 
 function safeText(value: string): string {
@@ -683,7 +685,24 @@ export async function createFinalAgreementPdf(
       font: bold,
       color: MUTED,
     });
-    y2 -= 24;
+    y2 -= 18;
+    const businessSignature = await embedSignature(
+      pdf,
+      input.businessSignatureBytes,
+      input.businessSignatureContentType,
+    );
+    if (businessSignature) {
+      const scale = Math.min(200 / businessSignature.width, 54 / businessSignature.height, 1);
+      pageTwo.drawImage(businessSignature, {
+        x: MARGIN,
+        y: y2 - businessSignature.height * scale,
+        width: businessSignature.width * scale,
+        height: businessSignature.height * scale,
+      });
+      y2 -= 62;
+    } else {
+      y2 -= 6;
+    }
     drawField(pageTwo, regular, bold, "Authorized business signer", input.businessSignerName, MARGIN, y2, half);
     drawField(pageTwo, regular, bold, "Countersigned at", input.businessSignedAt || input.confirmedAt, MARGIN + half + 20, y2, half);
   }

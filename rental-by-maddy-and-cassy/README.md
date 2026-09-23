@@ -67,6 +67,31 @@ the Supabase project's own email settings.
 Run `npm run verify` to lint, type-check, test PDF generation, and build the
 production application.
 
+## Resend transactional email deployment
+
+The final booking email is deliberately sent by an administrator only after
+payment and verification documents are approved, the customer has signed, the
+administrator has countersigned, and the final contract PDF exists. The signed
+contract is attached to the Resend email.
+
+1. In Resend, add a domain you own under **Domains**. Prefer a transactional
+   subdomain such as `updates.example.com`, then add Resend's DNS records at
+   your DNS provider and wait for the domain to show **Verified**.
+2. Create a Resend API key with sending permission.
+3. In Vercel, open the project and go to **Settings → Environment Variables**.
+   Add these server-only values for Production (and Preview if needed):
+   `RESEND_API_KEY`, `BOOKING_EMAIL_FROM`, and optionally
+   `BOOKING_EMAIL_REPLY_TO`. `BOOKING_EMAIL_FROM` must use the verified domain,
+   for example `Rental by Maddy & Cassy <bookings@updates.example.com>`.
+4. Keep `SUPABASE_SECRET_KEY` configured as a server-only Vercel variable; it is
+   required to securely load the private contract PDF for the attachment.
+5. Redeploy after saving the variables. Vercel environment changes only apply
+   to new deployments.
+
+Never commit the real Resend API key to `.env.example`, Git, or a
+`NEXT_PUBLIC_*` variable. For local development, place the same names in the
+ignored `.env.local` file.
+
 Optional browser regression scripts use Chrome and an available Playwright
 installation. Set `PLAYWRIGHT_MODULE` to its module directory if it is installed
 outside this project. `testControls.cjs` also uses the esbuild dependency

@@ -47,6 +47,11 @@ test("generates invoice and receipt PDFs", async () => {
     confirmedAt: "July 29, 2026",
     businessSignerName: "Maddy & Cassy Rentals",
     businessSignedAt: "July 29, 2026",
+    businessSignatureBytes: Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2NAAAAABJRU5ErkJggg==",
+      "base64",
+    ),
+    businessSignatureContentType: "image/png",
   });
   assert.equal(Buffer.from(invoice).subarray(0, 4).toString(), "%PDF");
   assert.equal(Buffer.from(receipt).subarray(0, 4).toString(), "%PDF");

@@ -1661,16 +1661,62 @@
   gap: 0.6rem;
 }
 
+.fulfillmentEditor {
+  display: grid;
+  grid-template-columns: minmax(190px, 0.75fr) minmax(0, 1.5fr);
+  gap: 0.8rem;
+  margin: 0.75rem 0;
+  padding: 0.8rem;
+  border: 1px solid rgba(154, 89, 101, 0.18);
+  border-radius: 12px;
+  background: var(--color-background-soft);
+}
+
+.fulfillmentEditor > div:first-child > span {
+  color: var(--color-primary);
+  font-size: 0.55rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.fulfillmentEditor h3 { margin: 0.18rem 0 0.25rem; font-size: 0.82rem; }
+.fulfillmentEditor p { margin: 0; color: var(--color-charcoal); font-size: 0.62rem; line-height: 1.5; }
+.fulfillmentControls { display: grid; gap: 0.5rem; }
+.fulfillmentControls label { display: grid; gap: 0.25rem; color: var(--color-charcoal); font-size: 0.58rem; font-weight: 800; }
+.fulfillmentControls select,
+.fulfillmentControls input {
+  width: 100%;
+  min-height: 40px;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--color-light-gray);
+  border-radius: var(--radius-control);
+  background: #fff;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 0.65rem;
+}
+.fulfillmentControls select:disabled,
+.fulfillmentControls input:disabled { background: #f2efed; cursor: not-allowed; }
+.fulfillmentControls > button { justify-self: start; }
+.fulfillmentControls > small { color: var(--color-charcoal); font-size: 0.56rem; line-height: 1.4; }
+.deliveryAddressFields { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 0.45rem; }
+
 @media (max-width: 900px) {
   .detailGrid.rentalFacts {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .fulfillmentEditor { grid-template-columns: 1fr; }
+
+  .deliveryAddressFields { grid-template-columns: 1fr 1fr; }
 }
 
 @media (max-width: 560px) {
   .detailGrid.rentalFacts {
     grid-template-columns: 1fr;
   }
+
+  .deliveryAddressFields { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 560px) {

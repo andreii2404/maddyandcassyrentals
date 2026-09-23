@@ -13,6 +13,12 @@ export interface BookingStatusEmailResult {
   reason?: "not_configured" | "invalid_recipient" | "provider_error";
 }
 
+export interface BookingEmailAttachment {
+  filename: string;
+  /** Base64-encoded file content, as required by Resend's email API. */
+  content: string;
+}
+
 function isEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
@@ -33,6 +39,7 @@ export function missingBookingEmailSettings(): string[] {
 
 export async function sendBookingStatusEmail(
   details: BookingStatusEmailDetails,
+  attachments: BookingEmailAttachment[] = [],
 ): Promise<BookingStatusEmailResult> {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   const from = process.env.BOOKING_EMAIL_FROM?.trim();
@@ -61,6 +68,7 @@ export async function sendBookingStatusEmail(
         html: email.html,
         text: email.text,
         ...(replyTo ? { reply_to: replyTo } : {}),
+        ...(attachments.length ? { attachments } : {}),
         tags: [
           { name: "booking_status", value: details.status },
           { name: "booking_reference", value: details.bookingReference.replace(/[^a-zA-Z0-9_-]/g, "-") },
