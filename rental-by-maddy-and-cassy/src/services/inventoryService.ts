@@ -116,10 +116,12 @@ export async function submitBookingWithDateGuard(
     }
   }
 
-  const { data, error } = await supabase.rpc("create_multi_day_time_based_booking", {
+  const rpcArgs = {
     p_product_id: input.productId,
     p_quantity: input.quantity ?? 1,
-    p_variant: input.variant?.trim() || undefined,
+    // Send the optional argument explicitly. Omitting it lets PostgREST
+    // consider both the legacy and variant-aware overloaded RPC signatures.
+    p_variant: input.variant?.trim() || null,
     p_pickup_at: input.pickupAt,
     p_rental_days: input.rentalDays ?? 1,
     p_fulfillment_method: input.fulfillmentMethod,
@@ -139,10 +141,24 @@ export async function submitBookingWithDateGuard(
           address: input.emergencyContact.address ?? "",
         }
       : null,
-  });
+  };
+
+  let { data, error } = await supabase.rpc("create_multi_day_time_based_booking", rpcArgs);
+
+  // During a rolling deploy, an older database may still expose only the
+  // legacy 14-argument RPC. Keep bookings working for non-variant products
+  // until the overload-removal migration has reached that database.
+  if (error?.code === "PGRST202" && !input.variant?.trim()) {
+    const legacyRpcArgs = { ...rpcArgs, p_variant: undefined };
+    ({ data, error } = await supabase.rpc("create_multi_day_time_based_booking", legacyRpcArgs));
+  }
 
   if (error) {
-    if (error.message.includes("VARIANT_NOT_AVAILABLE") || error.message.includes("NO_VARIANT_AVAILABILITY")) {
+    if (
+      error.message.includes("VARIANT_REQUIRED") ||
+      error.message.includes("VARIANT_NOT_AVAILABLE") ||
+      error.message.includes("NO_VARIANT_AVAILABILITY")
+    ) {
       throw new Error("The selected color is unavailable or does not have enough units.");
     }
     if (error.message.includes("NO_TIME_AVAILABILITY")) {
@@ -163,7 +179,12 @@ export async function submitBookingWithDateGuard(
     // Anything else is an unexpected server-side failure, not something the
     // customer caused or can fix by re-entering details -- never surface the
     // raw database error text on the booking/payment screens.
-    console.error("submitBookingWithDateGuard: unexpected booking error", error);
+    console.error("submitBookingWithDateGuard: unexpected booking error", {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
     throw new Error("We couldn't save your reservation due to a server error. Please try again in a moment.");
   }
 

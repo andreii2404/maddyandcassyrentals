@@ -11,6 +11,25 @@ export interface TimeAvailability {
   pickupConvenienceFee: number;
 }
 
+export function getTimeAvailabilityRpcArgs(
+  productId: string,
+  pickupAt: Date,
+  requestedUnits: number,
+  rentalDays: number,
+  variant?: string,
+) {
+  return {
+    p_product_id: productId,
+    p_pickup_at: pickupAt.toISOString(),
+    p_quantity: requestedUnits,
+    p_rental_days: rentalDays,
+    // Passing null is intentional. Omitting this optional argument makes
+    // PostgREST match both the legacy 4-argument RPC and the variant-aware
+    // 5-argument RPC, which returns HTTP 300 instead of availability data.
+    p_variant: variant?.trim() || null,
+  };
+}
+
 export function toDateKey(date: Date): string {
   return formatISO(date, { representation: "date" });
 }
@@ -94,13 +113,10 @@ export async function getTimeAvailability(
   variant?: string,
 ): Promise<TimeAvailability> {
   const supabase = createPublicClient();
-  const { data, error } = await supabase.rpc("get_product_multi_day_time_availability", {
-    p_product_id: productId,
-    p_pickup_at: pickupAt.toISOString(),
-    p_quantity: requestedUnits,
-    p_rental_days: rentalDays,
-    p_variant: variant?.trim() || undefined,
-  });
+  const { data, error } = await supabase.rpc(
+    "get_product_multi_day_time_availability",
+    getTimeAvailabilityRpcArgs(productId, pickupAt, requestedUnits, rentalDays, variant),
+  );
 
   if (error) throw new Error(error.message);
   const row = data?.[0];

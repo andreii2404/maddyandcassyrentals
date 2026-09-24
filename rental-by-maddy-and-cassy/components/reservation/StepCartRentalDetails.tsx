@@ -21,6 +21,10 @@ import {
   PICKUP_CONVENIENCE_FEE,
   pickupDateKey,
 } from "@/src/lib/rentalTiming";
+import {
+  createBatchAvailabilityRequestKey,
+  type CheckoutAvailabilityItem,
+} from "@/src/lib/checkoutAvailability";
 import DateRangePicker from "@/components/date-range-picker/DateRangePicker";
 import PickupTimeSelector from "@/components/reservation/PickupTimeSelector";
 import formStyles from "@/components/ui/Form.module.css";
@@ -49,7 +53,6 @@ export default function StepCartRentalDetails({
   const [confirmedDateKeys, setConfirmedDateKeys] = useState<Set<string>>(new Set());
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [availabilityError, setAvailabilityError] = useState(false);
   const [availabilityByProductId, setAvailabilityByProductId] = useState<Map<string, TimeAvailability>>(
     new Map(),
   );
@@ -118,13 +121,25 @@ export default function StepCartRentalDetails({
     : 1;
   const returnAt = pickupAt ? calculateReturnDateTime(pickupAt, rentalDays) : null;
 
+  const availabilityItems = useMemo<CheckoutAvailabilityItem[]>(
+    () => lines.map((line) => ({
+      productId: line.product.id,
+      quantity: line.quantity,
+      variant: line.color,
+    })),
+    [lines],
+  );
+  const availabilityRequestKey = pickupAt
+    ? createBatchAvailabilityRequestKey(availabilityItems, pickupAt, rentalDays)
+    : "";
+
   useEffect(() => {
     if (!pickupAt || pickupAt.getTime() <= Date.now()) return;
     let cancelled = false;
     const timer = window.setTimeout(() => {
-      setAvailabilityError(false);
+      setAvailabilityByProductId(new Map());
       checkBatchTimeAvailability(
-        lines.map((line) => ({ productId: line.product.id, quantity: line.quantity, variant: line.color })),
+        availabilityItems,
         pickupAt,
         rentalDays,
       )
@@ -141,7 +156,6 @@ export default function StepCartRentalDetails({
         .catch(() => {
           if (!cancelled) {
             setAvailabilityByProductId(new Map());
-            setAvailabilityError(true);
           }
         });
     }, 200);
@@ -149,8 +163,9 @@ export default function StepCartRentalDetails({
       cancelled = true;
       window.clearTimeout(timer);
     };
+    // availabilityRequestKey includes the exact timestamp and all cart-line inputs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft.fulfillmentMethod, pickupAt, rentalDays]);
+  }, [availabilityRequestKey, pickupAt, rentalDays]);
 
   const isDelivery = draft.fulfillmentMethod === "delivery";
   const hasValidLocation =
@@ -192,9 +207,7 @@ export default function StepCartRentalDetails({
     missingItems.push("Add your complete delivery address.");
   }
   if (pickupAt && !isPickupTimePast && draft.fulfillmentMethod && hasValidLocation) {
-    if (availabilityError) {
-      missingItems.push("Availability could not be checked. Select the time again or try again.");
-    } else if (!allChecked) {
+    if (!allChecked) {
       missingItems.push("Checking availability for this time…");
     } else {
       for (const line of unavailableLines) {
@@ -232,7 +245,6 @@ export default function StepCartRentalDetails({
           : 0,
       });
       setAvailabilityByProductId(new Map());
-      setAvailabilityError(false);
       return;
     }
     const nextPickupAt = combineManilaPickupDateTime(pickupDateKey(date), pickupTime);
@@ -247,7 +259,6 @@ export default function StepCartRentalDetails({
         : 0,
     });
     setAvailabilityByProductId(new Map());
-    setAvailabilityError(false);
   }
 
   function handleFulfillmentChange(method: FulfillmentMethod) {
@@ -288,17 +299,15 @@ export default function StepCartRentalDetails({
     }
 
     setChecking(true);
-    setAvailabilityError(false);
     let latest: Map<string, TimeAvailability>;
     try {
       latest = await checkBatchTimeAvailability(
-        lines.map((line) => ({ productId: line.product.id, quantity: line.quantity, variant: line.color })),
+        availabilityItems,
         pickupAt,
         rentalDays,
       );
     } catch {
       setChecking(false);
-      setAvailabilityError(true);
       setError("Availability could not be checked. Please try again.");
       return;
     }
@@ -364,7 +373,7 @@ export default function StepCartRentalDetails({
 
             <div
               className={styles.scheduleConfirmation}
-              data-state={!pickupAt || isPickupTimePast ? "waiting" : allChecked ? "ready" : availabilityError ? "waiting" : "checking"}
+              data-state={!pickupAt || isPickupTimePast ? "waiting" : allChecked ? "ready" : "checking"}
               role="status"
             >
               <span className={styles.scheduleConfirmationIcon} aria-hidden="true">
@@ -378,8 +387,6 @@ export default function StepCartRentalDetails({
                       ? "Choose a future schedule"
                       : allChecked
                         ? "Date and time saved"
-                        : availabilityError
-                          ? "Availability check needs another try"
                         : "Time saved—checking all items"}
                 </strong>
                 <small>
