@@ -221,3 +221,85 @@ existing booking, payment, document, agreement, loyalty or customer data.
 9. View Booking Record is the permanent read-only history, including the agreement PDF and
    email history.
 10. Tabs: Pickup | Return | Item Condition | Charges & Payments | Customer Updates | Complete Rental.
+
+## 11. Addendum (2026-09-25): full lifecycle, security deposit, lifecycle emails
+
+Decisions from the user on 2026-09-25. They extend sections 1-10; where they conflict, this
+section wins.
+
+### 11.1 Lifecycle (authoritative order)
+
+| Step | Stored status | Admin action | Email |
+|---|---|---|---|
+| Booking Submitted | `pending` | none | none |
+| Payment Submitted | `pending` | none (customer) | none |
+| Requirements Review | `pending` | approve/reject documents | none |
+| Agreement | `pending` | countersign | none |
+| Approved | `approved` | Approve (now gated, 11.4) | Approval email (result saved, sections 5-6) |
+| Confirmed / Preparing | `confirmed` | Confirm (or auto-confirm) | none |
+| Ready for Pickup | `ready_for_release` | Ready for Handover | **Ready for Pickup** email |
+| Balance & Security Deposit | `ready_for_release` | record balance + record deposit | none |
+| Picked Up | `released` | Mark as Picked Up | **Picked Up** email |
+| Active Rental | `released` | none | none |
+| Return Reminder | `released` | automatic job, or manual send | **Return Reminder** email |
+| Returned | `released` | Mark as returned | **Returned** email |
+| Inspection | `released` | Item Condition | none |
+| Charges / Deposit Resolution | `released` | charges + Resolve Deposit | none |
+| Completed | `returned` (shown "Completed") | Complete Rental | **Rental Completed** email (includes deposit outcome) |
+
+Real facts checked on 2026-09-25 (live DB, read-only): all 17 products have deposit 0, and no
+booking has a non-zero `deposit_total`. Taking the deposit out of the booking total therefore
+changes no existing total, balance, payment or receipt.
+
+### 11.2 Security deposit
+
+- PHP 1,000 per rented device (`SECURITY_DEPOSIT_PER_DEVICE`), refundable. Required amount =
+  1,000 x the sum of `booking_items.quantity`. It is stored on the deposit row when collected.
+- It is **separate from the rental payment**: `booking_totals.total_amount` no longer adds
+  `deposit_total` (the column stays). Checkout, cart, product page, emails and PDFs show it
+  as its own "Security deposit (refundable)" line, due before release and not part of the total.
+- Statuses: Not Paid (no row) / Held / Refunded / Partially Deducted / Fully Deducted, in the
+  new table `booking_security_deposits` (one row per booking). Admins read and write it through
+  RPCs. Customers can read their own row.
+- **Collect**: admin records it (Cash / GCash / Other, optional reference) while the booking is
+  `confirmed` or `ready_for_release`. The amount is always the full required amount.
+- **Release guard**: the existing release trigger also raises `SECURITY_DEPOSIT_REQUIRED` when a
+  deposit is required and not Held. The pay-later flag never bypasses the deposit.
+- **Resolve** (after the return is recorded and the condition is saved): unpaid, non-voided
+  charges are covered from the deposit oldest first (`booking_charges.deposit_applied`). A fully
+  covered charge becomes Paid with method `security_deposit`. The rest is refunded (refund
+  method required when above 0). Status becomes Refunded / Partially Deducted / Fully
+  Deducted. If charges are larger than the deposit, the uncovered part stays unpaid and is shown
+  as "Customer still owes PHP X". It must be paid (or voided) before Complete Rental.
+- A charge with `deposit_applied > 0` cannot be voided.
+- Complete Rental also requires the deposit to be resolved when a Held deposit exists. Bookings
+  released before this policy (no deposit row) are not blocked.
+- The admin catalog "Non-refundable deposit" input is replaced by a read-only policy note. The
+  `products.refundable_deposit` column and its values are kept.
+- All customer-facing "non-refundable deposit" wording is corrected. Agreements already signed
+  keep their frozen snapshot.
+
+### 11.3 Lifecycle emails
+
+- New kinds: `ready_for_pickup` (on `ready_for_release`), `picked_up` (on `released`, from
+  either the PATCH route or the Pickup tab, only when the status actually changes),
+  `return_reminder` (3 hours before `bookings.return_at`, once), `returned` (the first time the
+  return is recorded).
+- Every attempt is saved in `booking_email_events` (kind, sent/failed, recipient, time,
+  who triggered it). They appear in Email History, and failed ones can be resent from there.
+- Return reminder job: `POST /api/jobs/return-reminders`, protected by `CRON_SECRET`, run
+  every 15 minutes by a small PM2 worker (`scripts/returnReminderWorker.mjs`). The Return tab
+  also has "Send return reminder now".
+- Emails never roll back a status change. A failure is saved and can be resent.
+
+### 11.4 Other fixes
+
+- Approve requires approved documents, a verified payment and a completed agreement (server
+  and UI). The approval email's "what happens next" wording follows that.
+- The automatic rejection when an admin opens a pending booking is removed. A pending booking
+  with no documents shows "Pending Requirements". Rejection only happens by an explicit admin
+  decision. The auto-reject route and helper are left in place but unused.
+- Auto-confirm after payment verification also requires a verified birthday discount when one
+  applies (same rule as manual Confirm).
+- `INVENTORY_NOT_RESERVED` and `SECURITY_DEPOSIT_REQUIRED` get plain admin messages. The
+  pay-later sentence is removed from the balance error message and the approval email.
