@@ -31,14 +31,19 @@ export default function ItemConditionPanel({ ctx, onOpenCharges }: ItemCondition
 
   const editable = ctx.status === "released";
   const saved = record?.itemCondition != null;
+  const attemptedPaths = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
-    const missing = photoPaths.filter((path) => !photoUrls[path]);
-    if (missing.length === 0) return;
+    const toAttempt = photoPaths.filter((path) => !photoUrls[path] && !attemptedPaths.current.has(path));
+    if (toAttempt.length === 0) return;
+
+    // Mark paths as attempted to prevent retries
+    toAttempt.forEach((path) => attemptedPaths.current.add(path));
+
     const supabase = createClient();
     void Promise.all(
-      missing.map(async (path) => {
+      toAttempt.map(async (path) => {
         try {
           return [path, await getConditionPhotoUrl(supabase, path)] as const;
         } catch {
@@ -47,16 +52,21 @@ export default function ItemConditionPanel({ ctx, onOpenCharges }: ItemCondition
       }),
     ).then((entries) => {
       if (cancelled) return;
-      setPhotoUrls((current) => {
-        const next = { ...current };
-        for (const entry of entries) if (entry) next[entry[0]] = entry[1];
-        return next;
-      });
+      const resolved = entries.filter((entry) => entry !== null) as Array<[string, string]>;
+      // Only update photoUrls if at least one URL resolved
+      if (resolved.length > 0) {
+        setPhotoUrls((current) => {
+          const next = { ...current };
+          for (const [path, url] of resolved) next[path] = url;
+          return next;
+        });
+      }
     });
     return () => {
       cancelled = true;
     };
-  }, [photoPaths, photoUrls]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [photoPaths]);
 
   async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
