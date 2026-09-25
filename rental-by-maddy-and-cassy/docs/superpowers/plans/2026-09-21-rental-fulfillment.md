@@ -10,6 +10,8 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-21-rental-fulfillment-design.md`
 
+**Addendum (2026-09-25):** `docs/superpowers/plans/2026-09-25-lifecycle-addendum.md` adds Task A, Tasks 15-20 and Task 14 additions (security deposit, lifecycle emails, fixes). Execution order: Task A, Tasks 3-13 here, Tasks 15-20, then Task 14.
+
 ## Global Constraints
 
 - `returned` stays the stored booking status; show it as "Completed" in UI and emails. No enum change.
