@@ -938,6 +938,8 @@ export type Database = {
         Row: {
           admin_notes: string | null
           approved_at: string | null
+          approval_email_sent_at: string | null
+          approval_email_status: string | null
           balance_payment_preference: string
           balance_preference_updated_at: string | null
           birth_date_snapshot: string | null
@@ -945,6 +947,8 @@ export type Database = {
           birthday_discount_status: string
           booking_reference: string
           cancelled_at: string | null
+          completion_email_sent_at: string | null
+          completion_email_to: string | null
           confirmed_at: string | null
           created_at: string
           currency_code: string
@@ -973,6 +977,8 @@ export type Database = {
         Insert: {
           admin_notes?: string | null
           approved_at?: string | null
+          approval_email_sent_at?: string | null
+          approval_email_status?: string | null
           balance_payment_preference?: string
           balance_preference_updated_at?: string | null
           birth_date_snapshot?: string | null

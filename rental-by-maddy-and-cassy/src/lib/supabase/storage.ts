@@ -11,6 +11,7 @@ export const STORAGE_BUCKETS = {
   agreements: "agreements",
   receipts: "receipts",
   invoices: "invoices",
+  conditionPhotos: "condition-photos",
 } as const;
 
 export type StorageBucket = (typeof STORAGE_BUCKETS)[keyof typeof STORAGE_BUCKETS];
