@@ -8,6 +8,7 @@ import type {
   AgreementSignature,
   Booking,
   BookingDocument,
+  BookingDocumentAttempt,
   EmergencyContact,
   RequirementReviewStatus,
   StatusHistoryEntry,
@@ -46,11 +47,23 @@ type RequirementRow = Pick<
 /** Picks the most recently submitted attempt for a requirement, if any exists yet. */
 export function mapRequirementToDocument(requirement: RequirementRow): BookingDocument | null {
   const submissions = requirement.booking_requirement_submissions ?? [];
-  const latest = [...submissions].sort((a, b) => {
+  const newestFirst = [...submissions].sort((a, b) => {
     const byDate = Date.parse(b.submitted_at) - Date.parse(a.submitted_at);
     return byDate || b.attempt_number - a.attempt_number;
-  })[0];
+  });
+  const latest = newestFirst[0];
   if (!latest) return null;
+  const history = [...newestFirst].reverse().map((submission): BookingDocumentAttempt => ({
+    id: submission.id,
+    attemptNumber: submission.attempt_number,
+    submittedAt: submission.submitted_at,
+    reviewStatus: submission.review_status as RequirementReviewStatus,
+    reviewNotes: submission.review_notes ?? undefined,
+    reviewedAt: submission.reviewed_at ?? undefined,
+    storageBucket: submission.customer_documents?.storage_bucket ?? "",
+    storagePath: submission.customer_documents?.storage_path ?? "",
+    originalFilename: submission.customer_documents?.original_filename ?? undefined,
+  }));
 
   const document = latest.customer_documents;
   return {
@@ -73,6 +86,7 @@ export function mapRequirementToDocument(requirement: RequirementRow): BookingDo
     reviewedAt: latest.reviewed_at ?? undefined,
     createdAt: document?.created_at ?? latest.submitted_at,
     updatedAt: document?.updated_at ?? latest.submitted_at,
+    history,
   };
 }
 

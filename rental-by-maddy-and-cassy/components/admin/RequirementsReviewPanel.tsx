@@ -4,8 +4,15 @@ import { Button } from "@/components/ui/Button";
 import { useEffect, useRef, useState } from "react";
 import { useToast } from "@/components/ui/ToastProvider";
 import Spinner from "@/components/ui/Spinner";
+import ConfirmModal from "@/components/ui/ConfirmModal";
+import Modal from "@/components/ui/Modal";
 import { formatManilaDateTime } from "@/src/lib/rentalTiming";
-import type { BookingDocument, RequirementReviewStatus, RequirementsStatus } from "@/src/types/booking";
+import {
+  adminRequirementReviewLabel,
+  RESUBMISSION_REQUESTED_MESSAGE,
+  WAITING_FOR_RESUBMISSION_LABEL,
+} from "@/src/lib/requirementResubmission";
+import type { BookingDocument, BookingDocumentAttempt, RequirementReviewStatus, RequirementsStatus } from "@/src/types/booking";
 import styles from "./RequirementsReviewPanel.module.css";
 
 function formatDocumentType(value: string): string {
@@ -23,7 +30,7 @@ export default function RequirementsReviewPanel({
   onOpenDocument(document: BookingDocument): Promise<void>;
   onReviewed(
     documentId: string,
-    patch: { reviewStatus: Exclude<RequirementReviewStatus, "pending">; reviewNotes?: string },
+    patch: { reviewStatus: Exclude<RequirementReviewStatus, "pending">; reviewNotes?: string; reviewedAt?: string },
     requirementsStatus: RequirementsStatus,
   ): void;
 }) {
@@ -35,14 +42,20 @@ export default function RequirementsReviewPanel({
   const [reason, setReason] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkApproving, setBulkApproving] = useState(false);
+  // Document id awaiting the admin's confirmation of a resubmission request.
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [showRequestedNotice, setShowRequestedNotice] = useState(false);
   const selectAllRef = useRef<HTMLInputElement>(null);
   const reviewedCount = documents.filter((document) => document.reviewStatus !== "pending").length;
   const approvedCount = documents.filter((document) => document.reviewStatus === "approved").length;
   const resubmittedCount = documents.filter((document) => document.isResubmitted && document.reviewStatus === "pending").length;
+  const waitingCount = documents.filter((document) => document.reviewStatus === "rejected").length;
   const progress = documents.length ? Math.round((reviewedCount / documents.length) * 100) : 0;
+  // Waiting-for-resubmission documents cannot be approved until the customer uploads a replacement.
   const selectableIds = documents
-    .filter((document) => document.reviewStatus !== "approved")
+    .filter((document) => document.reviewStatus === "pending")
     .map((document) => document.id);
+  const confirmingDocument = documents.find((document) => document.id === confirmingId) ?? null;
   const selectedCount = selectableIds.filter((id) => selectedIds.has(id)).length;
   const allSelectableSelected = selectableIds.length > 0 && selectedCount === selectableIds.length;
   const someSelectableSelected = selectedCount > 0 && !allSelectableSelected;
@@ -100,19 +113,33 @@ export default function RequirementsReviewPanel({
       setRejectingId(null);
       onReviewed(
         documentId,
-        { reviewStatus: status, reviewNotes: rejectionReason || undefined },
+        {
+          reviewStatus: status,
+          reviewNotes: rejectionReason || undefined,
+          reviewedAt: new Date().toISOString(),
+        },
         requirementsStatus,
       );
-      showToast(
-        status === "approved" ? "Document approved." : "Correction request sent to the customer.",
-        "success",
-      );
+      if (status === "approved") {
+        showToast("Document approved.", "success");
+      } else {
+        setShowRequestedNotice(true);
+      }
     } catch (error) {
       showToast(error instanceof Error ? error.message : "The review could not be saved.", "error");
     } finally {
       setActiveId(null);
       setActiveAction(null);
+      setConfirmingId(null);
     }
+  }
+
+  function requestResubmissionConfirmation(documentId: string) {
+    if (!reason.trim()) {
+      showToast("Explain what the customer needs to correct before sending the request.", "warning");
+      return;
+    }
+    setConfirmingId(documentId);
   }
 
   function toggleDocument(documentId: string) {
@@ -210,6 +237,13 @@ export default function RequirementsReviewPanel({
         </div>
       ) : null}
 
+      {waitingCount > 0 ? (
+        <div className={styles.waitingAlert} role="status">
+          <strong>{waitingCount} requirement{waitingCount === 1 ? " is" : "s are"} {WAITING_FOR_RESUBMISSION_LABEL.toLowerCase()}.</strong>
+          <span>The customer has been notified. This booking cannot be fully verified until each updated file is submitted and approved.</span>
+        </div>
+      ) : null}
+
       {selectableIds.length > 0 ? (
         <div className={styles.bulkBar}>
           <label className={styles.bulkCheckbox}>
@@ -246,7 +280,9 @@ export default function RequirementsReviewPanel({
           const isOpening = openingId === document.id;
           const isRejecting = rejectingId === document.id;
           const isApproved = document.reviewStatus === "approved";
+          const isWaiting = document.reviewStatus === "rejected";
           const isResubmitted = document.isResubmitted && document.reviewStatus === "pending";
+          const earlierAttempts = (document.history ?? []).filter((attempt) => attempt.id !== document.id);
           return (
             <article key={document.id} className={`${styles.documentCard} ${styles[document.reviewStatus]} ${isResubmitted ? styles.resubmitted : ""}`}>
               <div className={styles.documentTopline}>
@@ -256,11 +292,13 @@ export default function RequirementsReviewPanel({
                     className={styles.cardCheckbox}
                     checked={selectedIds.has(document.id)}
                     onChange={() => toggleDocument(document.id)}
-                    disabled={isApproved || bulkApproving}
+                    disabled={isApproved || isWaiting || bulkApproving}
                     aria-label={
                       isApproved
                         ? `${formatDocumentType(document.documentType)} already approved`
-                        : `Select ${formatDocumentType(document.documentType)} for approval`
+                        : isWaiting
+                          ? `${formatDocumentType(document.documentType)} is waiting for resubmission`
+                          : `Select ${formatDocumentType(document.documentType)} for approval`
                     }
                   />
                   <Button variant="none"
@@ -278,7 +316,7 @@ export default function RequirementsReviewPanel({
                   </Button>
                 </div>
                 <span className={`${styles.statusPill} ${styles[isResubmitted ? "resubmitted" : document.reviewStatus]}`}>
-                  {isResubmitted ? "Resubmitted" : document.reviewStatus === "pending" ? "Needs review" : formatDocumentType(document.reviewStatus)}
+                  {adminRequirementReviewLabel(document.reviewStatus)}
                 </span>
               </div>
 
@@ -289,9 +327,16 @@ export default function RequirementsReviewPanel({
                 </div>
               ) : null}
 
+              {isWaiting ? (
+                <div className={styles.waitingMeta}>
+                  <strong>{WAITING_FOR_RESUBMISSION_LABEL}</strong>
+                  <span>{document.reviewedAt ? `Requested ${formatManilaDateTime(document.reviewedAt)}` : "Requested"}</span>
+                </div>
+              ) : null}
+
               {document.reviewNotes ? (
                 <div className={styles.previousNote}>
-                  <strong>Customer correction note</strong>
+                  <strong>{isWaiting ? "Resubmission reason sent to customer" : "Customer correction note"}</strong>
                   <p>{document.reviewNotes}</p>
                 </div>
               ) : null}
@@ -310,10 +355,11 @@ export default function RequirementsReviewPanel({
                   type="button"
                   className={styles.approveButton}
                   onClick={() => saveReview(document.id, "approved")}
-                  disabled={isSaving || bulkApproving || document.reviewStatus === "approved"}
+                  disabled={isSaving || bulkApproving || isApproved || isWaiting}
                   aria-busy={isApproving}
+                  title={isWaiting ? "Wait for the customer to submit the updated requirement." : undefined}
                 >
-                  {isApproving ? <><Spinner size={11} label="Saving approval" /> Saving...</> : document.reviewStatus === "approved" ? "Approved" : "Approve document"}
+                  {isApproving ? <><Spinner size={11} label="Saving approval" /> Saving...</> : isApproved ? "Approved" : isWaiting ? "Awaiting customer" : "Approve document"}
                 </Button>
                 <Button variant="none"
                   type="button"
@@ -321,14 +367,14 @@ export default function RequirementsReviewPanel({
                   onClick={() => openCorrectionEditor(document)}
                   disabled={isSaving || bulkApproving}
                 >
-                  {document.reviewStatus === "rejected" ? "Edit correction" : "Request correction"}
+                  {isWaiting ? "Edit resubmission request" : "Request Resubmission"}
                 </Button>
               </div>
 
               {isRejecting ? (
                 <div className={styles.rejectEditor}>
                   <label>
-                    <span>What exactly must the customer correct?</span>
+                    <span>Why does the customer need to resubmit this requirement?</span>
                     <textarea
                       rows={3}
                       maxLength={1000}
@@ -349,19 +395,132 @@ export default function RequirementsReviewPanel({
                     <Button variant="none"
                       type="button"
                       className={styles.sendButton}
-                      onClick={() => saveReview(document.id, "rejected")}
+                      onClick={() => requestResubmissionConfirmation(document.id)}
                       disabled={isSaving || !reason.trim()}
                       aria-busy={isRejectingSave}
                     >
-                      {isRejectingSave ? <><Spinner size={11} label="Sending correction request" /> Sending...</> : "Send correction request"}
+                      {isRejectingSave ? <><Spinner size={11} label="Sending resubmission request" /> Sending...</> : "Request Resubmission"}
                     </Button>
                   </div>
                 </div>
+              ) : null}
+
+              {earlierAttempts.length > 0 || isWaiting ? (
+                <details className={styles.history}>
+                  <summary>Submission history ({earlierAttempts.length + 1} upload{earlierAttempts.length === 0 ? "" : "s"})</summary>
+                  <ol>
+                    {earlierAttempts.map((attempt) => (
+                      <AttemptHistoryItem
+                        key={attempt.id}
+                        attempt={attempt}
+                        onOpen={() => void onOpenDocument({
+                          ...document,
+                          id: attempt.id,
+                          storageBucket: attempt.storageBucket,
+                          storagePath: attempt.storagePath,
+                          originalFilename: attempt.originalFilename,
+                        })}
+                      />
+                    ))}
+                    <AttemptHistoryItem
+                      attempt={{
+                        id: document.id,
+                        attemptNumber: document.attemptNumber,
+                        submittedAt: document.submittedAt,
+                        reviewStatus: document.reviewStatus,
+                        reviewNotes: document.reviewNotes,
+                        reviewedAt: document.reviewedAt,
+                        storageBucket: document.storageBucket,
+                        storagePath: document.storagePath,
+                        originalFilename: document.originalFilename,
+                      }}
+                      isCurrent
+                      onOpen={() => void handleOpen(document)}
+                    />
+                  </ol>
+                </details>
               ) : null}
             </article>
           );
         })}
       </div>
+
+      {confirmingDocument ? (
+        <ConfirmModal
+          title="Request resubmission?"
+          description={
+            <>
+              The customer will be notified to resubmit their <strong>{formatDocumentType(confirmingDocument.documentType)}</strong>.
+              {" "}This requirement will be marked <strong>{WAITING_FOR_RESUBMISSION_LABEL}</strong> and the booking
+              cannot be fully verified until the updated file is submitted and approved.
+            </>
+          }
+          confirmLabel="Send request"
+          busy={activeId === confirmingDocument.id}
+          busyLabel="Sending..."
+          tone="danger"
+          onConfirm={() => void saveReview(confirmingDocument.id, "rejected")}
+          onCancel={() => {
+            if (activeId !== confirmingDocument.id) setConfirmingId(null);
+          }}
+        >
+          <p className={styles.confirmReason}>
+            <strong>Reason sent to the customer</strong>
+            <span>{reason.trim()}</span>
+          </p>
+        </ConfirmModal>
+      ) : null}
+
+      {showRequestedNotice ? (
+        <Modal title="Resubmission requested" onClose={() => setShowRequestedNotice(false)} describedBy="resubmission-requested-message">
+          <div className={styles.noticeBody}>
+            <p id="resubmission-requested-message">{RESUBMISSION_REQUESTED_MESSAGE}</p>
+            <Button variant="primary" type="button" onClick={() => setShowRequestedNotice(false)}>
+              OK
+            </Button>
+          </div>
+        </Modal>
+      ) : null}
     </section>
+  );
+}
+
+function AttemptHistoryItem({
+  attempt,
+  isCurrent = false,
+  onOpen,
+}: {
+  attempt: BookingDocumentAttempt;
+  isCurrent?: boolean;
+  onOpen(): void;
+}) {
+  return (
+    <li className={styles.historyItem}>
+      <div className={styles.historyHeader}>
+        <strong>
+          {attempt.attemptNumber > 1 ? `Resubmission ${attempt.attemptNumber - 1}` : "Original submission"}
+          {isCurrent ? " (latest)" : ""}
+        </strong>
+        <Button variant="none" type="button" className={styles.historyOpen} onClick={onOpen} disabled={!attempt.storagePath}>
+          Open file
+        </Button>
+      </div>
+      <small>
+        Submitted {formatManilaDateTime(attempt.submittedAt)}
+        {attempt.originalFilename ? ` · ${attempt.originalFilename}` : ""}
+      </small>
+      {attempt.reviewStatus === "rejected" ? (
+        <p className={styles.historyRequest}>
+          Resubmission requested{attempt.reviewedAt ? ` ${formatManilaDateTime(attempt.reviewedAt)}` : ""}
+          {attempt.reviewNotes ? `: ${attempt.reviewNotes}` : ""}
+        </p>
+      ) : attempt.reviewStatus === "approved" ? (
+        <p className={styles.historyApproved}>
+          Approved{attempt.reviewedAt ? ` ${formatManilaDateTime(attempt.reviewedAt)}` : ""}
+        </p>
+      ) : (
+        <p className={styles.historyPending}>Needs review</p>
+      )}
+    </li>
   );
 }

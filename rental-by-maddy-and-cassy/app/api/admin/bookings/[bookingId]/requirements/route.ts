@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { enforceRateLimit, requireActiveAdmin, RequestSecurityError } from "@/src/lib/server/requestSecurity";
 import { getBookingById } from "@/src/services/bookingService";
 import { bookingTrackingPath } from "@/src/lib/bookingAccess";
+import { buildResubmissionRequestNotification } from "@/src/lib/requirementResubmission";
 
 export const runtime = "nodejs";
 
@@ -63,6 +64,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
         { status: 409 },
       );
     }
+    // A rejected latest attempt is "Waiting for Resubmission": the customer
+    // must upload a replacement before this requirement can be approved.
+    if (status === "approved" && submission.review_status === "rejected") {
+      return NextResponse.json(
+        { error: "This requirement is waiting for the customer's resubmission. Review the updated file once it is submitted." },
+        { status: 409 },
+      );
+    }
 
     const now = new Date().toISOString();
     await supabase
@@ -118,17 +127,38 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
       ]);
     }
 
-    if (ownerUserId) {
-      await supabase.from("notifications").insert({
-        user_id: ownerUserId,
+    const resubmissionRequested = status === "rejected";
+
+    // Notify the customer account the booking belongs to (the document owner
+    // is the same account; it stays as the fallback).
+    const notifyUserId = booking?.customerId || ownerUserId;
+    if (notifyUserId) {
+      const resubmissionNotice = resubmissionRequested
+        ? buildResubmissionRequestNotification({ documentType, bookingRef: booking?.bookingRef, reason })
+        : null;
+      const { error: notificationError } = await supabase.from("notifications").insert({
+        user_id: notifyUserId,
         booking_id: bookingId,
         notification_type: "requirements_reviewed",
-        title: status === "approved" ? "Verification document approved" : "Document replacement requested",
-        message: status === "approved"
-          ? `Your ${documentType.replace(/_/g, " ")} was approved.${birthdayVerified ? " Your birthday-month discount is now verified." : ""}`
-          : reason,
-        action_url: bookingTrackingPath(bookingId, booking?.isGuestCheckout === true),
+        title: resubmissionNotice ? resubmissionNotice.title : "Verification document approved",
+        message: resubmissionNotice
+          ? resubmissionNotice.message
+          : `Your ${documentType.replace(/_/g, " ")} was approved.${birthdayVerified ? " Your birthday-month discount is now verified." : ""}`,
+        action_url: bookingTrackingPath(
+          bookingId,
+          booking?.isGuestCheckout === true,
+          resubmissionRequested ? "#booking-documents" : "",
+        ),
       });
+      if (notificationError) {
+        console.error("Requirement review notification failed", notificationError);
+      }
+    }
+
+    if (resubmissionRequested) {
+      // Touch the booking row so the customer's open booking page refreshes
+      // live (it subscribes to bookings changes) and shows the request.
+      await supabase.from("bookings").update({ updated_at: now }).eq("id", bookingId);
     }
 
     await supabase.rpc("log_audit_event", {
@@ -136,7 +166,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
       p_entity_type: "requirement_submission",
       p_entity_id: documentId,
       p_booking_id: bookingId,
-      p_new_values: { status, reason, birthdayVerified },
+      p_new_values: { status, reason, birthdayVerified, resubmissionRequested },
     });
 
     return NextResponse.json({ success: true, requirementsStatus });

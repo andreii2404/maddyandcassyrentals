@@ -207,7 +207,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
 
   function handleDocumentReviewed(
     documentId: string,
-    patch: { reviewStatus: Exclude<RequirementReviewStatus, "pending">; reviewNotes?: string },
+    patch: { reviewStatus: Exclude<RequirementReviewStatus, "pending">; reviewNotes?: string; reviewedAt?: string },
     requirementsStatus: RequirementsStatus,
   ) {
     setState((previous) => {
@@ -218,7 +218,15 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
           ...previous.details,
           booking: { ...previous.details.booking, requirementsStatus },
           documents: previous.details.documents.map((document): BookingDocument =>
-            document.id === documentId ? { ...document, ...patch } : document,
+            document.id === documentId
+              ? {
+                ...document,
+                ...patch,
+                history: document.history?.map((attempt) =>
+                  attempt.id === documentId ? { ...attempt, ...patch } : attempt,
+                ),
+              }
+              : document,
           ),
         },
       };

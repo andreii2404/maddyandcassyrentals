@@ -31,7 +31,14 @@ const REQUIREMENTS_STATUS_LABEL: Record<string, string> = {
   not_submitted: "Not Submitted",
   pending_review: "Pending Review",
   approved: "Approved",
-  rejected: "Rejected",
+  // Rejected requirements are ones the business asked the customer to resubmit.
+  rejected: "Resubmission Requested",
+};
+
+const DOCUMENT_REVIEW_LABEL: Record<string, string> = {
+  pending: "Pending",
+  approved: "Approved",
+  rejected: "Resubmission Requested",
 };
 
 const AGREEMENT_STATUS_LABEL: Record<string, string> = {
@@ -67,7 +74,7 @@ function getRequirementGuidance(status: string): string {
     case "pending_review":
       return "Under review. No action needed right now.";
     case "rejected":
-      return "Correct the flagged document below.";
+      return "Resubmit the requested document from Documents.";
     default:
       return "Submit verification documents to continue.";
   }
@@ -519,7 +526,7 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
 
       {rejectedDocuments.length ? (
         <section className={styles.correctionSection}>
-          <h3>Document Correction Needed</h3>
+          <h3>Resubmission Requested</h3>
           {rejectedDocuments.map((document) => (
             <p key={document.id} className={styles.remarks}>
               <strong>{formatDocumentType(document.documentType)}:</strong>{" "}
@@ -598,13 +605,13 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
                     <small>Open secure document</small>
                   </span>
                   <span className={`${styles.documentStatus} ${styles[document.reviewStatus]}`}>
-                    {formatDocumentType(document.reviewStatus)}
+                    {DOCUMENT_REVIEW_LABEL[document.reviewStatus] ?? formatDocumentType(document.reviewStatus)}
                   </span>
                 </Button>
                 {document.reviewStatus === "rejected" ? (
                   <div className={styles.rejectedDocumentDetails}>
                     <span className={styles.rejectedDocumentReason}>
-                      <strong>Rejected</strong>{document.reviewNotes || "Please upload a corrected file for review."}
+                      <strong>Resubmission requested</strong>{document.reviewNotes || "Please upload an updated file for review."}
                     </span>
                     <DocumentResubmission bookingId={booking.id} document={document} onSubmitted={loadDetails} />
                   </div>

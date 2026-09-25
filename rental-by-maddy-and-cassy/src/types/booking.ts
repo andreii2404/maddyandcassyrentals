@@ -204,6 +204,25 @@ export interface BookingDocument {
   reviewedAt?: string;
   createdAt: string;
   updatedAt: string;
+  /**
+   * Every upload attempt for this requirement, oldest first (the last entry is
+   * this document). Earlier attempts are never overwritten, so this is the
+   * original submission, each resubmission request, and each replacement.
+   */
+  history?: BookingDocumentAttempt[];
+}
+
+/** One upload attempt for a booking requirement (a booking_requirement_submissions row). */
+export interface BookingDocumentAttempt {
+  id: string;
+  attemptNumber: number;
+  submittedAt: string;
+  reviewStatus: RequirementReviewStatus;
+  reviewNotes?: string;
+  reviewedAt?: string;
+  storageBucket: string;
+  storagePath: string;
+  originalFilename?: string;
 }
 
 /** One row of public.document_review_events — review history entry for one submission. */
