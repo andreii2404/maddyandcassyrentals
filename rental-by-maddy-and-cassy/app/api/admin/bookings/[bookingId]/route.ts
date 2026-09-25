@@ -45,6 +45,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
       return errorResponse("Administrator notes are required for this action.", 400);
     }
 
+    if (targetStatus === "returned") {
+      // Completing a rental goes through Complete Rental so its checks and the Rental Completed
+      // email always run.
+      return errorResponse("Use Complete Rental in the Rental Fulfillment tabs to finish this rental.", 409);
+    }
+
     if (targetStatus === "confirmed") {
       const { data: discountCheck } = await supabase
         .from("bookings")
