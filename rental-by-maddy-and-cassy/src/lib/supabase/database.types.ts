@@ -486,6 +486,187 @@ export type Database = {
           },
         ]
       }
+      booking_charges: {
+        Row: {
+          amount: number
+          booking_id: string
+          charge_type: string
+          created_at: string
+          created_by: string | null
+          id: string
+          paid_at: string | null
+          paid_recorded_by: string | null
+          payment_method: string | null
+          payment_status: string
+          reason: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          amount: number
+          booking_id: string
+          charge_type: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          paid_at?: string | null
+          paid_recorded_by?: string | null
+          payment_method?: string | null
+          payment_status?: string
+          reason: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          amount?: number
+          booking_id?: string
+          charge_type?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          paid_at?: string | null
+          paid_recorded_by?: string | null
+          payment_method?: string | null
+          payment_status?: string
+          reason?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_charges_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_customer_updates: {
+        Row: {
+          admin_note: string | null
+          booking_id: string
+          created_at: string
+          delivery_attempts: number
+          delivery_status: string
+          first_attempt_at: string | null
+          id: string
+          last_attempt_at: string | null
+          message: string
+          related_charge_id: string | null
+          sent_at: string | null
+          sent_by: string | null
+          sent_to: string | null
+          subject: string
+        }
+        Insert: {
+          admin_note?: string | null
+          booking_id: string
+          created_at?: string
+          delivery_attempts?: number
+          delivery_status?: string
+          first_attempt_at?: string | null
+          id?: string
+          last_attempt_at?: string | null
+          message: string
+          related_charge_id?: string | null
+          sent_at?: string | null
+          sent_by?: string | null
+          sent_to?: string | null
+          subject: string
+        }
+        Update: {
+          admin_note?: string | null
+          booking_id?: string
+          created_at?: string
+          delivery_attempts?: number
+          delivery_status?: string
+          first_attempt_at?: string | null
+          id?: string
+          last_attempt_at?: string | null
+          message?: string
+          related_charge_id?: string | null
+          sent_at?: string | null
+          sent_by?: string | null
+          sent_to?: string | null
+          subject?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_customer_updates_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_customer_updates_related_charge_id_fkey"
+            columns: ["related_charge_id"]
+            isOneToOne: false
+            referencedRelation: "booking_charges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_fulfillment_records: {
+        Row: {
+          actual_pickup_at: string | null
+          actual_return_at: string | null
+          booking_id: string
+          condition_notes: string | null
+          condition_photo_paths: string[]
+          created_at: string
+          item_condition: string | null
+          picked_up: boolean
+          pickup_notes: string | null
+          return_notes: string | null
+          returned: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          actual_pickup_at?: string | null
+          actual_return_at?: string | null
+          booking_id: string
+          condition_notes?: string | null
+          condition_photo_paths?: string[]
+          created_at?: string
+          item_condition?: string | null
+          picked_up?: boolean
+          pickup_notes?: string | null
+          return_notes?: string | null
+          returned?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          actual_pickup_at?: string | null
+          actual_return_at?: string | null
+          booking_id?: string
+          condition_notes?: string | null
+          condition_photo_paths?: string[]
+          created_at?: string
+          item_condition?: string | null
+          picked_up?: boolean
+          pickup_notes?: string | null
+          return_notes?: string | null
+          returned?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_fulfillment_records_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booking_items: {
         Row: {
           booking_id: string
@@ -986,6 +1167,8 @@ export type Database = {
           birthday_discount_status?: string
           booking_reference?: string
           cancelled_at?: string | null
+          completion_email_sent_at?: string | null
+          completion_email_to?: string | null
           confirmed_at?: string | null
           created_at?: string
           currency_code?: string
@@ -1014,6 +1197,8 @@ export type Database = {
         Update: {
           admin_notes?: string | null
           approved_at?: string | null
+          approval_email_sent_at?: string | null
+          approval_email_status?: string | null
           balance_payment_preference?: string
           balance_preference_updated_at?: string | null
           birth_date_snapshot?: string | null
@@ -1021,6 +1206,8 @@ export type Database = {
           birthday_discount_status?: string
           booking_reference?: string
           cancelled_at?: string | null
+          completion_email_sent_at?: string | null
+          completion_email_to?: string | null
           confirmed_at?: string | null
           created_at?: string
           currency_code?: string
@@ -1825,6 +2012,76 @@ export type Database = {
       }
     }
     Functions: {
+      admin_record_pickup: {
+        Args: { p_booking_id: string; p_notes?: string; p_picked_up_at: string }
+        Returns: Database["public"]["Tables"]["booking_fulfillment_records"]["Row"]
+        SetofOptions: {
+          from: "*"
+          to: "booking_fulfillment_records"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_record_return: {
+        Args: { p_booking_id: string; p_notes?: string; p_returned_at: string }
+        Returns: Database["public"]["Tables"]["booking_fulfillment_records"]["Row"]
+        SetofOptions: {
+          from: "*"
+          to: "booking_fulfillment_records"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_save_item_condition: {
+        Args: { p_booking_id: string; p_condition: string; p_notes?: string; p_photo_paths?: string[] }
+        Returns: Database["public"]["Tables"]["booking_fulfillment_records"]["Row"]
+        SetofOptions: {
+          from: "*"
+          to: "booking_fulfillment_records"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_add_booking_charge: {
+        Args: { p_amount: number; p_booking_id: string; p_charge_type: string; p_reason: string }
+        Returns: Database["public"]["Tables"]["booking_charges"]["Row"]
+        SetofOptions: {
+          from: "*"
+          to: "booking_charges"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_mark_charge_paid: {
+        Args: { p_charge_id: string; p_method: string; p_paid_at: string }
+        Returns: Database["public"]["Tables"]["booking_charges"]["Row"]
+        SetofOptions: {
+          from: "*"
+          to: "booking_charges"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_void_booking_charge: {
+        Args: { p_charge_id: string; p_reason: string }
+        Returns: Database["public"]["Tables"]["booking_charges"]["Row"]
+        SetofOptions: {
+          from: "*"
+          to: "booking_charges"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_complete_rental: {
+        Args: { p_booking_id: string; p_note?: string }
+        Returns: Database["public"]["Tables"]["bookings"]["Row"]
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       recover_guest_booking_access: {
         Args: {
           p_target_user_id: string
