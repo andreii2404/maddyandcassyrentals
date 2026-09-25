@@ -14,6 +14,7 @@ import {
   buildMonthGrid,
   groupBookingsByDate,
   isCalendarBooking,
+  layoutRangeSegments,
   monthCursorFromKey,
   shiftMonth,
   todayDateKey,
@@ -27,6 +28,9 @@ const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 /** Booking cards shown for a day before the "Show more bookings" button appears. */
 const COLLAPSED_BOOKING_LIMIT = 3;
+
+/** Rental-range bars drawn in a day cell; any further bookings that day show as "+N more". */
+const VISIBLE_RANGE_LANES = 2;
 
 const ROLE_LABELS: Record<BookingDayRole, string> = {
   pickup: "Pickup day",
@@ -192,6 +196,10 @@ export default function AdminCalendar() {
 
   const bookingsByDate = useMemo(() => groupBookingsByDate(bookings ?? []), [bookings]);
   const grid = useMemo(() => buildMonthGrid(cursor.year, cursor.month), [cursor]);
+  const rangeLayout = useMemo(
+    () => layoutRangeSegments(grid.map((cell) => cell.dateKey), bookingsByDate),
+    [grid, bookingsByDate],
+  );
   const selectedBookings = bookingsByDate.get(selectedKey) ?? [];
   const canCollapse = selectedBookings.length > COLLAPSED_BOOKING_LIMIT;
   const isExpanded = expandedKey === selectedKey;
@@ -378,6 +386,14 @@ export default function AdminCalendar() {
             <div className={styles.grid}>
               {grid.map((cell) => {
                 const count = bookingsByDate.get(cell.dateKey)?.length ?? 0;
+                const segments = rangeLayout.get(cell.dateKey) ?? [];
+                const shownSegments = segments.filter((segment) => segment.lane < VISIBLE_RANGE_LANES);
+                const moreCount = segments.length - shownSegments.length;
+                // Empty lanes are kept as spacers so each booking's bar lines up across the week.
+                const laneSlots = Array.from(
+                  { length: shownSegments.length ? shownSegments[shownSegments.length - 1].lane + 1 : 0 },
+                  (_, lane) => shownSegments.find((segment) => segment.lane === lane) ?? null,
+                );
                 const classNames = [
                   styles.day,
                   cell.inMonth ? "" : styles.dayOutside,
@@ -398,7 +414,29 @@ export default function AdminCalendar() {
                     onClick={() => selectDay(cell.dateKey, cell.inMonth)}
                   >
                     <span className={styles.dayNumber}>{cell.day}</span>
-                    {count ? <span className={styles.dayCount}>{bookingCountLabel(count)}</span> : null}
+                    {segments.length ? (
+                      <span className={styles.dayRanges} aria-hidden="true">
+                        {laneSlots.map((segment, lane) =>
+                          segment ? (
+                            <span
+                              key={segment.booking.id}
+                              className={[
+                                styles.rangeBar,
+                                segment.continuesLeft ? styles.rangeContinuesLeft : "",
+                                segment.continuesRight ? styles.rangeContinuesRight : "",
+                              ].filter(Boolean).join(" ")}
+                              title={`${segment.booking.bookingRef} · ${customerName(segment.booking)} · ${formatRentalDates(segment.booking)}`}
+                            >
+                              {/* Named once where the bar starts (or where it wraps onto a new week). */}
+                              {segment.continuesLeft ? null : customerName(segment.booking)}
+                            </span>
+                          ) : (
+                            <span key={`lane-${lane}`} className={styles.rangeSpacer} />
+                          ),
+                        )}
+                        {moreCount ? <span className={styles.rangeMore}>+{moreCount} more</span> : null}
+                      </span>
+                    ) : null}
                   </Button>
                 );
               })}
@@ -406,6 +444,7 @@ export default function AdminCalendar() {
 
             <ul className={styles.legend} aria-label="Calendar key">
               <li><span className={`${styles.swatch} ${styles.swatchBooked}`} aria-hidden="true" />Has approved bookings</li>
+              <li><span className={`${styles.swatch} ${styles.swatchRange}`} aria-hidden="true" />One booking across its rental dates</li>
               <li><span className={`${styles.swatch} ${styles.swatchToday}`} aria-hidden="true" />Today</li>
               <li><span className={`${styles.swatch} ${styles.swatchSelected}`} aria-hidden="true" />Selected day</li>
             </ul>

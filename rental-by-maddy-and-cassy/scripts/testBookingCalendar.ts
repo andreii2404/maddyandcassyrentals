@@ -7,6 +7,7 @@ import {
   buildMonthGrid,
   groupBookingsByDate,
   isCalendarBooking,
+  layoutRangeSegments,
   shiftMonth,
 } from "../src/lib/bookingCalendar";
 
@@ -117,4 +118,91 @@ test("shiftMonth rolls over year boundaries", () => {
   assert.deepEqual(shiftMonth({ year: 2026, month: 11 }, 1), { year: 2027, month: 0 });
   assert.deepEqual(shiftMonth({ year: 2026, month: 0 }, -1), { year: 2025, month: 11 });
   assert.deepEqual(shiftMonth({ year: 2026, month: 5 }, 1), { year: 2026, month: 6 });
+});
+
+test("a multi-day booking is one connected bar in the same lane across its days", () => {
+  // Sep 9-11 2026 (Wed-Fri) in Manila time.
+  const booking = makeBooking({
+    id: "range",
+    startDate: "2026-09-09T02:00:00+00:00",
+    endDate: "2026-09-11T02:00:00+00:00",
+  });
+  const grid = buildMonthGrid(2026, 8).map((cell) => cell.dateKey);
+  const layout = layoutRangeSegments(grid, groupBookingsByDate([booking]));
+
+  const pieces = ["2026-09-09", "2026-09-10", "2026-09-11"].map((key) => layout.get(key)?.[0]);
+  assert.deepEqual(pieces.map((piece) => piece?.booking.id), ["range", "range", "range"]);
+  assert.deepEqual(pieces.map((piece) => piece?.lane), [0, 0, 0]);
+  assert.deepEqual(
+    pieces.map((piece) => [piece?.continuesLeft, piece?.continuesRight]),
+    [[false, true], [true, true], [true, false]],
+  );
+  assert.equal(layout.has("2026-09-08"), false);
+  assert.equal(layout.has("2026-09-12"), false);
+});
+
+test("range bars break at the week edge and restart on the next row", () => {
+  // Sat Sep 12 -> Mon Sep 14 2026 crosses the Saturday/Sunday row break.
+  const booking = makeBooking({
+    id: "wrap",
+    startDate: "2026-09-12T02:00:00+00:00",
+    endDate: "2026-09-14T02:00:00+00:00",
+  });
+  const grid = buildMonthGrid(2026, 8).map((cell) => cell.dateKey);
+  const layout = layoutRangeSegments(grid, groupBookingsByDate([booking]));
+  const saturday = layout.get("2026-09-12")?.[0];
+  const sunday = layout.get("2026-09-13")?.[0];
+  const monday = layout.get("2026-09-14")?.[0];
+  assert.deepEqual([saturday?.continuesLeft, saturday?.continuesRight], [false, false]);
+  assert.deepEqual([sunday?.continuesLeft, sunday?.continuesRight], [false, true]);
+  assert.deepEqual([monday?.continuesLeft, monday?.continuesRight], [true, false]);
+});
+
+test("overlapping bookings get separate lanes that stay fixed within the week", () => {
+  const long = makeBooking({
+    id: "long",
+    startDate: "2026-09-08T02:00:00+00:00",
+    endDate: "2026-09-11T02:00:00+00:00",
+  });
+  const short = makeBooking({
+    id: "short",
+    startDate: "2026-09-10T02:00:00+00:00",
+    endDate: "2026-09-12T02:00:00+00:00",
+  });
+  // Starts the day "long" returns, so it cannot share that lane.
+  const turnover = makeBooking({
+    id: "turnover",
+    startDate: "2026-09-11T06:00:00+00:00",
+    endDate: "2026-09-11T09:00:00+00:00",
+  });
+  const grid = buildMonthGrid(2026, 8).map((cell) => cell.dateKey);
+  const layout = layoutRangeSegments(grid, groupBookingsByDate([short, turnover, long]));
+  const laneOf = (key: string, id: string) =>
+    layout.get(key)?.find((segment) => segment.booking.id === id)?.lane;
+
+  for (const key of ["2026-09-08", "2026-09-09", "2026-09-10", "2026-09-11"]) {
+    assert.equal(laneOf(key, "long"), 0, key);
+  }
+  for (const key of ["2026-09-10", "2026-09-11", "2026-09-12"]) {
+    assert.equal(laneOf(key, "short"), 1, key);
+  }
+  assert.equal(laneOf("2026-09-11", "turnover"), 2);
+  assert.deepEqual(layout.get("2026-09-11")?.map((segment) => segment.lane), [0, 1, 2]);
+});
+
+test("a lane is reused once the earlier bar has ended", () => {
+  const first = makeBooking({
+    id: "first",
+    startDate: "2026-09-07T02:00:00+00:00",
+    endDate: "2026-09-08T02:00:00+00:00",
+  });
+  const later = makeBooking({
+    id: "later",
+    startDate: "2026-09-10T02:00:00+00:00",
+    endDate: "2026-09-11T02:00:00+00:00",
+  });
+  const grid = buildMonthGrid(2026, 8).map((cell) => cell.dateKey);
+  const layout = layoutRangeSegments(grid, groupBookingsByDate([first, later]));
+  assert.equal(layout.get("2026-09-07")?.[0].lane, 0);
+  assert.equal(layout.get("2026-09-10")?.[0].lane, 0);
 });

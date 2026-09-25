@@ -100,6 +100,77 @@ export function bookingDayRole(booking: Booking, dateKey: string): BookingDayRol
   return "ongoing";
 }
 
+/** One day's piece of a booking's rental-range bar on the month grid. */
+export interface DayRangeSegment {
+  booking: Booking;
+  /** Row the bar sits in; stays the same for every day of the booking within a week. */
+  lane: number;
+  /** The same booking is also on the previous / next cell of this week row, so the bar joins it. */
+  continuesLeft: boolean;
+  continuesRight: boolean;
+}
+
+/**
+ * Lays out each booking as one connected bar across the days it covers, the way
+ * a wall calendar draws a multi-day event. `dateKeys` are the grid's cells in
+ * order (whole Sunday-first weeks); bars never join across a week break.
+ * Within a week, earlier and longer rentals get the upper lanes, and a booking
+ * keeps its lane on every day of that week so its bar lines up.
+ */
+export function layoutRangeSegments(
+  dateKeys: string[],
+  bookingsByDate: Map<string, Booking[]>,
+): Map<string, DayRangeSegment[]> {
+  const layout = new Map<string, DayRangeSegment[]>();
+
+  for (let weekStart = 0; weekStart < dateKeys.length; weekStart += 7) {
+    const week = dateKeys.slice(weekStart, weekStart + 7);
+    const idsByDay = week.map(
+      (key) => new Set((bookingsByDate.get(key) ?? []).map((booking) => booking.id)),
+    );
+
+    // First and last column each booking covers in this week.
+    const spans = new Map<string, { booking: Booking; first: number; last: number }>();
+    week.forEach((key, column) => {
+      for (const booking of bookingsByDate.get(key) ?? []) {
+        const span = spans.get(booking.id);
+        if (span) span.last = column;
+        else spans.set(booking.id, { booking, first: column, last: column });
+      }
+    });
+
+    const ordered = [...spans.values()].sort(
+      (a, b) =>
+        a.first - b.first ||
+        (b.last - b.first) - (a.last - a.first) ||
+        new Date(a.booking.startDate).getTime() - new Date(b.booking.startDate).getTime() ||
+        a.booking.id.localeCompare(b.booking.id),
+    );
+
+    // Last column used by each lane; a lane is free once its bar has ended.
+    const laneEnds: number[] = [];
+    const lanes = new Map<string, number>();
+    for (const span of ordered) {
+      let lane = laneEnds.findIndex((end) => end < span.first);
+      if (lane === -1) lane = laneEnds.length;
+      laneEnds[lane] = span.last;
+      lanes.set(span.booking.id, lane);
+    }
+
+    week.forEach((key, column) => {
+      const segments = (bookingsByDate.get(key) ?? []).map((booking) => ({
+        booking,
+        lane: lanes.get(booking.id) ?? 0,
+        continuesLeft: column > 0 && idsByDay[column - 1].has(booking.id),
+        continuesRight: column < week.length - 1 && idsByDay[column + 1].has(booking.id),
+      }));
+      if (segments.length) layout.set(key, segments.sort((a, b) => a.lane - b.lane));
+    });
+  }
+
+  return layout;
+}
+
 /** Whole Sunday-first weeks covering the month, including leading/trailing days from neighbouring months. */
 export function buildMonthGrid(year: number, month: number): CalendarCell[] {
   const first = new Date(Date.UTC(year, month, 1));
