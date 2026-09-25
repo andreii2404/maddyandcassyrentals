@@ -17,7 +17,7 @@ export const ADMIN_BOOKING_ACTIONS: Record<BookingStatus, AdminBookingAction[]> 
     {
       status: "approved",
       label: "Approve Booking",
-      description: "Accept the rental request after checking its basic details and availability.",
+      description: "Accept the request once the payment is verified, documents are approved and the agreement is countersigned.",
     },
     {
       status: "rejected",

@@ -5,6 +5,7 @@ import {
   createInvoicePdf,
   createReceiptPdf,
 } from "../src/lib/pdf/customerDocuments";
+import { canAutoConfirmAfterPayment } from "../src/lib/autoConfirm";
 
 test("generates invoice and receipt PDFs", async () => {
   const base = {
@@ -51,4 +52,52 @@ test("generates invoice and receipt PDFs", async () => {
   assert.equal(Buffer.from(invoice).subarray(0, 4).toString(), "%PDF");
   assert.equal(Buffer.from(receipt).subarray(0, 4).toString(), "%PDF");
   assert.equal(Buffer.from(agreement).subarray(0, 4).toString(), "%PDF");
+});
+
+test("canAutoConfirmAfterPayment requires approval, a completed agreement, and a verified birthday discount", () => {
+  assert.equal(
+    canAutoConfirmAfterPayment({
+      bookingStatus: "approved",
+      agreementStatus: "completed",
+      birthdayDiscountAmount: 0,
+      birthdayDiscountStatus: "not_eligible",
+    }),
+    true,
+  );
+  assert.equal(
+    canAutoConfirmAfterPayment({
+      bookingStatus: "pending",
+      agreementStatus: "completed",
+      birthdayDiscountAmount: 0,
+      birthdayDiscountStatus: "not_eligible",
+    }),
+    false,
+  );
+  assert.equal(
+    canAutoConfirmAfterPayment({
+      bookingStatus: "approved",
+      agreementStatus: "awaiting_business_signature",
+      birthdayDiscountAmount: 0,
+      birthdayDiscountStatus: "not_eligible",
+    }),
+    false,
+  );
+  assert.equal(
+    canAutoConfirmAfterPayment({
+      bookingStatus: "approved",
+      agreementStatus: "completed",
+      birthdayDiscountAmount: 100,
+      birthdayDiscountStatus: "pending_verification",
+    }),
+    false,
+  );
+  assert.equal(
+    canAutoConfirmAfterPayment({
+      bookingStatus: "approved",
+      agreementStatus: "completed",
+      birthdayDiscountAmount: 100,
+      birthdayDiscountStatus: "verified",
+    }),
+    true,
+  );
 });

@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/Button";
 import ConfirmModal from "@/components/ui/ConfirmModal";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/src/lib/supabase/client";
 import {
@@ -12,7 +12,6 @@ import {
 } from "@/src/services/bookingDetailService";
 import {
   ADMIN_BOOKING_ACTIONS,
-  autoRejectBookingForMissingRequirements,
   countersignBookingAgreement,
   downloadAdminBookingPdf,
   reviewAdminCancellationRequest,
@@ -36,10 +35,11 @@ import {
   AUTO_REJECT_DECLINE_DETAILS,
   DECLINE_REASON_OPTIONS,
   formatDeclineNote,
+  getApprovalBlockers,
   getFulfillmentProgressLabel,
+  getPendingStageLabel,
   getRejectionReason,
   PAYMENT_PROOF_SUBMITTED_STATUSES,
-  shouldAutoRejectForMissingRequirements,
 } from "@/src/lib/bookingManagement";
 import BookingItemsSummary from "@/components/booking-summary/BookingItemsSummary";
 import { bookingHeadline, bookingItemsSummaryData } from "@/src/lib/bookingDisplay";
@@ -172,35 +172,6 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   }, [loadDetails]);
 
   useBookingRealtime({ bookingId, onChange: loadDetails });
-
-  // A pending booking that reached the requirements step with no documents
-  // submitted is rejected immediately. The server re-checks eligibility, and
-  // each booking is only attempted once per page visit.
-  const autoRejectAttemptedFor = useRef<string | null>(null);
-  useEffect(() => {
-    if (!state) return;
-    const { booking: loadedBooking } = state.details;
-    const shouldReject = shouldAutoRejectForMissingRequirements({
-      status: loadedBooking.status,
-      requirementsStatus: loadedBooking.requirementsStatus,
-      paymentProofSubmitted: state.payments.some((payment) =>
-        (PAYMENT_PROOF_SUBMITTED_STATUSES as readonly string[]).includes(payment.status),
-      ),
-    });
-    if (!shouldReject || autoRejectAttemptedFor.current === loadedBooking.id) return;
-    autoRejectAttemptedFor.current = loadedBooking.id;
-
-    void (async () => {
-      try {
-        if (await autoRejectBookingForMissingRequirements(loadedBooking.id)) {
-          await loadDetails();
-          showToast(AUTO_REJECT_DECLINE_DETAILS, "info");
-        }
-      } catch {
-        showToast("This booking could not be rejected automatically. Please refresh and try again.", "error");
-      }
-    })();
-  }, [state, loadDetails, showToast]);
 
   const actions = useMemo(
     () => (state ? ADMIN_BOOKING_ACTIONS[state.details.booking.status] : []),
@@ -557,10 +528,24 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
     },
   ];
   const remainingChecks = reviewChecks.filter((check) => !check.ready).length;
+  const paymentProofSubmitted = payments.some((payment) =>
+    (PAYMENT_PROOF_SUBMITTED_STATUSES as readonly string[]).includes(payment.status),
+  );
+  const approvalBlockers = getApprovalBlockers({
+    requirementsStatus: booking.requirementsStatus,
+    hasVerifiedPayment: amountPaid > 0,
+    agreementStatus: booking.agreementStatus,
+  });
   const primaryAction = actions.find((action) => action.tone !== "danger") ?? null;
   const bookingApproved = ["approved", "confirmed", "ready_for_release", "released"].includes(booking.status);
   const finalDecisionLabel = booking.status === "pending"
-    ? remainingChecks === 0 ? "Ready for Approval" : "Pending"
+    ? remainingChecks === 0
+      ? "Ready for Approval"
+      : getPendingStageLabel({
+          status: booking.status,
+          requirementsStatus: booking.requirementsStatus,
+          paymentProofSubmitted,
+        }) ?? "Pending"
     : booking.status === "returned"
       ? "Returned / Completed"
       : booking.status === "cancelled"
@@ -603,6 +588,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   function renderActionChoice(action: (typeof actions)[number]) {
     const selected = action.status === selectedStatus;
     const blockedByBalance = action.status === "released" && !handoverPaymentReady;
+    const blockedByApproval = action.status === "approved" && approvalBlockers.length > 0;
     return (
       <Button variant="none"
         key={action.status}
@@ -610,7 +596,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
         className={`${styles.actionChoice} ${action.tone === "danger" ? styles.dangerChoice : ""} ${selected ? styles.actionChoiceSelected : ""}`}
         onClick={() => { setSelectedStatus(action.status); setNote(""); setDeclineReason(""); }}
         aria-pressed={selected}
-        disabled={updating || blockedByBalance}
+        disabled={updating || blockedByBalance || blockedByApproval}
       >
         <span className={styles.actionChoiceIcon} aria-hidden="true">{action.tone === "danger" ? "!" : "✓"}</span>
         <span className={styles.actionChoiceCopy}>
@@ -1092,7 +1078,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                     <div className={styles.completedAgreement}>
                       <div><span aria-hidden="true">✓</span><div><strong>Agreement fully signed</strong><p>No further signature action is needed. The customer can access the final PDF from My Bookings.</p></div></div>
                       {booking.status === "approved" ? <p className={styles.nextAdminStep}><strong>Next admin step:</strong> Use “Update this booking” above and choose “Confirm Booking.” The customer will then receive the final booking confirmation.</p> : null}
-                      {booking.status === "pending" ? <p className={styles.nextAdminStep}><strong>Next admin step:</strong> Approve the booking first, then confirm it after every checklist item is complete.</p> : null}
+                      {booking.status === "pending" ? <p className={styles.nextAdminStep}><strong>Next admin step:</strong> Approve the booking now that the agreement is complete, then confirm it.</p> : null}
                       <div className={styles.agreementButtons}>
                         {agreement.finalDocumentPath ? <Button variant="none" type="button" onClick={() => openPrivateFile("agreements", agreement.finalDocumentPath!)}>Open final agreement</Button> : null}
                         {customerSignature?.signaturePath ? <Button variant="none" type="button" className={styles.secondaryRecordButton} onClick={() => openPrivateFile("customer-documents", customerSignature.signaturePath!)}>View customer signature</Button> : null}
@@ -1181,6 +1167,9 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                   </div>
                   {actions.some((action) => action.status === "released") && !handoverPaymentReady ? (
                     <p className={styles.choosePrompt}>Handover is protected: the remaining balance must be recorded before “Released to Customer” becomes available.</p>
+                  ) : null}
+                  {actions.some((action) => action.status === "approved") && approvalBlockers.length > 0 ? (
+                    <p className={styles.choosePrompt}>{`Approval is available once: ${approvalBlockers.join(" ")}`}</p>
                   ) : null}
                   <p className={styles.choosePrompt}>
                     {selectedAction

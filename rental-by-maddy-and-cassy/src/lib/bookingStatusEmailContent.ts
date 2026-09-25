@@ -60,9 +60,11 @@ export function buildBookingStatusEmail(details: BookingStatusEmailDetails) {
     : `We have recorded the return of <strong>${item}</strong>. Booking <strong>${reference}</strong> is now complete.`;
   const nextTitle = approved ? "What happens next" : "Your completed rental";
   const nextCopy = approved
-    ? isGuest
-      ? "Open the secure guest tracker in the same browser used for checkout to finish any remaining payment, verification documents, and agreement steps. No customer account is required."
-      : "Open your booking to finish any remaining payment, verification documents, and rental agreement steps. We will keep your account updated as each requirement is reviewed."
+    ? details.remainingAction
+      ? isGuest
+        ? "Open the secure guest tracker in the same browser used for checkout to finish any remaining payment, verification documents, and agreement steps. No customer account is required."
+        : "Open your booking to finish any remaining payment, verification documents, and rental agreement steps. We will keep your account updated as each requirement is reviewed."
+      : "Everything is in order. We will email you again when your rental is ready for pickup."
     : isGuest
       ? "Your payment records, receipt, invoice, and completed rental remain available in the secure guest tracker on the browser used for checkout."
       : "Your booking history, payment records, receipt, and invoice remain available in your account. You can also share a review to help future renters choose with confidence.";

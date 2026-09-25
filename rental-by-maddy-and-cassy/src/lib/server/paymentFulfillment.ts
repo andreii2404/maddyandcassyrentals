@@ -5,6 +5,7 @@ import type { Database, Tables } from "@/src/lib/supabase/database.types";
 import { toJson } from "@/src/lib/supabase/types";
 import { getBookingById } from "@/src/services/bookingService";
 import { bookingTrackingPath } from "@/src/lib/bookingAccess";
+import { canAutoConfirmAfterPayment } from "@/src/lib/autoConfirm";
 import {
   generateAndSaveFinalAgreement,
   generateAndSaveReceipt,
@@ -193,7 +194,15 @@ export async function fulfillVerifiedPayment(
     console.error("Verified payment agreement lookup failed", { bookingId: booking.id, paymentId: payment.id, error: agreementError });
   }
 
-  if (agreementRow?.status === "completed" && booking.status === "approved") {
+  if (
+    agreementRow &&
+    canAutoConfirmAfterPayment({
+      bookingStatus: booking.status,
+      agreementStatus: agreementRow?.status ?? "",
+      birthdayDiscountAmount: booking.birthdayDiscountAmount,
+      birthdayDiscountStatus: booking.birthdayDiscountStatus,
+    })
+  ) {
     const { data: confirmedBooking, error: confirmError } = await admin.rpc(
       "system_confirm_booking",
       { p_booking_id: booking.id, p_note: "Auto-confirmed after verified GCash payment." },

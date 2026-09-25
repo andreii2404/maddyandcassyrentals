@@ -67,11 +67,7 @@ export function buildApprovalEmailDetails({
 
   const remainingActions: string[] = [];
   if (remainingBalance > 0.01) {
-    remainingActions.push(
-      booking.payLaterAllowed
-        ? "Pay the remaining balance according to the approved pay-later arrangement before handover"
-        : "Pay the remaining balance before handover",
-    );
+    remainingActions.push("Pay the remaining balance before handover");
   }
   if (booking.requirementsStatus !== "approved") remainingActions.push("Complete your verification documents");
   if (booking.agreementStatus !== "completed") remainingActions.push("Complete the rental agreement");

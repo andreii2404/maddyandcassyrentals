@@ -7,6 +7,8 @@ import { createAdminClient } from "@/src/lib/supabase/admin";
 import type { BookingStatus } from "@/src/types/booking";
 import { bookingHeadline } from "@/src/lib/bookingDisplay";
 import { bookingTrackingPath } from "@/src/lib/bookingAccess";
+import { getApprovalBlockers } from "@/src/lib/bookingManagement";
+import { getBookingById } from "@/src/services/bookingService";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -61,6 +63,27 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
       }
     }
 
+    if (targetStatus === "approved") {
+      const approvalBooking = await getBookingById(supabase, bookingId);
+      if (!approvalBooking) return errorResponse("The selected booking no longer exists.", 404);
+
+      const { data: verifiedPayment } = await supabase
+        .from("booking_payment_submissions")
+        .select("id")
+        .eq("booking_id", bookingId)
+        .eq("status", "verified")
+        .limit(1);
+
+      const blockers = getApprovalBlockers({
+        requirementsStatus: approvalBooking.requirementsStatus,
+        hasVerifiedPayment: (verifiedPayment?.length ?? 0) > 0,
+        agreementStatus: approvalBooking.agreementStatus,
+      });
+      if (blockers.length > 0) {
+        return errorResponse(`Finish these steps before approving: ${blockers.join(" ")}`, 409);
+      }
+    }
+
     const { data, error } =
       targetStatus === "confirmed"
         ? await supabase.rpc("confirm_booking", { p_booking_id: bookingId, p_note: note || undefined })
@@ -89,10 +112,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
         return errorResponse("The rental agreement must be fully signed before confirming this booking.", 409);
       }
       if (message.includes("BALANCE_PAYMENT_REQUIRED")) {
+        return errorResponse("The remaining balance must be recorded as paid before handover.", 409);
+      }
+      if (message.includes("INVENTORY_NOT_RESERVED")) {
         return errorResponse(
-          "The remaining balance must be recorded as paid before handover. If the business approved a pay-later arrangement, enable that exception in Agreement & Payment first.",
+          "The reserved units for this booking are no longer held, so it can't be confirmed. Check the unit assignments on the booking, then try again.",
           409,
         );
+      }
+      if (message.includes("SECURITY_DEPOSIT_REQUIRED")) {
+        return errorResponse("Record the security deposit before releasing the item.", 409);
       }
       if (message.includes("unit_reservation_status")) {
         return errorResponse("The device return could not be recorded. Refresh the page and try once more.", 500);

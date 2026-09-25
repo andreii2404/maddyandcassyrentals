@@ -131,6 +131,31 @@ export function canCustomerEditBooking(booking: Booking, hasLockedProgress: bool
   return booking.status === "pending" && !hasLockedProgress;
 }
 
+/** The unmet steps, in display order, blocking approval of a pending booking. */
+export function getApprovalBlockers(input: {
+  requirementsStatus: Booking["requirementsStatus"];
+  hasVerifiedPayment: boolean;
+  agreementStatus: Booking["agreementStatus"];
+}): string[] {
+  const blockers: string[] = [];
+  if (!input.hasVerifiedPayment) blockers.push("Verify at least one payment.");
+  if (input.requirementsStatus !== "approved") blockers.push("Approve every required verification document.");
+  if (input.agreementStatus !== "completed") blockers.push("Countersign the rental agreement.");
+  return blockers;
+}
+
+/** Where a pending booking sits in the intake flow, for display next to its status. Null once it is no longer pending. */
+export function getPendingStageLabel(input: {
+  status: BookingStatus;
+  requirementsStatus: Booking["requirementsStatus"];
+  paymentProofSubmitted: boolean;
+}): string | null {
+  if (input.status !== "pending") return null;
+  if (!input.paymentProofSubmitted) return "Awaiting Payment";
+  if (input.requirementsStatus === "not_submitted") return "Pending Requirements";
+  return "Under Review";
+}
+
 export interface BookingMilestone {
   key: string;
   label: string;

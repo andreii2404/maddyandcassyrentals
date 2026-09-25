@@ -3,9 +3,11 @@ import assert from "node:assert/strict";
 import {
   canCustomerCancelBooking,
   canCustomerEditBooking,
+  getApprovalBlockers,
   getBookingHistoryGroup,
   getBookingMilestones,
   getFulfillmentProgressLabel,
+  getPendingStageLabel,
 } from "../src/lib/bookingManagement";
 import { CANCELLATION_REASON_OPTIONS, type Booking } from "../src/types/booking";
 import { createEmptyDraft } from "../src/types/reservationDraft";
@@ -166,6 +168,56 @@ test("repeat review submissions are recognized without exposing a database const
   assert.equal(isDuplicateReviewError({ code: "23505", message: "duplicate key value" }), true);
   assert.equal(isDuplicateReviewError({ message: 'violates unique constraint "reviews_booking_item_id_key"' }), true);
   assert.equal(isDuplicateReviewError({ code: "42501", message: "permission denied" }), false);
+});
+
+test("getApprovalBlockers lists unmet approval requirements in order", () => {
+  assert.deepEqual(
+    getApprovalBlockers({
+      requirementsStatus: "not_submitted",
+      hasVerifiedPayment: false,
+      agreementStatus: "not_created",
+    }),
+    [
+      "Verify at least one payment.",
+      "Approve every required verification document.",
+      "Countersign the rental agreement.",
+    ],
+  );
+  assert.deepEqual(
+    getApprovalBlockers({
+      requirementsStatus: "approved",
+      hasVerifiedPayment: false,
+      agreementStatus: "not_created",
+    }),
+    ["Verify at least one payment.", "Countersign the rental agreement."],
+  );
+  assert.deepEqual(
+    getApprovalBlockers({
+      requirementsStatus: "approved",
+      hasVerifiedPayment: true,
+      agreementStatus: "completed",
+    }),
+    [],
+  );
+});
+
+test("getPendingStageLabel reflects where a pending booking is in the intake flow", () => {
+  assert.equal(
+    getPendingStageLabel({ status: "approved", requirementsStatus: "not_submitted", paymentProofSubmitted: false }),
+    null,
+  );
+  assert.equal(
+    getPendingStageLabel({ status: "pending", requirementsStatus: "not_submitted", paymentProofSubmitted: false }),
+    "Awaiting Payment",
+  );
+  assert.equal(
+    getPendingStageLabel({ status: "pending", requirementsStatus: "not_submitted", paymentProofSubmitted: true }),
+    "Pending Requirements",
+  );
+  assert.equal(
+    getPendingStageLabel({ status: "pending", requirementsStatus: "pending_review", paymentProofSubmitted: true }),
+    "Under Review",
+  );
 });
 
 test("approval and completion emails contain the booking reference and safe customer action", () => {
