@@ -36,7 +36,7 @@ interface SendBookingApprovalEmailOptions {
  * the time this runs, so every failure is logged server-side and returned as an
  * outcome for the caller to turn into a friendly message.
  */
-export async function sendBookingApprovalEmail({
+async function attemptBookingApprovalEmail({
   bookingId,
   origin,
   resend = false,
@@ -95,4 +95,49 @@ export async function sendBookingApprovalEmail({
     });
     return { sent: false, reason: "load_failed" };
   }
+}
+
+/**
+ * Saves how the approval email went so the admin page can decide when to switch to Rental
+ * Fulfillment. A failed resend never downgrades an earlier "sent" or "legacy" state, and a
+ * failed first send only marks bookings that have no state yet. Never throws.
+ */
+async function recordApprovalEmailOutcome(bookingId: string, sent: boolean, resend: boolean): Promise<void> {
+  try {
+    const admin = createAdminClient();
+    if (sent) {
+      const { error } = await admin
+        .from("bookings")
+        .update({ approval_email_status: "sent", approval_email_sent_at: new Date().toISOString() })
+        .eq("id", bookingId);
+      if (error) console.error("Approval email status could not be saved", { bookingId, error: error.message });
+      return;
+    }
+    if (resend) return;
+    const { error } = await admin
+      .from("bookings")
+      .update({ approval_email_status: "failed" })
+      .eq("id", bookingId)
+      .is("approval_email_status", null);
+    if (error) console.error("Approval email status could not be saved", { bookingId, error: error.message });
+  } catch (error) {
+    console.error("Approval email status could not be saved", {
+      bookingId,
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+}
+
+/**
+ * Sends the Approval Confirmation email and records the outcome on the booking. Same contract
+ * as before: it never throws and the outcome is returned for the caller to turn into a message.
+ */
+export async function sendBookingApprovalEmail(
+  options: SendBookingApprovalEmailOptions,
+): Promise<BookingApprovalEmailOutcome> {
+  const outcome = await attemptBookingApprovalEmail(options);
+  if (outcome.reason !== "not_found") {
+    await recordApprovalEmailOutcome(options.bookingId, outcome.sent, options.resend === true);
+  }
+  return outcome;
 }
