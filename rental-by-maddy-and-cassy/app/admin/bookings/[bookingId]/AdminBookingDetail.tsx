@@ -43,12 +43,14 @@ import {
 } from "@/src/lib/bookingManagement";
 import BookingItemsSummary from "@/components/booking-summary/BookingItemsSummary";
 import { bookingHeadline, bookingItemsSummaryData } from "@/src/lib/bookingDisplay";
+import { WAITING_FOR_RESUBMISSION_LABEL } from "@/src/lib/requirementResubmission";
 
 const REQUIREMENTS_STATUS_LABELS: Record<string, string> = {
   not_submitted: "Not Submitted",
   pending_review: "Pending Review",
   approved: "Approved",
-  rejected: "Rejected",
+  // A rejected requirement is one the customer was asked to resubmit.
+  rejected: WAITING_FOR_RESUBMISSION_LABEL,
 };
 
 const AGREEMENT_STATUS_LABELS: Record<string, string> = {
@@ -602,7 +604,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
         <span className={styles.actionChoiceCopy}>
           <small>{action.tone === "danger" ? "Close booking" : action.status === primaryAction?.status ? "Recommended next step" : "Alternative action"}</small>
           <strong>{action.label}</strong>
-          <span>{blockedByBalance ? "Record the remaining balance or approve a pay-later exception in Requirements first." : action.description}</span>
+          <span>{blockedByBalance ? "Record the remaining balance before this action becomes available." : action.description}</span>
         </span>
         <span className={styles.actionChoiceState}>{selected ? "Selected" : "Select"}</span>
       </Button>

@@ -67,12 +67,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
       const approvalBooking = await getBookingById(supabase, bookingId);
       if (!approvalBooking) return errorResponse("The selected booking no longer exists.", 404);
 
-      const { data: verifiedPayment } = await supabase
+      const { data: verifiedPayment, error: verifiedPaymentError } = await supabase
         .from("booking_payment_submissions")
         .select("id")
         .eq("booking_id", bookingId)
         .eq("status", "verified")
         .limit(1);
+      if (verifiedPaymentError) {
+        console.error("Admin approval payment check failed", verifiedPaymentError);
+        return errorResponse("The booking could not be checked. Please try again.", 500);
+      }
 
       const blockers = getApprovalBlockers({
         requirementsStatus: approvalBooking.requirementsStatus,
