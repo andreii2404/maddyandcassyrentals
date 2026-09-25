@@ -46,12 +46,16 @@ const DEFAULT_FILTERS: AdminPaymentsFilters = {
   sort: "newest",
 };
 
-const STATUS_FILTER_OPTIONS: Array<{ value: NonNullable<AdminPaymentsFilters["status"]> | "all"; label: string }> = [
+type StatusTabValue = NonNullable<AdminPaymentsFilters["status"]> | "all";
+
+const STATUS_FILTER_OPTIONS: Array<{ value: StatusTabValue; label: string }> = [
   { value: "all", label: "All" },
+  { value: "unverified", label: "Needs Review" },
   { value: "verified", label: "Verified" },
-  { value: "unverified", label: "Unverified" },
   { value: "rejected", label: "Rejected" },
 ];
+
+const SEARCH_DEBOUNCE_MS = 350;
 
 const STAGE_FILTER_OPTIONS: Array<{ value: NonNullable<AdminPaymentsFilters["stage"]> | "all"; label: string }> = [
   { value: "all", label: "All" },
@@ -105,21 +109,19 @@ function isDefaultFilters(filters: AdminPaymentsFilters): boolean {
   );
 }
 
-/** How many filter controls are currently narrowing the list (the date range counts once). */
-function countActiveFilters(filters: AdminPaymentsFilters, search: string): number {
+/** How many "More Filters" controls are currently applied (the date range counts once). */
+function countMoreFilters(filters: AdminPaymentsFilters): number {
   return [
-    filters.status,
     filters.stage,
     filters.accountType,
     filters.bookingStatus,
     filters.proof,
     filters.dateFrom || filters.dateTo,
-    search,
     (filters.sort ?? "newest") !== "newest" ? filters.sort : undefined,
   ].filter(Boolean).length;
 }
 
-function statusCount(metrics: AdminPaymentsData["metrics"], value: (typeof STATUS_FILTER_OPTIONS)[number]["value"]): number {
+function statusCount(metrics: AdminPaymentsData["metrics"], value: StatusTabValue): number {
   return value === "all" ? metrics.statusCounts.all : metrics.statusCounts[value];
 }
 
@@ -232,11 +234,14 @@ export default function AdminPaymentsPage() {
   const { user, profile } = useAuth();
 
   // `searchInput` and `draftFilters` are what the filter controls edit; `appliedSearch` and
-  // `filters` are what the table is actually filtered by. Apply Filters copies draft -> applied.
+  // `filters` are what the table is actually filtered by. Status tabs apply immediately,
+  // search applies after a short pause (or on Enter), and the More Filters panel's
+  // Apply Filters copies draft -> applied.
   const [searchInput, setSearchInput] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [draftFilters, setDraftFilters] = useState<AdminPaymentsFilters>(DEFAULT_FILTERS);
   const [filters, setFilters] = useState<AdminPaymentsFilters>(DEFAULT_FILTERS);
+  const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
   const [paymentsPage, setPaymentsPage] = useState(1);
   const [paymentsPageSize, setPaymentsPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
   const [paymentsData, setPaymentsData] = useState<AdminPaymentsData | null>(null);
@@ -253,9 +258,11 @@ export default function AdminPaymentsPage() {
 
   function applyFilters(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setFilters(draftFilters);
+    // The status tab is the source of truth for status; keep it even if the draft is stale.
+    setFilters((current) => ({ ...draftFilters, status: current.status }));
     setAppliedSearch(searchInput.trim());
     setPaymentsPage(1);
+    setMoreFiltersOpen(false);
   }
 
   function clearFilters() {
@@ -266,8 +273,41 @@ export default function AdminPaymentsPage() {
     setPaymentsPage(1);
   }
 
+  function selectStatusTab(value: StatusTabValue) {
+    const status = value === "all" ? undefined : value;
+    setFilters((current) => ({ ...current, status }));
+    setDraftFilters((current) => ({ ...current, status }));
+    setPaymentsPage(1);
+  }
+
+  function applySearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const nextSearch = searchInput.trim();
+    if (nextSearch === appliedSearch) return;
+    setAppliedSearch(nextSearch);
+    setPaymentsPage(1);
+  }
+
+  function toggleMoreFilters() {
+    // Opening starts from what is actually applied, so abandoned edits don't linger.
+    if (!moreFiltersOpen) setDraftFilters(filters);
+    setMoreFiltersOpen((open) => !open);
+  }
+
+  // Apply the search box after the admin pauses typing, so it filters without a button.
+  useEffect(() => {
+    const nextSearch = searchInput.trim();
+    if (nextSearch === appliedSearch) return;
+    const timer = window.setTimeout(() => {
+      setAppliedSearch(nextSearch);
+      setPaymentsPage(1);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [searchInput, appliedSearch]);
+
   const filtersActive = !isDefaultFilters(filters) || Boolean(appliedSearch);
-  const activeFilterCount = countActiveFilters(filters, appliedSearch);
+  const moreFilterCount = countMoreFilters(filters);
+  const activeStatusTab: StatusTabValue = filters.status ?? "all";
   const canClearFilters = filtersActive || !isDefaultFilters(draftFilters) || Boolean(searchInput.trim());
 
   // Shared by the param-driven effect below and by realtime change notifications, so
@@ -413,32 +453,55 @@ export default function AdminPaymentsPage() {
                   <p>Manual GCash submissions and their review status.</p>
                 </div>
               </div>
-              <form className={styles.filterPanel} onSubmit={applyFilters} aria-label="Filter payment records">
-                <div className={styles.filterPanelHeader}>
-                  <h3>Filters</h3>
-                  {activeFilterCount ? (
-                    <span className={styles.filterCountBadge}>{activeFilterCount} applied</span>
-                  ) : null}
-                </div>
-                <div className={styles.filterGrid}>
-                  <label className={styles.filterControl}>
-                    <span>Payment Status</span>
-                    <select
-                      value={draftFilters.status ?? "all"}
-                      onChange={(event) =>
-                        updateDraftFilter(
-                          "status",
-                          event.target.value === "all" ? undefined : (event.target.value as AdminPaymentsFilters["status"]),
-                        )
-                      }
+              <div className={styles.recordsToolbar}>
+                <div className={styles.statusTabs} role="group" aria-label="Filter by payment status">
+                  {STATUS_FILTER_OPTIONS.map((option) => (
+                    <Button
+                      variant="none"
+                      key={option.value}
+                      type="button"
+                      className={activeStatusTab === option.value ? styles.activeTab : ""}
+                      onClick={() => selectStatusTab(option.value)}
+                      aria-pressed={activeStatusTab === option.value}
                     >
-                      {STATUS_FILTER_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label} ({statusCount(paymentsData.metrics, option.value)})
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                      {option.label}
+                      <span>{statusCount(paymentsData.metrics, option.value)}</span>
+                    </Button>
+                  ))}
+                </div>
+                <div className={styles.toolbarActions}>
+                  <form className={styles.toolbarSearch} role="search" onSubmit={applySearch}>
+                    <input
+                      type="search"
+                      aria-label="Search payment records"
+                      placeholder="Search booking, GCash reference or status"
+                      value={searchInput}
+                      onChange={(event) => setSearchInput(event.target.value)}
+                    />
+                  </form>
+                  <Button
+                    variant="none"
+                    type="button"
+                    className={`${styles.moreFiltersButton} ${moreFilterCount ? styles.moreFiltersButtonActive : ""}`}
+                    aria-expanded={moreFiltersOpen}
+                    aria-controls="payments-more-filters"
+                    onClick={toggleMoreFilters}
+                  >
+                    More Filters
+                    {moreFilterCount ? (
+                      <span aria-label={`${moreFilterCount} applied`}>{moreFilterCount}</span>
+                    ) : null}
+                  </Button>
+                </div>
+              </div>
+              {moreFiltersOpen ? (
+              <form
+                id="payments-more-filters"
+                className={styles.filterPanel}
+                onSubmit={applyFilters}
+                aria-label="More payment filters"
+              >
+                <div className={styles.filterGrid}>
                   <label className={styles.filterControl}>
                     <span>Payment Type</span>
                     <select
@@ -529,7 +592,7 @@ export default function AdminPaymentsPage() {
                     </select>
                   </label>
                   <div className={`${styles.filterControl} ${styles.dateControl}`} role="group" aria-labelledby="payments-date-filter-label">
-                    <span id="payments-date-filter-label">Date</span>
+                    <span id="payments-date-filter-label">Date Range</span>
                     <div className={styles.dateRange}>
                       <input
                         type="date"
@@ -548,15 +611,6 @@ export default function AdminPaymentsPage() {
                       />
                     </div>
                   </div>
-                  <label className={`${styles.filterControl} ${styles.searchControl}`}>
-                    <span>Search</span>
-                    <input
-                      type="search"
-                      placeholder="Booking, GCash reference or status"
-                      value={searchInput}
-                      onChange={(event) => setSearchInput(event.target.value)}
-                    />
-                  </label>
                 </div>
                 <div className={styles.filterActions}>
                   <Button
@@ -573,6 +627,7 @@ export default function AdminPaymentsPage() {
                   </Button>
                 </div>
               </form>
+              ) : null}
               {paymentsData.payments.length ? (
                 <div className={styles.tableWrap}>
                   <table>
