@@ -53,7 +53,8 @@ export default function MessagingWorkspace({ mode, isGuest = false }: MessagingW
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageAreaRef = useRef<HTMLDivElement>(null);
+  const keepLatestMessageVisibleRef = useRef(true);
   const refreshTimerRef = useRef<number | null>(null);
 
   const activeConversation = useMemo(
@@ -138,12 +139,27 @@ export default function MessagingWorkspace({ mode, isGuest = false }: MessagingW
   }, [activeId, client, mode, refreshConversations, refreshMessages]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ block: "end" });
-  }, [messages, messagesLoading]);
+    if (!keepLatestMessageVisibleRef.current) return undefined;
+
+    const frameId = window.requestAnimationFrame(() => {
+      const messageArea = messageAreaRef.current;
+      if (messageArea) messageArea.scrollTop = messageArea.scrollHeight;
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [activeId, messages]);
 
   function chooseConversation(conversationId: string) {
+    keepLatestMessageVisibleRef.current = true;
     setActiveId(conversationId);
     setMobileChatOpen(true);
+  }
+
+  function handleMessageAreaScroll() {
+    const messageArea = messageAreaRef.current;
+    if (!messageArea) return;
+    const distanceFromBottom = messageArea.scrollHeight - messageArea.scrollTop - messageArea.clientHeight;
+    keepLatestMessageVisibleRef.current = distanceFromBottom <= 72;
   }
 
   async function handleSend() {
@@ -151,6 +167,7 @@ export default function MessagingWorkspace({ mode, isGuest = false }: MessagingW
     if (!activeId || !body || sending) return;
     setSending(true);
     setDraft("");
+    keepLatestMessageVisibleRef.current = true;
     try {
       const sent = await sendMessage(client, activeId, body);
       setMessages((current) => current.some((message) => message.id === sent.id)
@@ -171,7 +188,10 @@ export default function MessagingWorkspace({ mode, isGuest = false }: MessagingW
   }
 
   return (
-    <section className={styles.page} aria-label="Messages">
+    <section
+      className={`${styles.page} ${mode === "admin" ? styles.pageAdmin : styles.pageCustomer}`}
+      aria-label="Messages"
+    >
       <div className={styles.headingRow}>
         <div>
           <span className={styles.eyebrow}>{mode === "admin" ? "Customer care" : "Rental support"}</span>
@@ -252,7 +272,12 @@ export default function MessagingWorkspace({ mode, isGuest = false }: MessagingW
                 </div>
               </header>
 
-              <div className={styles.messageArea} aria-live="polite">
+              <div
+                ref={messageAreaRef}
+                className={styles.messageArea}
+                aria-live="polite"
+                onScroll={handleMessageAreaScroll}
+              >
                 {messagesLoading && messages.length === 0 ? <div className={styles.messageState}>Loading messages…</div> : null}
                 {messages.map((message, index) => {
                   const own = mode === "admin" ? message.senderRole === "admin" : message.senderRole === "customer";
@@ -271,7 +296,6 @@ export default function MessagingWorkspace({ mode, isGuest = false }: MessagingW
                     </div>
                   );
                 })}
-                <div ref={messagesEndRef} />
               </div>
 
               <div className={styles.composer}>

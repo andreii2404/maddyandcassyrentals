@@ -47,7 +47,11 @@ function ArrowIcon() {
 export default function SiteFooter() {
   const pathname = usePathname();
 
-  if (pathname.startsWith("/admin") || pathname.startsWith("/demo")) return null;
+  if (
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/demo") ||
+    pathname === "/messages"
+  ) return null;
 
   return (
     <footer className={styles.footer}>

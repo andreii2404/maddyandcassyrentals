@@ -1,6 +1,17 @@
 .page {
+  display: flex;
   width: min(100%, 1420px);
+  min-height: 0;
   margin: 0 auto;
+  flex-direction: column;
+}
+
+.pageCustomer {
+  height: 100%;
+}
+
+.pageAdmin {
+  height: calc(100dvh - 4.25rem);
 }
 
 .headingRow {
@@ -96,18 +107,15 @@
 
 .workspace {
   display: grid;
-  min-height: 570px;
-  height: min(72vh, 760px);
+  min-height: 0;
+  height: auto;
   overflow: hidden;
+  flex: 1 1 auto;
   grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
   border: 1px solid rgba(154, 89, 101, 0.16);
   border-radius: 22px;
   background: var(--color-white);
   box-shadow: 0 18px 55px rgba(73, 48, 53, 0.08);
-}
-
-.workspaceGuest {
-  height: min(68vh, 720px);
 }
 
 .inbox {
@@ -151,7 +159,9 @@
 .conversationList {
   min-height: 0;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
   padding: 0.45rem;
+  scrollbar-gutter: stable;
 }
 
 .conversationItem {
@@ -232,10 +242,12 @@
   display: flex;
   min-height: 0;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
   padding: 1.1rem clamp(0.8rem, 2.5vw, 2rem);
   flex: 1;
   flex-direction: column;
   gap: 0.35rem;
+  scrollbar-gutter: stable;
 }
 
 .messageRow { display: flex; justify-content: flex-start; }
@@ -283,7 +295,7 @@
   width: 100%;
   min-height: 44px;
   max-height: 120px;
-  resize: vertical;
+  resize: none;
   padding: 0.68rem 0.85rem;
   border: 1px solid var(--color-light-gray);
   border-radius: 15px;
@@ -322,11 +334,14 @@
 .emptyChat strong { margin-top: 0.4rem; color: var(--color-text-primary); font-size: 1rem; }
 .emptyChat p { max-width: 380px; margin: 0.3rem 0 0; font-size: 0.74rem; }
 
+@media (max-width: 1024px) {
+  .pageAdmin { height: calc(100dvh - 8.4rem); }
+}
+
 @media (max-width: 760px) {
   .headingRow { align-items: flex-start; }
   .headingRow p { max-width: 280px; }
-  .workspace { height: calc(100dvh - 210px); min-height: 360px; grid-template-columns: 1fr; border-radius: 18px; }
-  .workspaceGuest { height: calc(100dvh - 295px); }
+  .workspace { grid-template-columns: 1fr; border-radius: 18px; }
   .chatPanel { display: none; }
   .mobileChatOpen .inbox { display: none; }
   .mobileChatOpen .chatPanel { display: flex; }
@@ -340,8 +355,6 @@
   .headingRow p { display: none; }
   .liveBadge { padding: 0.4rem 0.58rem; }
   .guestNotice { align-items: flex-start; flex-direction: column; gap: 0.35rem; }
-  .workspace { height: calc(100dvh - 190px); min-height: 350px; }
-  .workspaceGuest { height: calc(100dvh - 280px); }
   .composer { gap: 0.45rem; }
   .composer button { padding-inline: 0.85rem; }
 }

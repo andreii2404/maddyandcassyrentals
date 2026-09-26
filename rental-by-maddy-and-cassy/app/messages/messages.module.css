@@ -5,7 +5,9 @@
 }
 
 .workspacePage {
-  min-height: calc(100dvh - 68px);
+  height: calc(100dvh - 68px);
+  min-height: 0;
+  overflow: hidden;
 }
 
 .loading,
@@ -55,4 +57,12 @@
 @media (max-width: 520px) {
   .workspacePage { padding: 0.75rem; }
   .actions { flex-direction: column; }
+}
+
+@media (max-width: 1050px) {
+  .workspacePage { height: calc(100dvh - 64px); }
+}
+
+@media (max-width: 700px) {
+  .workspacePage { height: calc(100dvh - 60px); }
 }
