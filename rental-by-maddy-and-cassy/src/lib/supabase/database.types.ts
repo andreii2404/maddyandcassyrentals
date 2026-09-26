@@ -1108,6 +1108,100 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_conversations: {
+        Row: {
+          admin_last_read_at: string | null
+          booking_id: string | null
+          created_at: string
+          customer_id: string
+          customer_last_read_at: string | null
+          id: string
+          last_message_at: string | null
+          last_message_preview: string | null
+          status: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          admin_last_read_at?: string | null
+          booking_id?: string | null
+          created_at?: string
+          customer_id: string
+          customer_last_read_at?: string | null
+          id?: string
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_last_read_at?: string | null
+          booking_id?: string | null
+          created_at?: string
+          customer_id?: string
+          customer_last_read_at?: string | null
+          id?: string
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_conversations_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_messages: {
+        Row: {
+          body: string
+          client_message_id: string
+          conversation_id: string
+          created_at: string
+          edited_at: string | null
+          id: string
+          message_type: string
+          sender_id: string | null
+          sender_role: string
+        }
+        Insert: {
+          body: string
+          client_message_id?: string
+          conversation_id: string
+          created_at?: string
+          edited_at?: string | null
+          id?: string
+          message_type?: string
+          sender_id?: string | null
+          sender_role: string
+        }
+        Update: {
+          body?: string
+          client_message_id?: string
+          conversation_id?: string
+          created_at?: string
+          edited_at?: string | null
+          id?: string
+          message_type?: string
+          sender_id?: string | null
+          sender_role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_documents: {
         Row: {
           created_at: string
@@ -1825,6 +1919,64 @@ export type Database = {
       }
     }
     Functions: {
+      get_or_create_chat_conversation: {
+        Args: { p_booking_id?: string | null }
+        Returns: string
+      }
+      list_chat_conversations: {
+        Args: never
+        Returns: {
+          booking_id: string | null
+          booking_reference: string | null
+          created_at: string
+          customer_email: string | null
+          customer_id: string
+          customer_name: string
+          id: string
+          is_guest: boolean
+          last_message_at: string | null
+          last_message_preview: string | null
+          status: string
+          subject: string
+          unread_count: number
+        }[]
+      }
+      list_chat_messages: {
+        Args: { p_conversation_id: string; p_limit?: number }
+        Returns: {
+          body: string
+          conversation_id: string
+          created_at: string
+          edited_at: string | null
+          id: string
+          message_type: string
+          sender_id: string | null
+          sender_name: string
+          sender_role: string
+        }[]
+      }
+      mark_chat_conversation_read: {
+        Args: { p_conversation_id: string }
+        Returns: undefined
+      }
+      send_chat_message: {
+        Args: {
+          p_body: string
+          p_client_message_id: string
+          p_conversation_id: string
+        }
+        Returns: {
+          body: string
+          conversation_id: string
+          created_at: string
+          edited_at: string | null
+          id: string
+          message_type: string
+          sender_id: string | null
+          sender_name: string
+          sender_role: string
+        }[]
+      }
       recover_guest_booking_access: {
         Args: {
           p_target_user_id: string
