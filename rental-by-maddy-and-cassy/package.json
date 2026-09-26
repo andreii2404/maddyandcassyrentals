@@ -18,8 +18,9 @@
     "test:rental-timing": "tsx --test scripts/testRentalTiming.ts",
     "test:variant-inventory": "tsx --test scripts/testVariantInventory.ts",
     "test:feedback": "tsx --test scripts/testFeedbackMessages.ts",
+    "test:messaging": "tsx --test scripts/testMessaging.ts",
     "test:fulfillment": "tsx --test scripts/testRentalFulfillment.ts scripts/testFulfillmentEmails.ts",
-    "verify": "npm run lint && tsc --noEmit && npm run test:payments && npm run test:checkout && npm run test:bookings && npm run test:documents && npm run test:auth && npm run test:rental-timing && npm run test:variant-inventory && npm run test:feedback && npm run test:fulfillment && npm run build"
+    "verify": "npm run lint && tsc --noEmit && npm run test:payments && npm run test:checkout && npm run test:bookings && npm run test:documents && npm run test:auth && npm run test:rental-timing && npm run test:variant-inventory && npm run test:feedback && npm run test:messaging && npm run test:fulfillment && npm run build"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.5.3",

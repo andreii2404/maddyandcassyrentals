@@ -1,0 +1,58 @@
+.page,
+.workspacePage {
+  width: 100%;
+  padding: clamp(1rem, 2.5vw, 2rem);
+}
+
+.workspacePage {
+  min-height: calc(100dvh - 68px);
+}
+
+.loading,
+.welcomeCard {
+  width: min(100%, 680px);
+  margin: clamp(2rem, 8vh, 6rem) auto;
+  border: 1px solid rgba(154, 89, 101, 0.16);
+  border-radius: 24px;
+  background: var(--color-white);
+  box-shadow: 0 20px 60px rgba(73, 48, 53, 0.08);
+  text-align: center;
+}
+
+.loading { padding: 3rem; color: var(--color-charcoal); font-size: 0.85rem; }
+.welcomeCard { padding: clamp(1.5rem, 5vw, 3.2rem); }
+.welcomeCard > span { color: var(--color-primary); font-size: 0.7rem; font-weight: 750; letter-spacing: 0.1em; text-transform: uppercase; }
+.welcomeCard h1 { margin: 0.45rem 0; font-size: clamp(1.65rem, 4vw, 2.5rem); line-height: 1.15; }
+.welcomeCard p { max-width: 530px; margin: 0 auto; color: var(--color-charcoal); font-size: 0.88rem; }
+.welcomeCard small { display: block; margin-top: 1rem; color: var(--color-charcoal); font-size: 0.7rem; }
+
+.actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.7rem;
+  margin-top: 1.25rem;
+}
+
+.primaryAction,
+.secondaryAction {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0.7rem 1.2rem;
+  border-radius: 13px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.primaryAction { border: 1px solid var(--color-primary); background: var(--color-primary); color: white; }
+.secondaryAction { border: 1px solid rgba(154, 89, 101, 0.28); background: white; color: var(--color-primary); }
+.primaryAction:disabled { cursor: wait; opacity: 0.6; }
+.error { margin-top: 1rem; padding: 0.65rem; border-radius: 12px; background: var(--color-danger-bg); color: var(--color-danger); font-size: 0.75rem; }
+
+@media (max-width: 520px) {
+  .workspacePage { padding: 0.75rem; }
+  .actions { flex-direction: column; }
+}
