@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../src/lib/supabase/database.types";
 import {
@@ -9,6 +10,11 @@ import {
   markConversationRead,
   sendMessage,
 } from "../src/services/messagingService";
+
+const chatSendMigration = readFileSync(
+  new URL("../supabase/migrations/20260926075045_fix_chat_message_send.sql", import.meta.url),
+  "utf8",
+);
 
 type RpcResult = { data: unknown; error: { message: string } | null };
 
@@ -105,4 +111,23 @@ test("database errors are converted into plain customer-facing messages", async 
     () => listConversations(client),
     /sending messages too quickly/i,
   );
+});
+
+test("chat send SQL uses an unambiguous idempotency constraint", () => {
+  assert.match(
+    chatSendMigration,
+    /on conflict on constraint chat_messages_client_key do update/i,
+  );
+  assert.doesNotMatch(
+    chatSendMigration,
+    /on conflict\s*\(\s*conversation_id\s*,\s*client_message_id\s*\)/i,
+  );
+});
+
+test("chat send SQL returns a sender even when a guest profile is absent", () => {
+  assert.match(
+    chatSendMigration,
+    /left join public\.profiles as profile on profile\.id = v_uid/i,
+  );
+  assert.match(chatSendMigration, /'Guest customer'/i);
 });
