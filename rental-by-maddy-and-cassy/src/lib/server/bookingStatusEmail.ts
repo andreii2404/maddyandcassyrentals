@@ -4,8 +4,12 @@ import {
   buildBookingStatusEmail,
   type BookingStatusEmailDetails,
 } from "@/src/lib/bookingStatusEmailContent";
-
-const RESEND_EMAIL_ENDPOINT = "https://api.resend.com/emails";
+import {
+  buildSupabaseEmailRequest,
+  DEFAULT_SUPABASE_EMAIL_FUNCTION_NAME,
+} from "@/src/lib/emailFunctionTransport";
+import { buildEmailNotificationQueueRow } from "@/src/lib/emailNotificationQueue";
+import { createAdminClient } from "@/src/lib/supabase/admin";
 
 export interface BookingStatusEmailResult {
   sent: boolean;
@@ -18,7 +22,11 @@ function isEmail(value: string): boolean {
 }
 
 export function isBookingEmailConfigured(): boolean {
-  return Boolean(process.env.RESEND_API_KEY?.trim() && process.env.BOOKING_EMAIL_FROM?.trim());
+  return Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() &&
+      process.env.SUPABASE_SECRET_KEY?.trim() &&
+      (process.env.SUPABASE_EMAIL_FUNCTION_NAME?.trim() || DEFAULT_SUPABASE_EMAIL_FUNCTION_NAME),
+  );
 }
 
 /**
@@ -26,66 +34,75 @@ export function isBookingEmailConfigured(): boolean {
  * empty. Server-console diagnostics only: admins never see these names.
  */
 export function missingBookingEmailSettings(): string[] {
-  return ["RESEND_API_KEY", "BOOKING_EMAIL_FROM", "SUPABASE_SECRET_KEY"].filter(
-    (name) => !process.env[name]?.trim(),
-  );
+  return ["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SECRET_KEY"].filter((name) => !process.env[name]?.trim());
 }
 
 export async function sendBookingStatusEmail(
   details: BookingStatusEmailDetails,
 ): Promise<BookingStatusEmailResult> {
-  const apiKey = process.env.RESEND_API_KEY?.trim();
-  const from = process.env.BOOKING_EMAIL_FROM?.trim();
-  const replyTo = process.env.BOOKING_EMAIL_REPLY_TO?.trim();
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const serviceKey = process.env.SUPABASE_SECRET_KEY?.trim();
+  const functionName = process.env.SUPABASE_EMAIL_FUNCTION_NAME?.trim() || DEFAULT_SUPABASE_EMAIL_FUNCTION_NAME;
 
-  if (!apiKey || !from) return { sent: false, reason: "not_configured" };
+  if (!supabaseUrl || !serviceKey) return { sent: false, reason: "not_configured" };
   if (!isEmail(details.customerEmail)) return { sent: false, reason: "invalid_recipient" };
 
   const email = buildBookingStatusEmail(details);
-  const idempotencyKey = (details.deliveryKey ?? `booking-${details.status}-${details.bookingId}-${details.statusChangedAt}`)
-    .replace(/[^a-zA-Z0-9_-]/g, "-")
-    .slice(0, 256);
+  const queueRow = buildEmailNotificationQueueRow(details, email.subject);
 
   try {
-    const response = await fetch(RESEND_EMAIL_ENDPOINT, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "Idempotency-Key": idempotencyKey,
-      },
-      body: JSON.stringify({
-        from,
-        to: [details.customerEmail],
-        subject: email.subject,
-        html: email.html,
-        text: email.text,
-        ...(replyTo ? { reply_to: replyTo } : {}),
-        tags: [
-          { name: "booking_status", value: details.status },
-          { name: "booking_reference", value: details.bookingReference.replace(/[^a-zA-Z0-9_-]/g, "-") },
-        ],
-      }),
-      cache: "no-store",
+    const queueClient = createAdminClient() as unknown as {
+      from(table: string): {
+        insert(row: typeof queueRow): Promise<{ error: { message?: string } | null }>;
+      };
+    };
+    const { error: queueError } = await queueClient
+      .from("email_notifications")
+      .insert(queueRow);
+
+    if (queueError) {
+      console.error("Booking status email could not be queued", {
+        bookingId: details.bookingId,
+        error: queueError.message,
+      });
+      return { sent: false, reason: "provider_error" };
+    }
+  } catch (error) {
+    console.error("Booking status email queue request failed", {
+      bookingId: details.bookingId,
+      error: error instanceof Error ? error.message : "Unknown queue error",
     });
+    return { sent: false, reason: "provider_error" };
+  }
+
+  const request = buildSupabaseEmailRequest(
+    { supabaseUrl, functionName, serviceKey },
+    {
+      to: details.customerEmail,
+      subject: email.subject,
+      html: email.html,
+      text: email.text,
+    },
+  );
+
+  try {
+    const response = await fetch(request.url, request.init);
 
     const payload = (await response.json().catch(() => null)) as
-      | { id?: unknown; name?: unknown; message?: unknown }
+      | { id?: unknown; success?: unknown; error?: unknown; message?: unknown }
       | null;
-    if (!response.ok || typeof payload?.id !== "string") {
-      // Logged for whoever operates the server (an unverified sender domain, for
-      // example, shows up here as a 403). It is never sent back to the browser.
+    if (!response.ok || payload?.success !== true || payload.message === "No pending emails.") {
       console.error("Booking status email provider rejected the request", {
         bookingId: details.bookingId,
         status: details.status,
         providerStatus: response.status,
-        providerError: typeof payload?.name === "string" ? payload.name : undefined,
+        providerError: typeof payload?.error === "string" ? payload.error : undefined,
         providerMessage: typeof payload?.message === "string" ? payload.message : undefined,
       });
       return { sent: false, reason: "provider_error" };
     }
 
-    return { sent: true, providerId: payload.id };
+    return { sent: true, providerId: typeof payload.id === "string" ? payload.id : undefined };
   } catch (error) {
     console.error("Booking status email request failed", {
       bookingId: details.bookingId,

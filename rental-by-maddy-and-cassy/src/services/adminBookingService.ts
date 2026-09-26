@@ -156,6 +156,25 @@ export async function sendAdminBookingConfirmationEmail(
   };
 }
 
+export async function sendAdminSignedAgreementEmail(
+  bookingId: string,
+): Promise<{ emailedTo: string }> {
+  const failureMessage = "The signed agreement email could not be sent. Please try again.";
+  let response: Response;
+  try {
+    response = await fetch(`/api/admin/bookings/${encodeURIComponent(bookingId)}/agreement-email`, {
+      method: "POST",
+      credentials: "same-origin",
+    });
+  } catch {
+    throw new Error(failureMessage);
+  }
+
+  if (!response.ok) throw new Error(await getErrorMessage(response, failureMessage));
+  const body = (await response.json()) as { emailedTo?: unknown };
+  return { emailedTo: typeof body.emailedTo === "string" ? body.emailedTo : "the customer" };
+}
+
 export async function reviewAdminCancellationRequest(
   bookingId: string,
   requestId: string,
