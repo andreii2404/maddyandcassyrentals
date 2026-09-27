@@ -28,6 +28,7 @@ import DateRangePicker from "@/components/date-range-picker/DateRangePicker";
 import PickupTimeSelector from "@/components/reservation/PickupTimeSelector";
 import formStyles from "@/components/ui/Form.module.css";
 import ReservationFooter from "@/components/reservation/ReservationFooter";
+import RentalScheduleNoticeModal from "@/components/reservation/RentalScheduleNoticeModal";
 import styles from "./StepRentalDetails.module.css";
 import { PHILIPPINE_PROVINCES } from "@/src/data/philippineLocations";
 
@@ -58,6 +59,7 @@ export default function StepCartRentalDetails({
   );
   const [unavailableTimes, setUnavailableTimes] = useState<Set<string> | undefined>(undefined);
   const [nowTick, setNowTick] = useState(() => Date.now());
+  const [showScheduleNotice, setShowScheduleNotice] = useState(false);
   // A plain string, not the `lines` array, so this doesn't refire the
   // effect below just because the parent re-created the lines array with the
   // same product ids on an unrelated render.
@@ -374,6 +376,11 @@ export default function StepCartRentalDetails({
       return;
     }
 
+    setShowScheduleNotice(true);
+  }
+
+  function handleConfirmScheduleNotice() {
+    setShowScheduleNotice(false);
     onContinue();
   }
 
@@ -636,6 +643,13 @@ export default function StepCartRentalDetails({
         primaryDisabled={!canContinue || checking}
         onContinue={() => void handleContinue()}
       />
+
+      {showScheduleNotice ? (
+        <RentalScheduleNoticeModal
+          onGoBack={() => setShowScheduleNotice(false)}
+          onContinue={handleConfirmScheduleNotice}
+        />
+      ) : null}
     </div>
   );
 }

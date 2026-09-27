@@ -29,8 +29,8 @@ import DateRangePicker from "@/components/date-range-picker/DateRangePicker";
 import PickupTimeSelector from "@/components/reservation/PickupTimeSelector";
 import formStyles from "@/components/ui/Form.module.css";
 import { Button } from "@/components/ui/Button";
-import ConfirmModal from "@/components/ui/ConfirmModal";
 import ReservationFooter from "@/components/reservation/ReservationFooter";
+import RentalScheduleNoticeModal from "@/components/reservation/RentalScheduleNoticeModal";
 import styles from "./StepRentalDetails.module.css";
 import { PHILIPPINE_PROVINCES } from "@/src/data/philippineLocations";
 import { getVariantQuantityLimit } from "@/src/lib/variantInventory";
@@ -64,7 +64,7 @@ export default function StepRentalDetails({
   const [timeAvailability, setTimeAvailability] = useState<TimeAvailability | null>(null);
   const [unavailableTimes, setUnavailableTimes] = useState<Set<string> | undefined>(undefined);
   const [nowTick, setNowTick] = useState(() => Date.now());
-  const [showDeliveryNotice, setShowDeliveryNotice] = useState(false);
+  const [showScheduleNotice, setShowScheduleNotice] = useState(false);
   const stockLimit = getVariantQuantityLimit(product, selectedVariant);
 
   useEffect(() => {
@@ -335,16 +335,11 @@ export default function StepRentalDetails({
       return;
     }
 
-    if (isDelivery) {
-      setShowDeliveryNotice(true);
-      return;
-    }
-
-    onContinue();
+    setShowScheduleNotice(true);
   }
 
-  function handleConfirmDeliveryNotice() {
-    setShowDeliveryNotice(false);
+  function handleConfirmScheduleNotice() {
+    setShowScheduleNotice(false);
     onContinue();
   }
 
@@ -637,27 +632,11 @@ export default function StepRentalDetails({
         />
       )}
 
-      {showDeliveryNotice ? (
-        <ConfirmModal
-          title="Delivery Time Notice"
-          description="Your selected date and time will be used as the preferred delivery schedule."
-          confirmLabel="I Understand, Continue"
-          cancelLabel="Go Back"
-          onCancel={() => setShowDeliveryNotice(false)}
-          onConfirm={handleConfirmDeliveryNotice}
-        >
-          <p className={styles.deliveryNoticeHighlight}>
-            Please allow a <strong>minimum of 2 additional hours</strong> for transportation and
-            delivery.
-          </p>
-          <p className={styles.deliveryNoticeText}>
-            Actual delivery time may take longer depending on your location, distance, traffic,
-            weather, and other transportation conditions.
-          </p>
-          <p className={styles.deliveryNoticeText}>
-            Please make sure your schedule allows enough time for the item to arrive.
-          </p>
-        </ConfirmModal>
+      {showScheduleNotice ? (
+        <RentalScheduleNoticeModal
+          onGoBack={() => setShowScheduleNotice(false)}
+          onContinue={handleConfirmScheduleNotice}
+        />
       ) : null}
     </div>
   );
