@@ -102,6 +102,12 @@ export default function Navbar() {
   // link is clicked so the active state updates in the same frame.
   const [clickedHash, setClickedHash] = useState<string | null>(null);
   const hash = clickedHash ?? syncedHash;
+  // Next.js does not reliably scroll to a fragment when the navigation is a
+  // same-page hash-only change (pathname unchanged), and its cross-page
+  // fragment scroll can also race the sticky navbar layout. pendingScrollHash
+  // records the target of the most recent Home/About click so the effect
+  // below can drive the scroll itself once the destination is on screen.
+  const pendingScrollHash = useRef<string | null>(null);
 
   function closeDropdowns() {
     setGuideOpen(false);
@@ -122,6 +128,27 @@ export default function Navbar() {
     const syncTimerId = window.setTimeout(() => setClickedHash(null), 0);
     return () => window.clearTimeout(syncTimerId);
   }, [pathname, syncedHash]);
+
+  // Actually perform the Home/About navigation's scroll. Next.js's built-in
+  // fragment scrolling is not reliable for a same-page hash-only navigation
+  // (pathname unchanged), so a Home/About click stores its target here via
+  // pendingScrollHash and this effect carries it out once we're on "/" -
+  // immediately for a same-page click, or after landing here from another
+  // route. scroll-margin-top on the #about section (see page.module.css)
+  // keeps the heading clear of the sticky navbar.
+  useEffect(() => {
+    if (pathname !== "/" || pendingScrollHash.current === null) return;
+    const target = pendingScrollHash.current;
+    pendingScrollHash.current = null;
+    const frame = requestAnimationFrame(() => {
+      if (target === "#about") {
+        document.getElementById("about")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [pathname, hash]);
 
   useEffect(() => {
     if (!guideOpen && !profileOpen) return undefined;
@@ -175,6 +202,12 @@ export default function Navbar() {
     setMenuOpen(false);
   }
 
+  function handlePrimaryLinkClick(href: string) {
+    const hrefHash = getHrefHash(href);
+    setClickedHash(hrefHash);
+    pendingScrollHash.current = hrefHash;
+  }
+
   return (
     <>
     <header className={styles.navbar}>
@@ -207,7 +240,7 @@ export default function Navbar() {
                 aria-current={active ? "page" : undefined}
                 onClick={() => {
                   closeDropdowns();
-                  setClickedHash(getHrefHash(item.href));
+                  handlePrimaryLinkClick(item.href);
                 }}
               >
                 {item.label}
@@ -409,7 +442,7 @@ export default function Navbar() {
                     aria-current={active ? "page" : undefined}
                     onClick={() => {
                       closeMenu();
-                      setClickedHash(getHrefHash(item.href));
+                      handlePrimaryLinkClick(item.href);
                     }}
                   >
                     {item.label}<span aria-hidden="true">→</span>

@@ -254,15 +254,83 @@
   transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, transform 150ms ease;
 }
 
-.quickTimes button:hover,
+.quickTimes button:hover:not([aria-disabled="true"]),
 .quickTimes button[aria-pressed="true"] {
   border-color: var(--color-primary);
   background: var(--color-primary);
   color: var(--color-white);
 }
 
-.quickTimes button:active {
+.quickTimes button:active:not([aria-disabled="true"]) {
   transform: translateY(1px);
+}
+
+/* Quick Select: unavailable-time styling + tooltip. Wrapper needs
+   `position: relative` so the tooltip bubble can anchor to its button. */
+.quickTimeWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.quickTimeButton[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+/* Red: the slot conflicts with an existing booking. */
+.quickTimeButton[data-reason="booked"] {
+  border-color: var(--color-danger-border);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+/* Gray: blocked only by the preparation/turnaround buffer (or another
+   non-conflict restriction). */
+.quickTimeButton[data-reason="buffer"],
+.quickTimeButton[data-reason="unavailable"] {
+  border-color: var(--color-light-gray);
+  background: var(--color-background-soft);
+  color: var(--color-charcoal);
+  opacity: 0.7;
+}
+
+.quickTimeTooltip {
+  position: absolute;
+  bottom: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  width: max-content;
+  max-width: 170px;
+  padding: 0.4rem 0.55rem;
+  border-radius: 8px;
+  background: var(--color-charcoal);
+  color: var(--color-white);
+  font-size: 0.6rem;
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 120ms ease, transform 120ms ease;
+  z-index: 5;
+}
+
+.quickTimeTooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--color-charcoal);
+}
+
+.quickTimeWrap:hover .quickTimeTooltip,
+.quickTimeWrap:focus-within .quickTimeTooltip,
+.quickTimeWrap[data-open="true"] .quickTimeTooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
 }
 
 .normalWindowNote {

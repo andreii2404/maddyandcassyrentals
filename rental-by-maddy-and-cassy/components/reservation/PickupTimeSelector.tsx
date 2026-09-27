@@ -1,13 +1,20 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import ClockIcon from "@/components/icons/ClockIcon";
 import {
   createPickupTimeValue,
   pickupTimeParts,
   type PickupPeriod,
+  type PickupUnavailabilityReason,
 } from "@/src/lib/rentalTiming";
 import styles from "./StepRentalDetails.module.css";
+
+const REASON_TOOLTIP: Record<PickupUnavailabilityReason, string> = {
+  booked: "Booked during this time.",
+  buffer: "Blocked by the required 2-hour preparation period.",
+};
 
 interface PickupTimeSelectorProps {
   idPrefix: string;
@@ -21,6 +28,13 @@ interface PickupTimeSelectorProps {
    * time is open.
    */
   unavailableTimes?: Set<string>;
+  /**
+   * Same blocked times as `unavailableTimes`, plus why each is blocked, so
+   * the Quick Select buttons can show a customer-friendly tooltip and the
+   * correct red/gray styling. Falls back to a generic "unavailable" reason
+   * for a time present in `unavailableTimes` but missing here.
+   */
+  unavailableReasons?: Map<string, PickupUnavailabilityReason>;
 }
 
 const QUICK_TIMES = [
@@ -42,6 +56,7 @@ export default function PickupTimeSelector({
   onChange,
   invalid = false,
   unavailableTimes,
+  unavailableReasons,
 }: PickupTimeSelectorProps) {
   const parts = pickupTimeParts(value);
   const hour = parts?.hour ?? "";
@@ -51,6 +66,10 @@ export default function PickupTimeSelector({
     ? STANDARD_MINUTES
     : [...STANDARD_MINUTES, minute].sort();
   const isTimeUnavailable = (candidate: string) => !!unavailableTimes?.has(candidate);
+  // Tracks which blocked Quick Select button's tooltip a tap opened, since
+  // touch devices have no hover and disabled/aria-disabled buttons don't
+  // reliably receive focus on tap (notably iOS Safari).
+  const [tappedTooltip, setTappedTooltip] = useState<string | null>(null);
 
   function update(nextHour: string, nextMinute: string, nextPeriod: PickupPeriod) {
     if (!nextHour) {
@@ -131,17 +150,42 @@ export default function PickupTimeSelector({
         <div>
           {QUICK_TIMES.map((option) => {
             const blocked = isTimeUnavailable(option.value);
+            const reason = unavailableReasons?.get(option.value);
+            const tooltipText = blocked
+              ? reason
+                ? REASON_TOOLTIP[reason]
+                : "This time is unavailable."
+              : undefined;
+            const tooltipId = blocked ? `${idPrefix}-quick-${option.value.replace(":", "")}-tip` : undefined;
+            const tooltipOpen = blocked && tappedTooltip === option.value;
             return (
-              <Button variant="none"
-                key={option.value}
-                type="button"
-                aria-pressed={value === option.value}
-                disabled={blocked}
-                title={blocked ? "Already booked or still in preparation time" : undefined}
-                onClick={() => onChange(option.value)}
-              >
-                {option.label}{blocked ? " (unavailable)" : ""}
-              </Button>
+              <span key={option.value} className={styles.quickTimeWrap} data-open={tooltipOpen ? "true" : undefined}>
+                <Button
+                  variant="none"
+                  type="button"
+                  aria-pressed={value === option.value}
+                  aria-disabled={blocked || undefined}
+                  aria-describedby={tooltipId}
+                  className={styles.quickTimeButton}
+                  data-reason={blocked ? reason ?? "unavailable" : undefined}
+                  onClick={() => {
+                    if (blocked) {
+                      setTappedTooltip((current) => (current === option.value ? null : option.value));
+                      return;
+                    }
+                    setTappedTooltip(null);
+                    onChange(option.value);
+                  }}
+                  onBlur={() => setTappedTooltip((current) => (current === option.value ? null : current))}
+                >
+                  {option.label}
+                </Button>
+                {tooltipText ? (
+                  <span role="tooltip" id={tooltipId} className={styles.quickTimeTooltip}>
+                    {tooltipText}
+                  </span>
+                ) : null}
+              </span>
             );
           })}
         </div>

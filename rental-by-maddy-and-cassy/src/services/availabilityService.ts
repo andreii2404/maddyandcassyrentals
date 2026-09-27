@@ -4,6 +4,30 @@ import type { ReservedWindow } from "@/src/lib/rentalTiming";
 
 export const MAX_RENTAL_DAYS = 30;
 
+/**
+ * Supabase's edge occasionally rejects a freshly-issued anon/session token
+ * with "JWT issued at future" -- a transient clock-skew blip between
+ * PostgREST replicas, not an app bug. It clears within milliseconds, so one
+ * silent retry avoids surfacing a scary error for something that resolves
+ * itself before the user notices.
+ */
+function isTransientJwtClockSkew(message: string): boolean {
+  return /jwt issued at future/i.test(message);
+}
+
+async function callRpc<T>(
+  call: () => PromiseLike<{ data: T; error: { message: string } | null }>,
+): Promise<T> {
+  const first = await call();
+  if (!first.error) return first.data;
+  if (!isTransientJwtClockSkew(first.error.message)) throw new Error(first.error.message);
+
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  const retry = await call();
+  if (retry.error) throw new Error(retry.error.message);
+  return retry.data;
+}
+
 export interface TimeAvailability {
   totalUnits: number;
   availableUnits: number;
@@ -49,13 +73,13 @@ export async function getCalendarDateStatuses(productId: string): Promise<Calend
   const windowEnd = new Date(today);
   windowEnd.setDate(windowEnd.getDate() + CALENDAR_WINDOW_DAYS);
 
-  const { data, error } = await supabase.rpc("get_product_availability_calendar", {
-    p_product_id: productId,
-    p_start_date: toDateKey(today),
-    p_end_date: toDateKey(windowEnd),
-  });
-
-  if (error) throw new Error(error.message);
+  const data = await callRpc(() =>
+    supabase.rpc("get_product_availability_calendar", {
+      p_product_id: productId,
+      p_start_date: toDateKey(today),
+      p_end_date: toDateKey(windowEnd),
+    }),
+  );
 
   const disabledDateKeys = new Set<string>();
   const confirmedDateKeys = new Set<string>();
@@ -77,13 +101,13 @@ export async function isRangeAvailable(
   requestedUnits = 1,
 ): Promise<boolean> {
   const supabase = createPublicClient();
-  const { data, error } = await supabase.rpc("get_product_availability", {
-    p_product_id: productId,
-    p_start_date: toDateKey(startDate),
-    p_end_date: toDateKey(endDate),
-  });
-
-  if (error) throw new Error(error.message);
+  const data = await callRpc(() =>
+    supabase.rpc("get_product_availability", {
+      p_product_id: productId,
+      p_start_date: toDateKey(startDate),
+      p_end_date: toDateKey(endDate),
+    }),
+  );
   return (data?.[0]?.available_units ?? 0) >= requestedUnits;
 }
 
@@ -95,15 +119,15 @@ export async function getTimeAvailability(
   variant?: string,
 ): Promise<TimeAvailability> {
   const supabase = createPublicClient();
-  const { data, error } = await supabase.rpc("get_product_multi_day_time_availability", {
-    p_product_id: productId,
-    p_pickup_at: pickupAt.toISOString(),
-    p_quantity: requestedUnits,
-    p_rental_days: rentalDays,
-    p_variant: variant?.trim() || undefined,
-  });
-
-  if (error) throw new Error(error.message);
+  const data = await callRpc(() =>
+    supabase.rpc("get_product_multi_day_time_availability", {
+      p_product_id: productId,
+      p_pickup_at: pickupAt.toISOString(),
+      p_quantity: requestedUnits,
+      p_rental_days: rentalDays,
+      p_variant: variant?.trim() || undefined,
+    }),
+  );
   const row = data?.[0];
   return {
     totalUnits: Number(row?.total_units ?? 0),
@@ -158,14 +182,14 @@ export async function getProductVariantReservedWindows(
   windowEnd: Date,
 ): Promise<VariantReservedWindows> {
   const supabase = createPublicClient();
-  const { data, error } = await supabase.rpc("get_product_variant_reserved_windows", {
-    p_product_id: productId,
-    p_variant: variant?.trim() || undefined,
-    p_window_start: windowStart.toISOString(),
-    p_window_end: windowEnd.toISOString(),
-  });
-
-  if (error) throw new Error(error.message);
+  const data = await callRpc(() =>
+    supabase.rpc("get_product_variant_reserved_windows", {
+      p_product_id: productId,
+      p_variant: variant?.trim() || undefined,
+      p_window_start: windowStart.toISOString(),
+      p_window_end: windowEnd.toISOString(),
+    }),
+  );
   const row = data?.[0];
   return {
     totalUnits: Number(row?.total_units ?? 0),

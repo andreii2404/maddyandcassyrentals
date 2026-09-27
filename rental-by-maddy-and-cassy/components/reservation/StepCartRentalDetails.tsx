@@ -15,13 +15,14 @@ import {
 import {
   calculateReturnDateTime,
   combineManilaPickupDateTime,
-  computeUnavailablePickupTimes,
+  computeUnavailablePickupTimeReasons,
   formatManilaDateTime,
   formatManilaPickupTime,
   isOutsideNormalPickupWindow,
   isValidPickupTime,
   PICKUP_CONVENIENCE_FEE,
   pickupDateKey,
+  type PickupUnavailabilityReason,
   reservedWindowLookaheadDays,
 } from "@/src/lib/rentalTiming";
 import DateRangePicker from "@/components/date-range-picker/DateRangePicker";
@@ -58,6 +59,9 @@ export default function StepCartRentalDetails({
     new Map(),
   );
   const [unavailableTimes, setUnavailableTimes] = useState<Set<string> | undefined>(undefined);
+  const [unavailableReasons, setUnavailableReasons] = useState<
+    Map<string, PickupUnavailabilityReason> | undefined
+  >(undefined);
   const [nowTick, setNowTick] = useState(() => Date.now());
   const [showScheduleNotice, setShowScheduleNotice] = useState(false);
   // A plain string, not the `lines` array, so this doesn't refire the
@@ -185,24 +189,32 @@ export default function StepCartRentalDetails({
       )
         .then((result) => {
           if (cancelled) return;
-          const combined = new Set<string>();
+          const combinedReasons = new Map<string, PickupUnavailabilityReason>();
           for (const line of lines) {
             const reserved = result.get(line.product.id);
             if (!reserved) continue;
-            const blocked = computeUnavailablePickupTimes(
+            const reasons = computeUnavailablePickupTimeReasons(
               dayStart,
               rentalDays,
               line.quantity,
               reserved.totalUnits,
               reserved.windows,
             );
-            for (const time of blocked) combined.add(time);
+            for (const [time, reason] of reasons) {
+              // A real booking conflict on any line always outranks a
+              // buffer-only block from another line for the same time.
+              if (reason === "booked" || combinedReasons.get(time) !== "booked") {
+                combinedReasons.set(time, reason);
+              }
+            }
           }
-          setUnavailableTimes(combined);
+          setUnavailableReasons(combinedReasons);
+          setUnavailableTimes(new Set(combinedReasons.keys()));
         })
         .catch((err) => {
           if (!cancelled) {
             console.error("checkBatchReservedWindows failed", err);
+            setUnavailableReasons(undefined);
             setUnavailableTimes(undefined);
           }
         });
@@ -417,6 +429,7 @@ export default function StepCartRentalDetails({
               value={draft.pickupTime}
               invalid={isPickupTimePast}
               unavailableTimes={draft.startDate ? unavailableTimes : undefined}
+              unavailableReasons={draft.startDate ? unavailableReasons : undefined}
               onChange={(value) => updatePickupSchedule(
                 draft.startDate,
                 selectedRentalEndDate,

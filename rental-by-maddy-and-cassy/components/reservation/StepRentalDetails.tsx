@@ -16,13 +16,14 @@ import {
 import {
   calculateReturnDateTime,
   combineManilaPickupDateTime,
-  computeUnavailablePickupTimes,
+  computeUnavailablePickupTimeReasons,
   formatManilaDateTime,
   formatManilaPickupTime,
   isOutsideNormalPickupWindow,
   isValidPickupTime,
   PICKUP_CONVENIENCE_FEE,
   pickupDateKey,
+  type PickupUnavailabilityReason,
   reservedWindowLookaheadDays,
 } from "@/src/lib/rentalTiming";
 import DateRangePicker from "@/components/date-range-picker/DateRangePicker";
@@ -63,6 +64,9 @@ export default function StepRentalDetails({
   const [availabilityError, setAvailabilityError] = useState(false);
   const [timeAvailability, setTimeAvailability] = useState<TimeAvailability | null>(null);
   const [unavailableTimes, setUnavailableTimes] = useState<Set<string> | undefined>(undefined);
+  const [unavailableReasons, setUnavailableReasons] = useState<
+    Map<string, PickupUnavailabilityReason> | undefined
+  >(undefined);
   const [nowTick, setNowTick] = useState(() => Date.now());
   const [showScheduleNotice, setShowScheduleNotice] = useState(false);
   const stockLimit = getVariantQuantityLimit(product, selectedVariant);
@@ -130,11 +134,14 @@ export default function StepRentalDetails({
       getProductVariantReservedWindows(product.id, selectedVariant, dayStart, windowEnd)
         .then(({ totalUnits, windows }) => {
           if (cancelled) return;
-          setUnavailableTimes(computeUnavailablePickupTimes(dayStart, rentalDays, draft.quantity, totalUnits, windows));
+          const reasons = computeUnavailablePickupTimeReasons(dayStart, rentalDays, draft.quantity, totalUnits, windows);
+          setUnavailableReasons(reasons);
+          setUnavailableTimes(new Set(reasons.keys()));
         })
         .catch((err) => {
           if (!cancelled) {
             console.error("getProductVariantReservedWindows failed", err);
+            setUnavailableReasons(undefined);
             setUnavailableTimes(undefined);
           }
         });
@@ -376,6 +383,7 @@ export default function StepRentalDetails({
               value={draft.pickupTime}
               invalid={isPickupTimePast}
               unavailableTimes={draft.startDate ? unavailableTimes : undefined}
+              unavailableReasons={draft.startDate ? unavailableReasons : undefined}
               onChange={(value) => updatePickupSchedule(
                 draft.startDate,
                 selectedRentalEndDate,

@@ -153,24 +153,35 @@ export function reservedWindowLookaheadDays(rentalDays: number): number {
 }
 
 /**
+ * Why a pickup slot from {@link computeUnavailablePickupTimeReasons} is
+ * blocked: "booked" means the candidate rental period would actually
+ * overlap another booking's core rental window; "buffer" means it only
+ * falls inside the 2-hour preparation window tacked onto the end of a
+ * prior booking's reserved window.
+ */
+export type PickupUnavailabilityReason = "booked" | "buffer";
+
+/**
  * For every 5-minute pickup slot on the Manila calendar day starting at
  * `dayStart`, determines whether picking that time would leave fewer than
  * `quantity` units free for the whole rental period (22h + 2h buffer per
- * day, already baked into each reserved window's end). Returns the set of
- * blocked slots as "HH:MM" strings, matching PickupTimeSelector's value
- * format -- used to disable/hide already-occupied or buffer-blocked times
- * instead of only rejecting them after the customer picks one.
+ * day, already baked into each reserved window's end), and if so, why.
+ * Returns a map of blocked "HH:MM" strings (matching PickupTimeSelector's
+ * value format) to the reason -- used to disable/hide already-occupied or
+ * buffer-blocked times, and to explain the block to the customer, instead
+ * of only rejecting the time after the customer picks it.
  */
-export function computeUnavailablePickupTimes(
+export function computeUnavailablePickupTimeReasons(
   dayStart: Date,
   rentalDays: number,
   quantity: number,
   totalUnits: number,
   windows: ReservedWindow[],
-): Set<string> {
-  const unavailable = new Set<string>();
+): Map<string, PickupUnavailabilityReason> {
+  const reasons = new Map<string, PickupUnavailabilityReason>();
   const normalizedDays = Math.max(1, Math.trunc(rentalDays));
   const rentalSpanMs = normalizedDays * 24 * 60 * 60 * 1000;
+  const bufferMs = TURNAROUND_HOURS * 60 * 60 * 1000;
   const parsedWindows = windows
     .map((window) => ({
       unitId: window.unitId,
@@ -182,18 +193,41 @@ export function computeUnavailablePickupTimes(
 
   for (let slot = 0; slot < slotsPerDay; slot += 1) {
     const pickupAt = new Date(dayStart.getTime() + slot * PICKUP_SLOT_MINUTES * 60 * 1000);
-    const candidateEnd = pickupAt.getTime() + rentalSpanMs;
+    const pickupMs = pickupAt.getTime();
+    const candidateEnd = pickupMs + rentalSpanMs;
     const blockedUnitIds = new Set<string>();
+    let overlapsBooking = false;
     for (const window of parsedWindows) {
-      if (window.start < candidateEnd && window.end > pickupAt.getTime()) {
+      if (window.start < candidateEnd && window.end > pickupMs) {
         blockedUnitIds.add(window.unitId);
+        const bookingEnd = window.end - bufferMs;
+        if (window.start < candidateEnd && bookingEnd > pickupMs) {
+          overlapsBooking = true;
+        }
       }
     }
     const availableUnits = totalUnits - blockedUnitIds.size;
     if (availableUnits < quantity) {
-      unavailable.add(manilaTimeInputValue(pickupAt));
+      reasons.set(manilaTimeInputValue(pickupAt), overlapsBooking ? "booked" : "buffer");
     }
   }
 
-  return unavailable;
+  return reasons;
+}
+
+/**
+ * Same blocking rule as {@link computeUnavailablePickupTimeReasons}, without
+ * the per-slot reason -- kept for callers that only need to know which
+ * times are blocked.
+ */
+export function computeUnavailablePickupTimes(
+  dayStart: Date,
+  rentalDays: number,
+  quantity: number,
+  totalUnits: number,
+  windows: ReservedWindow[],
+): Set<string> {
+  return new Set(
+    computeUnavailablePickupTimeReasons(dayStart, rentalDays, quantity, totalUnits, windows).keys(),
+  );
 }

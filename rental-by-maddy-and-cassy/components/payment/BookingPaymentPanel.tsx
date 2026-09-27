@@ -6,7 +6,19 @@ import { useToast } from "@/components/ui/ToastProvider";
 import { submitManualPayment, updateBalancePaymentPreference } from "@/src/services/paymentService";
 import FileUploadField from "@/components/file-upload/FileUploadField";
 import GcashRecipientCard from "@/components/payment/GcashRecipientCard";
-import { isValidPhoneNumber, normalizePhoneInput, PHONE_DIGIT_COUNT } from "@/src/lib/authValidation";
+import {
+  ACCOUNT_NAME_MAX_LENGTH,
+  isValidAccountName,
+  isValidPaymentAccountNumber,
+  isValidReferenceNumber,
+  normalizePaymentAccountInput,
+  PAYMENT_ACCOUNT_MAX_DIGITS,
+  PAYMENT_ACCOUNT_MIN_DIGITS,
+  REFERENCE_NUMBER_MAX_LENGTH,
+  sanitizeAccountNameInput,
+  sanitizeReferenceNumberInput,
+} from "@/src/lib/paymentValidation";
+import { scrollToFirstError } from "@/src/lib/formScroll";
 import formStyles from "@/components/ui/Form.module.css";
 import type { Booking } from "@/src/types/booking";
 import type { PaymentRecord } from "@/src/types/payment";
@@ -18,6 +30,10 @@ function money(value: number): string {
     maximumFractionDigits: 2,
   })}`;
 }
+
+type PaymentErrors = Partial<Record<string, string>>;
+
+const FIELD_ORDER = ["panel-pay-reference", "panel-pay-account-name", "panel-pay-account-number", "panel-pay-proof"];
 
 export default function BookingPaymentPanel({
   booking,
@@ -35,7 +51,8 @@ export default function BookingPaymentPanel({
   const [accountName, setAccountName] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [proofFile, setProofFile] = useState<File | null>(null);
-  const [errors, setErrors] = useState<string[]>([]);
+  const [errors, setErrors] = useState<PaymentErrors>({});
+  const [touched, setTouched] = useState<Partial<Record<string, boolean>>>({});
   const [balancePreference, setBalancePreference] = useState(booking.balancePaymentPreference);
   const [savingPreference, setSavingPreference] = useState(false);
 
@@ -90,16 +107,69 @@ export default function BookingPaymentPanel({
     }
   }
 
-  function validate(): boolean {
-    const nextErrors: string[] = [];
-    if (!referenceNumber.trim()) nextErrors.push("Enter the GCash reference number for your payment.");
-    if (!accountName.trim()) nextErrors.push("Enter the name of the account used to pay.");
-    if (!isValidPhoneNumber(accountNumber)) {
-      nextErrors.push(`The GCash mobile number must contain exactly ${PHONE_DIGIT_COUNT} digits.`);
+  function validateReferenceField(value: string): string | null {
+    if (!value.trim()) return "Enter the reference number for your payment.";
+    if (!isValidReferenceNumber(value)) return "Enter a valid reference number using letters, numbers, and hyphens.";
+    return null;
+  }
+
+  function validateAccountNameField(value: string): string | null {
+    if (!value.trim()) return "Enter the name of the account used to pay.";
+    if (!isValidAccountName(value)) return "Enter a valid name using letters only.";
+    return null;
+  }
+
+  function validateAccountNumberField(value: string): string | null {
+    if (!isValidPaymentAccountNumber(value)) {
+      return `Enter a valid payment account or mobile number (${PAYMENT_ACCOUNT_MIN_DIGITS}-${PAYMENT_ACCOUNT_MAX_DIGITS} digits).`;
     }
-    if (!proofFile) nextErrors.push("Upload a screenshot or proof of payment.");
+    return null;
+  }
+
+  function setFieldError(field: string, message: string | null) {
+    setErrors((prev) => {
+      if (!message) {
+        if (!prev[field]) return prev;
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      }
+      if (prev[field] === message) return prev;
+      return { ...prev, [field]: message };
+    });
+  }
+
+  function handleFieldChange(field: string, message: string | null) {
+    if (touched[field] || errors[field]) {
+      setFieldError(field, message);
+    }
+  }
+
+  function handleFieldBlur(field: string, message: string | null) {
+    setTouched((prev) => (prev[field] ? prev : { ...prev, [field]: true }));
+    setFieldError(field, message);
+  }
+
+  function validate(): boolean {
+    const nextErrors: PaymentErrors = {};
+    const referenceError = validateReferenceField(referenceNumber);
+    if (referenceError) nextErrors["panel-pay-reference"] = referenceError;
+    const accountNameError = validateAccountNameField(accountName);
+    if (accountNameError) nextErrors["panel-pay-account-name"] = accountNameError;
+    const accountNumberError = validateAccountNumberField(accountNumber);
+    if (accountNumberError) nextErrors["panel-pay-account-number"] = accountNumberError;
+    if (!proofFile) nextErrors["panel-pay-proof"] = "Upload a screenshot or proof of payment.";
     setErrors(nextErrors);
-    return nextErrors.length === 0;
+    setTouched({
+      "panel-pay-reference": true,
+      "panel-pay-account-name": true,
+      "panel-pay-account-number": true,
+      "panel-pay-proof": true,
+    });
+    if (Object.keys(nextErrors).length > 0) {
+      scrollToFirstError(FIELD_ORDER, nextErrors);
+    }
+    return Object.keys(nextErrors).length === 0;
   }
 
   async function handleSubmit() {
@@ -118,7 +188,8 @@ export default function BookingPaymentPanel({
       setAccountName("");
       setAccountNumber("");
       setProofFile(null);
-      setErrors([]);
+      setErrors({});
+      setTouched({});
       showToast("Payment proof submitted. Our team will verify it shortly.", "success");
       await onPaymentUpdated?.();
     } catch (error) {
@@ -257,11 +328,21 @@ export default function BookingPaymentPanel({
             </label>
             <input
               id="panel-pay-reference"
-              className={formStyles.input}
+              className={`${formStyles.input} ${errors["panel-pay-reference"] ? formStyles.inputError : ""}`}
               value={referenceNumber}
-              onChange={(event) => setReferenceNumber(event.target.value)}
+              maxLength={REFERENCE_NUMBER_MAX_LENGTH}
+              aria-invalid={Boolean(errors["panel-pay-reference"])}
+              onChange={(event) => {
+                const value = sanitizeReferenceNumberInput(event.target.value);
+                setReferenceNumber(value);
+                handleFieldChange("panel-pay-reference", validateReferenceField(value));
+              }}
+              onBlur={() => handleFieldBlur("panel-pay-reference", validateReferenceField(referenceNumber))}
               disabled={submitting}
             />
+            {errors["panel-pay-reference"] ? (
+              <p className={formStyles.errorText}>{errors["panel-pay-reference"]}</p>
+            ) : null}
           </div>
           <div className={formStyles.field}>
             <label className={formStyles.label} htmlFor="panel-pay-account-name">
@@ -269,42 +350,55 @@ export default function BookingPaymentPanel({
             </label>
             <input
               id="panel-pay-account-name"
-              className={formStyles.input}
+              className={`${formStyles.input} ${errors["panel-pay-account-name"] ? formStyles.inputError : ""}`}
               value={accountName}
-              onChange={(event) => setAccountName(event.target.value)}
+              maxLength={ACCOUNT_NAME_MAX_LENGTH}
+              aria-invalid={Boolean(errors["panel-pay-account-name"])}
+              onChange={(event) => {
+                const value = sanitizeAccountNameInput(event.target.value);
+                setAccountName(value);
+                handleFieldChange("panel-pay-account-name", validateAccountNameField(value));
+              }}
+              onBlur={() => handleFieldBlur("panel-pay-account-name", validateAccountNameField(accountName))}
               disabled={submitting}
             />
+            {errors["panel-pay-account-name"] ? (
+              <p className={formStyles.errorText}>{errors["panel-pay-account-name"]}</p>
+            ) : null}
           </div>
           <div className={formStyles.field}>
             <label className={formStyles.label} htmlFor="panel-pay-account-number">
-              11-digit GCash mobile number used<span className={formStyles.required}>*</span>
+              Payment account / mobile number<span className={formStyles.required}>*</span>
             </label>
             <input
               id="panel-pay-account-number"
-              className={formStyles.input}
+              className={`${formStyles.input} ${errors["panel-pay-account-number"] ? formStyles.inputError : ""}`}
               inputMode="numeric"
-              autoComplete="tel"
-              maxLength={PHONE_DIGIT_COUNT}
+              autoComplete="off"
+              maxLength={PAYMENT_ACCOUNT_MAX_DIGITS}
               value={accountNumber}
-              onChange={(event) => setAccountNumber(normalizePhoneInput(event.target.value))}
+              aria-invalid={Boolean(errors["panel-pay-account-number"])}
+              onChange={(event) => {
+                const value = normalizePaymentAccountInput(event.target.value);
+                setAccountNumber(value);
+                handleFieldChange("panel-pay-account-number", validateAccountNumberField(value));
+              }}
+              onBlur={() => handleFieldBlur("panel-pay-account-number", validateAccountNumberField(accountNumber))}
               disabled={submitting}
             />
+            {errors["panel-pay-account-number"] ? (
+              <p className={formStyles.errorText}>{errors["panel-pay-account-number"]}</p>
+            ) : null}
           </div>
           <FileUploadField
+            id="panel-pay-proof"
             label="Screenshot / proof of payment"
-        disabled={submitting}
+            disabled={submitting}
             required
+            errorMessage={errors["panel-pay-proof"]}
             value={proofFile}
             onChange={setProofFile}
           />
-
-          {errors.length > 0 ? (
-            <ul className={formStyles.errorText} role="alert">
-              {errors.map((message) => (
-                <li key={message}>{message}</li>
-              ))}
-            </ul>
-          ) : null}
 
           <Button variant="primary" className={styles.submitButton} type="submit" loading={submitting} loadingText="Submitting payment…" disabled={savingPreference}>
             Submit Payment Proof

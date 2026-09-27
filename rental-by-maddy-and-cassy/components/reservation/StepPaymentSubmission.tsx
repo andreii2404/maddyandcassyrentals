@@ -11,7 +11,18 @@ import {
 import FileUploadField from "@/components/file-upload/FileUploadField";
 import GcashRecipientCard from "@/components/payment/GcashRecipientCard";
 import { scrollToFirstError } from "@/src/lib/formScroll";
-import { isValidPhoneNumber, normalizePhoneInput, PHONE_DIGIT_COUNT } from "@/src/lib/authValidation";
+import {
+  ACCOUNT_NAME_MAX_LENGTH,
+  isValidAccountName,
+  isValidPaymentAccountNumber,
+  isValidReferenceNumber,
+  normalizePaymentAccountInput,
+  PAYMENT_ACCOUNT_MAX_DIGITS,
+  PAYMENT_ACCOUNT_MIN_DIGITS,
+  REFERENCE_NUMBER_MAX_LENGTH,
+  sanitizeAccountNameInput,
+  sanitizeReferenceNumberInput,
+} from "@/src/lib/paymentValidation";
 import formStyles from "@/components/ui/Form.module.css";
 import ReservationFooter from "@/components/reservation/ReservationFooter";
 import sharedStyles from "./StepShared.module.css";
@@ -65,6 +76,7 @@ export default function StepPaymentSubmission({
   onContinue,
 }: StepPaymentSubmissionProps) {
   const [errors, setErrors] = useState<PaymentErrors>({});
+  const [touched, setTouched] = useState<Partial<Record<string, boolean>>>({});
   const pricing = calculateReservationPricing(product, draft, rewardProgress, isGuest);
   const dueNow = draft.paymentOption === "deposit_50"
     ? Math.round(pricing.finalAmount * 50) / 100
@@ -74,13 +86,47 @@ export default function StepPaymentSubmission({
   // manual-payment fields are empty -- don't re-require them in that case.
   const alreadySubmitted = paymentState !== "unpaid";
 
-  function clearFieldError(field: string) {
+  function validateReferenceField(value: string): string | null {
+    if (!value.trim()) return "Enter the reference number for your payment.";
+    if (!isValidReferenceNumber(value)) return "Enter a valid reference number using letters, numbers, and hyphens.";
+    return null;
+  }
+
+  function validateAccountNameField(value: string): string | null {
+    if (!value.trim()) return "Enter the name of the account used to pay.";
+    if (!isValidAccountName(value)) return "Enter a valid name using letters only.";
+    return null;
+  }
+
+  function validateAccountNumberField(value: string): string | null {
+    if (!isValidPaymentAccountNumber(value)) {
+      return `Enter a valid payment account or mobile number (${PAYMENT_ACCOUNT_MIN_DIGITS}-${PAYMENT_ACCOUNT_MAX_DIGITS} digits).`;
+    }
+    return null;
+  }
+
+  function setFieldError(field: string, message: string | null) {
     setErrors((prev) => {
-      if (!prev[field]) return prev;
-      const next = { ...prev };
-      delete next[field];
-      return next;
+      if (!message) {
+        if (!prev[field]) return prev;
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      }
+      if (prev[field] === message) return prev;
+      return { ...prev, [field]: message };
     });
+  }
+
+  function handleFieldChange(field: string, message: string | null) {
+    if (touched[field] || errors[field]) {
+      setFieldError(field, message);
+    }
+  }
+
+  function handleFieldBlur(field: string, message: string | null) {
+    setTouched((prev) => (prev[field] ? prev : { ...prev, [field]: true }));
+    setFieldError(field, message);
   }
 
   function validate(): boolean {
@@ -89,19 +135,17 @@ export default function StepPaymentSubmission({
       return true;
     }
     const nextErrors: PaymentErrors = {};
-    if (!draft.manualPayment.referenceNumber.trim()) {
-      nextErrors["pay-reference"] = "Enter the GCash reference number for your payment.";
-    }
-    if (!draft.manualPayment.accountName.trim()) {
-      nextErrors["pay-account-name"] = "Enter the name of the account used to pay.";
-    }
-    if (!isValidPhoneNumber(draft.manualPayment.accountNumber)) {
-      nextErrors["pay-account-number"] = `The GCash mobile number must contain exactly ${PHONE_DIGIT_COUNT} digits.`;
-    }
+    const referenceError = validateReferenceField(draft.manualPayment.referenceNumber);
+    if (referenceError) nextErrors["pay-reference"] = referenceError;
+    const accountNameError = validateAccountNameField(draft.manualPayment.accountName);
+    if (accountNameError) nextErrors["pay-account-name"] = accountNameError;
+    const accountNumberError = validateAccountNumberField(draft.manualPayment.accountNumber);
+    if (accountNumberError) nextErrors["pay-account-number"] = accountNumberError;
     if (!draft.manualPayment.proofFile) {
       nextErrors["pay-proof"] = "Upload a screenshot or proof of payment.";
     }
     setErrors(nextErrors);
+    setTouched({ "pay-reference": true, "pay-account-name": true, "pay-account-number": true, "pay-proof": true });
     if (Object.keys(nextErrors).length > 0) {
       scrollToFirstError(FIELD_ORDER, nextErrors);
     }
@@ -266,11 +310,14 @@ export default function StepPaymentSubmission({
             id="pay-reference"
             className={`${formStyles.input} ${errors["pay-reference"] ? formStyles.inputError : ""}`}
             value={draft.manualPayment.referenceNumber}
+            maxLength={REFERENCE_NUMBER_MAX_LENGTH}
+            aria-invalid={Boolean(errors["pay-reference"])}
             onChange={(event) => {
-              const value = event.target.value;
+              const value = sanitizeReferenceNumberInput(event.target.value);
               onManualPaymentUpdate({ referenceNumber: value });
-              if (value.trim()) clearFieldError("pay-reference");
+              handleFieldChange("pay-reference", validateReferenceField(value));
             }}
+            onBlur={() => handleFieldBlur("pay-reference", validateReferenceField(draft.manualPayment.referenceNumber))}
             disabled={opening}
           />
           {errors["pay-reference"] ? <p className={formStyles.errorText}>{errors["pay-reference"]}</p> : null}
@@ -283,11 +330,14 @@ export default function StepPaymentSubmission({
             id="pay-account-name"
             className={`${formStyles.input} ${errors["pay-account-name"] ? formStyles.inputError : ""}`}
             value={draft.manualPayment.accountName}
+            maxLength={ACCOUNT_NAME_MAX_LENGTH}
+            aria-invalid={Boolean(errors["pay-account-name"])}
             onChange={(event) => {
-              const value = event.target.value;
+              const value = sanitizeAccountNameInput(event.target.value);
               onManualPaymentUpdate({ accountName: value });
-              if (value.trim()) clearFieldError("pay-account-name");
+              handleFieldChange("pay-account-name", validateAccountNameField(value));
             }}
+            onBlur={() => handleFieldBlur("pay-account-name", validateAccountNameField(draft.manualPayment.accountName))}
             disabled={opening}
           />
           {errors["pay-account-name"] ? <p className={formStyles.errorText}>{errors["pay-account-name"]}</p> : null}
@@ -296,20 +346,22 @@ export default function StepPaymentSubmission({
 
       <div className={formStyles.field}>
         <label className={formStyles.label} htmlFor="pay-account-number">
-          11-digit GCash mobile number used<span className={formStyles.required}>*</span>
+          Payment account / mobile number<span className={formStyles.required}>*</span>
         </label>
         <input
           id="pay-account-number"
           className={`${formStyles.input} ${errors["pay-account-number"] ? formStyles.inputError : ""}`}
           inputMode="numeric"
-          autoComplete="tel"
-          maxLength={PHONE_DIGIT_COUNT}
+          autoComplete="off"
+          maxLength={PAYMENT_ACCOUNT_MAX_DIGITS}
           value={draft.manualPayment.accountNumber}
+          aria-invalid={Boolean(errors["pay-account-number"])}
           onChange={(event) => {
-            const value = normalizePhoneInput(event.target.value);
+            const value = normalizePaymentAccountInput(event.target.value);
             onManualPaymentUpdate({ accountNumber: value });
-            if (isValidPhoneNumber(value)) clearFieldError("pay-account-number");
+            handleFieldChange("pay-account-number", validateAccountNumberField(value));
           }}
+          onBlur={() => handleFieldBlur("pay-account-number", validateAccountNumberField(draft.manualPayment.accountNumber))}
           disabled={opening}
         />
         {errors["pay-account-number"] ? <p className={formStyles.errorText}>{errors["pay-account-number"]}</p> : null}
