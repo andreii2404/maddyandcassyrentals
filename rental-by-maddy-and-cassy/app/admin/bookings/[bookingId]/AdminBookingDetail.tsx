@@ -16,6 +16,7 @@ import {
   downloadAdminBookingPdf,
   reviewAdminCancellationRequest,
   sendAdminBookingConfirmationEmail,
+  sendAdminSignedAgreementEmail,
   updateAdminBookingStatus,
 } from "@/src/services/adminBookingService";
 import { getUserProfile } from "@/src/services/userService";
@@ -141,6 +142,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   const [countersigning, setCountersigning] = useState(false);
   const [countersignConfirmationOpen, setCountersignConfirmationOpen] = useState(false);
   const [sendingConfirmationEmail, setSendingConfirmationEmail] = useState(false);
+  const [sendingAgreementEmail, setSendingAgreementEmail] = useState(false);
   const [confirmationEmailSentAt, setConfirmationEmailSentAt] = useState<string | null>(null);
   // True from the moment an approval's confirmation email fails until a resend succeeds.
   const [approvalEmailFailed, setApprovalEmailFailed] = useState(false);
@@ -333,6 +335,21 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
       else showToast(message, "error");
     } finally {
       setSendingConfirmationEmail(false);
+    }
+  }
+
+  async function handleSendSignedAgreementEmail() {
+    setSendingAgreementEmail(true);
+    try {
+      await sendAdminSignedAgreementEmail(bookingId);
+      showToast("Signed agreement emailed to the customer.", "success");
+    } catch (sendError) {
+      showToast(
+        sendError instanceof Error ? sendError.message : "The signed agreement email could not be sent.",
+        "error",
+      );
+    } finally {
+      setSendingAgreementEmail(false);
     }
   }
 
@@ -1091,6 +1108,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                       {booking.status === "pending" ? <p className={styles.nextAdminStep}><strong>Next admin step:</strong> Approve the booking now that the agreement is complete, then confirm it.</p> : null}
                       <div className={styles.agreementButtons}>
                         {agreement.finalDocumentPath ? <Button variant="none" type="button" onClick={() => openPrivateFile("agreements", agreement.finalDocumentPath!)}>Open final agreement</Button> : null}
+                        {agreement.finalDocumentPath ? <Button variant="none" type="button" onClick={() => void handleSendSignedAgreementEmail()} disabled={sendingAgreementEmail}>{sendingAgreementEmail ? "Sending signed agreement..." : "Send signed agreement"}</Button> : null}
                         {customerSignature?.signaturePath ? <Button variant="none" type="button" className={styles.secondaryRecordButton} onClick={() => openPrivateFile("customer-documents", customerSignature.signaturePath!)}>View customer signature</Button> : null}
                       </div>
                     </div>

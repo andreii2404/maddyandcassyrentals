@@ -28,6 +28,7 @@ const navSections = [
   {
     title: "Customer Management",
     items: [
+      { href: "/admin/messages", label: "Messages" },
       { href: "/admin/users", label: "User Accounts" },
       { href: "/admin/reviews", label: "Feedback & Reviews" },
     ],

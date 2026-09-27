@@ -44,6 +44,15 @@ function CartIcon() {
   );
 }
 
+function MessageIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.7 9.7 0 0 1-3.7-.8L3 21l1.7-4.6A8.3 8.3 0 1 1 21 11.5Z" />
+      <path d="M8 12h.01M12 12h.01M16 12h.01" />
+    </svg>
+  );
+}
+
 function ChevronIcon() {
   return (
     <svg viewBox="0 0 12 12" aria-hidden="true">
@@ -244,7 +253,15 @@ export default function Navbar() {
         </nav>
 
         <div className={styles.actions}>
-          <div className={styles.quickActions} aria-label="Saved items and cart">
+          <div className={styles.quickActions} aria-label="Messages, saved items, and cart">
+            <Link
+              href="/messages"
+              className={`${styles.iconAction} ${pathname === "/messages" ? styles.iconActionActive : ""}`}
+              aria-label="Messages"
+              title="Messages"
+            >
+              <MessageIcon />
+            </Link>
             <Link
               href="/favorites"
               className={`${styles.iconAction} ${pathname === "/favorites" ? styles.iconActionActive : ""}`}
@@ -319,6 +336,13 @@ export default function Navbar() {
 
         <div className={styles.compactActions}>
           <Link
+            href="/messages"
+            className={styles.compactIcon}
+            aria-label="Messages"
+          >
+            <MessageIcon />
+          </Link>
+          <Link
             href="/favorites"
             className={styles.compactIcon}
             aria-label={`Favorites${favorites.length ? `, ${favorites.length} saved` : ""}`}
@@ -356,6 +380,11 @@ export default function Navbar() {
         <div id="mobile-navigation" className={styles.mobileMenu}>
           <div className={styles.mobileMenuInner}>
             <div className={styles.mobileQuickLinks}>
+              <Link href="/messages" onClick={closeMenu}>
+                <span className={styles.mobileQuickIcon}><MessageIcon /></span>
+                <span><strong>Messages</strong><small>Chat with rental support</small></span>
+                <span className={styles.mobileQuickArrow} aria-hidden="true">→</span>
+              </Link>
               <Link href="/favorites" onClick={closeMenu}>
                 <span className={styles.mobileQuickIcon}><HeartIcon /></span>
                 <span><strong>Favorites</strong><small>{favorites.length} saved</small></span>
@@ -420,6 +449,7 @@ export default function Navbar() {
                   </div>
                   <div className={styles.mobileAccountLinks}>
                     <Link href={accountHomeHref} onClick={closeMenu}>{accountHomeLabel}</Link>
+                    {!isAdmin ? <Link href="/messages" onClick={closeMenu}>Messages</Link> : null}
                     {!isAdmin ? <Link href={profileHref} onClick={closeMenu}>{profileLabel}</Link> : null}
                     {!isAdmin ? <Link href="/account/payments" onClick={closeMenu}>Payment History</Link> : null}
                      <Button variant="none" onClick={handleSignOut}>Sign Out</Button>
