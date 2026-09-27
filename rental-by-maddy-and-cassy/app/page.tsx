@@ -2,6 +2,7 @@ import Link from "next/link";
 import Hero from "@/components/hero/Hero";
 import FeaturedProducts from "@/components/storefront/FeaturedProducts";
 import ReviewCarousel, { type StorefrontReview } from "@/components/storefront/ReviewCarousel";
+import Reveal from "@/components/ui/Reveal";
 import { getActiveProducts } from "@/src/services/productService";
 import styles from "./page.module.css";
 
@@ -54,6 +55,7 @@ export default async function Home() {
       <main>
         <Hero products={products} />
 
+        <Reveal>
         <section className={styles.discovery} aria-labelledby="category-heading">
           <div className={styles.sectionTopline}>
             <div>
@@ -78,15 +80,18 @@ export default async function Home() {
                 <div>
                   <h3>{category}</h3>
                   <p>{categoryDescriptions[category] ?? `Explore available ${category.toLowerCase()} for daily rental.`}</p>
+                  <span className={styles.categoryReveal} aria-hidden="true">View Category</span>
                 </div>
                 <strong>{count} {count === 1 ? "listing" : "listings"} <span aria-hidden="true">→</span></strong>
               </Link>
             ))}
           </div>
         </section>
+        </Reveal>
 
         <FeaturedProducts products={featuredProducts} totalProductCount={products.length} />
 
+        <Reveal>
         <section className={styles.perksSection} aria-labelledby="perks-heading">
           <div className={styles.perksIntro}>
             <p className={styles.eyebrow}>SPECIAL DISCOUNTS &amp; PERKS</p>
@@ -130,7 +135,9 @@ export default async function Home() {
             <Link href="/sign-up">Create an account to track progress</Link>
           </div>
         </section>
+        </Reveal>
 
+        <Reveal>
         <section id="about" className={styles.about} aria-labelledby="about-heading">
           <div className={styles.aboutIntro}>
             <p className={styles.eyebrow}>ABOUT US</p>
@@ -223,9 +230,11 @@ export default async function Home() {
           </div>
 
         </section>
+        </Reveal>
 
         <ReviewCarousel reviews={storefrontReviews} />
 
+        <Reveal>
         <section id="how-it-works" className={styles.howItWorks} aria-labelledby="how-it-works-heading">
           <div className={styles.aboutIntro}>
             <p className={styles.eyebrow}>HOW IT WORKS</p>
@@ -246,6 +255,7 @@ export default async function Home() {
             ))}
           </div>
         </section>
+        </Reveal>
 
       </main>
     </div>

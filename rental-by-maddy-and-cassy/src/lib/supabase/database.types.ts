@@ -2567,6 +2567,18 @@ export type Database = {
           variant: string
         }[]
       }
+      get_product_variant_reserved_windows: {
+        Args: {
+          p_product_id: string
+          p_variant?: string
+          p_window_end: string
+          p_window_start: string
+        }
+        Returns: {
+          total_units: number
+          windows: Json
+        }[]
+      }
       is_active_admin: { Args: never; Returns: boolean }
       log_audit_event: {
         Args: {

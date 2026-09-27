@@ -9,18 +9,21 @@ import type { ReservationDraft } from "@/src/types/reservationDraft";
 import type { ReservationPricing } from "@/src/lib/reservationPricing";
 import {
   getCalendarDateStatuses,
+  getProductVariantReservedWindows,
   getTimeAvailability,
   type TimeAvailability,
 } from "@/src/services/availabilityService";
 import {
   calculateReturnDateTime,
   combineManilaPickupDateTime,
+  computeUnavailablePickupTimes,
   formatManilaDateTime,
   formatManilaPickupTime,
   isOutsideNormalPickupWindow,
   isValidPickupTime,
   PICKUP_CONVENIENCE_FEE,
   pickupDateKey,
+  reservedWindowLookaheadDays,
 } from "@/src/lib/rentalTiming";
 import DateRangePicker from "@/components/date-range-picker/DateRangePicker";
 import PickupTimeSelector from "@/components/reservation/PickupTimeSelector";
@@ -58,6 +61,7 @@ export default function StepRentalDetails({
   const [error, setError] = useState<string | null>(null);
   const [availabilityError, setAvailabilityError] = useState(false);
   const [timeAvailability, setTimeAvailability] = useState<TimeAvailability | null>(null);
+  const [unavailableTimes, setUnavailableTimes] = useState<Set<string> | undefined>(undefined);
   const [nowTick, setNowTick] = useState(() => Date.now());
   const stockLimit = getVariantQuantityLimit(product, selectedVariant);
 
@@ -83,8 +87,9 @@ export default function StepRentalDetails({
         setDisabledDateKeys(disabledDateKeys);
         setConfirmedDateKeys(confirmedDateKeys);
       })
-      .catch(() => {
+      .catch((err) => {
         if (cancelled) return;
+        console.error("getCalendarDateStatuses failed", err);
         setDisabledDateKeys(new Set());
         setConfirmedDateKeys(new Set());
       });
@@ -107,6 +112,37 @@ export default function StepRentalDetails({
     : 1;
   const returnAt = pickupAt ? calculateReturnDateTime(pickupAt, rentalDays) : null;
 
+  // Recomputed from the reserved-window RPC whenever the date, quantity,
+  // rental length, or item/variant changes -- independent of the exact
+  // pickup time, so the picker can start pre-disabled before a time is
+  // chosen and update immediately when any of those inputs change.
+  useEffect(() => {
+    if (!draft.startDate) return;
+    const dayStart = combineManilaPickupDateTime(pickupDateKey(draft.startDate), "00:00");
+    if (Number.isNaN(dayStart.getTime())) return;
+    let cancelled = false;
+    const windowEnd = new Date(
+      dayStart.getTime() + reservedWindowLookaheadDays(rentalDays) * 24 * 60 * 60 * 1000,
+    );
+    const timer = window.setTimeout(() => {
+      getProductVariantReservedWindows(product.id, selectedVariant, dayStart, windowEnd)
+        .then(({ totalUnits, windows }) => {
+          if (cancelled) return;
+          setUnavailableTimes(computeUnavailablePickupTimes(dayStart, rentalDays, draft.quantity, totalUnits, windows));
+        })
+        .catch((err) => {
+          if (!cancelled) {
+            console.error("getProductVariantReservedWindows failed", err);
+            setUnavailableTimes(undefined);
+          }
+        });
+    }, 200);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [draft.startDate, draft.quantity, product.id, rentalDays, selectedVariant]);
+
   useEffect(() => {
     if (!pickupAt || pickupAt.getTime() <= Date.now()) return;
     let cancelled = false;
@@ -123,8 +159,9 @@ export default function StepRentalDetails({
             onUpdate({ pickupConvenienceFee: fee });
           }
         })
-        .catch(() => {
+        .catch((err) => {
           if (!cancelled) {
+            console.error("getTimeAvailability failed", err);
             setTimeAvailability(null);
             setAvailabilityError(true);
           }
@@ -269,7 +306,8 @@ export default function StepRentalDetails({
     let latestAvailability: TimeAvailability;
     try {
       latestAvailability = await getTimeAvailability(product.id, pickupAt, draft.quantity, rentalDays, selectedVariant);
-    } catch {
+    } catch (err) {
+      console.error("getTimeAvailability failed", err);
       setChecking(false);
       setAvailabilityError(true);
       setError("The exact pickup-time availability could not be checked. Please try again.");
@@ -330,6 +368,7 @@ export default function StepRentalDetails({
               idPrefix="pickup-time"
               value={draft.pickupTime}
               invalid={isPickupTimePast}
+              unavailableTimes={draft.startDate ? unavailableTimes : undefined}
               onChange={(value) => updatePickupSchedule(
                 draft.startDate,
                 selectedRentalEndDate,

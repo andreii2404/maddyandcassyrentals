@@ -693,8 +693,10 @@ export default function CheckoutFlowClient(props: CheckoutFlowClientProps) {
         </p>
         <div className={styles.gateOptions}>
           <div>
-            <strong>Continue as guest</strong>
-            <span>No password required. You will still provide an email for booking updates.</span>
+            <div className={styles.gateCardBody}>
+              <strong>Continue as guest</strong>
+              <span>No password required. You will still provide an email for booking updates.</span>
+            </div>
             <Button variant="none"
               type="button"
               disabled={startingGuest}
@@ -718,14 +720,18 @@ export default function CheckoutFlowClient(props: CheckoutFlowClientProps) {
             </Button>
           </div>
           <div>
-            <strong>Use a customer account</strong>
-            <span>Save booking history and open receipts or invoices from any signed-in device.</span>
-            <Link href={`/sign-in?redirect=${encodeURIComponent(checkoutPath)}`}>Sign In</Link>
-            <Link href={`/sign-up?redirect=${encodeURIComponent(checkoutPath)}`} className={styles.secondaryGateLink}>Create Account</Link>
+            <div className={styles.gateCardBody}>
+              <strong>Use a customer account</strong>
+              <span>Save booking history and open receipts or invoices from any signed-in device.</span>
+            </div>
+            <div className={styles.gateCardActions}>
+              <Link href={`/sign-in?redirect=${encodeURIComponent(checkoutPath)}`}>Sign In</Link>
+              <Link href={`/sign-up?redirect=${encodeURIComponent(checkoutPath)}`} className={styles.secondaryGateLink}>Create Account</Link>
+            </div>
           </div>
         </div>
         {guestError ? <p className={styles.gateError} role="alert">{guestError}</p> : null}
-        <Link href="/cart" className={styles.backToCart}>← Back to rental cart</Link>
+        <Link href="/cart" className={styles.backToCart}>Back to Rental Cart</Link>
       </section>
     );
   }

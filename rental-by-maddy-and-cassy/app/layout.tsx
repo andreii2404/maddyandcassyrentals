@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Poppins } from "next/font/google";
+import { Poppins, Crimson_Pro } from "next/font/google";
 import { AuthProvider } from "@/src/contexts/AuthContext";
 import { ToastProvider } from "@/components/ui/ToastProvider";
 import NavbarGate from "@/components/navbar/NavbarGate";
@@ -10,6 +10,14 @@ const poppins = Poppins({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
   variable: "--font-poppins",
+  display: "swap",
+});
+
+const crimsonPro = Crimson_Pro({
+  subsets: ["latin"],
+  weight: ["300", "400"],
+  style: ["normal", "italic"],
+  variable: "--font-serif",
   display: "swap",
 });
 
@@ -31,7 +39,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={poppins.variable}
+      className={`${poppins.variable} ${crimsonPro.variable}`}
       data-scroll-behavior="auto"
       suppressHydrationWarning
     >

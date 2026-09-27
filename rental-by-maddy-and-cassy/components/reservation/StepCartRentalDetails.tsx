@@ -7,6 +7,7 @@ import type { FulfillmentMethod } from "@/src/types/booking";
 import type { ReservationDraft } from "@/src/types/reservationDraft";
 import type { MultiItemReservationPricing } from "@/src/lib/reservationPricing";
 import {
+  checkBatchReservedWindows,
   checkBatchTimeAvailability,
   getCalendarDateStatuses,
   type TimeAvailability,
@@ -14,12 +15,14 @@ import {
 import {
   calculateReturnDateTime,
   combineManilaPickupDateTime,
+  computeUnavailablePickupTimes,
   formatManilaDateTime,
   formatManilaPickupTime,
   isOutsideNormalPickupWindow,
   isValidPickupTime,
   PICKUP_CONVENIENCE_FEE,
   pickupDateKey,
+  reservedWindowLookaheadDays,
 } from "@/src/lib/rentalTiming";
 import DateRangePicker from "@/components/date-range-picker/DateRangePicker";
 import PickupTimeSelector from "@/components/reservation/PickupTimeSelector";
@@ -53,6 +56,7 @@ export default function StepCartRentalDetails({
   const [availabilityByProductId, setAvailabilityByProductId] = useState<Map<string, TimeAvailability>>(
     new Map(),
   );
+  const [unavailableTimes, setUnavailableTimes] = useState<Set<string> | undefined>(undefined);
   const [nowTick, setNowTick] = useState(() => Date.now());
   // A plain string, not the `lines` array, so this doesn't refire the
   // effect below just because the parent re-created the lines array with the
@@ -77,10 +81,13 @@ export default function StepCartRentalDetails({
     const productIds = lineProductIdsKey ? lineProductIdsKey.split(",") : [];
     Promise.all(
       productIds.map((productId) =>
-        getCalendarDateStatuses(productId).catch(() => ({
-          disabledDateKeys: new Set<string>(),
-          confirmedDateKeys: new Set<string>(),
-        })),
+        getCalendarDateStatuses(productId).catch((err) => {
+          console.error("getCalendarDateStatuses failed", err);
+          return {
+            disabledDateKeys: new Set<string>(),
+            confirmedDateKeys: new Set<string>(),
+          };
+        }),
       ),
     ).then((results) => {
       if (cancelled) return;
@@ -138,8 +145,9 @@ export default function StepCartRentalDetails({
             onUpdate({ pickupConvenienceFee: fee });
           }
         })
-        .catch(() => {
+        .catch((err) => {
           if (!cancelled) {
+            console.error("checkBatchTimeAvailability failed", err);
             setAvailabilityByProductId(new Map());
             setAvailabilityError(true);
           }
@@ -151,6 +159,58 @@ export default function StepCartRentalDetails({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft.fulfillmentMethod, pickupAt, rentalDays]);
+
+  // A shared pickup time is blocked if it's occupied/buffered for ANY line
+  // -- independent of the exact pickup time, so the picker can start
+  // pre-disabled and update as soon as dates/quantities/items change.
+  const lineAvailabilityKey = lines
+    .map((line) => `${line.product.id}:${line.quantity}:${line.color ?? ""}`)
+    .join("|");
+
+  useEffect(() => {
+    if (!draft.startDate) return;
+    const dayStart = combineManilaPickupDateTime(pickupDateKey(draft.startDate), "00:00");
+    if (Number.isNaN(dayStart.getTime())) return;
+    let cancelled = false;
+    const windowEnd = new Date(
+      dayStart.getTime() + reservedWindowLookaheadDays(rentalDays) * 24 * 60 * 60 * 1000,
+    );
+    const timer = window.setTimeout(() => {
+      checkBatchReservedWindows(
+        lines.map((line) => ({ productId: line.product.id, quantity: line.quantity, variant: line.color })),
+        dayStart,
+        windowEnd,
+      )
+        .then((result) => {
+          if (cancelled) return;
+          const combined = new Set<string>();
+          for (const line of lines) {
+            const reserved = result.get(line.product.id);
+            if (!reserved) continue;
+            const blocked = computeUnavailablePickupTimes(
+              dayStart,
+              rentalDays,
+              line.quantity,
+              reserved.totalUnits,
+              reserved.windows,
+            );
+            for (const time of blocked) combined.add(time);
+          }
+          setUnavailableTimes(combined);
+        })
+        .catch((err) => {
+          if (!cancelled) {
+            console.error("checkBatchReservedWindows failed", err);
+            setUnavailableTimes(undefined);
+          }
+        });
+    }, 200);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft.startDate, rentalDays, lineAvailabilityKey]);
 
   const isDelivery = draft.fulfillmentMethod === "delivery";
   const hasValidLocation =
@@ -296,7 +356,8 @@ export default function StepCartRentalDetails({
         pickupAt,
         rentalDays,
       );
-    } catch {
+    } catch (err) {
+      console.error("checkBatchTimeAvailability failed", err);
       setChecking(false);
       setAvailabilityError(true);
       setError("Availability could not be checked. Please try again.");
@@ -348,6 +409,7 @@ export default function StepCartRentalDetails({
               idPrefix="cart-pickup-time"
               value={draft.pickupTime}
               invalid={isPickupTimePast}
+              unavailableTimes={draft.startDate ? unavailableTimes : undefined}
               onChange={(value) => updatePickupSchedule(
                 draft.startDate,
                 selectedRentalEndDate,

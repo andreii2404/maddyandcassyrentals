@@ -14,6 +14,13 @@ interface PickupTimeSelectorProps {
   value: string;
   onChange: (value: string) => void;
   invalid?: boolean;
+  /**
+   * "HH:MM" times that are already occupied or still inside the 2-hour
+   * preparation buffer for the currently selected date/quantity/item(s).
+   * Undefined (not yet computed) disables nothing; an empty set means every
+   * time is open.
+   */
+  unavailableTimes?: Set<string>;
 }
 
 const QUICK_TIMES = [
@@ -34,6 +41,7 @@ export default function PickupTimeSelector({
   value,
   onChange,
   invalid = false,
+  unavailableTimes,
 }: PickupTimeSelectorProps) {
   const parts = pickupTimeParts(value);
   const hour = parts?.hour ?? "";
@@ -42,6 +50,7 @@ export default function PickupTimeSelector({
   const minuteOptions = STANDARD_MINUTES.includes(minute)
     ? STANDARD_MINUTES
     : [...STANDARD_MINUTES, minute].sort();
+  const isTimeUnavailable = (candidate: string) => !!unavailableTimes?.has(candidate);
 
   function update(nextHour: string, nextMinute: string, nextPeriod: PickupPeriod) {
     if (!nextHour) {
@@ -91,9 +100,15 @@ export default function PickupTimeSelector({
             disabled={!hour}
             onChange={(event) => update(hour, event.target.value, period)}
           >
-            {minuteOptions.map((option) => (
-              <option key={option} value={option}>{option}</option>
-            ))}
+            {minuteOptions.map((option) => {
+              const candidate = hour ? createPickupTimeValue(hour, option, period) : "";
+              const blocked = candidate ? isTimeUnavailable(candidate) : false;
+              return (
+                <option key={option} value={option} disabled={blocked}>
+                  {blocked ? `${option} (unavailable)` : option}
+                </option>
+              );
+            })}
           </select>
         </label>
 
@@ -114,16 +129,21 @@ export default function PickupTimeSelector({
       <div className={styles.quickTimes} aria-label="Suggested pickup or delivery times">
         <span>Quick select</span>
         <div>
-          {QUICK_TIMES.map((option) => (
-            <Button variant="none"
-              key={option.value}
-              type="button"
-              aria-pressed={value === option.value}
-              onClick={() => onChange(option.value)}
-            >
-              {option.label}
-            </Button>
-          ))}
+          {QUICK_TIMES.map((option) => {
+            const blocked = isTimeUnavailable(option.value);
+            return (
+              <Button variant="none"
+                key={option.value}
+                type="button"
+                aria-pressed={value === option.value}
+                disabled={blocked}
+                title={blocked ? "Already booked or still in preparation time" : undefined}
+                onClick={() => onChange(option.value)}
+              >
+                {option.label}{blocked ? " (unavailable)" : ""}
+              </Button>
+            );
+          })}
         </div>
       </div>
 

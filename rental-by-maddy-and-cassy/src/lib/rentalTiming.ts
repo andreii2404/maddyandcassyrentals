@@ -133,3 +133,67 @@ export function pickupDateKey(date: Date): string {
   const day = parts.find((part) => part.type === "day")?.value;
   return year && month && day ? `${year}-${month}-${day}` : "";
 }
+
+/** Matches the 5-minute increments PickupTimeSelector already offers. */
+const PICKUP_SLOT_MINUTES = 5;
+
+export interface ReservedWindow {
+  unitId: string;
+  start: string;
+  end: string;
+}
+
+/**
+ * How many days ahead a reserved-windows fetch must span to cover every
+ * candidate pickup time on the given day: the latest candidate (just before
+ * midnight) still needs its own full rentalDays-long window.
+ */
+export function reservedWindowLookaheadDays(rentalDays: number): number {
+  return Math.max(1, Math.trunc(rentalDays)) + 1;
+}
+
+/**
+ * For every 5-minute pickup slot on the Manila calendar day starting at
+ * `dayStart`, determines whether picking that time would leave fewer than
+ * `quantity` units free for the whole rental period (22h + 2h buffer per
+ * day, already baked into each reserved window's end). Returns the set of
+ * blocked slots as "HH:MM" strings, matching PickupTimeSelector's value
+ * format -- used to disable/hide already-occupied or buffer-blocked times
+ * instead of only rejecting them after the customer picks one.
+ */
+export function computeUnavailablePickupTimes(
+  dayStart: Date,
+  rentalDays: number,
+  quantity: number,
+  totalUnits: number,
+  windows: ReservedWindow[],
+): Set<string> {
+  const unavailable = new Set<string>();
+  const normalizedDays = Math.max(1, Math.trunc(rentalDays));
+  const rentalSpanMs = normalizedDays * 24 * 60 * 60 * 1000;
+  const parsedWindows = windows
+    .map((window) => ({
+      unitId: window.unitId,
+      start: new Date(window.start).getTime(),
+      end: new Date(window.end).getTime(),
+    }))
+    .filter((window) => !Number.isNaN(window.start) && !Number.isNaN(window.end));
+  const slotsPerDay = (24 * 60) / PICKUP_SLOT_MINUTES;
+
+  for (let slot = 0; slot < slotsPerDay; slot += 1) {
+    const pickupAt = new Date(dayStart.getTime() + slot * PICKUP_SLOT_MINUTES * 60 * 1000);
+    const candidateEnd = pickupAt.getTime() + rentalSpanMs;
+    const blockedUnitIds = new Set<string>();
+    for (const window of parsedWindows) {
+      if (window.start < candidateEnd && window.end > pickupAt.getTime()) {
+        blockedUnitIds.add(window.unitId);
+      }
+    }
+    const availableUnits = totalUnits - blockedUnitIds.size;
+    if (availableUnits < quantity) {
+      unavailable.add(manilaTimeInputValue(pickupAt));
+    }
+  }
+
+  return unavailable;
+}

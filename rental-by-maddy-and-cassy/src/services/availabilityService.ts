@@ -1,5 +1,6 @@
 import { formatISO } from "date-fns";
 import { createPublicClient } from "@/src/lib/supabase/public";
+import type { ReservedWindow } from "@/src/lib/rentalTiming";
 
 export const MAX_RENTAL_DAYS = 30;
 
@@ -134,5 +135,59 @@ export async function checkBatchTimeAvailability(
   );
   const result = new Map<string, TimeAvailability>();
   for (const [productId, availability] of entries) result.set(productId, availability);
+  return result;
+}
+
+export interface VariantReservedWindows {
+  totalUnits: number;
+  windows: ReservedWindow[];
+}
+
+/**
+ * Fetches the active-unit total and every blocking reserved window (already
+ * inclusive of the 2-hour turnaround) for a product/variant within
+ * [windowStart, windowEnd) -- the raw material StepRentalDetails and
+ * StepCartRentalDetails feed into computeUnavailablePickupTimes to disable
+ * occupied/buffer-blocked times in the pickup time picker. Same UX-only,
+ * non-atomic caveat as getCalendarDateStatuses above.
+ */
+export async function getProductVariantReservedWindows(
+  productId: string,
+  variant: string | undefined,
+  windowStart: Date,
+  windowEnd: Date,
+): Promise<VariantReservedWindows> {
+  const supabase = createPublicClient();
+  const { data, error } = await supabase.rpc("get_product_variant_reserved_windows", {
+    p_product_id: productId,
+    p_variant: variant?.trim() || undefined,
+    p_window_start: windowStart.toISOString(),
+    p_window_end: windowEnd.toISOString(),
+  });
+
+  if (error) throw new Error(error.message);
+  const row = data?.[0];
+  return {
+    totalUnits: Number(row?.total_units ?? 0),
+    windows: Array.isArray(row?.windows) ? (row.windows as unknown as ReservedWindow[]) : [],
+  };
+}
+
+/**
+ * Batch form of getProductVariantReservedWindows for the multi-item cart
+ * flow, one shared pickup date/time across every line.
+ */
+export async function checkBatchReservedWindows(
+  items: { productId: string; quantity: number; variant?: string }[],
+  windowStart: Date,
+  windowEnd: Date,
+): Promise<Map<string, VariantReservedWindows>> {
+  const entries = await Promise.all(
+    items.map(async ({ productId, variant }) =>
+      [productId, await getProductVariantReservedWindows(productId, variant, windowStart, windowEnd)] as const,
+    ),
+  );
+  const result = new Map<string, VariantReservedWindows>();
+  for (const [productId, reserved] of entries) result.set(productId, reserved);
   return result;
 }

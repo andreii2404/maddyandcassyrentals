@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import Reveal from "@/components/ui/Reveal";
 import styles from "./ReviewCarousel.module.css";
 
 export interface StorefrontReview {
@@ -86,6 +87,7 @@ export default function ReviewCarousel({ reviews }: ReviewCarouselProps) {
   }
 
   return (
+    <Reveal>
     <section className={styles.reviews} aria-labelledby="customer-reviews-heading">
       <div className={styles.header}>
         <div>
@@ -157,5 +159,6 @@ export default function ReviewCarousel({ reviews }: ReviewCarouselProps) {
         ) : null}
       </div>
     </section>
+    </Reveal>
   );
 }

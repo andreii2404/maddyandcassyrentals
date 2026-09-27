@@ -16,6 +16,7 @@ export default function Hero({ products }: HeroProps) {
   return (
     <section id="top" className={styles.hero} aria-label="Introduction">
       <div className={styles.backgroundGlow} aria-hidden="true" />
+      <div className={`${styles.heroBlob} editorialBlob editorialBreathe`} aria-hidden="true" />
 
       <div className={styles.inner}>
         <div className={styles.content}>
@@ -26,7 +27,7 @@ export default function Hero({ products }: HeroProps) {
             <br />
             Create the
             <br />
-            Moment.
+            <em className={styles.emphasis}>Moment.</em>
           </h1>
 
           <p className={styles.description}>

@@ -129,3 +129,34 @@ img {
     scroll-behavior: auto !important;
   }
 }
+
+/* Editorial design-system utilities: shared decorative accents used across
+   the homepage (organic blob, breathing pulse, scroll reveal). Kept global
+   so they can be reused across CSS Modules without duplicating keyframes. */
+.editorialBlob {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+  filter: blur(48px);
+}
+
+@keyframes editorialBreathe {
+  0%, 100% { transform: scale(1); opacity: 0.32; }
+  50% { transform: scale(1.08); opacity: 0.5; }
+}
+
+.editorialBreathe {
+  animation: editorialBreathe 8s ease-in-out infinite;
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+
+.reveal-in {
+  opacity: 1;
+  transform: translateY(0);
+}

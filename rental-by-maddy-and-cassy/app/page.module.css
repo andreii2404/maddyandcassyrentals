@@ -19,17 +19,19 @@
 .eyebrow {
   margin: 0 0 0.5rem;
   color: var(--color-primary);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.18em;
 }
 
 .heading {
   margin: 0 0 0.75rem;
   color: var(--color-text-primary);
-  font-size: clamp(1.55rem, 3vw, 2.2rem);
+  font-family: var(--font-serif), Georgia, "Times New Roman", serif;
+  font-size: clamp(1.65rem, 3.2vw, 2.4rem);
+  font-weight: 400;
   line-height: 1.2;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
 }
 
 .description {
@@ -121,15 +123,31 @@
 }
 
 .categoryIndex {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--color-blush);
   color: var(--color-primary);
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.08em;
+  transition: background 200ms ease, color 200ms ease;
+}
+
+.categoryCard:hover .categoryIndex,
+.categoryCard:focus-visible .categoryIndex {
+  background: var(--color-primary);
+  color: var(--color-white);
 }
 
 .categoryCard h3 {
   margin: 0 0 0.5rem;
-  font-size: 1.35rem;
+  font-family: var(--font-serif), Georgia, "Times New Roman", serif;
+  font-size: 1.45rem;
+  font-weight: 400;
 }
 
 .categoryCard p {
@@ -138,6 +156,27 @@
   color: var(--color-charcoal);
   font-size: 0.9rem;
   line-height: 1.65;
+}
+
+.categoryReveal {
+  display: block;
+  overflow: hidden;
+  max-height: 0;
+  margin-top: 0;
+  color: var(--color-primary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0;
+  transition: max-height 220ms ease, opacity 200ms ease, margin-top 200ms ease;
+}
+
+.categoryCard:hover .categoryReveal,
+.categoryCard:focus-visible .categoryReveal {
+  max-height: 20px;
+  margin-top: 0.5rem;
+  opacity: 1;
 }
 
 .categoryCard strong {
@@ -289,7 +328,9 @@
 .founderCard h3 {
   margin: 0 0 0.6rem;
   color: var(--color-text-primary);
-  font-size: 1.15rem;
+  font-family: var(--font-serif), Georgia, "Times New Roman", serif;
+  font-size: 1.3rem;
+  font-weight: 400;
 }
 
 .founderPet {
@@ -466,7 +507,9 @@
 
 .step h3 {
   margin: 0 0 0.5rem;
-  font-size: 1.05rem;
+  font-family: var(--font-serif), Georgia, "Times New Roman", serif;
+  font-size: 1.15rem;
+  font-weight: 400;
 }
 
 .step p {
