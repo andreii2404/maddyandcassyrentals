@@ -31,7 +31,7 @@
 .inner {
   position: relative;
   z-index: 1;
-  max-width: 1280px;
+  max-width: calc(1280px - 2.5rem);
   margin: 0 auto;
   display: grid;
   grid-template-columns: 1.1fr 0.9fr;
@@ -290,7 +290,7 @@
 
 @media (max-width: 560px) {
   .hero {
-    padding: 1.4rem 1rem 1.25rem;
+    padding: 1.4rem 1.25rem 1.25rem;
   }
 
   .buttons {
