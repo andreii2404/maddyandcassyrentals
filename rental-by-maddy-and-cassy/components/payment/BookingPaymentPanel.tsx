@@ -39,10 +39,12 @@ export default function BookingPaymentPanel({
   booking,
   payments,
   onPaymentUpdated,
+  autoOpenResubmission = false,
 }: {
   booking: Booking;
   payments: PaymentRecord[];
   onPaymentUpdated?: () => void | Promise<void>;
+  autoOpenResubmission?: boolean;
 }) {
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
@@ -53,6 +55,7 @@ export default function BookingPaymentPanel({
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<PaymentErrors>({});
   const [touched, setTouched] = useState<Partial<Record<string, boolean>>>({});
+  const [paymentFormOpen, setPaymentFormOpen] = useState(autoOpenResubmission);
   const [balancePreference, setBalancePreference] = useState(booking.balancePaymentPreference);
   const [savingPreference, setSavingPreference] = useState(false);
 
@@ -201,7 +204,7 @@ export default function BookingPaymentPanel({
   }
 
   return (
-    <section className={styles.panel}>
+    <section id="booking-payment" className={styles.panel}>
       <div className={styles.heading}>
         <div className={styles.titleGroup}>
           <span className={styles.secureIcon} aria-hidden="true">✓</span>
@@ -317,7 +320,11 @@ export default function BookingPaymentPanel({
           ) : null}
 
           {showGcashForm ? (
-            <details className={styles.paymentAction}>
+            <details
+              className={styles.paymentAction}
+              open={paymentFormOpen}
+              onToggle={(event) => setPaymentFormOpen(event.currentTarget.open)}
+            >
               <summary>{paymentStatus === "partially_paid" ? "Submit remaining payment" : "Submit payment proof"}</summary>
               <form className={styles.paymentForm} onSubmit={(event) => { event.preventDefault(); void handleSubmit(); }} noValidate aria-busy={submitting}>
               <GcashRecipientCard compact />

@@ -66,6 +66,35 @@ function guestContactErrorMessage(message: string): string {
   return "We couldn't securely save your guest contact details. Please try again in a moment.";
 }
 
+type SupabaseErrorFields = {
+  message: string;
+  code: string | null;
+  details: string | null;
+  hint: string | null;
+};
+
+function extractSupabaseError(error: unknown): SupabaseErrorFields {
+  const candidate = error as Partial<Record<keyof SupabaseErrorFields, unknown>> | null;
+  const value = (key: keyof SupabaseErrorFields): string | null => {
+    const field = candidate?.[key];
+    return typeof field === "string" && field.length > 0 ? field : null;
+  };
+
+  return {
+    message: value("message") ?? (error instanceof Error ? error.message : String(error)),
+    code: value("code"),
+    details: value("details"),
+    hint: value("hint"),
+  };
+}
+
+function logSupabaseError(context: string, error: unknown): void {
+  // Keep the payload in the first argument as text. Next.js can render a
+  // second console argument as `{}` in its error overlay even when the
+  // Supabase fields were extracted correctly.
+  console.error(`${context}: ${JSON.stringify(extractSupabaseError(error))}`);
+}
+
 export interface SubmitBookingInput {
   productId: string;
   quantity?: number;
@@ -111,7 +140,7 @@ export async function submitBookingWithDateGuard(
       p_customer_snapshot: toJson(input.customerSnapshot),
     });
     if (guestContactError) {
-      console.error("submitBookingWithDateGuard: guest contact save failed", guestContactError);
+      logSupabaseError("submitBookingWithDateGuard: guest contact save failed", guestContactError);
       throw new Error(guestContactErrorMessage(guestContactError.message));
     }
   }
@@ -119,7 +148,9 @@ export async function submitBookingWithDateGuard(
   const { data, error } = await supabase.rpc("create_multi_day_time_based_booking", {
     p_product_id: input.productId,
     p_quantity: input.quantity ?? 1,
-    p_variant: input.variant?.trim() || undefined,
+    // Keep the argument present even when no variant is selected. This avoids
+    // PostgREST choosing between legacy and variant-aware RPC overloads.
+    p_variant: input.variant?.trim() || null,
     p_pickup_at: input.pickupAt,
     p_rental_days: input.rentalDays ?? 1,
     p_fulfillment_method: input.fulfillmentMethod,
@@ -142,6 +173,7 @@ export async function submitBookingWithDateGuard(
   });
 
   if (error) {
+    logSupabaseError("submitBookingWithDateGuard: booking RPC failed", error);
     if (error.message.includes("VARIANT_NOT_AVAILABLE") || error.message.includes("NO_VARIANT_AVAILABILITY")) {
       throw new Error("The selected color is unavailable or does not have enough units.");
     }
@@ -163,7 +195,6 @@ export async function submitBookingWithDateGuard(
     // Anything else is an unexpected server-side failure, not something the
     // customer caused or can fix by re-entering details -- never surface the
     // raw database error text on the booking/payment screens.
-    console.error("submitBookingWithDateGuard: unexpected booking error", error);
     throw new Error("We couldn't save your reservation due to a server error. Please try again in a moment.");
   }
 
@@ -211,7 +242,7 @@ export async function submitMultiItemBookingWithDateGuard(
       p_customer_snapshot: toJson(input.customerSnapshot),
     });
     if (guestContactError) {
-      console.error("submitMultiItemBookingWithDateGuard: guest contact save failed", guestContactError);
+      logSupabaseError("submitMultiItemBookingWithDateGuard: guest contact save failed", guestContactError);
       throw new Error(guestContactErrorMessage(guestContactError.message));
     }
   }
@@ -242,6 +273,7 @@ export async function submitMultiItemBookingWithDateGuard(
   });
 
   if (error) {
+    logSupabaseError("submitMultiItemBookingWithDateGuard: booking RPC failed", error);
     if (error.message.includes("VARIANT_NOT_AVAILABLE") || error.message.includes("NO_VARIANT_AVAILABILITY")) {
       throw new Error("One of the selected colors is unavailable or does not have enough units.");
     }
@@ -267,7 +299,6 @@ export async function submitMultiItemBookingWithDateGuard(
     }
     if (error.message.includes("PICKUP_TIME_IN_PAST")) throw new Error("Choose a future pickup date and time.");
     if (error.message.includes("PICKUP_TIME_REQUIRED")) throw new Error("Choose a pickup date and time.");
-    console.error("submitMultiItemBookingWithDateGuard: unexpected booking error", error);
     throw new Error("We couldn't save your reservation due to a server error. Please try again in a moment.");
   }
 

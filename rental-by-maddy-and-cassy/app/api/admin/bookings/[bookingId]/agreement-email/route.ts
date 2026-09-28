@@ -58,16 +58,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
     const subject = `Booking ${booking.bookingRef} confirmation & signed contract`;
     const queueRow = buildSignedAgreementQueueRow({
       bookingId,
+      eventKey: `booking-confirmation-contract-${bookingId}-${version.final_document_path}`,
       recipientEmail,
       recipientName: booking.customerSnapshot.fullName,
       subject,
     });
     const queueClient = admin as unknown as {
       from(table: string): {
-        insert(row: typeof queueRow): Promise<{ error: { message?: string } | null }>;
+        upsert(row: typeof queueRow, options: { onConflict: string; ignoreDuplicates: boolean }): Promise<{ error: { message?: string } | null }>;
       };
     };
-    const { error: queueError } = await queueClient.from("email_notifications").insert(queueRow);
+    const { error: queueError } = await queueClient
+      .from("email_notifications")
+      .upsert(queueRow, { onConflict: "event_key", ignoreDuplicates: true });
     if (queueError) throw queueError;
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
@@ -77,7 +80,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
 
     const edgeRequest = buildSupabaseEmailRequest(
       { supabaseUrl, serviceKey, functionName },
-      { to: recipientEmail, subject, html: "", text: "" },
+      { to: recipientEmail, eventKey: queueRow.event_key, subject, html: "", text: "" },
     );
     const edgeResponse = await fetch(edgeRequest.url, edgeRequest.init);
     const payload = (await edgeResponse.json().catch(() => null)) as { success?: unknown; message?: unknown; error?: unknown } | null;

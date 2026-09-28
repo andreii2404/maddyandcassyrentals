@@ -69,7 +69,7 @@ export default function StepRentalDetails({
   >(undefined);
   const [nowTick, setNowTick] = useState(() => Date.now());
   const [showScheduleNotice, setShowScheduleNotice] = useState(false);
-  const stockLimit = getVariantQuantityLimit(product, selectedVariant);
+  const stockLimit = Math.min(getVariantQuantityLimit(product, selectedVariant), units.totalUnits);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNowTick(Date.now()), 30000);

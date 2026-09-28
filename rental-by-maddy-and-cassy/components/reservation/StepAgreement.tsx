@@ -102,7 +102,7 @@ export default function StepAgreement({
       <div className={styles.viewerToolbar}>
         <div>
           <h2 className={styles.heading}>Rental Agreement &amp; Terms</h2>
-          <p className={styles.viewerHint}>Review the agreement, confirm both statements, then sign.</p>
+          <p className={styles.viewerHint}>Phase 3 · Agreement · Review the agreement, confirm both statements, then sign.</p>
         </div>
         <Button variant="none"
           type="button"
