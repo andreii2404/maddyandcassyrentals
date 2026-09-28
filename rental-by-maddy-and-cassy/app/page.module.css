@@ -16,6 +16,13 @@
   margin-bottom: 1.25rem;
 }
 
+.aboutBody {
+  display: grid;
+  grid-template-columns: 0.42fr 0.58fr;
+  gap: 2rem;
+  align-items: start;
+}
+
 .eyebrow {
   margin: 0 0 0.5rem;
   color: var(--color-primary);
@@ -42,10 +49,9 @@
 }
 
 .foundersGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 1.25rem;
-  margin-bottom: 1.25rem;
 }
 
 .founderCard {
@@ -98,38 +104,63 @@
 }
 
 .categoryCard {
-  display: grid;
-  min-height: 140px;
-  grid-template-columns: auto 1fr;
-  grid-template-rows: 1fr auto;
-  gap: 0.75rem 1rem;
+  position: relative;
+  display: flex;
+  min-height: 300px;
+  flex-direction: column;
+  justify-content: flex-end;
   padding: 1.1rem;
+  overflow: hidden;
   border: 1px solid var(--color-light-gray);
   border-radius: 22px;
-  background:
-    radial-gradient(circle at 100% 0%, rgba(242, 210, 207, 0.75), transparent 45%),
-    var(--color-white);
-  color: var(--color-text-primary);
+  color: var(--color-white);
   text-decoration: none;
   box-shadow: 0 14px 34px rgba(36, 36, 36, 0.05);
   transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
 
+.categoryImageWrap {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.categoryImage {
+  object-fit: cover;
+  filter: saturate(1.02) contrast(1.02);
+  transition: transform 400ms ease;
+}
+
+.categoryCard:hover .categoryImage,
+.categoryCard:focus-visible .categoryImage {
+  transform: scale(1.05);
+}
+
+.categoryScrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, rgba(74, 46, 51, 0.86) 0%, rgba(74, 46, 51, 0.32) 48%, rgba(74, 46, 51, 0.08) 100%);
+}
+
 .categoryCard:hover,
 .categoryCard:focus-visible {
   border-color: var(--color-dusty-rose);
-  box-shadow: 0 20px 42px rgba(154, 89, 101, 0.11);
+  box-shadow: 0 20px 42px rgba(154, 89, 101, 0.18);
   transform: translateY(-4px);
 }
 
 .categoryIndex {
+  position: absolute;
+  top: 1.1rem;
+  left: 1.1rem;
+  z-index: 1;
   display: inline-flex;
   width: 34px;
   height: 34px;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--color-blush);
+  background: rgba(255, 255, 255, 0.9);
   color: var(--color-primary);
   font-size: 0.72rem;
   font-weight: 700;
@@ -143,17 +174,26 @@
   color: var(--color-white);
 }
 
+.categoryCopy {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
 .categoryCard h3 {
   margin: 0 0 0.5rem;
   font-family: var(--font-serif), Georgia, "Times New Roman", serif;
   font-size: 1.45rem;
   font-weight: 400;
+  color: var(--color-white);
 }
 
 .categoryCard p {
   max-width: 440px;
   margin: 0;
-  color: var(--color-charcoal);
+  color: rgba(255, 255, 255, 0.82);
   font-size: 0.9rem;
   line-height: 1.65;
 }
@@ -163,7 +203,7 @@
   overflow: hidden;
   max-height: 0;
   margin-top: 0;
-  color: var(--color-primary);
+  color: var(--color-blush);
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -175,14 +215,17 @@
 .categoryCard:hover .categoryReveal,
 .categoryCard:focus-visible .categoryReveal {
   max-height: 20px;
-  margin-top: 0.5rem;
+  margin-top: 0;
   opacity: 1;
 }
 
 .categoryCard strong {
-  grid-column: 2;
-  color: var(--color-primary);
+  position: relative;
+  z-index: 1;
+  margin-top: 0.85rem;
+  color: rgba(255, 255, 255, 0.92);
   font-size: 0.82rem;
+  font-weight: 700;
 }
 
 .perksSection {
@@ -191,9 +234,64 @@
   padding: 2.75rem 1.25rem 1.25rem;
 }
 
+.perksBody {
+  display: grid;
+  grid-template-columns: 0.42fr 0.58fr;
+  gap: 2.5rem;
+  align-items: start;
+}
+
 .perksIntro {
-  max-width: 760px;
-  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  max-width: 420px;
+}
+
+.perksCta {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: var(--control-height);
+  margin-top: 0.5rem;
+  padding: 0.55rem 0.55rem 0.55rem 1.3rem;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: var(--color-white);
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+}
+
+.perksCta:hover,
+.perksCta:focus-visible {
+  background: var(--color-primary-hover);
+  box-shadow: 0 10px 26px rgba(154, 89, 101, 0.26);
+  transform: translateY(-1px);
+}
+
+.perksCtaChip {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--color-white);
+  color: var(--color-primary);
+  transition: transform 0.25s ease;
+}
+
+.perksCta:hover .perksCtaChip {
+  transform: rotate(45deg);
+}
+
+.perksGridWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
 }
 
 .perksGrid {
@@ -269,23 +367,14 @@
   line-height: 1.55;
 }
 
-.perksFooter {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-top: 1rem;
-  padding: 1rem 1.2rem;
+.perksNote {
+  margin: 0;
+  padding: 0.85rem 1.1rem;
   border-radius: 14px;
   background: var(--color-background-soft);
   color: var(--color-charcoal);
-  font-size: 0.8rem;
-}
-
-.perksFooter a {
-  color: var(--color-primary);
-  font-weight: 750;
-  text-decoration: none;
+  font-size: 0.78rem;
+  line-height: 1.5;
 }
 
 .founderCard:hover {
@@ -484,8 +573,8 @@
 
 .steps {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 0.7rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
 }
 
 .step {
@@ -586,6 +675,22 @@
   .steps { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
+@media (max-width: 860px) {
+  .perksBody,
+  .aboutBody {
+    grid-template-columns: 1fr;
+    gap: 1.75rem;
+  }
+
+  .perksIntro {
+    max-width: none;
+  }
+
+  .perksCta {
+    align-self: flex-start;
+  }
+}
+
 @media (max-width: 760px) {
   .discovery { padding-top: 2rem; }
 
@@ -618,18 +723,12 @@
     min-height: 0;
   }
 
-  .perksFooter {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
   .categoryCard {
-    min-height: 0;
+    min-height: 240px;
   }
 
   .about { padding-top: 2rem; }
 
-  .foundersGrid { grid-template-columns: 1fr; }
   .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
   .storyBody {

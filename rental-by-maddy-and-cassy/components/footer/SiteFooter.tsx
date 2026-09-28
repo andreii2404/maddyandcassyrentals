@@ -104,6 +104,10 @@ export default function SiteFooter() {
         </nav>
       </div>
 
+      <div className={styles.wordmarkWrap} aria-hidden="true">
+        <span className={styles.wordmark}>Maddy &amp; Cassy</span>
+      </div>
+
       <div className={styles.bottom}>
         <p>© {new Date().getFullYear()} Rental by Maddy &amp; Cassy. All rights reserved.</p>
         <div>

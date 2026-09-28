@@ -173,6 +173,26 @@
 
 .linkGroup a:hover { color: var(--color-blush); transform: translateX(3px); }
 
+.wordmarkWrap {
+  overflow: hidden;
+  width: min(100% - 3rem, 1240px);
+  margin: 0 auto;
+  padding-bottom: clamp(0.5rem, 2vw, 1.25rem);
+  line-height: 1;
+}
+
+.wordmark {
+  display: block;
+  margin: 0 -0.01em;
+  color: rgba(255, 255, 255, 0.08);
+  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.14);
+  font-family: var(--font-serif), Georgia, "Times New Roman", serif;
+  font-size: clamp(2.75rem, 11vw, 8.5rem);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
 .bottom {
   display: flex;
   align-items: center;

@@ -47,6 +47,9 @@
 }
 
 .label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   margin: 0;
   font-size: 0.72rem;
   font-weight: 600;
@@ -56,6 +59,21 @@
   padding: 0.4rem 0.85rem;
   border: 1px solid var(--color-dusty-rose);
   border-radius: 999px;
+}
+
+.labelDot {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(154, 89, 101, 0.18);
+  animation: labelDotPulse 2.4s ease-in-out infinite;
+}
+
+@keyframes labelDotPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(0.82); }
 }
 
 .heading {
@@ -169,10 +187,10 @@
 .primaryButton {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.6rem;
   min-height: var(--control-height);
-  padding: 0.7rem 1.4rem;
-  border-radius: var(--radius-control);
+  padding: 0.55rem 0.55rem 0.55rem 1.4rem;
+  border-radius: 999px;
   background: var(--color-primary);
   color: var(--color-white);
   font-size: 0.95rem;
@@ -192,32 +210,61 @@
   transform: translateY(1px);
 }
 
+.arrowChip {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--color-white);
+  color: var(--color-primary);
+  transition: transform 0.25s ease;
+}
+
+.primaryButton:hover .arrowChip {
+  transform: rotate(45deg);
+}
+
 .tertiaryLink {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.85rem 0.25rem;
+  gap: 0.6rem;
+  min-height: var(--control-height);
+  padding: 0.55rem 0.55rem 0.55rem 1.15rem;
+  border: 1px solid var(--color-dusty-rose);
+  border-radius: 999px;
   color: var(--color-text-primary);
   font-size: 0.9rem;
   font-weight: 650;
   text-decoration: none;
-  border-bottom: 1px solid transparent;
-  transition: color 0.2s ease, border-color 0.2s ease;
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
-.tertiaryLink span {
-  transition: transform 0.2s ease;
+.tertiaryChip {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--color-blush);
+  color: var(--color-primary);
+  transition: transform 0.25s ease, background 0.2s ease, color 0.2s ease;
 }
 
 .tertiaryLink:hover,
 .tertiaryLink:focus-visible {
   color: var(--color-primary);
-  border-color: var(--color-dusty-rose);
+  border-color: var(--color-primary);
+  background: var(--color-background-soft);
 }
 
-.tertiaryLink:hover span,
-.tertiaryLink:focus-visible span {
-  transform: translateX(3px);
+.tertiaryLink:hover .tertiaryChip,
+.tertiaryLink:focus-visible .tertiaryChip {
+  background: var(--color-primary);
+  color: var(--color-white);
+  transform: translateX(2px);
 }
 
 @media (max-width: 860px) {

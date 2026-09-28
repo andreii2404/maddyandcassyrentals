@@ -20,7 +20,10 @@ export default function Hero({ products }: HeroProps) {
 
       <div className={styles.inner}>
         <div className={styles.content}>
-          <p className={styles.label}>PREMIUM RENTALS · METRO MANILA</p>
+          <p className={styles.label}>
+            <span className={styles.labelDot} aria-hidden="true" />
+            PREMIUM RENTALS · METRO MANILA
+          </p>
 
           <h1 className={styles.heading}>
             Rent the Gear.
@@ -58,9 +61,19 @@ export default function Hero({ products }: HeroProps) {
               icon={<CalendarIcon size={18} />}
             >
               Check Availability
+              <span className={styles.arrowChip} aria-hidden="true">
+                <svg viewBox="0 0 20 20" width="14" height="14">
+                  <path d="M5 15 15 5M7 5h8v8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
             </Button>
             <a href="#how-it-works" className={styles.tertiaryLink}>
-              How Renting Works <span aria-hidden="true">→</span>
+              How Renting Works
+              <span className={styles.tertiaryChip} aria-hidden="true">
+                <svg viewBox="0 0 20 20" width="12" height="12">
+                  <path d="M5 15 15 5M7 5h8v8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
             </a>
           </div>
 

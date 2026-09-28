@@ -1,7 +1,9 @@
+import Image from "next/image";
 import Link from "next/link";
 import Hero from "@/components/hero/Hero";
 import FeaturedProducts from "@/components/storefront/FeaturedProducts";
 import ReviewCarousel, { type StorefrontReview } from "@/components/storefront/ReviewCarousel";
+import StatsMarquee from "@/components/stats-marquee/StatsMarquee";
 import Reveal from "@/components/ui/Reveal";
 import { getActiveProducts } from "@/src/services/productService";
 import styles from "./page.module.css";
@@ -50,10 +52,35 @@ export default async function Home() {
     })))
     .sort((left, right) => Date.parse(right.date) - Date.parse(left.date));
 
+  const categoryImages = new Map(
+    categories.map(([category]) => [
+      category,
+      products.find((product) => product.category === category)?.image
+        || "/images/product-placeholder.png",
+    ]),
+  );
+
+  const averageRating = storefrontReviews.length
+    ? storefrontReviews.reduce((total, review) => total + review.rating, 0) / storefrontReviews.length
+    : 0;
+
+  const marqueeItems = [
+    `${products.length}+ catalog listings`,
+    `${categories.length} gear categories`,
+    ...(storefrontReviews.length
+      ? [`${averageRating.toFixed(1)} average rating from ${storefrontReviews.length} reviews`]
+      : []),
+    "Metro Manila delivery & pickup",
+    "Secure checkout via GCash",
+    "Loyalty rewards on every 11th rental",
+  ];
+
   return (
     <div className={styles.page}>
       <main>
         <Hero products={products} />
+
+        <StatsMarquee items={marqueeItems} />
 
         <Reveal>
         <section className={styles.discovery} aria-labelledby="category-heading">
@@ -76,8 +103,18 @@ export default async function Home() {
                 href={{ pathname: "/catalog", query: { category } }}
                 className={styles.categoryCard}
               >
+                <div className={styles.categoryImageWrap}>
+                  <Image
+                    src={categoryImages.get(category) || "/images/product-placeholder.png"}
+                    alt=""
+                    fill
+                    sizes="(max-width: 760px) 100vw, 620px"
+                    className={styles.categoryImage}
+                  />
+                  <div className={styles.categoryScrim} aria-hidden="true" />
+                </div>
                 <span className={styles.categoryIndex}>{String(index + 1).padStart(2, "0")}</span>
-                <div>
+                <div className={styles.categoryCopy}>
                   <h3>{category}</h3>
                   <p>{categoryDescriptions[category] ?? `Explore available ${category.toLowerCase()} for daily rental.`}</p>
                   <span className={styles.categoryReveal} aria-hidden="true">View Category</span>
@@ -93,46 +130,57 @@ export default async function Home() {
 
         <Reveal>
         <section className={styles.perksSection} aria-labelledby="perks-heading">
-          <div className={styles.perksIntro}>
-            <p className={styles.eyebrow}>SPECIAL DISCOUNTS &amp; PERKS</p>
-            <h2 id="perks-heading" className={styles.heading}>A little extra for your moments and milestones.</h2>
-            <p className={styles.description}>
-              Birthday savings and loyalty rewards are tracked directly in the booking system,
-              with clear eligibility shown before you continue to payment.
-            </p>
-          </div>
-
-          <div className={styles.perksGrid}>
-            <article className={styles.perkCard}>
-              <div className={styles.perkTopline}>
-                <span>01</span>
-                <strong>Birthday Month Discount</strong>
-              </div>
-              <p className={styles.perkAmount}>₱100 <span>off</span></p>
-              <p>
-                Rent during your birth month and receive ₱100 off the rental fee.
-                Add your birth date once and present a valid ID showing the same date.
+          <div className={styles.perksBody}>
+            <div className={styles.perksIntro}>
+              <p className={styles.eyebrow}>SPECIAL DISCOUNTS &amp; PERKS</p>
+              <h2 id="perks-heading" className={styles.heading}>A little extra for your moments and milestones.</h2>
+              <p className={styles.description}>
+                Birthday savings and loyalty rewards are tracked directly in the booking system,
+                with clear eligibility shown before you continue to payment.
               </p>
-              <small>Eligible birthday savings are applied at checkout and verified from your submitted ID.</small>
-            </article>
+              <Link href="/sign-up" className={styles.perksCta}>
+                Create an account to track progress
+                <span className={styles.perksCtaChip} aria-hidden="true">
+                  <svg viewBox="0 0 20 20" width="14" height="14">
+                    <path d="M5 15 15 5M7 5h8v8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+              </Link>
+            </div>
 
-            <article className={`${styles.perkCard} ${styles.loyaltyCard}`}>
-              <div className={styles.perkTopline}>
-                <span>02</span>
-                <strong>Loyalty Reward Program</strong>
+            <div className={styles.perksGridWrap}>
+              <div className={styles.perksGrid}>
+                <article className={styles.perkCard}>
+                  <div className={styles.perkTopline}>
+                    <span>01</span>
+                    <strong>Birthday Month Discount</strong>
+                  </div>
+                  <p className={styles.perkAmount}>₱100 <span>off</span></p>
+                  <p>
+                    Rent during your birth month and receive ₱100 off the rental fee.
+                    Add your birth date once and present a valid ID showing the same date.
+                  </p>
+                  <small>Eligible birthday savings are applied at checkout and verified from your submitted ID.</small>
+                </article>
+
+                <article className={`${styles.perkCard} ${styles.loyaltyCard}`}>
+                  <div className={styles.perkTopline}>
+                    <span>02</span>
+                    <strong>Loyalty Reward Program</strong>
+                  </div>
+                  <p className={styles.perkAmount}>₱200 <span>off</span></p>
+                  <p>
+                    No loyalty card needed. Every returned rental under the same customer account
+                    counts, and ₱200 is automatically applied to your 11th rental.
+                  </p>
+                  <small>Track your completed rentals and reward progress anytime from My Bookings.</small>
+                </article>
               </div>
-              <p className={styles.perkAmount}>₱200 <span>off</span></p>
-              <p>
-                No loyalty card needed. Every returned rental under the same customer account
-                counts, and ₱200 is automatically applied to your 11th rental.
-              </p>
-              <small>Track your completed rentals and reward progress anytime from My Bookings.</small>
-            </article>
-          </div>
 
-          <div className={styles.perksFooter}>
-            <span>1 completed rental = 1 loyalty count, regardless of the number of units in that booking.</span>
-            <Link href="/sign-up">Create an account to track progress</Link>
+              <p className={styles.perksNote}>
+                1 completed rental = 1 loyalty count, regardless of the number of units in that booking.
+              </p>
+            </div>
           </div>
         </section>
         </Reveal>
@@ -149,6 +197,7 @@ export default async function Home() {
             </p>
           </div>
 
+          <div className={styles.aboutBody}>
           <div className={styles.foundersGrid} aria-label="Founders">
             <article className={styles.founderCard}>
               <div className={styles.founderTopline}>
@@ -227,6 +276,7 @@ export default async function Home() {
                 </p>
               </div>
             </details>
+          </div>
           </div>
 
         </section>
