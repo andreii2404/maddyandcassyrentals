@@ -14,6 +14,132 @@ export type Database = {
   }
   public: {
     Tables: {
+      analytics_events: {
+        Row: {
+          booking_id: string | null
+          created_at: string
+          customer_id: string | null
+          event_type: string
+          id: string
+          is_guest: boolean
+          metadata: Json
+          product_id: string | null
+          promotion_id: string | null
+          session_id: string
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+        }
+        Insert: {
+          booking_id?: string | null
+          created_at?: string
+          customer_id?: string | null
+          event_type: string
+          id?: string
+          is_guest?: boolean
+          metadata?: Json
+          product_id?: string | null
+          promotion_id?: string | null
+          session_id: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Update: {
+          booking_id?: string | null
+          created_at?: string
+          customer_id?: string | null
+          event_type?: string
+          id?: string
+          is_guest?: boolean
+          metadata?: Json
+          product_id?: string | null
+          promotion_id?: string | null
+          session_id?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "booking_totals"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "analytics_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analytics_events_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analytics_events_promotion_id_fkey"
+            columns: ["promotion_id"]
+            isOneToOne: false
+            referencedRelation: "active_promotions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analytics_events_promotion_id_fkey"
+            columns: ["promotion_id"]
+            isOneToOne: false
+            referencedRelation: "promotions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      newsletter_subscribers: {
+        Row: {
+          consented_at: string
+          created_at: string
+          customer_id: string | null
+          email: string
+          id: string
+          source: string | null
+          status: string
+          unsubscribe_token: string
+          unsubscribed_at: string | null
+        }
+        Insert: {
+          consented_at?: string
+          created_at?: string
+          customer_id?: string | null
+          email: string
+          id?: string
+          source?: string | null
+          status?: string
+          unsubscribe_token?: string
+          unsubscribed_at?: string | null
+        }
+        Update: {
+          consented_at?: string
+          created_at?: string
+          customer_id?: string | null
+          email?: string
+          id?: string
+          source?: string | null
+          status?: string
+          unsubscribe_token?: string
+          unsubscribed_at?: string | null
+        }
+        Relationships: []
+      }
       promotion_redemptions: {
         Row: {
           booking_id: string
@@ -2273,6 +2399,30 @@ export type Database = {
         Args: { p_booking_id: string; p_code: string }
         Returns: number
       }
+      log_marketing_event: {
+        Args: {
+          p_booking_id?: string
+          p_event_type: string
+          p_metadata?: Json
+          p_product_id?: string
+          p_promotion_id?: string
+          p_session_id: string
+          p_utm_campaign?: string
+          p_utm_content?: string
+          p_utm_medium?: string
+          p_utm_source?: string
+          p_utm_term?: string
+        }
+        Returns: undefined
+      }
+      subscribe_newsletter: {
+        Args: { p_email: string; p_source?: string }
+        Returns: {
+          already_subscribed: boolean
+          unsubscribe_token: string
+        }[]
+      }
+      unsubscribe_newsletter: { Args: { p_token: string }; Returns: boolean }
       preview_promotion: {
         Args: { p_code: string; p_subtotal: number }
         Returns: {
