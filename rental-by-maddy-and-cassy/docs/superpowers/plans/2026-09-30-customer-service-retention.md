@@ -23,7 +23,10 @@
 - **Completed rental means `bookings.status = 'returned'`.** There is no `completed` enum value. Every metric and every eligibility check uses `'returned'`.
 - **Loyalty rules are frozen.** Read `LOYALTY_REWARD_DISCOUNT`, `LOYALTY_REWARD_RENTAL_NUMBER`, `COMPLETED_RENTALS_BEFORE_REWARD` from `src/lib/promotions.ts`. Never hardcode ₱200 or 11.
 - **Branding:** Poppins, the existing pink/cream palette, CSS Modules beside each component. Match the conventions in `app/account/bookings/[bookingId]/page.tsx` and `components/admin/`.
-- **Working tree warning:** `components/navbar/Navbar.tsx` and `components/footer/SiteFooter.tsx` have uncommitted modifications from other work. Task 1 edits them. Read the current file contents before editing; never revert or overwrite unrelated changes.
+- **Never discard other people's work.** Do not run `git reset`, `git checkout --`, `git restore`, `git stash`, or `git clean` at any point. If you find unexpected uncommitted changes, leave them alone and report them. Read the current contents of every file before editing it — this branch receives merges from `origin/main` between tasks.
+- **Migrations are written, never applied.** Do not run `supabase db push`, `supabase migration up`, or any `apply_migration` tool. The human applies them after explicit approval.
+- **Verified against `origin/main` @ `b0e9c16` (2026-09-30).** The merge at `cd27c22` added an email-notification queue and a `send-booking-emails` edge function. That queue is **booking-status-specific** — its `email_type` union is a closed set (`booking_approved`, `booking_returned`, `booking_confirmation_contract`, `payment_rejected`, `payment_verified`). Support emails do **not** belong in it. Task 12 calls `sendEmail` from `src/lib/server/emailTransport.ts` directly, the same way `src/lib/server/customerUpdateEmail.ts` does. Do not route support mail through the queue or the edge function.
+- **The `verify` chain already contains `test:date-selection`** (added by that merge). Insert the new test scripts without disturbing any existing entry.
 
 ## Review Focus
 
@@ -199,7 +202,17 @@ In `app/contact/page.tsx`, delete the local `contactMethods` array and import `S
 
 Add `.serviceWindow` and `.responseStandard` to `app/contact/contact.module.css`, matching the existing `.subheading` rule with a smaller size and the muted text colour already used in that file.
 
-In `components/navbar/Navbar.tsx` and `components/footer/SiteFooter.tsx`, replace only hardcoded channel URLs/handles with values read from `SUPPORT_CHANNELS` (e.g. `SUPPORT_CHANNELS.find((c) => c.id === "facebook")!.href`). **Read each file first** — both have uncommitted edits. Do not change layout, classes, or any unrelated markup.
+`components/navbar/Navbar.tsx` needs **no change here**: it carries only a `/contact` nav link (line 18), not the channel details. Leave it alone in this task.
+
+`components/footer/SiteFooter.tsx` holds the three channels in a local array at lines 40–42, whose `href`/`label`/`value` already match `SUPPORT_CHANNELS` exactly:
+
+```tsx
+{ href: "https://www.tiktok.com/@iosrental.maddycassy", label: "TikTok", value: "@iosrental.maddycassy" },
+{ href: "https://www.facebook.com/share/19bCnTQZum/", label: "Facebook", value: "Rental by Maddy & Cassy" },
+{ href: "mailto:iosrentalbymaddycassy@gmail.com", label: "Email", value: "iosrentalbymaddycassy@gmail.com" },
+```
+
+Replace that array's contents with a mapping over `SUPPORT_CHANNELS` that produces the same `{ href, label, value }` shape, preserving the footer's existing order if it differs. Rendered output must be byte-identical. **Read the file first.** Do not change layout, classes, or any unrelated markup.
 
 - [ ] **Step 6: Register the test script**
 
@@ -2013,7 +2026,7 @@ git commit -m "feat: customer support case thread"
 
 **Interfaces:**
 - Consumes: `SUPPORT_CHANNELS`, `SERVICE_WINDOW`, `SUPPORT_RESPONSE_STANDARD` (Task 1); `isFeedbackEligible`, `validateFeedback`, `FEEDBACK_RATING_LABELS` (Task 5); `submit_booking_feedback` (Task 2).
-- Produces: `<SupportHelpCallout bookingId?: string | null heading?: string />`; `<BookingFeedbackPanel bookingId bookingStatus alreadySubmitted />`; `POST /api/bookings/:bookingId/feedback` → `{ submitted: true }`.
+- Produces: `<SupportHelpCallout bookingId?: string | null heading?: string guestMode?: boolean />`; `<BookingFeedbackPanel bookingId bookingStatus alreadySubmitted />`; `POST /api/bookings/:bookingId/feedback` → `{ submitted: true }`.
 
 - [ ] **Step 1: Build the help callout**
 
@@ -2023,9 +2036,12 @@ Create `components/support/SupportHelpCallout.tsx` (a server-safe component — 
 export default function SupportHelpCallout({
   bookingId = null,
   heading = "Need help?",
+  guestMode = false,
 }: {
   bookingId?: string | null;
   heading?: string;
+  /** Guests have no /account area, so the account link is omitted for them. */
+  guestMode?: boolean;
 }) {
   return (
     <aside className={styles.callout} aria-labelledby="support-callout-heading">
@@ -2049,12 +2065,14 @@ export default function SupportHelpCallout({
           </li>
         ))}
       </ul>
-      <Link
-        href={bookingId ? `/account/support?bookingId=${bookingId}` : "/account/support"}
-        className={styles.reportLink}
-      >
-        {bookingId ? "Report a problem with this rental" : "Send a support request"}
-      </Link>
+      {guestMode ? null : (
+        <Link
+          href={bookingId ? `/account/support?bookingId=${bookingId}` : "/account/support"}
+          className={styles.reportLink}
+        >
+          {bookingId ? "Report a problem with this rental" : "Send a support request"}
+        </Link>
+      )}
     </aside>
   );
 }
@@ -2162,9 +2180,16 @@ Below it: an optional labelled comment textarea with a character counter, a subm
 
 - [ ] **Step 4: Wire the booking pages**
 
-In `app/account/bookings/[bookingId]/page.tsx`, beside the existing `<CustomerReviewPanel>` (around line 498), add `<BookingFeedbackPanel>` and, below it, `<SupportHelpCallout bookingId={booking.id} />`. Fetch whether feedback already exists with a `booking_feedback` select on the customer's own client, and pass it as `alreadySubmitted`. In the booking-not-found branch (around line 218), add `<SupportHelpCallout />`.
+**One component already serves both audiences.** `app/account/bookings/[bookingId]/page.tsx` exports `BookingDetailContent({ guestMode = false })` (line 110), and `app/guest/bookings/[bookingId]/page.tsx` is a 13-line wrapper that renders it with `guestMode`. Edit the shared component once; do **not** add a separate guest code path.
 
-In `app/guest/bookings/[bookingId]/page.tsx` do the same. Guests own their booking through an anonymous auth user, so both the feedback panel and case filing work unchanged — do **not** add a separate guest code path.
+In `app/account/bookings/[bookingId]/page.tsx`:
+
+- Beside the existing `<CustomerReviewPanel>` (line 504), add `<BookingFeedbackPanel>` and, below it, `<SupportHelpCallout bookingId={details.booking.id} />`. Both render in guest mode too — a guest owns their booking through an anonymous auth user, so the RPCs accept them unchanged.
+- Read whether feedback already exists with a `booking_feedback` select on the viewer's own (RLS-scoped) client and pass it as `alreadySubmitted`.
+- In the booking-not-found branch (the `<Button href="/account/bookings">` block at line 219), add `<SupportHelpCallout />`.
+- `SupportHelpCallout`'s "Report a problem" link points at `/account/support`, which requires an account. Give the component a `guestMode` prop: when true, render the channels and omit that link, since a guest files a case from this page rather than from an account area. Add the case form inline here for guests in the same place, using `<SupportCaseForm lockedBookingId={details.booking.id} />`.
+
+Verify line numbers before editing — this file is 660 lines and moves with upstream merges.
 
 In `app/account/bookings/page.tsx`, add `<SupportHelpCallout />` to the error state and to the empty-list state. Leave the loyalty section untouched.
 
