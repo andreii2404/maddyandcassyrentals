@@ -51,3 +51,25 @@ test("booking_totals subtracts the promotion discount from total_amount", () => 
   );
   assert.match(redeemSql, /- b\.promotion_discount_amount,\s*\n\s*0::numeric/);
 });
+
+test("redeem_promotion blocks redemption on non-pending or already-paid bookings", () => {
+  const redeemSql = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "../supabase/migrations/20260929091000_redeem_promotion.sql"),
+    "utf8",
+  );
+  assert.match(redeemSql, /if v_booking\.status <> 'pending' or exists \(/);
+  assert.match(
+    redeemSql,
+    /where bps\.booking_id = v_booking\.id\s*\n\s*and bps\.status in \('submitted', 'under_review', 'verified'\)/,
+  );
+  assert.match(redeemSql, /raise exception 'BOOKING_NOT_ELIGIBLE';/);
+});
+
+test("promotions.code has a case-insensitive unique index and zero-value redemptions are rejected", () => {
+  const redeemSql = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "../supabase/migrations/20260929091000_redeem_promotion.sql"),
+    "utf8",
+  );
+  assert.match(redeemSql, /create unique index promotions_code_upper_unique on public\.promotions \(upper\(code\)\);/);
+  assert.match(redeemSql, /if v_discount <= 0 then\s*\n\s*raise exception 'NO_DISCOUNT_APPLICABLE';/);
+});

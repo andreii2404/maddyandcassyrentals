@@ -6,6 +6,8 @@ alter table public.bookings
   add column promotion_discount_amount numeric(12,2) not null default 0
     check (promotion_discount_amount >= 0);
 
+create unique index promotions_code_upper_unique on public.promotions (upper(code));
+
 create or replace function public.redeem_promotion(p_booking_id uuid, p_code text)
 returns numeric
 language plpgsql
@@ -35,6 +37,13 @@ begin
   end if;
   if v_booking.is_guest_checkout then
     raise exception 'GUEST_NOT_ELIGIBLE';
+  end if;
+  if v_booking.status <> 'pending' or exists (
+    select 1 from public.booking_payment_submissions bps
+    where bps.booking_id = v_booking.id
+      and bps.status in ('submitted', 'under_review', 'verified')
+  ) then
+    raise exception 'BOOKING_NOT_ELIGIBLE';
   end if;
   if v_booking.promotion_id is not null then
     raise exception 'PROMOTION_ALREADY_APPLIED';
@@ -87,6 +96,9 @@ begin
     v_discount := v_promo.discount_value;
   end if;
   v_discount := least(v_discount, v_base);
+  if v_discount <= 0 then
+    raise exception 'NO_DISCOUNT_APPLICABLE';
+  end if;
 
   update public.bookings
   set promotion_id = v_promo.id,
