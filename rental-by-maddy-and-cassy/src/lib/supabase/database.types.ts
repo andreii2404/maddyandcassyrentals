@@ -14,6 +14,122 @@ export type Database = {
   }
   public: {
     Tables: {
+      promotion_redemptions: {
+        Row: {
+          booking_id: string
+          created_at: string
+          customer_id: string | null
+          discount_amount: number
+          id: string
+          promotion_id: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          customer_id?: string | null
+          discount_amount: number
+          id?: string
+          promotion_id: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          customer_id?: string | null
+          discount_amount?: number
+          id?: string
+          promotion_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_redemptions_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "booking_totals"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "promotion_redemptions_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_redemptions_promotion_id_fkey"
+            columns: ["promotion_id"]
+            isOneToOne: false
+            referencedRelation: "active_promotions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_redemptions_promotion_id_fkey"
+            columns: ["promotion_id"]
+            isOneToOne: false
+            referencedRelation: "promotions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promotions: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          current_uses: number
+          description: string | null
+          discount_type: string
+          discount_value: number
+          ends_at: string
+          id: string
+          is_active: boolean
+          max_discount_amount: number | null
+          min_subtotal: number
+          per_customer_limit: number
+          starts_at: string
+          title: string
+          updated_at: string
+          usage_limit: number | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          current_uses?: number
+          description?: string | null
+          discount_type: string
+          discount_value: number
+          ends_at: string
+          id?: string
+          is_active?: boolean
+          max_discount_amount?: number | null
+          min_subtotal?: number
+          per_customer_limit?: number
+          starts_at: string
+          title: string
+          updated_at?: string
+          usage_limit?: number | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          current_uses?: number
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          ends_at?: string
+          id?: string
+          is_active?: boolean
+          max_discount_amount?: number | null
+          min_subtotal?: number
+          per_customer_limit?: number
+          starts_at?: string
+          title?: string
+          updated_at?: string
+          usage_limit?: number | null
+        }
+        Relationships: []
+      }
       agreement_acknowledgements: {
         Row: {
           acknowledged: boolean
@@ -2091,6 +2207,42 @@ export type Database = {
       }
     }
     Views: {
+      active_promotions: {
+        Row: {
+          code: string | null
+          description: string | null
+          discount_type: string | null
+          discount_value: number | null
+          ends_at: string | null
+          id: string | null
+          max_discount_amount: number | null
+          min_subtotal: number | null
+          title: string | null
+        }
+        Insert: {
+          code?: string | null
+          description?: string | null
+          discount_type?: string | null
+          discount_value?: number | null
+          ends_at?: string | null
+          id?: string | null
+          max_discount_amount?: number | null
+          min_subtotal?: number | null
+          title?: string | null
+        }
+        Update: {
+          code?: string | null
+          description?: string | null
+          discount_type?: string | null
+          discount_value?: number | null
+          ends_at?: string | null
+          id?: string | null
+          max_discount_amount?: number | null
+          min_subtotal?: number | null
+          title?: string | null
+        }
+        Relationships: []
+      }
       booking_totals: {
         Row: {
           booking_id: string | null
@@ -2106,6 +2258,16 @@ export type Database = {
       }
     }
     Functions: {
+      preview_promotion: {
+        Args: { p_code: string; p_subtotal: number }
+        Returns: {
+          discount_amount: number
+          promotion_id: string
+          reason: string
+          title: string
+          valid: boolean
+        }[]
+      }
       admin_record_pickup: {
         Args: { p_booking_id: string; p_notes?: string; p_picked_up_at: string }
         Returns: Database["public"]["Tables"]["booking_fulfillment_records"]["Row"]
