@@ -361,8 +361,8 @@ export default function Navbar() {
               {isGuestSession ? (
                 <Link href="/guest/bookings" className={styles.guestBookingsLink}>Guest Bookings</Link>
               ) : null}
-              <Link href="/sign-in" className={styles.customerLink}>Customer Login</Link>
-              <Link href="/admin/sign-in" className={styles.adminLink}>Admin</Link>
+              <Link href="/sign-in" className={styles.customerLink}>Login</Link>
+              <Link href="/admin/login" className={styles.adminLink}>Admin</Link>
             </div>
           )}
         </div>
@@ -493,8 +493,8 @@ export default function Navbar() {
                   {isGuestSession ? (
                     <Link href="/guest/bookings" onClick={closeMenu}>Guest Bookings</Link>
                   ) : null}
-                  <Link href="/sign-in" onClick={closeMenu}>Customer Login</Link>
-                  <Link href="/admin/sign-in" onClick={closeMenu}>Admin Login</Link>
+                  <Link href="/sign-in" onClick={closeMenu}>Login</Link>
+                  <Link href="/admin/login" onClick={closeMenu}>Admin Login</Link>
                 </div>
               )}
             </div>

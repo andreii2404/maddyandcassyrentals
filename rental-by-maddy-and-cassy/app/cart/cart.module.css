@@ -53,7 +53,7 @@
 .perkNote strong { color:var(--color-primary-hover); font-size:.78rem; }
 .perkNote span { color:var(--color-charcoal); font-size:.7rem; line-height:1.45; }
 .summary .primaryLink { width: 100%; margin-top: .3rem; }
-.empty { display: grid; max-width: 620px; margin: 2rem auto; place-items: center; padding: 2rem; border: 1px dashed var(--color-dusty-rose); border-radius: 20px; text-align: center; }
+.empty { display: grid; width: 100%; max-width: none; margin: 2rem 0; place-items: center; padding: 2rem; border: 1px dashed var(--color-dusty-rose); border-radius: 20px; text-align: center; }
 .empty > span { display: grid; width: 64px; height: 64px; place-items: center; border-radius: 50%; background: var(--color-blush); color: var(--color-primary); font-size: .68rem; font-weight: 800; }
 .empty h2 { margin: 1rem 0 .4rem; }
 .empty p { max-width: 460px; margin: 0 0 1.2rem; color: var(--color-charcoal); line-height: 1.6; }

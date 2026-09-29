@@ -1,0 +1,136 @@
+.section {
+  scroll-margin-top: 90px;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2.75rem 1.25rem 1.25rem;
+}
+
+.intro {
+  max-width: 720px;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.eyebrow {
+  margin: 0 0 0.5rem;
+  color: var(--color-primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+
+.heading {
+  margin: 0 0 0.75rem;
+  color: var(--color-text-primary);
+  font-family: var(--font-serif), Georgia, "Times New Roman", serif;
+  font-size: clamp(1.65rem, 3.2vw, 2.4rem);
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.description {
+  margin: 0;
+  color: var(--color-charcoal);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.item {
+  border: 1px solid var(--color-light-gray);
+  border-radius: 16px;
+  background: var(--color-white);
+  overflow: hidden;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.item[open] {
+  border-color: var(--color-dusty-rose);
+  box-shadow: 0 14px 32px rgba(154, 89, 101, 0.09);
+}
+
+.item summary {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem 1.2rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.item summary::-webkit-details-marker {
+  display: none;
+}
+
+.item summary h3 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 0.96rem;
+  font-weight: 600;
+}
+
+.toggle {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-blush);
+  color: var(--color-primary);
+  font-size: 1.15rem;
+  transition: transform 180ms ease;
+}
+
+.item[open] .toggle {
+  transform: rotate(45deg);
+}
+
+.item p {
+  margin: 0;
+  padding: 0 1.2rem 1.1rem 1.2rem;
+  color: var(--color-charcoal);
+  font-size: 0.88rem;
+  line-height: 1.65;
+}
+
+.viewAll {
+  display: inline-flex;
+  margin: 1.5rem auto 0;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid var(--color-dusty-rose);
+  color: var(--color-primary);
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-decoration: none;
+  width: fit-content;
+}
+
+.viewAll:hover,
+.viewAll:focus-visible {
+  color: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+}
+
+@media (max-width: 640px) {
+  .section {
+    padding-top: 2rem;
+  }
+
+  .item summary {
+    padding: 0.85rem 1rem;
+  }
+
+  .item summary h3 {
+    font-size: 0.88rem;
+  }
+}

@@ -21,7 +21,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 function getAdminRedirect(value: string | null): string {
-  if (!value || value === "/admin/sign-in") return "/admin";
+  if (!value || value === "/admin/sign-in" || value === "/admin/login") return "/admin";
   if (value === "/admin" || value.startsWith("/admin/")) return value;
   return "/admin";
 }

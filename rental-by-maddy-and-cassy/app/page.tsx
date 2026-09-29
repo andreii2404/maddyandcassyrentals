@@ -4,8 +4,14 @@ import Hero from "@/components/hero/Hero";
 import FeaturedProducts from "@/components/storefront/FeaturedProducts";
 import ReviewCarousel, { type StorefrontReview } from "@/components/storefront/ReviewCarousel";
 import StatsMarquee from "@/components/stats-marquee/StatsMarquee";
+import BrandStrip from "@/components/brand-strip/BrandStrip";
+import RentalOptions from "@/components/rental-options/RentalOptions";
+import Gallery, { type GalleryPhoto } from "@/components/gallery/Gallery";
+import FaqPreview from "@/components/faq-preview/FaqPreview";
 import Reveal from "@/components/ui/Reveal";
 import { getActiveProducts } from "@/src/services/productService";
+import { faqItems } from "@/src/data/faq";
+import type { Product } from "@/types/product";
 import styles from "./page.module.css";
 
 export const revalidate = 60;
@@ -19,10 +25,89 @@ const bookingSteps = [
   ["06", "Receive confirmation", "Follow the confirmed booking, receipt, payment history, and invoice in your account."],
 ] as const;
 
+// One simple stroke icon per booking step, matching the components/icons style
+// (24x24 viewBox, currentColor stroke, 1.6 weight) — kept inline since each is
+// used exactly once here rather than shared across the app.
+const stepIcons = [
+  <svg key="gear" viewBox="0 0 24 24" width={20} height={20} fill="none" aria-hidden="true">
+    <path d="M4 8.5C4 7.67 4.67 7 5.5 7H7.5L8.5 5H15.5L16.5 7H18.5C19.33 7 20 7.67 20 8.5V17.5C20 18.33 19.33 19 18.5 19H5.5C4.67 19 4 18.33 4 17.5V8.5Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    <circle cx="12" cy="13" r="3.4" stroke="currentColor" strokeWidth="1.6" />
+  </svg>,
+  <svg key="calendar" viewBox="0 0 24 24" width={20} height={20} fill="none" aria-hidden="true">
+    <rect x="4" y="5.5" width="16" height="14.5" rx="2.2" stroke="currentColor" strokeWidth="1.6" />
+    <path d="M4 10h16M8 3.5v3M16 3.5v3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+  </svg>,
+  <svg key="payment" viewBox="0 0 24 24" width={20} height={20} fill="none" aria-hidden="true">
+    <rect x="3.5" y="6" width="17" height="12" rx="2.2" stroke="currentColor" strokeWidth="1.6" />
+    <path d="M3.5 10h17M7 14.5h3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+  </svg>,
+  <svg key="verify" viewBox="0 0 24 24" width={20} height={20} fill="none" aria-hidden="true">
+    <path d="M6 4h9l3 3v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    <path d="M9 12h6M9 16h6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+  </svg>,
+  <svg key="sign" viewBox="0 0 24 24" width={20} height={20} fill="none" aria-hidden="true">
+    <path d="M4 18c2.5-1 3.5-4 4.5-7 .8-2.4 2-2.4 2.6 0 .6 2.2 1.6 2.2 2.4 0 1-2.6 2.2-1.6 3 .5.7 2 2 2.8 3.5 1.3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>,
+  <svg key="check" viewBox="0 0 24 24" width={20} height={20} fill="none" aria-hidden="true">
+    <circle cx="12" cy="12" r="8.2" stroke="currentColor" strokeWidth="1.6" />
+    <path d="m8.3 12.3 2.4 2.4 5-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>,
+];
+
 const categoryDescriptions: Record<string, string> = {
   Cameras: "Compact cameras and creator-ready gear for trips, concerts, and special events.",
   iPhones: "Premium iPhones for content, travel, celebrations, and everyday memories.",
 };
+
+interface RentalOptionPick {
+  tier: string;
+  tagline: string;
+  product: Product;
+}
+
+// Builds up to 3 distinct real-product picks spanning the live price range,
+// standing in for "packages" since the catalog has no bundle/tier data model.
+function buildRentalOptionPicks(products: Product[]): RentalOptionPick[] {
+  if (products.length === 0) return [];
+
+  const byPriceAscending = [...products].sort((a, b) => a.dailyRate - b.dailyRate);
+  const byPopularity = [...products].sort(
+    (a, b) => b.rating * b.reviewCount - a.rating * a.reviewCount,
+  );
+
+  const picks: RentalOptionPick[] = [];
+  const used = new Set<string>();
+
+  const cheapest = byPriceAscending[0];
+  picks.push({
+    tier: "Starter Pick",
+    tagline: "An easy, budget-friendly way to start renting.",
+    product: cheapest,
+  });
+  used.add(cheapest.id);
+
+  const popular = byPopularity.find((product) => !used.has(product.id));
+  if (popular) {
+    picks.push({
+      tier: "Most Booked",
+      tagline: "A favorite among Maddy & Cassy renters.",
+      product: popular,
+    });
+    used.add(popular.id);
+  }
+
+  const priciest = [...byPriceAscending].reverse().find((product) => !used.has(product.id));
+  if (priciest) {
+    picks.push({
+      tier: "Premium Pick",
+      tagline: "Top-tier gear for professional results.",
+      product: priciest,
+    });
+    used.add(priciest.id);
+  }
+
+  return picks;
+}
 
 export default async function Home() {
   const products = await getActiveProducts();
@@ -60,6 +145,35 @@ export default async function Home() {
     ]),
   );
 
+  const heroCategories = categories.map(([category]) => ({
+    name: category,
+    description: categoryDescriptions[category] ?? `Available ${category.toLowerCase()} for rent.`,
+  }));
+
+  const brands = Array.from(
+    new Set(products.map((product) => product.brand).filter((brand): brand is string => Boolean(brand))),
+  );
+
+  const rentalOptionPicks = buildRentalOptionPicks(products);
+
+  const aboutVisualProduct = products.find((product) => product.category === "Cameras") ?? products[0];
+
+  const galleryPhotos: GalleryPhoto[] = Array.from(
+    new Map(
+      products.flatMap((product) =>
+        product.images.map((image) => [
+          image.url,
+          {
+            id: image.id,
+            url: image.url,
+            alt: image.altText || `${product.name} rental photo`,
+            href: `/catalog/${product.slug || product.id}`,
+          },
+        ] as const),
+      ),
+    ).values(),
+  ).slice(0, 10);
+
   const averageRating = storefrontReviews.length
     ? storefrontReviews.reduce((total, review) => total + review.rating, 0) / storefrontReviews.length
     : 0;
@@ -78,9 +192,11 @@ export default async function Home() {
   return (
     <div className={styles.page}>
       <main>
-        <Hero products={products} />
+        <Hero products={products} categories={heroCategories} />
 
         <StatsMarquee items={marqueeItems} />
+
+        <BrandStrip brands={brands} />
 
         <Reveal>
         <section className={styles.discovery} aria-labelledby="category-heading">
@@ -127,6 +243,10 @@ export default async function Home() {
         </Reveal>
 
         <FeaturedProducts products={featuredProducts} totalProductCount={products.length} />
+
+        <Reveal>
+          <RentalOptions picks={rentalOptionPicks} />
+        </Reveal>
 
         <Reveal>
         <section className={styles.perksSection} aria-labelledby="perks-heading">
@@ -196,6 +316,18 @@ export default async function Home() {
               capture the moments that matter most.
             </p>
           </div>
+
+          {aboutVisualProduct ? (
+            <div className={styles.aboutVisual}>
+              <Image
+                src={aboutVisualProduct.image || "/images/product-placeholder.png"}
+                alt={`${aboutVisualProduct.name}, available to rent from Maddy & Cassy`}
+                fill
+                sizes="(max-width: 760px) 100vw, 1200px"
+                className={styles.aboutVisualImage}
+              />
+            </div>
+          ) : null}
 
           <div className={styles.aboutBody}>
           <div className={styles.foundersGrid} aria-label="Founders">
@@ -296,13 +428,58 @@ export default async function Home() {
           </div>
 
           <div className={styles.steps} aria-label="How renting works">
-            {bookingSteps.map(([number, title, description]) => (
+            {bookingSteps.map(([number, title, description], index) => (
               <article key={number} className={styles.step}>
+                <span className={styles.stepIcon} aria-hidden="true">{stepIcons[index]}</span>
                 <span className={styles.stepNumber}>{number}</span>
                 <h3>{title}</h3>
                 <p>{description}</p>
               </article>
             ))}
+          </div>
+        </section>
+        </Reveal>
+
+        <Reveal>
+          <Gallery photos={galleryPhotos} />
+        </Reveal>
+
+        <Reveal>
+          <FaqPreview items={faqItems.slice(0, 5)} />
+        </Reveal>
+
+        <Reveal>
+        <section id="before-you-rent" className={styles.guideSection} aria-labelledby="guide-heading">
+          <div className={styles.guideIntro}>
+            <p className={styles.eyebrow}>BEFORE YOU RENT</p>
+            <h2 id="guide-heading" className={styles.heading}>Know what to prepare before you book.</h2>
+            <p className={styles.description}>
+              A quick look at what every renter needs, how the booking flow works, and
+              where to find our full policies before you reserve a unit.
+            </p>
+          </div>
+
+          <div className={styles.guideGrid}>
+            <Link href="/rental-requirements" className={styles.guideCard}>
+              <span>Requirements</span>
+              <p>Two valid IDs, verified Facebook &amp; Instagram profiles, and emergency contact details.</p>
+              <strong>View requirements →</strong>
+            </Link>
+            <Link href="/how-to-book" className={styles.guideCard}>
+              <span>How to Book</span>
+              <p>Request, verify, and confirm your rental in five clear steps from browsing to handover.</p>
+              <strong>See the steps →</strong>
+            </Link>
+            <Link href="/terms" className={styles.guideCard}>
+              <span>Terms &amp; Conditions</span>
+              <p>Deposits, GCash payments, and the responsibilities that apply to every booking.</p>
+              <strong>Read the terms →</strong>
+            </Link>
+            <Link href="/faq" className={styles.guideCard}>
+              <span>FAQs</span>
+              <p>Answers on payment methods, security deposits, discounts, and rental extensions.</p>
+              <strong>Browse FAQs →</strong>
+            </Link>
           </div>
         </section>
         </Reveal>

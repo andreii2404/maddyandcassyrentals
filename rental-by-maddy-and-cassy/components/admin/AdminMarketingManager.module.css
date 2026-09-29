@@ -299,3 +299,39 @@
     white-space: nowrap;
   }
 }
+
+/* Row-action failures (Activate/Deactivate) surface here instead of replacing the
+   table, so the promotions list stays on screen while the error is shown. */
+.rowError {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0 0 1rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--color-status-red-border);
+  border-radius: 12px;
+  background: var(--color-status-red-bg);
+  color: var(--color-status-red);
+  font-size: 0.82rem;
+}
+
+.dismissButton {
+  flex-shrink: 0;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--color-status-red-border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-status-red);
+  font: inherit;
+  cursor: pointer;
+}
+
+.dismissButton:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.dismissButton:focus-visible {
+  outline: 2px solid var(--color-status-red);
+  outline-offset: 2px;
+}

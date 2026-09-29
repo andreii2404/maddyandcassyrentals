@@ -8,12 +8,6 @@
   max-width: 480px;
   margin-left: auto;
   padding: 2rem 1.5rem;
-  border-radius: 32px;
-  border: 1px solid var(--color-dusty-rose);
-  background:
-    radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 0.6), transparent 55%),
-    linear-gradient(155deg, var(--color-blush) 0%, var(--color-background-soft) 60%, var(--color-white) 100%);
-  box-shadow: 0 24px 60px rgba(154, 89, 101, 0.16);
   overflow: visible;
 }
 

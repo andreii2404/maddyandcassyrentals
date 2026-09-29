@@ -1,5 +1,5 @@
 .reviews {
-  width: min(100% - 2.5rem, 1280px);
+  width: min(100% - 2.5rem, 1240px);
   min-width: 0;
   margin: 0 auto;
   overflow: hidden;

@@ -7,33 +7,39 @@ import styles from "./SiteFooter.module.css";
 
 const footerGroups = [
   {
-    title: "Rentals",
+    title: "Navigation",
     links: [
+      { href: "/", label: "Home" },
       { href: "/catalog", label: "Browse Catalog" },
+      { href: "/#about", label: "About" },
       { href: "/favorites", label: "Favorites" },
       { href: "/cart", label: "Rental Cart" },
-      { href: "/account/bookings", label: "My Bookings" },
-      { href: "/guest/bookings", label: "Track Guest Booking" },
     ],
   },
   {
-    title: "Rental Guide",
+    title: "Support",
     links: [
       { href: "/how-to-book", label: "How to Book" },
       { href: "/rental-requirements", label: "Requirements" },
-      { href: "/terms", label: "Terms & Conditions" },
       { href: "/faq", label: "FAQs" },
+      { href: "/guest/bookings", label: "Track Guest Booking" },
+      { href: "/contact", label: "Contact Us" },
     ],
   },
   {
-    title: "Company",
+    title: "Legal",
     links: [
-      { href: "/#about", label: "Our Story" },
-      { href: "/contact", label: "Contact Us" },
-      { href: "/privacy", label: "Privacy Notice" },
+      { href: "/terms", label: "Terms & Conditions" },
+      { href: "/privacy", label: "Privacy Policy" },
       { href: "/sign-in", label: "Customer Login" },
     ],
   },
+] as const;
+
+const socialLinks = [
+  { href: "https://www.tiktok.com/@iosrental.maddycassy", label: "TikTok", value: "@iosrental.maddycassy" },
+  { href: "https://www.facebook.com/share/19bCnTQZum/", label: "Facebook", value: "Rental by Maddy & Cassy" },
+  { href: "mailto:iosrentalbymaddycassy@gmail.com", label: "Email", value: "iosrentalbymaddycassy@gmail.com" },
 ] as const;
 
 function ArrowIcon() {
@@ -101,6 +107,20 @@ export default function SiteFooter() {
               ))}
             </div>
           ))}
+
+          <div className={styles.linkGroup}>
+            <h3>Social Media</h3>
+            {socialLinks.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                target={link.href.startsWith("http") ? "_blank" : undefined}
+                rel={link.href.startsWith("http") ? "noreferrer" : undefined}
+              >
+                {link.label}
+              </a>
+            ))}
+          </div>
         </nav>
       </div>
 

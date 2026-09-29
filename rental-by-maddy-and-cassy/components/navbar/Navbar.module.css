@@ -23,7 +23,7 @@
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: clamp(1.25rem, 2.5vw, 3rem);
-  width: min(100% - 2.5rem, 1380px);
+  width: min(100% - 2.5rem, 1240px);
   min-height: 68px;
   margin: 0 auto;
 }
@@ -318,8 +318,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 40px;
-  padding: 0.55rem 0.8rem;
+  /* Matches the 44px icon actions beside them so the whole row shares one baseline. */
+  min-height: 44px;
+  padding: 0.55rem 0.9rem;
   border-radius: 11px;
   font-size: 0.77rem;
   font-weight: 650;

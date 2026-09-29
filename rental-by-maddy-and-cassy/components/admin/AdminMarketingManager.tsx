@@ -46,6 +46,7 @@ export default function AdminMarketingManager() {
   const [promotions, setPromotions] = useState<PromotionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [rowError, setRowError] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -53,6 +54,7 @@ export default function AdminMarketingManager() {
   async function loadPromotions() {
     setLoading(true);
     setError(null);
+    setRowError(null);
     try {
       const response = await fetch("/api/admin/promotions");
       const body = await response.json();
@@ -104,6 +106,7 @@ export default function AdminMarketingManager() {
   }
 
   async function toggleActive(promotion: PromotionRow) {
+    setRowError(null);
     try {
       const response = await fetch(`/api/admin/promotions/${promotion.id}`, {
         method: "PATCH",
@@ -116,7 +119,7 @@ export default function AdminMarketingManager() {
       }
       await loadPromotions();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "The promotion could not be updated.");
+      setRowError(err instanceof Error ? err.message : "The promotion could not be updated.");
     }
   }
 
@@ -257,6 +260,19 @@ export default function AdminMarketingManager() {
           </form>
 
           <h2 className={styles.sectionHeading}>Active &amp; scheduled promotions</h2>
+          {rowError ? (
+            <div className={styles.rowError} role="alert">
+              <span>{rowError}</span>
+              <button
+                type="button"
+                className={styles.dismissButton}
+                onClick={() => setRowError(null)}
+                aria-label="Dismiss error"
+              >
+                Dismiss
+              </button>
+            </div>
+          ) : null}
           {loading ? (
             <p className={styles.loading}>Loading promotions…</p>
           ) : error ? (

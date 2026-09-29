@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import Navbar from "./Navbar";
 
 const ADMIN_PREFIX = "/admin";
-const ADMIN_EXCEPTIONS = ["/admin/sign-in"];
+const ADMIN_EXCEPTIONS = ["/admin/sign-in", "/admin/login"];
 
 export default function NavbarGate() {
   const pathname = usePathname();

@@ -33,7 +33,7 @@
 }
 
 .info {
-  padding: 0.7rem 0.8rem 0.8rem;
+  padding: 0.8rem;
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
