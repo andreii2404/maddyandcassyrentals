@@ -25,3 +25,29 @@ test("preview_promotion checks the date window before returning valid", () => {
 test("promotion_redemptions enforces one redemption per booking", () => {
   assert.match(sql, /constraint promotion_redemptions_booking_unique unique \(booking_id\)/);
 });
+
+test("redeem_promotion locks the booking row before checking eligibility", () => {
+  const redeemSql = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "../supabase/migrations/20260929091000_redeem_promotion.sql"),
+    "utf8",
+  );
+  assert.match(redeemSql, /where id = p_booking_id and customer_id = v_uid\s*\n\s*for update;/);
+  assert.match(redeemSql, /select \* into v_promo from public\.promotions where upper\(code\) = v_code for update;/);
+});
+
+test("redeem_promotion rejects guest checkouts and re-redemption", () => {
+  const redeemSql = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "../supabase/migrations/20260929091000_redeem_promotion.sql"),
+    "utf8",
+  );
+  assert.match(redeemSql, /GUEST_NOT_ELIGIBLE/);
+  assert.match(redeemSql, /PROMOTION_ALREADY_APPLIED/);
+});
+
+test("booking_totals subtracts the promotion discount from total_amount", () => {
+  const redeemSql = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "../supabase/migrations/20260929091000_redeem_promotion.sql"),
+    "utf8",
+  );
+  assert.match(redeemSql, /- b\.promotion_discount_amount,\s*\n\s*0::numeric/);
+});
