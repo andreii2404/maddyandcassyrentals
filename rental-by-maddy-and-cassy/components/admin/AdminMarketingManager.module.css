@@ -1,0 +1,301 @@
+.wrapper {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.heading {
+  margin: 0 0 0.85rem;
+  color: var(--color-text-primary);
+}
+
+/* Tab bar: mirrors the pill-row tab navigation used by AdminCatalogManager. */
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.2rem;
+  width: fit-content;
+  max-width: 100%;
+  margin-bottom: 1rem;
+  padding: 0.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-background-soft);
+}
+
+.tab,
+.tabActive {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-height: 40px;
+  padding: 0.45rem 0.9rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-charcoal);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 750;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease, transform 140ms ease;
+}
+
+.tab:hover {
+  background: var(--color-white);
+  color: var(--color-text-primary);
+}
+
+.tab:focus-visible,
+.tabActive:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-primary) 40%, transparent);
+  outline-offset: 1px;
+}
+
+.tabActive {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.tab:active,
+.tabActive:active {
+  transform: translateY(1px);
+}
+
+@media (max-width: 650px) {
+  .tabs {
+    width: 100%;
+  }
+
+  .tab,
+  .tabActive {
+    flex: 1 1 auto;
+    text-align: center;
+  }
+}
+
+/* Create-promotion form card, matching the catalog manager's control-panel card treatment. */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  margin-bottom: 1.5rem;
+  padding: 1.1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  background: var(--color-white);
+  box-shadow: 0 12px 32px rgba(36, 36, 36, 0.035);
+}
+
+.sectionHeading {
+  margin: 0 0 0.2rem;
+  color: var(--color-text-primary);
+  font-size: 1.08rem;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.9rem;
+}
+
+.form label,
+.fullWidth {
+  display: flex;
+  flex-direction: column;
+  gap: 0.32rem;
+  color: var(--color-charcoal);
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+.form input,
+.form select,
+.form textarea {
+  width: 100%;
+  padding: 0.62rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-white);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-weight: 400;
+}
+
+.form input:focus,
+.form select:focus,
+.form textarea:focus {
+  outline: 2px solid color-mix(in srgb, var(--color-primary) 30%, transparent);
+  border-color: var(--color-primary);
+}
+
+.fullWidth {
+  grid-column: 1 / -1;
+}
+
+.submitButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  min-height: var(--control-height);
+  padding: 0.55rem 1.1rem;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-control);
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 750;
+  cursor: pointer;
+  transition: background-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.submitButton:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+  box-shadow: 0 6px 16px rgba(154, 89, 101, 0.2);
+  transform: translateY(-1px);
+}
+
+.submitButton:active:not(:disabled) {
+  box-shadow: none;
+  transform: translateY(1px);
+}
+
+.submitButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (max-width: 650px) {
+  .submitButton {
+    align-self: stretch;
+    width: 100%;
+  }
+}
+
+/* Loading / empty / error states. */
+.loading,
+.empty {
+  display: grid;
+  min-height: 140px;
+  place-items: center;
+  padding: 1rem;
+  color: var(--color-charcoal);
+  text-align: center;
+}
+
+.error {
+  margin: 0 0 1rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--color-status-red-border);
+  border-radius: 12px;
+  background: var(--color-status-red-bg);
+  color: var(--color-status-red);
+  font-size: 0.82rem;
+}
+
+/* Promotions table: scrolls within its own container at narrow widths so the page
+   itself never forces horizontal scroll. */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-white);
+}
+
+.table th,
+.table td {
+  padding: 0.75rem 0.85rem;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-charcoal);
+  font-size: 0.72rem;
+  text-align: left;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.table th {
+  background: var(--color-background);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table td:nth-child(2) {
+  white-space: normal;
+}
+
+.linkButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--color-dusty-rose);
+  border-radius: var(--radius-control);
+  background: var(--color-white);
+  color: var(--color-primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
+}
+
+.linkButton:hover {
+  border-color: var(--color-primary);
+  background: var(--color-background-soft);
+  transform: translateY(-1px);
+}
+
+.linkButton:active {
+  transform: translateY(1px);
+}
+
+/* Status pills, following the same convention as .statusTag in catalog.module.css
+   (green for good/active, yellow for pending/upcoming, neutral gray for anything
+   no longer relevant). No blue token exists in the site palette, so "scheduled"
+   reuses the existing yellow "upcoming" treatment instead of inventing a new color. */
+.status_active,
+.status_scheduled,
+.status_expired,
+.status_inactive {
+  display: inline-flex;
+  padding: 0.22rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 750;
+  line-height: 1.2;
+  text-transform: capitalize;
+}
+
+.status_active {
+  background: var(--color-status-green-bg);
+  color: var(--color-status-green);
+}
+
+.status_scheduled {
+  background: var(--color-status-yellow-bg);
+  color: var(--color-status-yellow);
+}
+
+.status_expired,
+.status_inactive {
+  background: var(--color-background-soft);
+  color: var(--color-charcoal);
+}
+
+/* Mobile: the table scrolls within its own bordered container rather than the page. */
+@media (max-width: 760px) {
+  .table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}

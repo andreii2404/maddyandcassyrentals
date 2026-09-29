@@ -26,6 +26,10 @@ const navSections = [
     ],
   },
   {
+    title: "Marketing",
+    items: [{ href: "/admin/marketing", label: "Promotions & Marketing" }],
+  },
+  {
     title: "Customer Management",
     items: [
       { href: "/admin/messages", label: "Messages" },
