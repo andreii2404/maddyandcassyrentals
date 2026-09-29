@@ -212,6 +212,8 @@
   border-color: var(--color-primary);
 }
 
+.phaseEyebrow { margin: 0; color: var(--color-primary); font-size: .66rem; font-weight: 800; letter-spacing: .1em; }
+
 .expandButton:active {
   transform: translateY(1px);
 }

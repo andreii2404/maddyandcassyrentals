@@ -248,10 +248,11 @@ export default function StepRequirements({
 
   return (
     <div className={styles.wrapper}>
+      <p className={styles.phaseEyebrow}>PHASE 2 · VERIFICATION</p>
       <h2 className={styles.heading}>Verification Document Submission</h2>
       <p className={styles.subheading}>
         Your reservation payment proof has been submitted and is pending admin verification. Now
-        submit the documents needed to verify the renter. Accepted valid IDs: {ACCEPTED_ID_EXAMPLES}.
+        submit the documents needed to verify the renter. You can complete this phase now and return later if needed. Accepted valid IDs: {ACCEPTED_ID_EXAMPLES}.
         At least one ID must show your current address and signature.
       </p>
 
@@ -476,7 +477,7 @@ export default function StepRequirements({
 
       <ReservationFooter
         onBack={onBack}
-        primaryLabel="Continue"
+        primaryLabel="Continue to agreement"
         onContinue={handleContinue}
       />
     </div>

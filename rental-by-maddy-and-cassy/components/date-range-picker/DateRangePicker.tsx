@@ -3,7 +3,6 @@
 import { useState } from "react";
 import {
   addMonths,
-  differenceInCalendarDays,
   eachDayOfInterval,
   endOfMonth,
   format,
@@ -20,6 +19,7 @@ import ArrowLeftIcon from "@/components/icons/ArrowLeftIcon";
 import { toDateKey } from "@/src/services/availabilityService";
 import styles from "./DateRangePicker.module.css";
 import { Button } from "@/components/ui/Button";
+import { selectRentalDateRange } from "@/src/lib/rentalDateSelection";
 
 interface DateRangePickerProps {
   startDate: Date | null;
@@ -70,9 +70,11 @@ export default function DateRangePicker({
   }
 
   function handleDayClick(day: Date) {
-    if (isDisabled(day)) return;
-
     if (singleDate) {
+      // A saved date may subsequently become unavailable. Keep it clickable
+      // only so the customer can clear it; unavailable dates cannot be newly
+      // selected.
+      if (isDisabled(day) && (!startDate || !isSameDay(day, startDate))) return;
       setError(null);
       const isSelectingCurrentDay = !!startDate && isSameDay(day, startDate);
       onChange(
@@ -83,39 +85,15 @@ export default function DateRangePicker({
       return;
     }
 
-    // A first click is already a valid one-day rental.
-    if (!startDate || !endDate || !isSameDay(startDate, endDate)) {
-      setError(null);
-      onChange({ startDate: day, endDate: day });
-      return;
-    }
-
-    if (isSameDay(day, startDate)) {
-      setError(null);
-      onChange({ startDate: null, endDate: null });
-      return;
-    }
-
-    if (isBefore(day, startDate)) {
-      setError(null);
-      onChange({ startDate: day, endDate: day });
-      return;
-    }
-
-    const daySpan = differenceInCalendarDays(day, startDate) + 1;
-    if (daySpan > maxRentalDays) {
-      setError(`Maximum rental period is ${maxRentalDays} days.`);
-      return;
-    }
-
-    const blockedDate = eachDayOfInterval({ start: startDate, end: day }).find(isDisabled);
-    if (blockedDate) {
-      setError("That range includes an unavailable date. Please choose another end date.");
-      return;
-    }
-
-    setError(null);
-    onChange({ startDate, endDate: day });
+    const result = selectRentalDateRange({
+      startDate,
+      endDate,
+      selectedDate: day,
+      isDisabled,
+      maxRentalDays,
+    });
+    setError(result.error);
+    if (!result.error) onChange(result.range);
   }
 
   const selectionEnd = endDate ?? startDate;
@@ -183,7 +161,7 @@ export default function DateRangePicker({
               key={day.toISOString()}
               type="button"
               role="gridcell"
-              disabled={disabled}
+              disabled={disabled && !selected}
               aria-current={selected ? "date" : undefined}
               aria-selected={selected}
               data-selected={selected ? "true" : undefined}

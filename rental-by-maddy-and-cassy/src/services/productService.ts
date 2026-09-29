@@ -2,6 +2,7 @@ import { createPublicClient } from "@/src/lib/supabase/public";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Tables } from "@/src/lib/supabase/database.types";
 import type { Product, ProductReview, ProductVariantAvailability } from "@/types/product";
+import { getProductColorOptions } from "@/src/lib/productVariantOptions";
 
 type ProductRow = Tables<"products"> & {
   product_images: Tables<"product_images">[] | null;
@@ -121,12 +122,10 @@ async function mapProduct(
     discountPercent: discountPercentText,
     discountLabel,
     colors: colorsText,
+    Color: legacyColorText,
     ...displaySpecifications
   } = specifications;
-  const colorOptions = (colorsText ?? "")
-    .split(",")
-    .map((color) => color.trim())
-    .filter(Boolean);
+  const colorOptions = getProductColorOptions({ colors: colorsText, Color: legacyColorText });
   const included = includedText
     ? includedText.split(",").map((item) => item.trim()).filter(Boolean)
     : [];

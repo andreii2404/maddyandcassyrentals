@@ -20,7 +20,7 @@ export default function StepBookingConfirmation({
       <div className={styles.success}>
         {isDemo
           ? "Demo flow completed. No real payment was processed."
-          : "Your reservation is secured and your booking information has been submitted successfully."}
+          : "Your reservation request and required customer information have been submitted successfully."}
       </div>
       <p className={sharedStyles.subheading}>
         Booking {bookingNumber} is now with the team for document verification. Once approved,

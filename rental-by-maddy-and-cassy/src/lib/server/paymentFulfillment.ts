@@ -6,6 +6,8 @@ import { toJson } from "@/src/lib/supabase/types";
 import { getBookingById } from "@/src/services/bookingService";
 import { bookingTrackingPath } from "@/src/lib/bookingAccess";
 import { canAutoConfirmAfterPayment } from "@/src/lib/autoConfirm";
+import { sendPaymentVerifiedEmail } from "@/src/lib/server/bookingStatusEmail";
+import { resolveBookingRecipientEmail } from "@/src/lib/server/bookingRecipient";
 import {
   generateAndSaveFinalAgreement,
   generateAndSaveReceipt,
@@ -25,6 +27,7 @@ export interface FulfillPaymentInput {
   providerEventId?: string;
   reviewedBy?: string;
   reviewerName?: string;
+  origin: string;
 }
 
 export interface FulfillPaymentResult {
@@ -182,6 +185,34 @@ export async function fulfillVerifiedPayment(
   });
   if (notificationError) {
     console.error("Verified payment notification failed", { bookingId: booking.id, paymentId: payment.id, error: notificationError });
+  }
+
+  const currentBooking = (await getBookingById(admin, booking.id)) ?? booking;
+  try {
+    const customerEmail = await resolveBookingRecipientEmail(admin, currentBooking);
+    const emailResult = await sendPaymentVerifiedEmail({
+      bookingId: currentBooking.id,
+      paymentId: payment.id,
+      bookingReference: currentBooking.bookingRef,
+      customerName: currentBooking.customerSnapshot.fullName,
+      customerEmail,
+      bookingUrl: `${input.origin}${bookingTrackingPath(currentBooking.id, currentBooking.isGuestCheckout)}#booking-documents`,
+      requirementsStatus: currentBooking.requirementsStatus,
+    });
+    if (!emailResult.sent) {
+      console.error("Payment verification email was not sent", {
+        bookingId: currentBooking.id,
+        paymentId: payment.id,
+        recipient: customerEmail,
+        reason: emailResult.reason,
+      });
+    }
+  } catch (error) {
+    console.error("Payment verification email trigger failed", {
+      bookingId: currentBooking.id,
+      paymentId: payment.id,
+      error,
+    });
   }
 
   let bookingConfirmed = false;

@@ -79,6 +79,9 @@
   line-height: 1.2;
 }
 
+.phaseStatus { color: var(--color-charcoal); font-size: 0.6rem; line-height: 1.15; }
+.current .phaseStatus { color: var(--color-primary); font-weight: 700; }
+
 .current .label {
   color: var(--color-primary);
 }
@@ -113,6 +116,8 @@
   .label {
     display: none;
   }
+
+  .phaseStatus { display: none; }
 
   .step {
     gap: 0;

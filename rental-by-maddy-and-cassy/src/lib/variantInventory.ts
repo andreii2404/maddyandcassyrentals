@@ -28,6 +28,10 @@ export function getVariantQuantityLimit(
   return Math.max(0, findVariantAvailability(product, selectedVariant)?.totalUnits ?? 0);
 }
 
+export function clampQuantityToInventory(quantity: number, limit: number): number {
+  return Math.min(Math.max(1, quantity), Math.max(1, limit));
+}
+
 export function isVariantSelectable(
   product: Pick<Product, "colorOptions" | "variantAvailability" | "totalUnits">,
   selectedVariant?: string | null,

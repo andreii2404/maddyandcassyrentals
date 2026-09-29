@@ -7,6 +7,7 @@ export interface SupabaseEmailFunctionConfig {
 export const DEFAULT_SUPABASE_EMAIL_FUNCTION_NAME = "send-booking-emails";
 
 export interface EmailFunctionMessage {
+  eventKey?: string;
   to: string;
   subject: string;
   html: string;
@@ -23,6 +24,7 @@ export function buildSupabaseEmailRequest(
       method: "POST",
       headers: {
         apikey: config.serviceKey,
+        Authorization: `Bearer ${config.serviceKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(message),

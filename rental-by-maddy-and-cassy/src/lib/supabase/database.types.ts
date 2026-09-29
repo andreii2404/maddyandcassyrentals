@@ -2796,7 +2796,7 @@ export type Database = {
           p_province?: string
           p_quantity?: number
           p_rental_days?: number
-          p_variant?: string
+          p_variant?: string | null
         }
         Returns: Database["public"]["Tables"]["bookings"]["Row"]
       }

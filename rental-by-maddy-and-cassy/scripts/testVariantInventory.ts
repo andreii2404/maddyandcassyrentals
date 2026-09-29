@@ -1,10 +1,19 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import type { Product } from "../types/product";
 
 async function loadVariantInventory() {
   try {
     return await import("../src/lib/variantInventory");
+  } catch {
+    return null;
+  }
+}
+
+async function loadProductVariantOptions() {
+  try {
+    return await import("../src/lib/productVariantOptions");
   } catch {
     return null;
   }
@@ -92,4 +101,25 @@ test("a product without variants keeps its existing aggregate stock limit", asyn
     availableUnits: 4,
   });
   assert.equal(inventory.getVariantQuantityLimit(product, undefined), 4);
+});
+
+test("restored quantities are capped by the current inventory limit", async () => {
+  const inventory = await loadVariantInventory();
+  assert.ok(inventory, "variant inventory module should exist");
+  assert.equal(inventory.clampQuantityToInventory(3, 1), 1);
+  assert.equal(inventory.clampQuantityToInventory(1, 4), 1);
+});
+
+test("legacy singular Color metadata is treated as one selectable variant", async () => {
+  const options = await loadProductVariantOptions();
+  assert.ok(options, "product variant options module should exist");
+  assert.deepEqual(options.getProductColorOptions({ Color: "White", Storage: "128 GB" }), ["White"]);
+});
+
+test("single-item booking RPC treats an empty variant as null", () => {
+  const migration = readFileSync(
+    new URL("../supabase/migrations/20260928125210_fix_non_variant_single_booking_wrapper.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(migration, /v_variant\s*:=\s*nullif\(trim\(v_variant\),\s*''\)/);
 });

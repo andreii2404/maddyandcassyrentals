@@ -16,6 +16,7 @@ import StepCartPaymentSubmission, {
   type BookingPaymentState,
 } from "@/components/reservation/StepCartPaymentSubmission";
 import StepBookingConfirmation from "@/components/reservation/StepBookingConfirmation";
+import PhaseHandoff from "@/components/reservation/PhaseHandoff";
 import { useToast } from "@/components/ui/ToastProvider";
 import { friendlyMessage } from "@/src/lib/friendlyMessage";
 import { createEmptyDraft, formatCustomerLocation, getDayCount, parseCustomerAddress, type ReservationDraft } from "@/src/types/reservationDraft";
@@ -43,6 +44,10 @@ import type { RewardProgress } from "@/src/lib/promotions";
 import { manilaTimeInputValue } from "@/src/lib/rentalTiming";
 import styles from "../catalog/[id]/reserve/reserve.module.css";
 import { getVariantQuantityLimit } from "@/src/lib/variantInventory";
+import {
+  shouldShowPaymentHandoff,
+  shouldShowPaymentSubmission,
+} from "@/src/lib/reservationSubmissionUi";
 
 const STEP_LABELS = [
   "Rental Details",
@@ -84,6 +89,7 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
   const [openingPayment, setOpeningPayment] = useState(false);
   const [checkingPayment, setCheckingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [showPaymentHandoff, setShowPaymentHandoff] = useState(false);
   const [submittingDocuments, setSubmittingDocuments] = useState(false);
   const documentSubmissionInFlightRef = useRef(false);
   const [prefilled, setPrefilled] = useState(false);
@@ -116,11 +122,11 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
     }
     const restored = restoreReservationProgress(rawProgress);
     if (restored) {
-      const hasSubmittedPayment = restored.paymentState !== "unpaid";
+      const hasSubmittedPayment = shouldShowPaymentHandoff(restored.bookingId, restored.paymentState);
       const safeStep = !restored.bookingId
         ? Math.min(restored.step, 3)
         : hasSubmittedPayment
-          ? Math.min(restored.step, 4)
+          ? 3
           : Math.min(restored.step, 3);
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setDraft(restored.draft);
@@ -128,6 +134,7 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
       setBookingId(restored.bookingId);
       setBookingNumber(restored.bookingNumber);
       setPaymentState(restored.paymentState);
+      setShowPaymentHandoff(hasSubmittedPayment);
       setIsDemoPayment(restored.isDemoPayment);
       setLastSavedAt(new Date(restored.savedAt));
       setProgressRestored(true);
@@ -234,6 +241,7 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
     async function refreshBooking() {
       setBookingId(activeBookingId);
       setStep(3);
+      setShowPaymentHandoff(false);
       setCheckingPayment(true);
 
       let resumeState;
@@ -268,6 +276,7 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
       setBookingId(booking.id);
       setBookingNumber(booking.bookingRef);
       setPaymentState(resumeState.paymentState);
+      setShowPaymentHandoff(shouldShowPaymentHandoff(booking.id, resumeState.paymentState));
       setIsDemoPayment(resumeState.isDemoPayment);
       setDraft((current) => ({
         ...current,
@@ -388,7 +397,7 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
         });
         setPaymentState("pending");
       }
-      goToStep(4);
+      setShowPaymentHandoff(true);
     } catch (error) {
       setPaymentError(
         friendlyMessage(
@@ -590,7 +599,7 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
           />
         ) : null}
 
-        {step === 3 ? (
+        {shouldShowPaymentSubmission(step, showPaymentHandoff) ? (
           <StepCartPaymentSubmission
             pricing={pricing}
             currency={currency}
@@ -610,7 +619,11 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
           />
         ) : null}
 
-        {step === 4 ? (
+        {step === 3 && showPaymentHandoff ? (
+          <PhaseHandoff phase={1} bookingNumber={bookingNumber} isGuest={isGuest} onContinue={() => { setShowPaymentHandoff(false); goToStep(4); }} />
+        ) : null}
+
+        {step === 4 && !showPaymentHandoff ? (
           <StepRequirements
             requirements={draft.requirements}
             onUpdate={(patch) =>

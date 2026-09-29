@@ -113,6 +113,7 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
   const searchParams = useSearchParams();
   const justSubmitted = searchParams.get("justSubmitted") === "1";
   const justRecovered = searchParams.get("recovered") === "1";
+  const resubmitPayment = searchParams.get("resubmitPayment") === "1";
 
   const [details, setDetails] = useState<BookingDetails | null | "error">(null);
   const [activePanel, setActivePanel] = useState<BookingPanel>("overview");
@@ -488,7 +489,12 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
         </div>
 
         <aside className={styles.paymentColumn}>
-          <BookingPaymentPanel booking={booking} payments={payments} onPaymentUpdated={loadDetails} />
+          <BookingPaymentPanel
+            booking={booking}
+            payments={payments}
+            onPaymentUpdated={loadDetails}
+            autoOpenResubmission={resubmitPayment}
+          />
         </aside>
       </div>
 

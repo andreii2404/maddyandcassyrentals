@@ -15,7 +15,7 @@ export default function StatsMarquee({ items }: StatsMarqueeProps) {
         <div className={styles.group}>
           {items.map((item, index) => (
             <span key={index} className={styles.item}>
-              <span className={styles.mark} aria-hidden="true">//</span>
+              <span className={styles.mark} aria-hidden="true">{"//"}</span>
               {item}
             </span>
           ))}
@@ -23,7 +23,7 @@ export default function StatsMarquee({ items }: StatsMarqueeProps) {
         <div className={styles.group} aria-hidden="true">
           {items.map((item, index) => (
             <span key={index} className={styles.item}>
-              <span className={styles.mark} aria-hidden="true">//</span>
+              <span className={styles.mark} aria-hidden="true">{"//"}</span>
               {item}
             </span>
           ))}

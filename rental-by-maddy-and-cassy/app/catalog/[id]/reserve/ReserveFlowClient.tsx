@@ -17,6 +17,7 @@ import StepPaymentSubmission, {
   type BookingPaymentState,
 } from "@/components/reservation/StepPaymentSubmission";
 import StepBookingConfirmation from "@/components/reservation/StepBookingConfirmation";
+import PhaseHandoff from "@/components/reservation/PhaseHandoff";
 import { useToast } from "@/components/ui/ToastProvider";
 import { friendlyMessage } from "@/src/lib/friendlyMessage";
 import { createEmptyDraft, formatCustomerLocation, getDayCount, parseCustomerAddress, type ReservationDraft } from "@/src/types/reservationDraft";
@@ -43,7 +44,11 @@ import {
 import type { RewardProgress } from "@/src/lib/promotions";
 import { manilaTimeInputValue } from "@/src/lib/rentalTiming";
 import styles from "./reserve.module.css";
-import { getVariantQuantityLimit } from "@/src/lib/variantInventory";
+import { clampQuantityToInventory, getVariantQuantityLimit } from "@/src/lib/variantInventory";
+import {
+  shouldShowPaymentHandoff,
+  shouldShowPaymentSubmission,
+} from "@/src/lib/reservationSubmissionUi";
 
 const STEP_LABELS = [
   "Rental Details",
@@ -73,6 +78,7 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
   const [openingPayment, setOpeningPayment] = useState(false);
   const [checkingPayment, setCheckingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [showPaymentHandoff, setShowPaymentHandoff] = useState(false);
   const [receiptReady, setReceiptReady] = useState(false);
   const [submittingDocuments, setSubmittingDocuments] = useState(false);
   // React state updates (and therefore the disabled button) land a render
@@ -115,13 +121,13 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
       // Any non-"unpaid" state means the customer already submitted payment
       // details/proof in Step 3 -- admin verification happens later and
       // should not force them back through payment submission again.
-      const hasSubmittedPayment = restored.paymentState !== "unpaid";
+      const hasSubmittedPayment = shouldShowPaymentHandoff(restored.bookingId, restored.paymentState);
       // Verification files and signature images are intentionally never saved
       // to localStorage. Return to the document step when those files are needed.
       const safeStep = !restored.bookingId
         ? Math.min(restored.step, 3)
         : hasSubmittedPayment
-          ? Math.min(restored.step, 4)
+          ? 3
           : Math.min(restored.step, 3);
       // One-time hydration from the browser-owned draft backup.
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -130,12 +136,24 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
       setBookingId(restored.bookingId);
       setBookingNumber(restored.bookingNumber);
       setPaymentState(restored.paymentState);
+      setShowPaymentHandoff(hasSubmittedPayment);
       setIsDemoPayment(restored.isDemoPayment);
       setLastSavedAt(new Date(restored.savedAt));
       setProgressRestored(true);
     }
     setProgressHydrated(true);
   }, [progressKey]);
+
+  useEffect(() => {
+    if (!progressHydrated) return;
+    const currentLimit = Math.min(getVariantQuantityLimit(product, bookingColor), units.totalUnits);
+    const safeQuantity = clampQuantityToInventory(draft.quantity, currentLimit);
+    if (safeQuantity === draft.quantity) return;
+    // A saved draft can outlive an inventory change. Keep the current form
+    // aligned with the live product limit before the booking RPC is called.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setDraft((current) => current.quantity === safeQuantity ? current : { ...current, quantity: safeQuantity });
+  }, [bookingColor, draft.quantity, product, progressHydrated, units.totalUnits]);
 
   useEffect(() => {
     if (!progressHydrated || prefilled || !user) return;
@@ -253,6 +271,7 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
       // browser draft show Rental Details while the booking loads.
       setBookingId(activeBookingId);
       setStep(3);
+      setShowPaymentHandoff(false);
       setCheckingPayment(true);
 
       let resumeState;
@@ -280,6 +299,7 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
       setBookingId(booking.id);
       setBookingNumber(booking.bookingRef);
       setPaymentState(resumeState.paymentState);
+      setShowPaymentHandoff(shouldShowPaymentHandoff(booking.id, resumeState.paymentState));
       setIsDemoPayment(resumeState.isDemoPayment);
       setReceiptReady(resumeState.receiptReady);
       setDraft((current) => ({
@@ -397,7 +417,7 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
         });
         setPaymentState("pending");
       }
-      goToStep(4);
+      setShowPaymentHandoff(true);
     } catch (error) {
       setPaymentError(
         friendlyMessage(
@@ -603,7 +623,7 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
           />
         ) : null}
 
-        {step === 3 ? (
+        {shouldShowPaymentSubmission(step, showPaymentHandoff) ? (
           <StepPaymentSubmission
             product={product}
             draft={draft}
@@ -626,7 +646,11 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
           />
         ) : null}
 
-        {step === 4 ? (
+        {step === 3 && showPaymentHandoff ? (
+          <PhaseHandoff phase={1} bookingNumber={bookingNumber} isGuest={isGuest} onContinue={() => { setShowPaymentHandoff(false); goToStep(4); }} />
+        ) : null}
+
+        {step === 4 && !showPaymentHandoff ? (
           <StepRequirements
             requirements={draft.requirements}
             onUpdate={(patch) =>

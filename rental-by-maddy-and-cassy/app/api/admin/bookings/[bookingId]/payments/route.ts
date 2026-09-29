@@ -4,6 +4,8 @@ import { createAdminClient } from "@/src/lib/supabase/admin";
 import { fulfillVerifiedPayment } from "@/src/lib/server/paymentFulfillment";
 import { getBookingById } from "@/src/services/bookingService";
 import { bookingTrackingPath } from "@/src/lib/bookingAccess";
+import { sendPaymentRejectionEmail } from "@/src/lib/server/bookingStatusEmail";
+import { resolveBookingRecipientEmail } from "@/src/lib/server/bookingRecipient";
 
 export const runtime = "nodejs";
 
@@ -78,6 +80,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
       paymentMethod: method,
       providerMetadata: { channel: "in_person", recordedBy: user.id, notes },
       reviewedBy: user.id,
+      origin: new URL(request.url).origin,
     });
     await admin.from("booking_status_history").insert({
       booking_id: bookingId,
@@ -155,6 +158,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
         providerMetadata: { manualReview: true, reviewedBy: user.id },
         reviewedBy: user.id,
         reviewerName,
+        origin: new URL(request.url).origin,
       });
 
       const booking = await getBookingById(admin, bookingId);
@@ -206,6 +210,35 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
           message: reason,
           action_url: bookingTrackingPath(bookingId, booking.isGuestCheckout),
         });
+      }
+
+      if (booking) {
+        try {
+          const customerEmail = await resolveBookingRecipientEmail(admin, booking);
+          const emailResult = await sendPaymentRejectionEmail({
+            bookingId: booking.id,
+            paymentId,
+            bookingReference: booking.bookingRef,
+            customerName: booking.customerSnapshot.fullName,
+            customerEmail,
+            rejectionReason: reason,
+            bookingUrl: `${new URL(request.url).origin}/account/bookings/${encodeURIComponent(booking.id)}?resubmitPayment=1#booking-payment`,
+          });
+          if (!emailResult.sent) {
+            console.error("Payment rejection email was not sent", {
+              bookingId: booking.id,
+              paymentId,
+              recipient: customerEmail,
+              reason: emailResult.reason,
+            });
+          }
+        } catch (error) {
+          console.error("Payment rejection email trigger failed", {
+            bookingId: booking.id,
+            paymentId,
+            error,
+          });
+        }
       }
 
       await admin.rpc("log_audit_event", {
