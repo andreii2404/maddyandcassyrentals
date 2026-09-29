@@ -103,7 +103,8 @@ begin
 
   perform private.log_audit_event(
     'promotion.redeemed', 'booking', v_booking.id::text, v_booking.id,
-    null, jsonb_build_object('promotionId', v_promo.id, 'code', v_promo.code, 'discount', v_discount),
+    null, null,
+    jsonb_build_object('promotionId', v_promo.id, 'code', v_promo.code, 'discount', v_discount),
     'user'
   );
 
