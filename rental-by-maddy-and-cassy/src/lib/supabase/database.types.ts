@@ -1262,6 +1262,9 @@ export type Database = {
           pay_later_allowed_by: string | null
           pay_later_note: string | null
           pickup_at: string
+          promotion_code_snapshot: string | null
+          promotion_discount_amount: number
+          promotion_id: string | null
           ready_for_release_at: string | null
           rejected_at: string | null
           released_at: string | null
@@ -1301,6 +1304,9 @@ export type Database = {
           pay_later_allowed_by?: string | null
           pay_later_note?: string | null
           pickup_at: string
+          promotion_code_snapshot?: string | null
+          promotion_discount_amount?: number
+          promotion_id?: string | null
           ready_for_release_at?: string | null
           rejected_at?: string | null
           released_at?: string | null
@@ -1340,6 +1346,9 @@ export type Database = {
           pay_later_allowed_by?: string | null
           pay_later_note?: string | null
           pickup_at?: string
+          promotion_code_snapshot?: string | null
+          promotion_discount_amount?: number
+          promotion_id?: string | null
           ready_for_release_at?: string | null
           rejected_at?: string | null
           released_at?: string | null
@@ -2249,6 +2258,8 @@ export type Database = {
           delivery_fee: number | null
           pickup_convenience_fee: number | null
           deposit_total: number | null
+          promotion_code: string | null
+          promotion_discount_amount: number | null
           rental_days: number | null
           rental_subtotal: number | null
           special_discount_total: number | null
@@ -2258,6 +2269,10 @@ export type Database = {
       }
     }
     Functions: {
+      redeem_promotion: {
+        Args: { p_booking_id: string; p_code: string }
+        Returns: number
+      }
       preview_promotion: {
         Args: { p_code: string; p_subtotal: number }
         Returns: {
