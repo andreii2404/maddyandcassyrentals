@@ -88,7 +88,7 @@
 
 .guestNotice strong { font-size: 0.8rem; }
 .guestNotice span { color: var(--color-charcoal); font-size: 0.72rem; }
-.guestNotice a { color: var(--color-primary); font-size: 0.76rem; font-weight: 700; white-space: nowrap; }
+.guestNotice a { color: var(--color-primary); font-size: 0.76rem; font-weight: 700; text-decoration: none; white-space: nowrap; }
 
 .errorBanner {
   border: 1px solid var(--color-danger-border);
@@ -278,6 +278,16 @@
   background: rgba(154, 89, 101, 0.08);
   color: #6c6262;
   font-size: 0.64rem;
+  text-align: center;
+}
+
+.replyNotice {
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+  border-top: 1px solid var(--color-light-gray);
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--color-charcoal);
+  font-size: 0.7rem;
   text-align: center;
 }
 

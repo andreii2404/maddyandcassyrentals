@@ -20,7 +20,7 @@ export default function FAQPage() {
         title="Frequently Asked Questions"
         introduction="Find quick answers to the most common questions about booking, payments, deposits, extensions, returns, and equipment care."
         sections={sections}
-        layout="stack"
+        layout="accordion"
         notice="For a question specific to your booking, contact the team through the official Contact page."
       />
     </div>

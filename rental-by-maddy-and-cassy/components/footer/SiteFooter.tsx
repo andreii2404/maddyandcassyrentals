@@ -42,14 +42,6 @@ const socialLinks = [
   { href: "mailto:iosrentalbymaddycassy@gmail.com", label: "Email", value: "iosrentalbymaddycassy@gmail.com" },
 ] as const;
 
-function ArrowIcon() {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true">
-      <path d="M4 10h11M11 6l4 4-4 4" />
-    </svg>
-  );
-}
-
 export default function SiteFooter() {
   const pathname = usePathname();
 
@@ -59,17 +51,20 @@ export default function SiteFooter() {
     pathname === "/messages"
   ) return null;
 
+  // Keep the CTA low-key where it would otherwise compete with the page's own primary action.
+  const compact = pathname === "/contact";
+
   return (
-    <footer className={styles.footer}>
+    <footer className={compact ? `${styles.footer} ${styles.compact}` : styles.footer}>
       <div className={styles.ctaWrap}>
         <div className={styles.cta}>
-          <div>
+          <div className={styles.ctaCopy}>
             <span>YOUR NEXT MEMORY STARTS HERE</span>
             <h2>Premium gear, ready when your plans are.</h2>
             <p>Browse the live catalog, choose your dates, and complete one clear booking process.</p>
           </div>
           <Link href="/catalog" className={styles.ctaLink}>
-            Browse rentals <ArrowIcon />
+            Browse rentals
           </Link>
         </div>
       </div>

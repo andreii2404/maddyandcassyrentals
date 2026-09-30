@@ -14,7 +14,7 @@ interface GuidePageProps {
   title: string;
   introduction: string;
   sections: GuideSection[];
-  layout?: "grid" | "stack";
+  layout?: "grid" | "stack" | "accordion";
   notice?: string;
   showRelated?: boolean;
 }
@@ -35,16 +35,37 @@ export default function GuidePage({
   notice,
   showRelated = true,
 }: GuidePageProps) {
+  const isAccordion = layout === "accordion";
+
   return (
-    <main className={styles.main}>
-      <header className={styles.header}>
+    <main className={`${styles.main} ${isAccordion ? styles.mainCompact : ""}`}>
+      <header className={`${styles.header} ${isAccordion ? styles.headerCentered : ""}`}>
         <p className={styles.eyebrow}>{eyebrow}</p>
         <h1>{title}</h1>
         <p className={styles.introduction}>{introduction}</p>
       </header>
 
-      {notice ? <aside className={styles.notice}>{notice}</aside> : null}
+      {notice ? (
+        <aside className={`${styles.notice} ${isAccordion ? styles.noticeQuiet : ""}`}>{notice}</aside>
+      ) : null}
 
+      {isAccordion ? (
+        <section className={styles.accordion} aria-label={title}>
+          {sections.map((section, index) => (
+            <details key={section.title} className={styles.accordionItem} open={index === 0}>
+              <summary>
+                <h2>{section.title}</h2>
+                <span className={styles.accordionToggle} aria-hidden="true" />
+              </summary>
+              <div className={styles.accordionBody}>
+                {section.paragraphs?.map((paragraph) => (
+                  <p key={paragraph}>{paragraph}</p>
+                ))}
+              </div>
+            </details>
+          ))}
+        </section>
+      ) : (
       <section
         className={`${styles.sections} ${
           layout === "stack" ? styles.stack : styles.grid
@@ -81,9 +102,13 @@ export default function GuidePage({
           </article>
         ))}
       </section>
+      )}
 
       {showRelated ? (
-        <nav className={styles.related} aria-label="Rental guide pages">
+        <nav
+          className={`${styles.related} ${isAccordion ? styles.relatedQuiet : ""}`}
+          aria-label="Rental guide pages"
+        >
           <p>Continue through the rental guide</p>
           <div>
             {guideLinks.map((item) => (

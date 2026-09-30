@@ -7,10 +7,8 @@ import StatsMarquee from "@/components/stats-marquee/StatsMarquee";
 import BrandStrip from "@/components/brand-strip/BrandStrip";
 import RentalOptions from "@/components/rental-options/RentalOptions";
 import Gallery, { type GalleryPhoto } from "@/components/gallery/Gallery";
-import FaqPreview from "@/components/faq-preview/FaqPreview";
 import Reveal from "@/components/ui/Reveal";
 import { getActiveProducts } from "@/src/services/productService";
-import { faqItems } from "@/src/data/faq";
 import type { Product } from "@/types/product";
 import styles from "./page.module.css";
 
@@ -325,59 +323,54 @@ export default async function Home() {
           ) : null}
 
           <div className={styles.aboutBody}>
-          <div className={styles.foundersGrid} aria-label="Founders">
-            <article className={styles.founderCard}>
-              <div className={styles.founderTopline}>
-                <span className={styles.founderAvatar} aria-hidden="true">KC</span>
-                <span className={styles.founderRole}>Owner &amp; Founder</span>
-              </div>
-              <h3>Kyla Concepcion</h3>
-              <span className={styles.founderPet}>Maddy’s person</span>
-              <p>
-                Kyla built Rental by Maddy &amp; Cassy from an idea into a working
-                business, drawing on her love of traveling and attending concerts
-                to shape a service that helps others hold onto their favorite moments.
-              </p>
-            </article>
+            <p className={styles.storyKicker}>The people behind it</p>
+            <div className={styles.founderDuo} aria-label="Founders">
+              <article className={styles.founder}>
+                <div className={styles.founderTopline}>
+                  <span className={styles.founderAvatar} aria-hidden="true">KC</span>
+                  <span className={styles.founderRole}>Owner &amp; Founder</span>
+                </div>
+                <h3>Kyla Concepcion</h3>
+                <span className={styles.founderPet}>Maddy’s person</span>
+                <p>
+                  Kyla built Rental by Maddy &amp; Cassy from an idea into a working
+                  business, drawing on her love of traveling and attending concerts
+                  to shape a service that helps others hold onto their favorite moments.
+                </p>
+              </article>
 
-            <article className={styles.founderCard}>
-              <div className={styles.founderTopline}>
-                <span className={styles.founderAvatar} aria-hidden="true">KR</span>
-                <span className={styles.founderRole}>Co-Owner</span>
-              </div>
-              <h3>Kim Antonette Repalda</h3>
-              <span className={styles.founderPet}>Cassy’s person</span>
-              <p>
-                Kim is Kyla&apos;s best friend and co-owner, working alongside her
-                to research the rental industry and put in place the policies and
-                processes that keep every booking clear and secure.
-              </p>
-            </article>
-          </div>
+              <span className={styles.founderAmpersand} aria-hidden="true">&amp;</span>
 
-          <div className={styles.storyGrid}>
-            <details className={styles.storyBlock} open>
-              <summary>
-                <span className={styles.storyNumber}>01</span>
+              <article className={styles.founder}>
+                <div className={styles.founderTopline}>
+                  <span className={styles.founderAvatar} aria-hidden="true">KR</span>
+                  <span className={styles.founderRole}>Co-Owner</span>
+                </div>
+                <h3>Kim Antonette Repalda</h3>
+                <span className={styles.founderPet}>Cassy’s person</span>
+                <p>
+                  Kim is Kyla&apos;s best friend and co-owner, working alongside her
+                  to research the rental industry and put in place the policies and
+                  processes that keep every booking clear and secure.
+                </p>
+              </article>
+            </div>
+
+            <p className={`${styles.storyKicker} ${styles.storyKickerPlain}`}>How it came together</p>
+            <ol className={styles.chapters}>
+              <li className={styles.chapter}>
+                <span className={styles.chapterNumber} aria-hidden="true">01</span>
                 <h3>The Story Behind Our Name</h3>
-                <span className={styles.storyToggle} aria-hidden="true">+</span>
-              </summary>
-              <div className={styles.storyBody}>
                 <p>
                   Maddy &amp; Cassy comes from our pets — Kyla&apos;s dog, Maddy, and
                   Kim&apos;s cat, Cassy. It&apos;s also a nod to Maddy and Cassie,
                   Kyla&apos;s two favorite characters from <em>Euphoria</em>.
                 </p>
-              </div>
-            </details>
+              </li>
 
-            <details className={styles.storyBlock}>
-              <summary>
-                <span className={styles.storyNumber}>02</span>
+              <li className={styles.chapter}>
+                <span className={styles.chapterNumber} aria-hidden="true">02</span>
                 <h3>Why We Started</h3>
-                <span className={styles.storyToggle} aria-hidden="true">+</span>
-              </summary>
-              <div className={styles.storyBody}>
                 <p>
                   Kyla&apos;s love for traveling and attending concerts showed her
                   how much a quality camera or phone matters for preserving
@@ -386,24 +379,18 @@ export default async function Home() {
                   premium devices accessible for trips, concerts, content creation,
                   and special occasions.
                 </p>
-              </div>
-            </details>
+              </li>
 
-            <details className={styles.storyBlock}>
-              <summary>
-                <span className={styles.storyNumber}>03</span>
+              <li className={styles.chapter}>
+                <span className={styles.chapterNumber} aria-hidden="true">03</span>
                 <h3>Our Mission</h3>
-                <span className={styles.storyToggle} aria-hidden="true">+</span>
-              </summary>
-              <div className={styles.storyBody}>
                 <p>
                   We&apos;re here for travelers, concertgoers, content creators, and
                   anyone chasing a memorable moment — giving them access to reliable,
                   high-quality devices so they can capture it without compromise.
                 </p>
-              </div>
-            </details>
-          </div>
+              </li>
+            </ol>
           </div>
 
         </section>
@@ -413,7 +400,7 @@ export default async function Home() {
 
         <Reveal>
         <section id="how-it-works" className={styles.howItWorks} aria-labelledby="how-it-works-heading">
-          <div className={styles.aboutIntro}>
+          <div className={`${styles.aboutIntro} ${styles.howItWorksIntro}`}>
             <p className={styles.eyebrow}>HOW IT WORKS</p>
             <h2 id="how-it-works-heading" className={styles.heading}>One clear path from browsing to confirmation.</h2>
             <p className={styles.description}>
@@ -422,25 +409,21 @@ export default async function Home() {
             </p>
           </div>
 
-          <div className={styles.steps} aria-label="How renting works">
+          <ol className={styles.steps} aria-label="How renting works">
             {bookingSteps.map(([number, title, description], index) => (
-              <article key={number} className={styles.step}>
-                <span className={styles.stepIcon} aria-hidden="true">{stepIcons[index]}</span>
-                <span className={styles.stepNumber}>{number}</span>
+              <li key={number} className={styles.step}>
+                <span className={styles.stepMarker} aria-hidden="true">{stepIcons[index]}</span>
+                <span className={styles.stepNumber}>Step {number}</span>
                 <h3>{title}</h3>
                 <p>{description}</p>
-              </article>
+              </li>
             ))}
-          </div>
+          </ol>
         </section>
         </Reveal>
 
         <Reveal>
           <Gallery photos={galleryPhotos} />
-        </Reveal>
-
-        <Reveal>
-          <FaqPreview items={faqItems.slice(0, 5)} />
         </Reveal>
 
         <Reveal>
@@ -458,22 +441,22 @@ export default async function Home() {
             <Link href="/rental-requirements" className={styles.guideCard}>
               <span>Requirements</span>
               <p>Two valid IDs, verified Facebook &amp; Instagram profiles, and emergency contact details.</p>
-              <strong>View requirements →</strong>
+              <strong>View requirements</strong>
             </Link>
             <Link href="/how-to-book" className={styles.guideCard}>
               <span>How to Book</span>
               <p>Request, verify, and confirm your rental in five clear steps from browsing to handover.</p>
-              <strong>See the steps →</strong>
+              <strong>See the steps</strong>
             </Link>
             <Link href="/terms" className={styles.guideCard}>
               <span>Terms &amp; Conditions</span>
               <p>Deposits, GCash payments, and the responsibilities that apply to every booking.</p>
-              <strong>Read the terms →</strong>
+              <strong>Read the terms</strong>
             </Link>
             <Link href="/faq" className={styles.guideCard}>
               <span>FAQs</span>
               <p>Answers on payment methods, security deposits, discounts, and rental extensions.</p>
-              <strong>Browse FAQs →</strong>
+              <strong>Browse all FAQs</strong>
             </Link>
           </div>
         </section>

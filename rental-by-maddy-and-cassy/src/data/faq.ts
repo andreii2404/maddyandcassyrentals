@@ -4,9 +4,8 @@ export interface FaqItem {
 }
 
 /**
- * Shared source of truth for FAQ copy, consumed by both the dedicated /faq
- * page (via GuidePage) and the homepage FAQ preview section, so the two
- * never drift out of sync.
+ * Source of truth for FAQ copy, rendered by the dedicated /faq page
+ * (Rental Guide → FAQs) via GuidePage's accordion layout.
  */
 export const faqItems: FaqItem[] = [
   {

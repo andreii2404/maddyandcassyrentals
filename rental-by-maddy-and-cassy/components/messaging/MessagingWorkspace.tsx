@@ -198,7 +198,7 @@ export default function MessagingWorkspace({ mode, isGuest = false }: MessagingW
           <h1>{mode === "admin" ? "Messages" : "Chat with us"}</h1>
           <p>{mode === "admin" ? "Reply to customer and guest questions in real time." : "Questions about a rental? Our team can help here."}</p>
         </div>
-        <span className={styles.liveBadge}><i /> Live updates</span>
+        {mode === "admin" ? <span className={styles.liveBadge}><i /> Live updates</span> : null}
       </div>
 
       {isGuest ? (
@@ -297,6 +297,10 @@ export default function MessagingWorkspace({ mode, isGuest = false }: MessagingW
                   );
                 })}
               </div>
+
+              {mode === "customer" && activeConversation.status === "open" ? (
+                <p className={styles.replyNotice}>Please wait for our reply. Our rental team will respond here.</p>
+              ) : null}
 
               <div className={styles.composer}>
                 <textarea
