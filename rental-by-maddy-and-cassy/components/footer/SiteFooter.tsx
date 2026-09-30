@@ -134,6 +134,7 @@ export default function SiteFooter() {
           <span>Secure checkout via GCash</span>
           <Link href="/privacy">Privacy</Link>
           <Link href="/terms">Terms</Link>
+          <Link href="/admin/login">Staff</Link>
         </div>
       </div>
     </footer>

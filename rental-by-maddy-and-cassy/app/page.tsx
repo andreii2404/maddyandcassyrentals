@@ -145,11 +145,6 @@ export default async function Home() {
     ]),
   );
 
-  const heroCategories = categories.map(([category]) => ({
-    name: category,
-    description: categoryDescriptions[category] ?? `Available ${category.toLowerCase()} for rent.`,
-  }));
-
   const brands = Array.from(
     new Set(products.map((product) => product.brand).filter((brand): brand is string => Boolean(brand))),
   );
@@ -192,7 +187,7 @@ export default async function Home() {
   return (
     <div className={styles.page}>
       <main>
-        <Hero products={products} categories={heroCategories} />
+        <Hero products={products} />
 
         <StatsMarquee items={marqueeItems} />
 

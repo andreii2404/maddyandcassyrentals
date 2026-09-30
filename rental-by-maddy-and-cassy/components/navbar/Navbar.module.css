@@ -312,8 +312,7 @@
   background: rgba(154, 89, 101, 0.14);
 }
 
-.customerLink,
-.adminLink {
+.customerLink {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -336,16 +335,6 @@
 
 .customerLink:hover {
   background: var(--color-primary-hover);
-}
-
-.adminLink {
-  border: 1px solid rgba(154, 89, 101, 0.2);
-  color: var(--color-primary-hover);
-}
-
-.adminLink:hover {
-  border-color: var(--color-dusty-rose);
-  background: var(--color-background-soft);
 }
 
 .profileTrigger {
@@ -692,9 +681,8 @@
 
   .mobileAccountLinks a:hover,
   .mobileAccountLinks button:hover { background: var(--color-background-soft); color: var(--color-primary); }
-  .mobileLoginActions a:first-child { background: var(--color-primary); color: white; text-align: center; }
-  .mobileLoginActions a:last-child { border: 1px solid rgba(154, 89, 101, 0.2); text-align: center; }
-  .mobileLoginActions a { text-align: center; }
+  .mobileLoginActions a { background: var(--color-primary); color: white; text-align: center; }
+  .mobileLoginActions a:hover { background: var(--color-primary-hover); }
 }
 
 @media (max-width: 700px) {
@@ -733,9 +721,7 @@
   }
 
   .mobileLinks .mobileLabel { grid-column: 1 / -1; }
-  .mobileAccount { padding-top: 1.1rem; padding-left: 0; border-top: 1px solid rgba(154, 89, 101, 0.12); border-left: 0; }
-  .mobileLoginActions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
+  .mobileAccount { padding-top: 1.1rem; padding-left: 0; border-top: 1px solid rgba(154, 89, 101, 0.12); border-left: 0; }}
 
 @media (max-width: 430px) {
   .brandCopy span { max-width: 112px; overflow: hidden; text-overflow: ellipsis; }

@@ -357,7 +357,6 @@ export default function Navbar() {
           ) : (
             <div className={styles.loginActions}>
               <Link href="/sign-in" className={styles.customerLink}>Login</Link>
-              <Link href="/admin/login" className={styles.adminLink}>Admin</Link>
             </div>
           )}
         </div>
@@ -486,7 +485,6 @@ export default function Navbar() {
               ) : (
                 <div className={styles.mobileLoginActions}>
                   <Link href="/sign-in" onClick={closeMenu}>Login</Link>
-                  <Link href="/admin/login" onClick={closeMenu}>Admin Login</Link>
                 </div>
               )}
             </div>
