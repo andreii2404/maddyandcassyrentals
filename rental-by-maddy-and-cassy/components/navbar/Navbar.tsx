@@ -20,7 +20,6 @@ const primaryLinks = [
 
 const guideLinks = [
   { href: "/how-to-book", label: "How to Book", description: "Booking steps" },
-  { href: "/guest/bookings", label: "Track Booking", description: "Guest booking lookup" },
   { href: "/rental-requirements", label: "Requirements", description: "What to prepare" },
   { href: "/terms", label: "Terms & Conditions", description: "Rental policies" },
   { href: "/faq", label: "FAQs", description: "Quick answers" },
@@ -85,7 +84,6 @@ export default function Navbar() {
   // object but are not a customer account, so account-only nav must treat
   // them the same as signed-out visitors.
   const isAccountHolder = Boolean(user) && !user?.is_anonymous;
-  const isGuestSession = Boolean(user?.is_anonymous);
   const { favorites } = useFavorites();
   const { totalQuantity } = useCart();
   const router = useRouter();
@@ -358,9 +356,6 @@ export default function Navbar() {
             </div>
           ) : (
             <div className={styles.loginActions}>
-              {isGuestSession ? (
-                <Link href="/guest/bookings" className={styles.guestBookingsLink}>Guest Bookings</Link>
-              ) : null}
               <Link href="/sign-in" className={styles.customerLink}>Login</Link>
               <Link href="/admin/login" className={styles.adminLink}>Admin</Link>
             </div>
@@ -490,9 +485,6 @@ export default function Navbar() {
                 </>
               ) : (
                 <div className={styles.mobileLoginActions}>
-                  {isGuestSession ? (
-                    <Link href="/guest/bookings" onClick={closeMenu}>Guest Bookings</Link>
-                  ) : null}
                   <Link href="/sign-in" onClick={closeMenu}>Login</Link>
                   <Link href="/admin/login" onClick={closeMenu}>Admin Login</Link>
                 </div>

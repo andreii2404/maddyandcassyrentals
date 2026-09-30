@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { Product } from "@/types/product";
 import type { UnitCounts } from "@/lib/availability";
 import { useCart } from "@/hooks/useCart";
 import { useInventoryMap } from "@/hooks/useInventory";
+import { useAuth } from "@/hooks/useAuth";
+import CheckoutAccessDialog from "@/components/checkout/CheckoutAccessDialog";
 import { Button } from "@/components/ui/Button";
 import styles from "./cart.module.css";
 import { getVariantQuantityLimit } from "@/src/lib/variantInventory";
@@ -17,6 +19,14 @@ function money(value: number): string {
 
 export default function CartView({ products }: { products: Product[] }) {
   const { items, totalQuantity, updateQuantity, removeItem, clearCart, removeStaleItems } = useCart();
+  const { user, loading: authLoading } = useAuth();
+  const [accessDialogOpen, setAccessDialogOpen] = useState(false);
+  // Visitors with no session (not even the anonymous session behind guest
+  // checkout) choose between guest checkout and logging in here, before the
+  // flow starts. While auth is still resolving we keep the plain link so a
+  // signed-in customer is never asked to pick again; /checkout carries the
+  // same gate as a fallback for direct visits.
+  const needsCheckoutAccess = !authLoading && !user;
   const productsById = useMemo(() => new Map(products.map((product) => [product.id, product])), [products]);
   const defaultsById: Record<string, UnitCounts> = Object.fromEntries(
     products.map((product) => [product.id, {
@@ -167,12 +177,27 @@ export default function CartView({ products }: { products: Product[] }) {
                 </p>
               </>
             ) : (
-              <Link href="/checkout" className={styles.primaryLink}>Start checkout</Link>
+              needsCheckoutAccess ? (
+                <Button
+                  variant="none"
+                  className={styles.primaryLink}
+                  aria-haspopup="dialog"
+                  aria-expanded={accessDialogOpen}
+                  onClick={() => setAccessDialogOpen(true)}
+                >
+                  Start checkout
+                </Button>
+              ) : (
+                <Link href="/checkout" className={styles.primaryLink}>Start checkout</Link>
+              )
             )}
             <p className={styles.bookingRule}>All items above are booked together — one rental period, one payment, one document review, and one signed agreement.</p>
           </aside>
         </div>
       )}
+      {accessDialogOpen ? (
+        <CheckoutAccessDialog onClose={() => setAccessDialogOpen(false)} />
+      ) : null}
     </section>
   );
 }

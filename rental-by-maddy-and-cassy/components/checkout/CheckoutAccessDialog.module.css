@@ -1,0 +1,83 @@
+.intro {
+  margin: 0 0 1.1rem;
+  color: var(--color-charcoal);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.options {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.option {
+  display: grid;
+  gap: 0.6rem;
+  padding: 1rem;
+  border: 1px solid var(--color-dusty-rose);
+  border-radius: 16px;
+  background: var(--color-white);
+}
+
+.option strong {
+  color: var(--color-text-primary);
+  font-size: 0.9rem;
+}
+
+.option p {
+  margin: 0;
+  color: var(--color-charcoal);
+  font-size: 0.74rem;
+  line-height: 1.55;
+}
+
+.primaryAction,
+.secondaryAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-height);
+  padding: 0.55rem 1rem;
+  border-radius: var(--radius-control);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.primaryAction {
+  border: 1px solid var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-white);
+}
+
+.primaryAction:hover:not(:disabled) { background: var(--color-primary-hover); }
+.primaryAction:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.secondaryAction {
+  border: 1px solid var(--color-primary);
+  background: transparent;
+  color: var(--color-primary);
+}
+
+.secondaryAction:hover { background: var(--color-blush); }
+
+.signUpPrompt {
+  margin: 0;
+  color: var(--color-charcoal);
+  font-size: 0.74rem;
+  line-height: 1.55;
+}
+
+.signUpLink {
+  color: var(--color-primary);
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.error {
+  margin: 1rem 0 0;
+  color: var(--color-status-red, #c0392b);
+  font-size: 0.75rem;
+  line-height: 1.55;
+}
