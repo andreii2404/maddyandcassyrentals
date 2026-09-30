@@ -217,12 +217,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
           const customerEmail = await resolveBookingRecipientEmail(admin, booking);
           const emailResult = await sendPaymentRejectionEmail({
             bookingId: booking.id,
+            isGuestCheckout: booking.isGuestCheckout,
             paymentId,
             bookingReference: booking.bookingRef,
             customerName: booking.customerSnapshot.fullName,
             customerEmail,
             rejectionReason: reason,
-            bookingUrl: `${new URL(request.url).origin}/account/bookings/${encodeURIComponent(booking.id)}?resubmitPayment=1#booking-payment`,
           });
           if (!emailResult.sent) {
             console.error("Payment rejection email was not sent", {

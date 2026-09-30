@@ -43,7 +43,7 @@ test("payment queue rows use the payment submission as the event identity", () =
       customerName: "Customer",
       customerEmail: "customer@example.com",
       rejectionReason: "Unreadable",
-      bookingUrl: "https://example.com/booking-1",
+      isGuestCheckout: false,
     },
     "subject",
   );

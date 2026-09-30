@@ -55,7 +55,6 @@ export default function BookingPaymentPanel({
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<PaymentErrors>({});
   const [touched, setTouched] = useState<Partial<Record<string, boolean>>>({});
-  const [paymentFormOpen, setPaymentFormOpen] = useState(autoOpenResubmission);
   const [balancePreference, setBalancePreference] = useState(booking.balancePaymentPreference);
   const [savingPreference, setSavingPreference] = useState(false);
 
@@ -63,6 +62,9 @@ export default function BookingPaymentPanel({
   const latestPayment = [...payments].sort(
     (left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
   )[0];
+  const [paymentFormOpen, setPaymentFormOpen] = useState(
+    autoOpenResubmission || (latestPayment?.status === "rejected" && !hasPendingPayment),
+  );
   const isDemoPayment = payments.some((p) => (p.providerMetadata as { demo?: boolean } | undefined)?.demo === true);
   const amountPaid = payments
     .filter((p) => p.status === "verified")

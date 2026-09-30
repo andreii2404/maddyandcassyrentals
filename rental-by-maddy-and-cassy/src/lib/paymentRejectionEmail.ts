@@ -1,4 +1,5 @@
 import type { PaymentRejectionEmailDetails } from "@/src/lib/emailNotificationQueue";
+import { paymentRejectionBookingUrl } from "@/supabase/functions/_shared/paymentRejectionBookingUrl";
 
 function escapeHtml(value: string): string {
   return value
@@ -19,7 +20,7 @@ export function buildPaymentRejectionEmail(details: PaymentRejectionEmailDetails
   const fullName = escapeHtml(customerName);
   const reference = escapeHtml(details.bookingReference);
   const reason = escapeHtml(details.rejectionReason);
-  const bookingUrl = escapeHtml(details.bookingUrl);
+  const bookingUrl = paymentRejectionBookingUrl(details.bookingId, details.isGuestCheckout);
   const subject = `Payment Rejected – Booking ${details.bookingReference}`;
 
   return {
@@ -32,7 +33,7 @@ export function buildPaymentRejectionEmail(details: PaymentRejectionEmailDetails
       "Rejection Reason:",
       details.rejectionReason,
       "",
-      `Resubmit your payment proof: ${details.bookingUrl}`,
+      `Resubmit your payment proof: ${bookingUrl}`,
     ].join("\n"),
     html: `<!doctype html>
 <html lang="en">
