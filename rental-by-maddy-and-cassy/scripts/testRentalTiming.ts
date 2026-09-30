@@ -1,14 +1,31 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  calculateEstimatedDeliveryDateTime,
   calculateNextAvailableDateTime,
   calculateReturnDateTime,
   combineManilaPickupDateTime,
   computeUnavailablePickupTimes,
   createPickupTimeValue,
+  formatManilaDateTime,
   isOutsideNormalPickupWindow,
   pickupTimeParts,
 } from "../src/lib/rentalTiming";
+
+test("estimated delivery adds the 2-hour minimum transportation allowance, crossing midnight", () => {
+  const handover = combineManilaPickupDateTime("2026-10-01", "23:00");
+  const eta = calculateEstimatedDeliveryDateTime(handover);
+  assert.equal(eta.toISOString(), "2026-10-01T17:00:00.000Z");
+  assert.equal(formatManilaDateTime(eta), formatManilaDateTime(combineManilaPickupDateTime("2026-10-02", "01:00")));
+});
+
+test("a 3-day rental picked up at 9:00 AM returns 70 hours later at 7:00 AM", () => {
+  const pickup = combineManilaPickupDateTime("2026-10-01", "09:00");
+  assert.equal(
+    calculateReturnDateTime(pickup, 3).getTime(),
+    combineManilaPickupDateTime("2026-10-04", "07:00").getTime(),
+  );
+});
 
 test("a 7:00 PM Manila pickup returns after 22 hours and is ready after 24 hours", () => {
   const pickup = combineManilaPickupDateTime("2026-08-11", "19:00");

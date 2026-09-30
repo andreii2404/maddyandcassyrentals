@@ -3,6 +3,12 @@
 import { useRouter } from "next/navigation";
 import Modal from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
+import type { FulfillmentMethod } from "@/src/types/booking";
+import {
+  DELIVERY_TRANSPORT_ALLOWANCE_HOURS,
+  calculateEstimatedDeliveryDateTime,
+  formatManilaDateTime,
+} from "@/src/lib/rentalTiming";
 import styles from "./RentalScheduleNoticeModal.module.css";
 
 // Reuses the same Facebook page already listed as the official contact
@@ -11,15 +17,24 @@ import styles from "./RentalScheduleNoticeModal.module.css";
 const MESSENGER_URL = "https://www.facebook.com/share/19bCnTQZum/";
 
 interface RentalScheduleNoticeModalProps {
+  /** Selected pickup/delivery handover timestamp (Manila) from the live draft. */
+  pickupAt: Date;
+  /** Return timestamp derived from pickupAt and the selected rental days. */
+  returnAt: Date;
+  fulfillmentMethod: FulfillmentMethod;
   onGoBack: () => void;
   onContinue: () => void;
 }
 
 export default function RentalScheduleNoticeModal({
+  pickupAt,
+  returnAt,
+  fulfillmentMethod,
   onGoBack,
   onContinue,
 }: RentalScheduleNoticeModalProps) {
   const router = useRouter();
+  const isDelivery = fulfillmentMethod === "delivery";
 
   return (
     <Modal
@@ -31,6 +46,28 @@ export default function RentalScheduleNoticeModal({
         <p id="rental-schedule-notice-description" className={styles.leadText}>
           Your selected date and time is your preferred rental schedule.
         </p>
+
+        <dl className={styles.schedule} aria-label="Your rental schedule">
+          <div className={styles.scheduleRow}>
+            <dt>Selected schedule ({isDelivery ? "delivery" : "pickup"})</dt>
+            <dd>{formatManilaDateTime(pickupAt)}</dd>
+          </div>
+          {isDelivery ? (
+            <div className={styles.scheduleRow}>
+              <dt>Estimated delivery time</dt>
+              <dd>
+                {formatManilaDateTime(calculateEstimatedDeliveryDateTime(pickupAt))} or later
+                <span className={styles.scheduleNote}>
+                  Includes the {DELIVERY_TRANSPORT_ALLOWANCE_HOURS}-hour minimum transportation allowance
+                </span>
+              </dd>
+            </div>
+          ) : null}
+          <div className={styles.scheduleRow}>
+            <dt>Return schedule</dt>
+            <dd>{formatManilaDateTime(returnAt)}</dd>
+          </div>
+        </dl>
 
         <p className={styles.text}>
           Please allow additional time for preparation and transportation. The actual time may be

@@ -1,61 +1,59 @@
-/* One framed panel instead of two floating cards: a soft blush surface that
-   holds both tiles on a shared grid, so image sizes and edges always line up. */
+/* Coverflow carousel in the hero's right column. The column clips the
+   neighbouring cards so they peek in from the edges behind the centered one. */
 .showcase {
   position: relative;
   width: 100%;
-  max-width: 560px;
-  margin-left: auto;
-  padding: 1.25rem;
-  border: 1px solid rgba(154, 89, 101, 0.14);
-  border-radius: 28px;
-  background:
-    linear-gradient(160deg, rgba(255, 255, 255, 0.75) 0%, rgba(242, 210, 207, 0.45) 100%);
-  box-shadow: 0 30px 70px rgba(36, 36, 36, 0.08);
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1.25rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.single {
-  max-width: 340px;
-}
-
-.single .grid {
-  grid-template-columns: minmax(0, 1fr);
-}
-
-.tile {
+  max-width: 600px;
   min-width: 0;
+  margin-left: auto;
+  overflow: hidden;
+  animation: showcaseIn 0.4s ease-out 0.2s both;
 }
 
-.link {
+/* Soft fade at the column edges so the peeking cards dissolve instead of
+   being cut off by a hard line. */
+.swiper {
+  width: 100%;
+  padding: 1rem 0 2.75rem !important;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 12%, #000 88%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 12%, #000 88%, transparent 100%);
+}
+
+/* Fixed card width (slidesPerView="auto") keeps every product the same size
+   regardless of how many are in the catalog. */
+.slide {
+  width: 260px !important;
+  height: auto !important;
+}
+
+.card {
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow: hidden;
   border: 1px solid var(--color-light-gray);
-  border-radius: 18px;
+  border-radius: 20px;
   background: var(--color-white);
+  box-shadow: 0 18px 44px rgba(36, 36, 36, 0.08);
   color: inherit;
   text-decoration: none;
-  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  user-select: none;
+  -webkit-user-drag: none;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-.link:hover {
+.slide:global(.swiper-slide-active) .card {
+  border-color: rgba(154, 89, 101, 0.28);
+  box-shadow: 0 26px 60px rgba(36, 36, 36, 0.12);
+}
+
+.card:hover {
   border-color: var(--color-dusty-rose);
-  box-shadow: 0 18px 40px rgba(36, 36, 36, 0.1);
-  transform: translateY(-4px);
 }
 
-.link:focus-visible {
+.card:focus-visible {
   outline: 3px solid var(--color-focus);
-  outline-offset: 3px;
+  outline-offset: -3px;
 }
 
 .imageWrap {
@@ -67,10 +65,11 @@
 
 .image {
   object-fit: cover;
+  pointer-events: none;
   transition: transform 0.5s ease;
 }
 
-.link:hover .image {
+.slide:global(.swiper-slide-active) .card:hover .image {
   transform: scale(1.03);
 }
 
@@ -86,7 +85,7 @@
   flex: 1;
   flex-direction: column;
   gap: 0.2rem;
-  padding: 0.95rem 1rem 1.05rem;
+  padding: 0.95rem 1.05rem 1.1rem;
 }
 
 .brand {
@@ -94,11 +93,15 @@
   color: var(--color-charcoal);
   font-size: 0.7rem;
   letter-spacing: 0.08em;
+  line-height: 1.4;
   text-transform: uppercase;
 }
 
+/* Two-line box reserved for every name so all cards share one height and the
+   prices line up whether a name wraps or not. */
 .name {
   display: -webkit-box;
+  min-height: 2.6em;
   margin: 0;
   overflow: hidden;
   color: var(--color-text-primary);
@@ -110,8 +113,6 @@
   -webkit-line-clamp: 2;
 }
 
-/* Pinned to the bottom so prices sit on one line across both tiles even when
-   one product name wraps and the other does not. */
 .price {
   margin: auto 0 0;
   padding-top: 0.45rem;
@@ -127,52 +128,92 @@
   font-weight: 400;
 }
 
+.dots {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: -0.75rem;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-text-primary);
+  opacity: 0.25;
+  cursor: pointer;
+  transition: width 0.25s ease, opacity 0.2s ease, background-color 0.2s ease;
+}
+
+.dot:hover {
+  opacity: 0.5;
+}
+
+.dot[aria-current="true"] {
+  width: 22px;
+  background: var(--color-primary);
+  opacity: 1;
+}
+
+.dot:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+@keyframes showcaseIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .link,
-  .image {
+  .showcase {
+    animation: none;
+  }
+
+  .card,
+  .image,
+  .dot {
     transition: none;
   }
 
-  .link:hover,
-  .link:hover .image {
+  .slide:global(.swiper-slide-active) .card:hover .image {
     transform: none;
   }
 }
 
 @media (max-width: 860px) {
   .showcase {
-    max-width: 520px;
+    max-width: 560px;
     margin: 0 auto;
-  }
-
-  .single {
-    max-width: 340px;
   }
 }
 
 @media (max-width: 560px) {
-  .showcase {
-    padding: 0.75rem;
-    border-radius: 22px;
+  .slide {
+    width: 220px !important;
   }
 
-  .grid {
-    gap: 0.75rem;
-  }
-
-  .link {
-    border-radius: 14px;
+  .card {
+    border-radius: 16px;
   }
 
   .info {
-    padding: 0.75rem 0.8rem 0.85rem;
+    padding: 0.8rem 0.85rem 0.95rem;
   }
 
   .name {
-    font-size: 0.9rem;
+    font-size: 0.92rem;
   }
 
   .price {
-    font-size: 0.95rem;
+    font-size: 0.98rem;
   }
 }

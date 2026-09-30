@@ -59,6 +59,7 @@ export default function FavoritesView({ products }: FavoritesViewProps) {
             <span className={styles.count}>
               {favoriteProducts.length} {favoriteProducts.length === 1 ? "saved item" : "saved items"}
             </span>
+            <span className={styles.divider} aria-hidden="true" />
             <Button variant="none" type="button" className={styles.clearButton} onClick={clearFavorites}>
               Clear all
             </Button>
@@ -67,17 +68,24 @@ export default function FavoritesView({ products }: FavoritesViewProps) {
       </header>
 
       {favoriteProducts.length > 0 ? (
-        <div className={styles.grid}>
-          {favoriteProducts.map((product) => (
-            <CatalogProductCard
-              key={product.id}
-              product={product}
-              units={unitsByProductId.get(product.id) ?? defaultsById[product.id]}
-              isFavorite={isFavorite(product.id)}
-              onToggleFavorite={toggleFavorite}
-            />
-          ))}
-        </div>
+        <>
+          <div className={styles.grid}>
+            {favoriteProducts.map((product) => (
+              <CatalogProductCard
+                key={product.id}
+                product={product}
+                units={unitsByProductId.get(product.id) ?? defaultsById[product.id]}
+                isFavorite={isFavorite(product.id)}
+                onToggleFavorite={toggleFavorite}
+                variant="favorite"
+              />
+            ))}
+          </div>
+          <div className={styles.moreRow}>
+            <p>Still comparing? Save more options from the full catalog.</p>
+            <Link href="/catalog" className={styles.moreLink}>Browse rentals</Link>
+          </div>
+        </>
       ) : (
         <div className={styles.empty}>
           <span className={styles.emptyHeart} aria-hidden="true">♡</span>

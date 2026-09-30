@@ -2,6 +2,8 @@ export const RENTAL_DURATION_HOURS = 22;
 export const TURNAROUND_HOURS = 2;
 export const PICKUP_CONVENIENCE_FEE = 100;
 export const DEFAULT_PICKUP_TIME = "09:00";
+/** Minimum transportation allowance added to a delivery's selected time. */
+export const DELIVERY_TRANSPORT_ALLOWANCE_HOURS = 2;
 
 const MANILA_OFFSET = "+08:00";
 const NORMAL_PICKUP_START_MINUTES = 9 * 60;
@@ -83,6 +85,12 @@ export function calculateReturnDateTime(pickupAt: Date, rentalDays = 1): Date {
 export function calculateNextAvailableDateTime(pickupAt: Date, rentalDays = 1): Date {
   return new Date(
     calculateReturnDateTime(pickupAt, rentalDays).getTime() + TURNAROUND_HOURS * 60 * 60 * 1000,
+  );
+}
+
+export function calculateEstimatedDeliveryDateTime(handoverAt: Date): Date {
+  return new Date(
+    handoverAt.getTime() + DELIVERY_TRANSPORT_ALLOWANCE_HOURS * 60 * 60 * 1000,
   );
 }
 

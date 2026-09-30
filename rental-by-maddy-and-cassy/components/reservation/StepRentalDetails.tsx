@@ -446,7 +446,7 @@ export default function StepRentalDetails({
 
             <fieldset className={styles.fulfillmentFieldset}>
               <legend className={formStyles.label}>
-                How would you like to get your rental?<span className={formStyles.required}>*</span>
+                How would you like to get your rental?<span className={styles.requiredMark}>*</span>
               </legend>
 
               <label className={styles.fulfillmentOption}>
@@ -458,10 +458,7 @@ export default function StepRentalDetails({
                 />
                 <span>
                   <strong>Pickup</strong>
-                  <span className={styles.fulfillmentDetail}>
-                    Right Focus Off Campus, Manuel Hizon, Sta. Cruz, Manila. Available by
-                    appointment from 9:00 AM to 7:00 PM.
-                  </span>
+                  <span className={styles.fulfillmentDetail}>Sta. Cruz, Manila · 9 AM–7 PM</span>
                 </span>
               </label>
 
@@ -474,23 +471,33 @@ export default function StepRentalDetails({
                 />
                 <span>
                   <strong>Delivery</strong>
-                  <span className={styles.fulfillmentDetail}>
-                    Delivery is arranged manually by the business. Delivery fees and courier
-                    arrangements are handled directly with you, outside this website.
-                  </span>
+                  <span className={styles.fulfillmentDetail}>Fees arranged with you directly</span>
                 </span>
               </label>
             </fieldset>
 
+            {draft.fulfillmentMethod === "pickup" ? (
+              <p className={styles.fulfillmentNote}>
+                Pick up at Right Focus Off Campus, Manuel Hizon, Sta. Cruz, Manila. Available by
+                appointment from 9:00 AM to 7:00 PM.
+              </p>
+            ) : null}
+
             {isDelivery ? (
-              <>
+              <div className={styles.deliveryFields}>
+                <p className={styles.fulfillmentNote}>
+                  Delivery is arranged manually by the business. Fees and courier arrangements are
+                  handled directly with you, outside this website.
+                </p>
+
                 <div className={formStyles.field}>
                   <label className={formStyles.label} htmlFor="customerLocation">
-                    Delivery address<span className={formStyles.required}>*</span>
+                    Delivery address<span className={styles.requiredMark}>*</span>
                   </label>
                   <textarea
                     id="customerLocation"
                     autoComplete="address-line1"
+                    aria-required="true"
                     className={formStyles.textarea}
                     value={draft.customerLocation}
                     onChange={(event) => onUpdate({ customerLocation: event.target.value })}
@@ -498,15 +505,16 @@ export default function StepRentalDetails({
                   />
                 </div>
 
-                <div className={formStyles.row}>
+                <div className={styles.deliveryRow}>
                   <div className={formStyles.field}>
                     <label className={formStyles.label} htmlFor="cityMunicipality">
-                      City/Municipality<span className={formStyles.required}>*</span>
+                      City/Municipality<span className={styles.requiredMark}>*</span>
                     </label>
                     <input
                       id="cityMunicipality"
                       type="text"
                       autoComplete="address-level2"
+                      aria-required="true"
                       className={formStyles.input}
                       value={draft.cityMunicipality}
                       onChange={(event) => onUpdate({ cityMunicipality: event.target.value })}
@@ -516,11 +524,12 @@ export default function StepRentalDetails({
 
                   <div className={formStyles.field}>
                     <label className={formStyles.label} htmlFor="province">
-                      Province<span className={formStyles.required}>*</span>
+                      Province<span className={styles.requiredMark}>*</span>
                     </label>
                     <select
                       id="province"
                       autoComplete="address-level1"
+                      aria-required="true"
                       className={formStyles.select}
                       value={draft.province}
                       onChange={(event) => onUpdate({ province: event.target.value })}
@@ -532,7 +541,7 @@ export default function StepRentalDetails({
                     </select>
                   </div>
                 </div>
-              </>
+              </div>
             ) : null}
           </section>
 
@@ -640,8 +649,11 @@ export default function StepRentalDetails({
         />
       )}
 
-      {showScheduleNotice ? (
+      {showScheduleNotice && pickupAt && returnAt && draft.fulfillmentMethod ? (
         <RentalScheduleNoticeModal
+          pickupAt={pickupAt}
+          returnAt={returnAt}
+          fulfillmentMethod={draft.fulfillmentMethod}
           onGoBack={() => setShowScheduleNotice(false)}
           onContinue={handleConfirmScheduleNotice}
         />

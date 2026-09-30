@@ -407,3 +407,143 @@
   min-height: var(--control-height);
 }
 }
+
+/* Favorites variant: quieter chrome, horizontal layout on wider screens. */
+.cardFavorite {
+  border-radius: 16px;
+  border-color: rgba(36, 36, 36, 0.07);
+  box-shadow: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cardFavorite:hover {
+    transform: none;
+    border-color: var(--color-dusty-rose);
+    box-shadow: 0 12px 28px rgba(36, 36, 36, 0.07);
+  }
+}
+
+.cardFavorite .favoriteButton {
+  border: none;
+  box-shadow: 0 2px 10px rgba(36, 36, 36, 0.1);
+}
+
+.cardFavorite .info {
+  gap: 0.2rem;
+  padding: 1rem 1.1rem 1.1rem;
+}
+
+.cardFavorite .category {
+  color: var(--color-charcoal);
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+}
+
+.cardFavorite .name {
+  margin-top: 0.15rem;
+  font-size: 1.12rem;
+  letter-spacing: -0.015em;
+}
+
+.cardFavorite .brand {
+  font-size: 0.8rem;
+}
+
+.cardFavorite .rating,
+.cardFavorite .ratingPlaceholder {
+  margin-top: 0.15rem;
+  font-size: 0.78rem;
+}
+
+.cardFavorite .priceBlock {
+  margin-top: 0.7rem;
+}
+
+.cardFavorite .price {
+  color: var(--color-text-primary);
+  font-size: 1.3rem;
+  letter-spacing: -0.01em;
+}
+
+.cardFavorite .availabilityPill {
+  margin: 0.55rem 0 0;
+  padding: 0.2rem 0.6rem;
+  border-color: transparent;
+  font-size: 0.7rem;
+}
+
+.cardFavorite .actions {
+  padding-top: 1rem;
+  gap: 0.35rem;
+}
+
+.cardFavorite .detailsButton {
+  border-color: transparent;
+  background: transparent;
+}
+
+.cardFavorite .detailsButton:hover {
+  background: var(--color-blush);
+}
+
+@media (min-width: 720px) {
+  .cardFavorite {
+    display: grid;
+    grid-template-columns: minmax(0, 44%) minmax(0, 1fr);
+  }
+
+  .cardFavorite .imageWrapper {
+    aspect-ratio: auto;
+    min-height: 260px;
+  }
+
+  .cardFavorite .favoriteButton {
+    right: auto;
+    left: calc(44% - 44px - 0.75rem);
+    top: 0.75rem;
+  }
+
+  .cardFavorite .info {
+    padding: 1.4rem 1.5rem 1.5rem;
+  }
+
+  .cardFavorite .name {
+    font-size: 1.28rem;
+  }
+
+  .cardFavorite .actions {
+    max-width: 360px;
+  }
+}
+
+@media (min-width: 1080px) {
+  .cardFavorite:only-child {
+    grid-template-columns: minmax(0, 50%) minmax(0, 1fr);
+  }
+
+  .cardFavorite:only-child .imageWrapper {
+    min-height: 380px;
+  }
+
+  .cardFavorite:only-child .favoriteButton {
+    left: calc(50% - 44px - 0.75rem);
+  }
+
+  .cardFavorite:only-child .info {
+    justify-content: center;
+    padding: 2.25rem 2.5rem;
+  }
+
+  .cardFavorite:only-child .name {
+    font-size: 1.7rem;
+  }
+
+  .cardFavorite:only-child .price {
+    font-size: 1.55rem;
+  }
+
+  .cardFavorite:only-child .actions {
+    margin-top: 0;
+    padding-top: 1.5rem;
+  }
+}

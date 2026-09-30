@@ -41,7 +41,13 @@ import {
   serializeReservationProgress,
 } from "@/src/lib/reservationProgress";
 import type { RewardProgress } from "@/src/lib/promotions";
-import { manilaTimeInputValue } from "@/src/lib/rentalTiming";
+import {
+  DELIVERY_TRANSPORT_ALLOWANCE_HOURS,
+  formatManilaDateTime,
+  formatManilaPickupTime,
+  manilaTimeInputValue,
+} from "@/src/lib/rentalTiming";
+import { getDraftRentalSchedule } from "@/src/lib/rentalSchedule";
 import styles from "../catalog/[id]/reserve/reserve.module.css";
 import { getVariantQuantityLimit } from "@/src/lib/variantInventory";
 import {
@@ -441,6 +447,7 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
 
   const pricing = calculateMultiItemReservationPricing(lines, draft, rewardProgress, isGuest);
   const currency = lines[0]?.product.currency ?? "PHP";
+  const schedule = getDraftRentalSchedule(draft);
   const agreementData = {
     bookingRef: bookingNumber ?? "Created before payment",
     customerName: draft.customerInfo.fullName || "-",
@@ -543,6 +550,54 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
         <aside className={styles.bookingSummary} aria-label="Selected rental summary">
           <p className={styles.summaryEyebrow}>YOUR CART</p>
           <h2>{pricing.productCount} product{pricing.productCount === 1 ? "" : "s"}</h2>
+          <section className={styles.summarySchedule} aria-label="Your rental schedule">
+            <p className={styles.summaryScheduleTitle}>Your schedule</p>
+            <dl>
+              <div>
+                <dt>Rental date{schedule.rentalDays > 1 ? "s" : ""}</dt>
+                <dd>{schedule.datesLabel}</dd>
+              </div>
+              <div>
+                <dt>Pickup/Delivery</dt>
+                <dd>
+                  {draft.fulfillmentMethod === "pickup"
+                    ? "Pickup"
+                    : draft.fulfillmentMethod === "delivery"
+                      ? "Delivery"
+                      : "Not selected yet"}
+                </dd>
+              </div>
+              <div>
+                <dt>
+                  {draft.fulfillmentMethod === "pickup"
+                    ? "Selected pickup time"
+                    : draft.fulfillmentMethod === "delivery"
+                      ? "Selected delivery time"
+                      : "Pickup/delivery time"}
+                </dt>
+                <dd>{schedule.pickupAt ? formatManilaPickupTime(schedule.pickupAt) : "Not selected yet"}</dd>
+              </div>
+              {draft.fulfillmentMethod === "delivery" ? (
+                <div>
+                  <dt>Estimated delivery</dt>
+                  <dd>
+                    {schedule.estimatedDeliveryAt ? (
+                      <>
+                        {formatManilaDateTime(schedule.estimatedDeliveryAt)} or later
+                        <small>Includes the {DELIVERY_TRANSPORT_ALLOWANCE_HOURS}-hour transportation allowance</small>
+                      </>
+                    ) : (
+                      "Not selected yet"
+                    )}
+                  </dd>
+                </div>
+              ) : null}
+              <div>
+                <dt>Return date &amp; time</dt>
+                <dd>{schedule.returnAt ? formatManilaDateTime(schedule.returnAt) : "Not selected yet"}</dd>
+              </div>
+            </dl>
+          </section>
           <dl className={styles.summaryFacts}>
             {lines.map((line) => (
               <div key={line.product.id}>

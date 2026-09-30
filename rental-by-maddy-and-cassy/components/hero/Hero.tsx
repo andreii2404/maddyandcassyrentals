@@ -29,7 +29,7 @@ export default function Hero({ products }: HeroProps) {
           </Button>
         </div>
 
-        <ProductShowcase products={products.slice(0, 2)} />
+        <ProductShowcase products={products.slice(0, 6)} />
       </div>
     </section>
   );

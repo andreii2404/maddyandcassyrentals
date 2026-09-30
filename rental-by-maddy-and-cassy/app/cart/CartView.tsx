@@ -21,6 +21,7 @@ export default function CartView({ products }: { products: Product[] }) {
   const { items, totalQuantity, updateQuantity, removeItem, clearCart, removeStaleItems } = useCart();
   const { user, loading: authLoading } = useAuth();
   const [accessDialogOpen, setAccessDialogOpen] = useState(false);
+  const [subtotalOpen, setSubtotalOpen] = useState(false);
   // Visitors with no session (not even the anonymous session behind guest
   // checkout) choose between guest checkout and logging in here, before the
   // flow starts. While auth is still resolving we keep the plain link so a
@@ -148,19 +149,53 @@ export default function CartView({ products }: { products: Product[] }) {
                 </article>
               );
             })}
-            <Link href="/catalog" className={styles.continueLink}>← Continue shopping</Link>
+            <Link href="/catalog" className={styles.continueLink}>Continue shopping</Link>
           </div>
 
           <aside className={styles.summary} aria-label="Rental cart estimate">
             <p className={styles.summaryEyebrow}>ONE-DAY ESTIMATE</p>
             <h2>Cart summary</h2>
-            <dl>
-              <div><dt>Product subtotal</dt><dd>{money(totals.listSubtotal)}</dd></div>
-              <div><dt>Discounts</dt><dd className={styles.savings}>−{money(discount)}</dd></div>
-              <div><dt>Rental subtotal</dt><dd>{money(totals.rentalSubtotal)}</dd></div>
+            <div className={styles.priceGroup}>
+              <Button
+                variant="none"
+                className={styles.subtotalToggle}
+                aria-expanded={subtotalOpen}
+                aria-controls="cart-subtotal-breakdown"
+                onClick={() => setSubtotalOpen((open) => !open)}
+              >
+                <span className={styles.subtotalLabel}>
+                  Product subtotal
+                  <svg className={styles.chevron} viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
+                    <path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+                <span className={styles.subtotalValue}>{money(totals.listSubtotal)}</span>
+              </Button>
+              <div id="cart-subtotal-breakdown" className={styles.breakdown} hidden={!subtotalOpen}>
+                <ul>
+                  {cartLines.map(({ product, quantity, color }) => (
+                    <li key={`${product.id}-${color ?? ""}`}>
+                      <span className={styles.breakdownName}>{product.name}{color ? ` (${color})` : ""}</span>
+                      <span className={styles.breakdownMath}>
+                        <span>× {quantity} × {money(product.listPricePerDay)}/day =</span>
+                        <strong>{money(product.listPricePerDay * quantity)}</strong>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p>Regular daily rates, before discounts.</p>
+              </div>
+              <dl>
+                <div><dt>Discounts</dt><dd className={styles.savings}>−{money(discount)}</dd></div>
+                <div className={styles.subtotalRow}><dt>Rental subtotal</dt><dd>{money(totals.rentalSubtotal)}</dd></div>
+              </dl>
+            </div>
+            <dl className={styles.priceGroup}>
               <div><dt>Non-refundable deposit</dt><dd>{money(totals.deposit)}</dd></div>
               <div><dt>Online fees</dt><dd>Free</dd></div>
-              <div className={styles.total}><dt>Estimated amount</dt><dd>{money(oneDayEstimate)}</dd></div>
+            </dl>
+            <dl className={styles.totalGroup}>
+              <div className={styles.total}><dt>Estimated total</dt><dd>{money(oneDayEstimate)}</dd></div>
             </dl>
             <div className={styles.perkNote}>
               <strong>More savings at checkout</strong>

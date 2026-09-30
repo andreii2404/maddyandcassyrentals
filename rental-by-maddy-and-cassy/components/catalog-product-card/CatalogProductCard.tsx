@@ -19,6 +19,7 @@ interface CatalogProductCardProps {
   isFavorite: boolean;
   onToggleFavorite: (productId: string) => void;
   ctaLabel?: string;
+  variant?: "default" | "favorite";
 }
 
 const LEVEL_CLASS = {
@@ -36,6 +37,7 @@ export default function CatalogProductCard({
   isFavorite,
   onToggleFavorite,
   ctaLabel = "Reserve Now",
+  variant = "default",
 }: CatalogProductCardProps) {
   const { addItem } = useCart();
   const { showToast } = useToast();
@@ -79,7 +81,7 @@ export default function CatalogProductCard({
 
   return (
     <article
-      className={`${styles.card} ${unavailable ? styles.cardUnavailable : ""}`}
+      className={`${styles.card} ${variant === "favorite" ? styles.cardFavorite : ""} ${unavailable ? styles.cardUnavailable : ""}`}
       onMouseEnter={startSlideshow}
       onMouseLeave={stopSlideshow}
     >
@@ -102,7 +104,7 @@ export default function CatalogProductCard({
                   src={image}
                   alt={`${product.name} photo ${index + 1}`}
                   fill
-                  sizes="(max-width: 640px) 92vw, (max-width: 1024px) 45vw, 23vw"
+                  sizes={variant === "favorite" ? "(max-width: 720px) 92vw, 45vw" : "(max-width: 640px) 92vw, (max-width: 1024px) 45vw, 23vw"}
                   className={styles.slideImage}
                 />
               </div>

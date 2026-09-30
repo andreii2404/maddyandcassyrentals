@@ -220,6 +220,59 @@
   text-align: right;
 }
 
+.summarySchedule {
+  margin: 0.7rem 0 0;
+  padding: 0.6rem;
+  border-radius: 12px;
+  background: var(--color-background-soft);
+}
+
+.summaryScheduleTitle {
+  margin: 0 0 0.4rem;
+  color: var(--color-text-primary);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.summarySchedule dl {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.summarySchedule dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.summarySchedule dt,
+.summarySchedule dd {
+  font-size: 0.68rem;
+  line-height: 1.3;
+}
+
+.summarySchedule dt {
+  flex-shrink: 0;
+  color: var(--color-charcoal);
+}
+
+.summarySchedule dd {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-weight: 700;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.summarySchedule dd small {
+  display: block;
+  margin-top: 0.1rem;
+  color: var(--color-charcoal);
+  font-size: 0.6rem;
+  font-weight: 400;
+}
+
 .detailsLink {
   color: var(--color-primary);
   font-size: 0.78rem;
@@ -313,6 +366,11 @@
     grid-column: 2;
   }
 
+  .bookingSummary .summarySchedule {
+    grid-column: 1 / -1;
+    margin-top: 0;
+  }
+
   .summaryFacts {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     border-bottom: 0;
@@ -371,6 +429,10 @@
   .bookingSummary {
     display: block;
     padding: 0.75rem;
+  }
+
+  .bookingSummary .summarySchedule {
+    margin-top: 0.5rem;
   }
 
   .bookingSummary .summaryFacts {

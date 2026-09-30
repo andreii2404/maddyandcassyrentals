@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { differenceInCalendarDays, format, isSameDay } from "date-fns";
+import { differenceInCalendarDays } from "date-fns";
 import type { Product } from "@/types/product";
 import type { FulfillmentMethod } from "@/src/types/booking";
 import type { ReservationDraft } from "@/src/types/reservationDraft";
@@ -25,6 +25,7 @@ import {
   type PickupUnavailabilityReason,
   reservedWindowLookaheadDays,
 } from "@/src/lib/rentalTiming";
+import { getDraftRentalSchedule } from "@/src/lib/rentalSchedule";
 import DateRangePicker from "@/components/date-range-picker/DateRangePicker";
 import PickupTimeSelector from "@/components/reservation/PickupTimeSelector";
 import formStyles from "@/components/ui/Form.module.css";
@@ -117,19 +118,20 @@ export default function StepCartRentalDetails({
     };
   }, [lineProductIdsKey]);
 
-  const pickupAt = useMemo(() => {
-    if (!draft.startDate || !isValidPickupTime(draft.pickupTime)) return null;
-    const value = combineManilaPickupDateTime(pickupDateKey(draft.startDate), draft.pickupTime);
-    return Number.isNaN(value.getTime()) ? null : value;
-  }, [draft.pickupTime, draft.startDate]);
+  const schedule = useMemo(
+    () =>
+      getDraftRentalSchedule({
+        startDate: draft.startDate,
+        rentalEndDate: draft.rentalEndDate,
+        pickupTime: draft.pickupTime,
+        fulfillmentMethod: draft.fulfillmentMethod,
+      }),
+    [draft.startDate, draft.rentalEndDate, draft.pickupTime, draft.fulfillmentMethod],
+  );
+  const { pickupAt, returnAt, rentalDays, estimatedDeliveryAt } = schedule;
+  const selectedRentalEndDate = schedule.rentalEndDate;
 
   const isPickupTimePast = !!pickupAt && pickupAt.getTime() <= nowTick;
-
-  const selectedRentalEndDate = draft.rentalEndDate ?? draft.startDate;
-  const rentalDays = draft.startDate && selectedRentalEndDate
-    ? Math.max(1, differenceInCalendarDays(selectedRentalEndDate, draft.startDate) + 1)
-    : 1;
-  const returnAt = pickupAt ? calculateReturnDateTime(pickupAt, rentalDays) : null;
 
   useEffect(() => {
     if (!pickupAt || pickupAt.getTime() <= Date.now()) return;
@@ -283,12 +285,7 @@ export default function StepCartRentalDetails({
     }
   }
 
-  const selectedDatesLabel =
-    draft.startDate && selectedRentalEndDate
-      ? isSameDay(draft.startDate, selectedRentalEndDate)
-        ? format(draft.startDate, "EEE, MMM d, yyyy")
-        : `${format(draft.startDate, "MMM d, yyyy")} – ${format(selectedRentalEndDate, "MMM d, yyyy")}`
-      : "Not selected yet";
+  const selectedDatesLabel = schedule.datesLabel;
 
   function updatePickupSchedule(
     date: Date | null,
@@ -484,7 +481,7 @@ export default function StepCartRentalDetails({
 
             <fieldset className={styles.fulfillmentFieldset}>
               <legend className={formStyles.label}>
-                How would you like to get your rentals?<span className={formStyles.required}>*</span>
+                How would you like to get your rentals?<span className={styles.requiredMark}>*</span>
               </legend>
 
               <label className={styles.fulfillmentOption}>
@@ -496,10 +493,7 @@ export default function StepCartRentalDetails({
                 />
                 <span>
                   <strong>Pickup</strong>
-                  <span className={styles.fulfillmentDetail}>
-                    Right Focus Off Campus, Manuel Hizon, Sta. Cruz, Manila. Available by
-                    appointment from 9:00 AM to 7:00 PM.
-                  </span>
+                  <span className={styles.fulfillmentDetail}>Sta. Cruz, Manila · 9 AM–7 PM</span>
                 </span>
               </label>
 
@@ -512,23 +506,33 @@ export default function StepCartRentalDetails({
                 />
                 <span>
                   <strong>Delivery</strong>
-                  <span className={styles.fulfillmentDetail}>
-                    Delivery is arranged manually by the business. Delivery fees and courier
-                    arrangements are handled directly with you, outside this website.
-                  </span>
+                  <span className={styles.fulfillmentDetail}>Fees arranged with you directly</span>
                 </span>
               </label>
             </fieldset>
 
+            {draft.fulfillmentMethod === "pickup" ? (
+              <p className={styles.fulfillmentNote}>
+                Pick up at Right Focus Off Campus, Manuel Hizon, Sta. Cruz, Manila. Available by
+                appointment from 9:00 AM to 7:00 PM.
+              </p>
+            ) : null}
+
             {isDelivery ? (
-              <>
+              <div className={styles.deliveryFields}>
+                <p className={styles.fulfillmentNote}>
+                  Delivery is arranged manually by the business. Fees and courier arrangements are
+                  handled directly with you, outside this website.
+                </p>
+
                 <div className={formStyles.field}>
                   <label className={formStyles.label} htmlFor="cartCustomerLocation">
-                    Delivery address<span className={formStyles.required}>*</span>
+                    Delivery address<span className={styles.requiredMark}>*</span>
                   </label>
                   <textarea
                     id="cartCustomerLocation"
                     autoComplete="address-line1"
+                    aria-required="true"
                     className={formStyles.textarea}
                     value={draft.customerLocation}
                     onChange={(event) => onUpdate({ customerLocation: event.target.value })}
@@ -536,15 +540,16 @@ export default function StepCartRentalDetails({
                   />
                 </div>
 
-                <div className={formStyles.row}>
+                <div className={styles.deliveryRow}>
                   <div className={formStyles.field}>
                     <label className={formStyles.label} htmlFor="cartCityMunicipality">
-                      City/Municipality<span className={formStyles.required}>*</span>
+                      City/Municipality<span className={styles.requiredMark}>*</span>
                     </label>
                     <input
                       id="cartCityMunicipality"
                       type="text"
                       autoComplete="address-level2"
+                      aria-required="true"
                       className={formStyles.input}
                       value={draft.cityMunicipality}
                       onChange={(event) => onUpdate({ cityMunicipality: event.target.value })}
@@ -554,11 +559,12 @@ export default function StepCartRentalDetails({
 
                   <div className={formStyles.field}>
                     <label className={formStyles.label} htmlFor="cartProvince">
-                      Province<span className={formStyles.required}>*</span>
+                      Province<span className={styles.requiredMark}>*</span>
                     </label>
                     <select
                       id="cartProvince"
                       autoComplete="address-level1"
+                      aria-required="true"
                       className={formStyles.select}
                       value={draft.province}
                       onChange={(event) => onUpdate({ province: event.target.value })}
@@ -570,7 +576,7 @@ export default function StepCartRentalDetails({
                     </select>
                   </div>
                 </div>
-              </>
+              </div>
             ) : null}
           </section>
         </div>
@@ -601,14 +607,6 @@ export default function StepCartRentalDetails({
                 <dd>{selectedDatesLabel}</dd>
               </div>
               <div>
-                <dt>Pickup/delivery time</dt>
-                <dd>{pickupAt ? formatManilaPickupTime(pickupAt) : "Not selected yet"}</dd>
-              </div>
-              <div>
-                <dt>Return time</dt>
-                <dd>{returnAt ? formatManilaDateTime(returnAt) : "Not selected yet"}</dd>
-              </div>
-              <div>
                 <dt>Pickup/Delivery</dt>
                 <dd>
                   {draft.fulfillmentMethod === "pickup"
@@ -617,6 +615,30 @@ export default function StepCartRentalDetails({
                       ? "Delivery"
                       : "Not selected yet"}
                 </dd>
+              </div>
+              <div>
+                <dt>
+                  {draft.fulfillmentMethod === "pickup"
+                    ? "Selected pickup time"
+                    : draft.fulfillmentMethod === "delivery"
+                      ? "Selected delivery time"
+                      : "Pickup/delivery time"}
+                </dt>
+                <dd>{pickupAt ? formatManilaPickupTime(pickupAt) : "Not selected yet"}</dd>
+              </div>
+              {draft.fulfillmentMethod === "delivery" ? (
+                <div>
+                  <dt>Estimated delivery</dt>
+                  <dd>
+                    {estimatedDeliveryAt
+                      ? `${formatManilaDateTime(estimatedDeliveryAt)} or later`
+                      : "Not selected yet"}
+                  </dd>
+                </div>
+              ) : null}
+              <div>
+                <dt>Return date &amp; time</dt>
+                <dd>{returnAt ? formatManilaDateTime(returnAt) : "Not selected yet"}</dd>
               </div>
             </dl>
 
@@ -657,8 +679,11 @@ export default function StepCartRentalDetails({
         onContinue={() => void handleContinue()}
       />
 
-      {showScheduleNotice ? (
+      {showScheduleNotice && pickupAt && returnAt && draft.fulfillmentMethod ? (
         <RentalScheduleNoticeModal
+          pickupAt={pickupAt}
+          returnAt={returnAt}
+          fulfillmentMethod={draft.fulfillmentMethod}
           onGoBack={() => setShowScheduleNotice(false)}
           onContinue={handleConfirmScheduleNotice}
         />
