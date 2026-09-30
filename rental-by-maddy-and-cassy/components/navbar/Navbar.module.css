@@ -209,6 +209,12 @@
   text-transform: uppercase;
 }
 
+.guideDropdown > p.guideDropdownSection {
+  margin-top: 0.4rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(154, 89, 101, 0.12);
+}
+
 .guideMenuLink {
   display: flex;
   padding: 0.65rem;
@@ -633,6 +639,8 @@
     text-decoration: none;
     flex-direction: column;
   }
+
+  .mobileGuideSection { margin-top: 1rem; }
 
   .mobileGuideLink strong { font-size: 0.75rem; }
   .mobileGuideLink small { margin-top: 0.18rem; color: #817878; font-size: 0.61rem; }

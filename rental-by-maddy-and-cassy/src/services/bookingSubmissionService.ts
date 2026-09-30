@@ -3,7 +3,13 @@ import type { Database } from "@/src/lib/supabase/database.types";
 import type { Product } from "@/types/product";
 import type { ReservationDraft } from "@/src/types/reservationDraft";
 import { formatCustomerAddress, getDayCount } from "@/src/types/reservationDraft";
-import { submitBookingWithDateGuard, submitMultiItemBookingWithDateGuard } from "@/src/services/inventoryService";
+import {
+  ItemDatesUnavailableError,
+  ItemUnavailableError,
+  submitBookingWithDateGuard,
+  submitMultiItemBookingWithDateGuard,
+} from "@/src/services/inventoryService";
+import { formatManilaDateTime } from "@/src/lib/rentalTiming";
 import { isValidPhoneNumber } from "@/src/lib/authValidation";
 
 export interface SubmitBookingResult {
@@ -122,8 +128,8 @@ export async function createMultiItemBookingReservation(
   const rentalDays = getDayCount(startDate, endDate);
 
   const colorNotes = lines
-    .filter((line) => line.color?.trim())
-    .map((line) => `${line.product.name}: ${line.color!.trim()}`)
+    .filter((line) => cartLineColor(line))
+    .map((line) => `${line.product.name}: ${cartLineColor(line)}`)
     .join("; ");
   const customerNotes = colorNotes ? `Color choice — ${colorNotes}` : undefined;
 
@@ -131,7 +137,7 @@ export async function createMultiItemBookingReservation(
     items: lines.map((line) => ({
       productId: line.product.id,
       quantity: line.quantity,
-      variant: line.color?.trim() || undefined,
+      variant: cartLineColor(line),
     })),
     pickupAt: startDate.toISOString(),
     rentalDays,
@@ -149,9 +155,62 @@ export async function createMultiItemBookingReservation(
       instagramLink: customerInfo.instagramLink.trim(),
     },
     isGuest,
+  }).catch((error: unknown) => {
+    throw describeCartLineError(error, lines);
   });
 
   return { bookingId: result.bookingId, bookingNumber: result.bookingRef };
+}
+
+type CartLine = { product: Product; quantity: number; color?: string };
+
+/**
+ * The color variant sent for a cart line. Products without color options never
+ * carry one, so a stale color left on such a line can't trigger color
+ * validation; a single-color product always books its only color.
+ */
+function cartLineColor(line: CartLine): string | undefined {
+  const options = line.product.colorOptions;
+  if (options.length === 0) return undefined;
+  return line.color?.trim() || (options.length === 1 ? options[0] : undefined);
+}
+
+function unitLabel(quantity: number): string {
+  return `${quantity} ${quantity === 1 ? "unit" : "units"}`;
+}
+
+/** Rewrites a per-item booking error so it names the affected cart item and quantity. */
+function describeCartLineError(error: unknown, lines: CartLine[]): unknown {
+  if (!(error instanceof ItemUnavailableError) && !(error instanceof ItemDatesUnavailableError)) {
+    return error;
+  }
+  const line = lines.find((candidate) => candidate.product.id === error.productId);
+  if (!line) return error;
+
+  const color = cartLineColor(line);
+  // Only name the color when the customer actually chose between several.
+  const itemName =
+    color && line.product.colorOptions.length > 1 ? `${line.product.name} (${color})` : line.product.name;
+  const needed = unitLabel(line.quantity);
+
+  if (error instanceof ItemDatesUnavailableError) {
+    const next = error.nextAvailableAt
+      ? ` It will be available starting ${formatManilaDateTime(error.nextAvailableAt)}.`
+      : "";
+    return new Error(
+      `${itemName} isn't available for your selected pickup time (${needed} needed).${next} Please choose a different schedule.`,
+    );
+  }
+  if (error.reason === "variant") {
+    return new Error(
+      color
+        ? `${line.product.name} is no longer offered in ${color}. Please choose another color in your cart.`
+        : `Please choose a color for ${line.product.name} in your cart.`,
+    );
+  }
+  return new Error(
+    `${itemName} doesn't have enough available units (${needed} needed). Please lower the quantity or remove it from your cart.`,
+  );
 }
 
 const UPLOAD_TIMEOUT_MS = 30_000;

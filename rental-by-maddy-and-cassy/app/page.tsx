@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import Hero from "@/components/hero/Hero";
 import FeaturedProducts from "@/components/storefront/FeaturedProducts";
 import ReviewCarousel, { type StorefrontReview } from "@/components/storefront/ReviewCarousel";
@@ -226,7 +227,7 @@ export default async function Home() {
                   <p>{categoryDescriptions[category] ?? `Explore available ${category.toLowerCase()} for daily rental.`}</p>
                   <span className={styles.categoryReveal} aria-hidden="true">View Category</span>
                 </div>
-                <strong>{count} {count === 1 ? "listing" : "listings"} <span aria-hidden="true">→</span></strong>
+                <strong>{count} {count === 1 ? "listing" : "listings"}</strong>
               </Link>
             ))}
           </div>
@@ -246,51 +247,87 @@ export default async function Home() {
               <p className={styles.eyebrow}>SPECIAL DISCOUNTS &amp; PERKS</p>
               <h2 id="perks-heading" className={styles.heading}>A little extra for your moments and milestones.</h2>
               <p className={styles.description}>
-                Birthday savings and loyalty rewards are tracked directly in the booking system,
-                with clear eligibility shown before you continue to payment.
+                Two ways to save, tracked in your account. Eligibility is shown before you
+                continue to payment.
               </p>
               <Link href="/sign-up" className={styles.perksCta}>
                 Create an account to track progress
-                <span className={styles.perksCtaChip} aria-hidden="true">
-                  <svg viewBox="0 0 20 20" width="14" height="14">
-                    <path d="M5 15 15 5M7 5h8v8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </span>
               </Link>
             </div>
 
-            <div className={styles.perksGridWrap}>
-              <div className={styles.perksGrid}>
-                <article className={styles.perkCard}>
-                  <div className={styles.perkTopline}>
-                    <span>01</span>
-                    <strong>Birthday Month Discount</strong>
-                  </div>
-                  <p className={styles.perkAmount}>₱100 <span>off</span></p>
-                  <p>
-                    Rent during your birth month and receive ₱100 off the rental fee.
-                    Add your birth date once and present a valid ID showing the same date.
-                  </p>
-                  <small>Eligible birthday savings are applied at checkout and verified from your submitted ID.</small>
-                </article>
+            <div className={styles.perksPanel}>
+              <article className={styles.perk}>
+                <div className={styles.perkHead}>
+                  <span className={styles.perkIcon} aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width={16} height={16} fill="none">
+                      <path d="M4.5 20h15M5.5 20v-6.5a1.5 1.5 0 0 1 1.5-1.5h10a1.5 1.5 0 0 1 1.5 1.5V20" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M5.5 15.5c1.1 0 1.6-.9 2.2-.9s1.1.9 2.2.9 1.6-.9 2.1-.9 1.1.9 2.2.9 1.6-.9 2.1-.9 1.1.9 2.2.9M12 12V9M12 6.8c.9 0 1.3-.7 1.3-1.3S12 3.5 12 3.5s-1.3 1.4-1.3 2c0 .6.4 1.3 1.3 1.3Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </span>
+                  <h3 className={styles.perkTitle}>Birthday Month Discount</h3>
+                </div>
 
-                <article className={`${styles.perkCard} ${styles.loyaltyCard}`}>
-                  <div className={styles.perkTopline}>
-                    <span>02</span>
-                    <strong>Loyalty Reward Program</strong>
-                  </div>
-                  <p className={styles.perkAmount}>₱200 <span>off</span></p>
-                  <p>
-                    No loyalty card needed. Every returned rental under the same customer account
-                    counts, and ₱200 is automatically applied to your 11th rental.
-                  </p>
-                  <small>Track your completed rentals and reward progress anytime from My Bookings.</small>
-                </article>
-              </div>
+                <p className={styles.perkAmount}>
+                  <span className={styles.perkCurrency}>₱</span>100
+                  <span className={styles.perkOff}>OFF</span>
+                </p>
+                <p className={styles.perkSummary}>Your rental fee when you rent during your birth month.</p>
 
-              <p className={styles.perksNote}>
-                1 completed rental = 1 loyalty count, regardless of the number of units in that booking.
-              </p>
+                <ul className={styles.perkFacts}>
+                  <li>Add your birth date to your account once</li>
+                  <li>Applied at checkout when eligible</li>
+                </ul>
+
+                <p className={styles.perkFine}>
+                  Verified from your submitted valid ID, which must show the same birth date.
+                </p>
+              </article>
+
+              <article className={`${styles.perk} ${styles.perkLoyalty}`}>
+                <div className={styles.perkHead}>
+                  <span className={styles.perkIcon} aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width={16} height={16} fill="none">
+                      <path d="m12 3.8 2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.6-4.8 2.6.9-5.4-3.9-3.8 5.4-.8L12 3.8Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                    </svg>
+                  </span>
+                  <h3 className={styles.perkTitle}>Loyalty Reward Program</h3>
+                </div>
+
+                <p className={styles.perkAmount}>
+                  <span className={styles.perkCurrency}>₱</span>200
+                  <span className={styles.perkOff}>OFF</span>
+                </p>
+                <p className={styles.perkSummary}>Complete 10 rentals, get ₱200 off your 11th rental.</p>
+
+                <div className={styles.loyaltyTrack} aria-hidden="true">
+                  <ol className={styles.loyaltyPips}>
+                    {Array.from({ length: 10 }, (_, index) => (
+                      <li key={index} className={styles.loyaltyPip} style={{ "--pip": index } as CSSProperties}>
+                        {index + 1}
+                      </li>
+                    ))}
+                    <li className={styles.loyaltyPipReward}>
+                      <svg viewBox="0 0 24 24" width={13} height={13} fill="none">
+                        <path d="M4.5 10.5h15v9h-15zM3.5 7.5h17v3h-17zM12 7.5v12M12 7.5c-1.5-2.8-4.8-3.4-4.8-1.3 0 1.3 2.3 1.3 4.8 1.3Zm0 0c1.5-2.8 4.8-3.4 4.8-1.3 0 1.3-2.3 1.3-4.8 1.3Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+                      </svg>
+                    </li>
+                  </ol>
+                  <div className={styles.loyaltyScale}>
+                    <span>10 completed rentals</span>
+                    <strong>11th</strong>
+                  </div>
+                </div>
+
+                <ul className={styles.perkFacts}>
+                  <li>No loyalty card needed, applied automatically</li>
+                  <li>Track your progress anytime in My Bookings</li>
+                </ul>
+
+                <p className={styles.perkFine}>
+                  Every returned rental under the same customer account counts. 1 completed rental =
+                  1 loyalty count, regardless of the number of units in that booking.
+                </p>
+              </article>
             </div>
           </div>
         </section>

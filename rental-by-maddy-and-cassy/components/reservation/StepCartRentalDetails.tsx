@@ -31,6 +31,12 @@ import PickupTimeSelector from "@/components/reservation/PickupTimeSelector";
 import formStyles from "@/components/ui/Form.module.css";
 import ReservationFooter from "@/components/reservation/ReservationFooter";
 import RentalScheduleNoticeModal from "@/components/reservation/RentalScheduleNoticeModal";
+import {
+  HandoverTimeDetails,
+  PriceBreakdown,
+  ReturnScheduleDetails,
+} from "@/components/reservation/CheckoutSummaryDetails";
+import { formatPeso } from "@/src/lib/emailShell";
 import styles from "./StepRentalDetails.module.css";
 import { PHILIPPINE_PROVINCES } from "@/src/data/philippineLocations";
 
@@ -616,36 +622,30 @@ export default function StepCartRentalDetails({
                       : "Not selected yet"}
                 </dd>
               </div>
-              <div>
-                <dt>
-                  {draft.fulfillmentMethod === "pickup"
-                    ? "Selected pickup time"
-                    : draft.fulfillmentMethod === "delivery"
-                      ? "Selected delivery time"
-                      : "Pickup/delivery time"}
-                </dt>
-                <dd>{pickupAt ? formatManilaPickupTime(pickupAt) : "Not selected yet"}</dd>
-              </div>
-              {draft.fulfillmentMethod === "delivery" ? (
-                <div>
-                  <dt>Estimated delivery</dt>
-                  <dd>
-                    {estimatedDeliveryAt
-                      ? `${formatManilaDateTime(estimatedDeliveryAt)} or later`
-                      : "Not selected yet"}
-                  </dd>
-                </div>
-              ) : null}
-              <div>
-                <dt>Return date &amp; time</dt>
-                <dd>{returnAt ? formatManilaDateTime(returnAt) : "Not selected yet"}</dd>
-              </div>
             </dl>
+
+            <HandoverTimeDetails
+              fulfillmentMethod={draft.fulfillmentMethod}
+              pickupAt={pickupAt}
+              estimatedDeliveryAt={estimatedDeliveryAt}
+            />
+            <ReturnScheduleDetails
+              pickupAt={pickupAt}
+              returnAt={returnAt}
+              rentalDays={rentalDays}
+              fulfillmentMethod={draft.fulfillmentMethod}
+            />
+            <PriceBreakdown
+              lines={lines}
+              pricing={pricing}
+              fulfillmentMethod={draft.fulfillmentMethod}
+              pickupTime={draft.pickupTime}
+            />
 
             <div className={styles.summaryTotal}>
               <span>Current total</span>
               <strong>
-                {pricing.rentalDays > 0 ? `${pricing.finalAmount.toLocaleString()}` : "Choose dates"}
+                {pricing.rentalDays > 0 ? formatPeso(pricing.finalAmount) : "Choose dates"}
               </strong>
             </div>
 

@@ -6,35 +6,26 @@
 
 .leadText {
   margin: 0;
-  color: var(--color-text-primary);
-  font-size: 0.95rem;
-  font-weight: 700;
-  line-height: 1.5;
-}
-
-.text {
-  margin: 0;
   color: var(--color-text-secondary);
-  font-size: 0.85rem;
+  font-size: 0.88rem;
   line-height: 1.5;
 }
 
 .schedule {
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
   margin: 0;
-  padding: 0.75rem 0.85rem;
-  border: 1px solid var(--color-light-gray);
-  border-radius: 12px;
-  background: var(--color-background-soft);
+  border-top: 1px solid var(--color-border);
 }
 
 .scheduleRow {
   display: flex;
   flex-wrap: wrap;
+  align-items: baseline;
   justify-content: space-between;
   gap: 0.15rem 0.75rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .scheduleRow dt {
@@ -44,35 +35,40 @@
 }
 
 .scheduleRow dd {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
   margin: 0;
   color: var(--color-text-primary);
-  font-size: 0.85rem;
+  font-size: 0.92rem;
   font-weight: 700;
   text-align: right;
 }
 
-.scheduleNote {
-  color: var(--color-text-secondary);
-  font-size: 0.72rem;
-  font-weight: 500;
+.scheduleRowStacked {
+  flex-direction: column;
+  align-items: stretch;
 }
 
-.highlight {
-  margin: 0;
-  padding: 0.7rem 0.85rem;
-  border: 1px solid var(--color-dusty-rose);
-  border-radius: 12px;
-  background: var(--color-blush);
-  color: var(--color-text-primary);
+.scheduleRowStacked dd {
   font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.scheduleRowStacked dd strong {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.note {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
   line-height: 1.5;
 }
 
-.highlight strong {
-  color: var(--color-primary);
+.note strong {
+  color: var(--color-text-primary);
+  font-weight: 700;
 }
 
 .contactRow {
@@ -81,15 +77,11 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  padding: 0.6rem 0.75rem;
-  border: 1px solid var(--color-light-gray);
-  border-radius: 12px;
-  background: var(--color-background-soft);
 }
 
 .contactLabel {
   color: var(--color-charcoal);
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   font-weight: 600;
 }
 
@@ -102,9 +94,8 @@
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
-  padding-top: 0.5rem;
+  padding-top: 0.75rem;
   border-top: 1px solid var(--color-border);
-  margin-top: 0.25rem;
 }
 
 @media (max-width: 480px) {

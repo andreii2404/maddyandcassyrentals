@@ -30,13 +30,37 @@ export class DatesUnavailableError extends Error {
 
 /** Same as DatesUnavailableError, but names which cart line/product it was raised for. */
 export class ItemDatesUnavailableError extends Error {
-  constructor(public readonly productId: string, requestedPickup?: string, nextAvailableAt?: string) {
+  constructor(
+    public readonly productId: string,
+    public readonly requestedPickup?: string,
+    public readonly nextAvailableAt?: string,
+  ) {
     const requested = requestedPickup ? formatManilaPickupTime(requestedPickup) : "That";
     const next = nextAvailableAt
       ? ` and will be available starting ${formatManilaDateTime(nextAvailableAt)}`
       : " at a later time";
     super(`${requested} pickup is unavailable for one of the selected items${next}.`);
     this.name = "ItemDatesUnavailableError";
+  }
+}
+
+/**
+ * A cart line the server could not reserve for inventory reasons:
+ * "variant" -- the chosen color is no longer offered for that product;
+ * "units" -- the product/color has fewer active units than the line's quantity.
+ */
+export class ItemUnavailableError extends Error {
+  constructor(
+    public readonly productId: string,
+    public readonly reason: "variant" | "units",
+    public readonly variant?: string,
+  ) {
+    super(
+      reason === "variant"
+        ? "The selected color for one of your items is no longer offered. Please choose another color in your cart."
+        : "One of your items no longer has enough available units. Please update your cart and try again.",
+    );
+    this.name = "ItemUnavailableError";
   }
 }
 
@@ -274,8 +298,19 @@ export async function submitMultiItemBookingWithDateGuard(
 
   if (error) {
     logSupabaseError("submitMultiItemBookingWithDateGuard: booking RPC failed", error);
+    const unitsMatch = error.message.match(/NO_VARIANT_AVAILABILITY:([0-9a-fA-F-]{36}):([^\n]*)/);
+    if (unitsMatch) {
+      const [, productId, variant] = unitsMatch;
+      throw new ItemUnavailableError(productId, "units", variant.trim() || undefined);
+    }
+    const variantMatch = error.message.match(/VARIANT_NOT_AVAILABLE:([0-9a-fA-F-]{36})/);
+    if (variantMatch) {
+      const productId = variantMatch[1];
+      const variant = input.items.find((item) => item.productId === productId)?.variant?.trim();
+      throw new ItemUnavailableError(productId, "variant", variant || undefined);
+    }
     if (error.message.includes("VARIANT_NOT_AVAILABLE") || error.message.includes("NO_VARIANT_AVAILABILITY")) {
-      throw new Error("One of the selected colors is unavailable or does not have enough units.");
+      throw new Error("One of your items is no longer available in the selected color or quantity. Please update your cart and try again.");
     }
     const timeMatch = error.message.match(/NO_TIME_AVAILABILITY:([0-9a-fA-F-]{36}):([^\n]*)/);
     if (timeMatch) {

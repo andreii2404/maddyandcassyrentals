@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/Button";
+import {
+  isSupabasePublicImage,
+  supabaseImageLoader,
+  supabaseSquareImageLoader,
+} from "@/src/lib/supabaseImageLoader";
 import styles from "./ImageGallery.module.css";
 
 interface ImageGalleryProps {
@@ -12,23 +17,31 @@ interface ImageGalleryProps {
 }
 
 const SWIPE_THRESHOLD_PX = 60;
+const PLACEHOLDER_IMAGE = "/images/product-placeholder.png";
 
 const FOCUS_TRAP_SELECTOR =
   "input, textarea, select, [contenteditable='true'], [contenteditable=''], [role='grid'], [role='listbox'], [role='combobox'], [role='menu']";
 
 export default function ImageGallery({ images, productName, badge }: ImageGalleryProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [viewMode, setViewMode] = useState<"photo" | "360">("photo");
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [failedImages, setFailedImages] = useState<ReadonlySet<string>>(() => new Set());
 
   const dragStartX = useRef(0);
   const activePointerId = useRef<number | null>(null);
 
-  const galleryImages = images.length > 0 ? images : ["/images/product-placeholder.png"];
+  // Photos that fail to load are dropped so no broken icon or alt text ever shows.
+  const loadableImages = images.filter((image) => image && !failedImages.has(image));
+  const galleryImages = loadableImages.length > 0 ? loadableImages : [PLACEHOLDER_IMAGE];
   const maxIndex = galleryImages.length - 1;
   const activeIndex = Math.min(selectedIndex, maxIndex);
-  const canSwipe = galleryImages.length > 1 && viewMode === "photo";
+  const canSwipe = galleryImages.length > 1;
+
+  const markFailed = useCallback((image: string) => {
+    if (image === PLACEHOLDER_IMAGE) return;
+    setFailedImages((current) => (current.has(image) ? current : new Set(current).add(image)));
+  }, []);
 
   const goTo = useCallback(
     (index: number) => {
@@ -81,7 +94,7 @@ export default function ImageGallery({ images, productName, badge }: ImageGaller
   return (
     <div className={styles.wrapper}>
       <div
-        className={`${styles.mainImageWrapper} ${viewMode === "360" ? styles.spinMode : ""}`}
+        className={styles.mainImageWrapper}
         role="region"
         aria-roledescription="carousel"
         aria-label={`${productName} photos`}
@@ -104,6 +117,8 @@ export default function ImageGallery({ images, productName, badge }: ImageGaller
                 className={styles.slideImage}
                 priority={index === 0}
                 draggable={false}
+                loader={isSupabasePublicImage(image) ? supabaseImageLoader : undefined}
+                onError={() => markFailed(image)}
               />
             </div>
           ))}
@@ -133,16 +148,6 @@ export default function ImageGallery({ images, productName, badge }: ImageGaller
           </Button>
           </>
         ) : null}
-
-        <Button
-          variant="none"
-          className={`${styles.viewToggle} ${viewMode === "360" ? styles.viewToggleActive : ""}`}
-          onClick={() => setViewMode((mode) => (mode === "photo" ? "360" : "photo"))}
-          aria-pressed={viewMode === "360"}
-          aria-label="Toggle between photo and 360 degree / 3D view"
-        >
-          360° | 3D View
-        </Button>
       </div>
 
       {galleryImages.length > 1 ? (
@@ -154,14 +159,18 @@ export default function ImageGallery({ images, productName, badge }: ImageGaller
             role="tab"
             aria-selected={index === activeIndex}
             className={`${styles.thumbnail} ${index === activeIndex ? styles.thumbnailActive : ""}`}
+            aria-label={`Show ${productName} photo ${index + 1}`}
             onClick={() => goTo(index)}
           >
             <Image
               src={image}
-              alt={`${productName} view ${index + 1}`}
+              alt=""
               fill
               sizes="80px"
               className={styles.thumbnailImage}
+              draggable={false}
+              loader={isSupabasePublicImage(image) ? supabaseSquareImageLoader : undefined}
+              onError={() => markFailed(image)}
             />
           </Button>
           ))}

@@ -2,7 +2,10 @@
 
 import { Button } from "@/components/ui/Button";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
+import ConfirmModal from "@/components/ui/ConfirmModal";
+import { useLeaveConfirmation } from "@/hooks/useLeaveConfirmation";
 import type { Product } from "@/types/product";
 import { useAuth } from "@/hooks/useAuth";
 import { createClient } from "@/src/lib/supabase/client";
@@ -102,6 +105,8 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
   const [progressHydrated, setProgressHydrated] = useState(false);
   const [progressRestored, setProgressRestored] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  /** Saves immediately (skipping the debounce) so nothing typed is lost when leaving checkout. */
+  const saveProgressNowRef = useRef<() => void>(() => {});
   const [rewardProgress, setRewardProgress] = useState<RewardProgress>({
     completedRentals: 0,
     loyaltyRewardUsed: false,
@@ -202,9 +207,11 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
       if (document.visibilityState === "hidden") saveProgress();
     };
     const timer = window.setTimeout(saveProgress, 250);
+    saveProgressNowRef.current = saveProgress;
     document.addEventListener("visibilitychange", saveWhenHidden);
     window.addEventListener("pagehide", saveProgress);
     return () => {
+      saveProgressNowRef.current = () => {};
       window.clearTimeout(timer);
       document.removeEventListener("visibilitychange", saveWhenHidden);
       window.removeEventListener("pagehide", saveProgress);
@@ -367,6 +374,16 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
   const updateDraft = useCallback((patch: Partial<ReservationDraft>) => {
     setDraft((current) => ({ ...current, ...patch }));
   }, []);
+
+  // Confirm before leaving an in-progress checkout (steps 1–5); the gate screens and the
+  // final confirmation step have nothing to lose.
+  const showsCheckoutGate =
+    Boolean(resumeMismatch) || (!bookingId && (Boolean(inventoryIssue) || lines.length === 0));
+  const leaveConfirmation = useLeaveConfirmation({
+    enabled: progressHydrated && step < 6 && !showsCheckoutGate,
+    fallbackHref: "/cart",
+    onBeforeLeave: () => saveProgressNowRef.current(),
+  });
 
   function goToStep(nextStep: number) {
     setStep(nextStep);
@@ -675,7 +692,7 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
         ) : null}
 
         {step === 3 && showPaymentHandoff ? (
-          <PhaseHandoff phase={1} bookingNumber={bookingNumber} isGuest={isGuest} onContinue={() => { setShowPaymentHandoff(false); goToStep(4); }} />
+          <PhaseHandoff phase={1} bookingNumber={bookingNumber} isGuest={isGuest} onContinue={() => { setShowPaymentHandoff(false); goToStep(4); }} onLeave={leaveConfirmation.requestLeave} />
         ) : null}
 
         {step === 4 && !showPaymentHandoff ? (
@@ -712,6 +729,21 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
         ) : null}
         </div>
       </div>
+
+      {leaveConfirmation.confirmOpen
+        ? createPortal(
+            // Portaled to <body> so it always sits above any dialog a step already has open.
+            <ConfirmModal
+              title="Are you sure you want to leave checkout?"
+              description="Your progress is saved, but verification files and signature images are not stored."
+              cancelLabel="Stay"
+              confirmLabel="Leave Checkout"
+              onCancel={leaveConfirmation.stay}
+              onConfirm={leaveConfirmation.confirmLeave}
+            />,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

@@ -57,7 +57,7 @@ export default function CheckoutAccessDialog({
         <div className={styles.option}>
           <strong>Guest Checkout</strong>
           <p>
-            No password required. You will still provide an email for booking updates, and you can
+            No account required. You will still provide an email for booking updates, and you can
             track this booking from the confirmation page afterwards.
           </p>
           <Button
@@ -72,7 +72,15 @@ export default function CheckoutAccessDialog({
 
         <div className={styles.option}>
           <strong>Login</strong>
-          <p>Save booking history and open receipts or invoices from any signed-in device.</p>
+          <div className={styles.benefits}>
+            <p>Signed-in customers can track, from any device:</p>
+            <ul>
+              <li>Booking history</li>
+              <li>Payment history</li>
+              <li>Receipts and invoices</li>
+              <li>Loyalty reward progress</li>
+            </ul>
+          </div>
           <Link href={`/sign-in${authRedirect}`} className={styles.primaryAction}>Login</Link>
           <p className={styles.signUpPrompt}>
             Don&apos;t have an account?{" "}

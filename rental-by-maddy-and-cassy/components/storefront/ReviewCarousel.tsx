@@ -45,6 +45,8 @@ export default function ReviewCarousel({ reviews }: ReviewCarouselProps) {
 
   return (
     <Reveal>
+    <div className={styles.block}>
+    <p className={styles.sectionTitle}>CUSTOMER STORIES &amp; REVIEWS</p>
     <section className={styles.reviews} aria-labelledby="customer-reviews-heading">
       <div className={styles.layout}>
         <div className={styles.info}>
@@ -100,6 +102,7 @@ export default function ReviewCarousel({ reviews }: ReviewCarouselProps) {
         </div>
       </div>
     </section>
+    </div>
     </Reveal>
   );
 }

@@ -25,6 +25,10 @@ const guideLinks = [
   { href: "/faq", label: "FAQs", description: "Quick answers" },
 ];
 
+const storyLinks = [
+  { href: "/reviews", label: "Reviews", description: "Verified renter feedback" },
+];
+
 function HeartIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -180,7 +184,7 @@ export default function Navbar() {
   const accountHomeLabel = isAdmin ? "Admin Dashboard" : "My Bookings";
   const profileHref = "/account/profile";
   const profileLabel = "My Profile";
-  const guideActive = guideLinks.some((item) => pathname === item.href);
+  const guideActive = [...guideLinks, ...storyLinks].some((item) => pathname === item.href);
 
   function isPrimaryLinkActive(href: string): boolean {
     if (href === "/") return pathname === "/";
@@ -256,6 +260,22 @@ export default function Navbar() {
               <div className={styles.guideDropdown}>
                 <p>Plan your rental</p>
                 {guideLinks.map((item) => {
+                  const active = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`${styles.guideMenuLink} ${active ? styles.guideMenuLinkActive : ""}`}
+                      aria-current={active ? "page" : undefined}
+                      onClick={() => setGuideOpen(false)}
+                    >
+                      <span>{item.label}</span>
+                      <small>{item.description}</small>
+                    </Link>
+                  );
+                })}
+                <p className={styles.guideDropdownSection}>Customer Stories &amp; Reviews</p>
+                {storyLinks.map((item) => {
                   const active = pathname === item.href;
                   return (
                     <Link
@@ -441,6 +461,24 @@ export default function Navbar() {
               <p className={styles.mobileLabel}>Rental Guide</p>
               <div>
                 {guideLinks.map((item) => {
+                  const active = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`${styles.mobileGuideLink} ${active ? styles.mobileGuideLinkActive : ""}`}
+                      aria-current={active ? "page" : undefined}
+                      onClick={closeMenu}
+                    >
+                      <strong>{item.label}</strong>
+                      <small>{item.description}</small>
+                    </Link>
+                  );
+                })}
+              </div>
+              <p className={`${styles.mobileLabel} ${styles.mobileGuideSection}`}>Customer Stories &amp; Reviews</p>
+              <div>
+                {storyLinks.map((item) => {
                   const active = pathname === item.href;
                   return (
                     <Link
