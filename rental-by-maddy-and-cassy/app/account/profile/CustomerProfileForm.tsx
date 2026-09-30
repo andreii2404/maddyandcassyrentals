@@ -151,14 +151,16 @@ function CustomerProfileEditor({
     }
   }
 
+  const birthDateLocked = Boolean(profile.birthDate);
+
   return (
-    <section className={styles.card} aria-labelledby="profile-heading">
-      <div className={styles.header}>
+    <div className={styles.page}>
+      <header className={styles.header}>
         <div className={styles.avatar} aria-hidden="true">
           {profile.displayName?.charAt(0).toUpperCase() || "C"}
         </div>
-        <div>
-          <p className={styles.eyebrow}>CUSTOMER ACCOUNT</p>
+        <div className={styles.headerText}>
+          <p className={styles.eyebrow}>Customer account</p>
           <h1 id="profile-heading" className={styles.heading}>
             My Profile
           </h1>
@@ -166,71 +168,68 @@ function CustomerProfileEditor({
             Keep your contact information current for booking coordination.
           </p>
         </div>
-      </div>
+        <span className={`${styles.status} ${styles[profile.accountStatus]}`}>
+          <span className={styles.statusDot} aria-hidden="true" />
+          Account {profile.accountStatus}
+        </span>
+      </header>
 
-      <form className={styles.form} onSubmit={handleSubmit}>
-        <div className={formStyles.row}>
-          <div className={formStyles.field}>
-            <label className={formStyles.label} htmlFor="profile-name">
-              Full name<span className={formStyles.required}>*</span>
-            </label>
-            <input
-              id="profile-name"
-              className={formStyles.input}
-              value={draft.displayName}
-              onChange={(event) => updateDraft("displayName", event.target.value)}
-              autoComplete="name"
-              required
-            />
+      <form className={styles.form} onSubmit={handleSubmit} aria-labelledby="profile-heading">
+        <section className={styles.section} aria-labelledby="profile-personal-heading">
+          <div className={styles.sectionIntro}>
+            <h2 id="profile-personal-heading" className={styles.sectionTitle}>
+              Personal Information
+            </h2>
+            <p className={styles.sectionDescription}>Your name and account identity.</p>
           </div>
 
-          <div className={formStyles.field}>
-            <label className={formStyles.label} htmlFor="profile-email">
-              Email address
-            </label>
-            <input
-              id="profile-email"
-              className={formStyles.input}
-              value={profile.email || user?.email || ""}
-              disabled
-            />
-          </div>
-        </div>
+          <div className={styles.sectionFields}>
+            <div className={formStyles.field}>
+              <label className={styles.label} htmlFor="profile-name">
+                Full name<span className={formStyles.required}>*</span>
+              </label>
+              <input
+                id="profile-name"
+                className={formStyles.input}
+                value={draft.displayName}
+                onChange={(event) => updateDraft("displayName", event.target.value)}
+                autoComplete="name"
+                required
+              />
+            </div>
 
-        <div className={formStyles.row}>
-          <div className={formStyles.field}>
-            <label className={formStyles.label} htmlFor="profile-phone">
-              Phone number<span className={formStyles.required}>*</span>
-            </label>
-            <input
-              id="profile-phone"
-              type="tel"
-              inputMode="numeric"
-              className={formStyles.input}
-              value={draft.phoneNumber}
-              onChange={(event) => updateDraft("phoneNumber", normalizePhoneInput(event.target.value))}
-              autoComplete="tel"
-              maxLength={PHONE_DIGIT_COUNT}
-              placeholder="09XXXXXXXXX"
-              required
-            />
-            <p className={formStyles.helpText}>Use exactly 11 digits.</p>
-          </div>
+            <div className={formStyles.row}>
+              <div className={formStyles.field}>
+                <label className={styles.label} htmlFor="profile-email">
+                  Email address
+                  <span className={styles.lockedBadge}>Read-only</span>
+                </label>
+                <input
+                  id="profile-email"
+                  className={`${formStyles.input} ${styles.lockedInput}`}
+                  value={profile.email || user?.email || ""}
+                  disabled
+                />
+              </div>
 
-          <div className={formStyles.field}>
-            <label className={formStyles.label} htmlFor="profile-birth-date">
-              Birth date <span className={styles.optional}>(birthday perk)</span>
-            </label>
-            <input
-              id="profile-birth-date"
-              type="date"
-              className={formStyles.input}
-              value={draft.birthDate}
-              onChange={(event) => updateDraft("birthDate", event.target.value)}
-              max={getMaxBirthDate()}
-              disabled={Boolean(profile.birthDate)}
-            />
-            <p className={styles.fieldNote}>
+              <div className={formStyles.field}>
+                <label className={styles.label} htmlFor="profile-birth-date">
+                  Birth date <span className={styles.optional}>(birthday perk)</span>
+                  {birthDateLocked ? <span className={styles.lockedBadge}>Locked</span> : null}
+                </label>
+                <input
+                  id="profile-birth-date"
+                  type="date"
+                  className={`${formStyles.input} ${birthDateLocked ? styles.lockedInput : ""}`}
+                  value={draft.birthDate}
+                  onChange={(event) => updateDraft("birthDate", event.target.value)}
+                  max={getMaxBirthDate()}
+                  disabled={birthDateLocked}
+                  aria-describedby="profile-birth-date-note"
+                />
+              </div>
+            </div>
+            <p id="profile-birth-date-note" className={styles.fieldNote}>
               {profile.birthDateVerifiedAt
                 ? "Verified from your submitted ID. Birthday-month rentals receive ₱100 off."
                 : profile.birthDate
@@ -238,61 +237,106 @@ function CustomerProfileEditor({
                   : "Add this once to check birthday-month eligibility. It must match your valid ID."}
             </p>
           </div>
-        </div>
+        </section>
 
-        <div className={formStyles.field}>
-          <label className={formStyles.label} htmlFor="profile-address">
-            Full address<span className={formStyles.required}>*</span>
-          </label>
-          <textarea
-            id="profile-address"
-            className={formStyles.textarea}
-            value={draft.fullAddress}
-            onChange={(event) => updateDraft("fullAddress", event.target.value)}
-            autoComplete="street-address"
-            required
-          />
-        </div>
-
-        <div className={formStyles.row}>
-          <div className={formStyles.field}>
-            <label className={formStyles.label} htmlFor="profile-facebook">
-              Facebook profile link<span className={formStyles.required}>*</span>
-            </label>
-            <input
-              id="profile-facebook"
-              type="url"
-              className={formStyles.input}
-              value={draft.facebookLink}
-              onChange={(event) => updateDraft("facebookLink", event.target.value)}
-              placeholder="https://facebook.com/..."
-              required
-            />
+        <section className={styles.section} aria-labelledby="profile-contact-heading">
+          <div className={styles.sectionIntro}>
+            <h2 id="profile-contact-heading" className={styles.sectionTitle}>
+              Contact &amp; Address
+            </h2>
+            <p className={styles.sectionDescription}>
+              Used to coordinate pickups, returns, and booking updates.
+            </p>
           </div>
 
-          <div className={formStyles.field}>
-            <label className={formStyles.label} htmlFor="profile-instagram">
-              Instagram profile link<span className={formStyles.required}>*</span>
-            </label>
-            <input
-              id="profile-instagram"
-              type="url"
-              className={formStyles.input}
-              value={draft.instagramLink}
-              onChange={(event) => updateDraft("instagramLink", event.target.value)}
-              placeholder="https://instagram.com/..."
-              required
-            />
-          </div>
-        </div>
+          <div className={styles.sectionFields}>
+            <div className={`${formStyles.field} ${styles.phoneField}`}>
+              <label className={styles.label} htmlFor="profile-phone">
+                Phone number<span className={formStyles.required}>*</span>
+              </label>
+              <input
+                id="profile-phone"
+                type="tel"
+                inputMode="numeric"
+                className={formStyles.input}
+                value={draft.phoneNumber}
+                onChange={(event) => updateDraft("phoneNumber", normalizePhoneInput(event.target.value))}
+                autoComplete="tel"
+                maxLength={PHONE_DIGIT_COUNT}
+                placeholder="09XXXXXXXXX"
+                required
+              />
+              <p className={formStyles.helpText}>Use exactly 11 digits.</p>
+            </div>
 
-        <div className={styles.footer}>
-          <span className={`${styles.status} ${styles[profile.accountStatus]}`}>
-            Account {profile.accountStatus}
-          </span>
+            <div className={formStyles.field}>
+              <label className={styles.label} htmlFor="profile-address">
+                Full address<span className={formStyles.required}>*</span>
+              </label>
+              <textarea
+                id="profile-address"
+                className={`${formStyles.textarea} ${styles.addressInput}`}
+                value={draft.fullAddress}
+                onChange={(event) => updateDraft("fullAddress", event.target.value)}
+                autoComplete="street-address"
+                required
+              />
+            </div>
+          </div>
+        </section>
+
+        <section className={styles.section} aria-labelledby="profile-social-heading">
+          <div className={styles.sectionIntro}>
+            <h2 id="profile-social-heading" className={styles.sectionTitle}>
+              Social Profiles
+            </h2>
+            <p className={styles.sectionDescription}>
+              Helps us confirm who we are renting to.
+            </p>
+          </div>
+
+          <div className={styles.sectionFields}>
+            <div className={formStyles.field}>
+              <label className={styles.label} htmlFor="profile-facebook">
+                Facebook profile link<span className={formStyles.required}>*</span>
+              </label>
+              <input
+                id="profile-facebook"
+                type="url"
+                className={formStyles.input}
+                value={draft.facebookLink}
+                onChange={(event) => updateDraft("facebookLink", event.target.value)}
+                placeholder="https://facebook.com/..."
+                required
+              />
+            </div>
+
+            <div className={formStyles.field}>
+              <label className={styles.label} htmlFor="profile-instagram">
+                Instagram profile link<span className={formStyles.required}>*</span>
+              </label>
+              <input
+                id="profile-instagram"
+                type="url"
+                className={formStyles.input}
+                value={draft.instagramLink}
+                onChange={(event) => updateDraft("instagramLink", event.target.value)}
+                placeholder="https://instagram.com/..."
+                required
+              />
+            </div>
+          </div>
+        </section>
+
+        <div className={styles.actions}>
+          <p className={styles.actionsHint}>
+            Fields marked <span className={formStyles.required}>*</span> are required.
+          </p>
           <Button
             type="submit"
             variant="primary"
+            size="lg"
+            className={styles.saveButton}
             loading={saving}
             loadingText="Saving..."
             disabled={saving}
@@ -300,8 +344,20 @@ function CustomerProfileEditor({
             Save Profile
           </Button>
         </div>
-        <PushNotificationButton />
       </form>
-    </section>
+
+      <section className={styles.section} aria-labelledby="profile-notifications-heading">
+        <div className={styles.sectionIntro}>
+          <h2 id="profile-notifications-heading" className={styles.sectionTitle}>
+            Notifications
+          </h2>
+          <p className={styles.sectionDescription}>Applies to this device only.</p>
+        </div>
+
+        <div className={styles.sectionFields}>
+          <PushNotificationButton />
+        </div>
+      </section>
+    </div>
   );
 }

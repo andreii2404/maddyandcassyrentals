@@ -97,27 +97,24 @@ export default function BookingsListPage() {
     <div className={styles.wrapper}>
       <header className={styles.hero}>
         <div>
-          <p className={styles.eyebrow}>BOOKING HISTORY &amp; MANAGEMENT</p>
+          <p className={styles.eyebrow}>Booking history</p>
           <h1>My Bookings</h1>
-          <p>Track every request, payment milestone, handover update, and completed rental.</p>
+          <p className={styles.heroLead}>Track every request, payment milestone, handover update, and completed rental.</p>
         </div>
-        <div className={styles.heroActions}>
-          <Link href="/catalog" className={styles.newBookingLink}>Book another rental <span>→</span></Link>
-        </div>
+        <Link href="/catalog" className={styles.newBookingLink}>Book another rental</Link>
       </header>
 
-      <section className={styles.summaryGrid} aria-label="Booking summary">
+      <section className={styles.summaryBar} aria-label="Booking summary">
         {FILTERS.map((item) => (
           <Button variant="none"
             key={item.value}
             type="button"
-            className={`${styles.summaryCard} ${filter === item.value ? styles.summaryCardActive : ""}`}
+            className={`${styles.summaryItem} ${filter === item.value ? styles.summaryItemActive : ""}`}
             onClick={() => setFilter(item.value)}
             aria-pressed={filter === item.value}
           >
-            <span>{item.label}</span>
             <strong>{counts[item.value]}</strong>
-            <small>{item.value === "ongoing" ? "Needs attention or in progress" : item.value === "completed" ? "Returned rentals" : item.value === "cancelled" ? "Cancelled or declined" : "Complete history"}</small>
+            <span>{item.label}</span>
           </Button>
         ))}
       </section>
@@ -125,11 +122,10 @@ export default function BookingsListPage() {
       {bookings !== null ? (
         <section className={styles.loyalty} aria-labelledby="loyalty-heading">
           <div className={styles.loyaltyTopline}>
-            <div>
-              <p>SPECIAL PERK</p>
-              <h2 id="loyalty-heading">Your loyalty reward progress</h2>
-            </div>
-            <strong>{completedRentals} of {COMPLETED_RENTALS_BEFORE_REWARD}</strong>
+            <h2 id="loyalty-heading">Loyalty reward</h2>
+            <span className={styles.loyaltyCount}>
+              <strong>{completedRentals}</strong> of {COMPLETED_RENTALS_BEFORE_REWARD} completed
+            </span>
           </div>
           <div
             className={styles.progressTrack}
@@ -149,7 +145,7 @@ export default function BookingsListPage() {
                   ? `Reward unlocked—₱200 will be applied automatically to rental #${LOYALTY_REWARD_RENTAL_NUMBER}.`
                   : `${COMPLETED_RENTALS_BEFORE_REWARD - completedRentals} more completed ${COMPLETED_RENTALS_BEFORE_REWARD - completedRentals === 1 ? "rental" : "rentals"} to unlock ₱200 off.`}
             </span>
-            <small>Same customer account • One returned booking equals one count • No card required</small>
+            <small>Same customer account · One returned booking equals one count · No card required</small>
           </div>
         </section>
       ) : null}
@@ -157,7 +153,6 @@ export default function BookingsListPage() {
       <section className={styles.historyPanel} aria-labelledby="history-heading">
         <div className={styles.historyToolbar}>
           <div>
-            <p className={styles.eyebrow}>YOUR RENTALS</p>
             <h2 id="history-heading">{FILTERS.find((item) => item.value === filter)?.label}</h2>
           </div>
           <label className={styles.searchField}>
@@ -181,8 +176,10 @@ export default function BookingsListPage() {
           </div>
         ) : bookings.length === 0 ? (
           <div className={styles.empty}>
-            <span className={styles.emptyIcon} aria-hidden="true">01</span>
-            <strong>Your booking history starts here.</strong>
+            <span className={styles.emptyIcon} aria-hidden="true">
+              <svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></svg>
+            </span>
+            <strong>Your booking history starts here</strong>
             <p>Choose an available rental and its dates to create your first booking reference.</p>
             <Link href="/catalog" className={styles.browseLink}>Browse Rentals</Link>
           </div>

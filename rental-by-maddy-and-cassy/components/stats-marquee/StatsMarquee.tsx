@@ -4,31 +4,23 @@ interface StatsMarqueeProps {
   items: string[];
 }
 
-// Full-width scrolling info strip below the hero. Renders the same content
-// twice (second copy aria-hidden) so the CSS translateX(-50%) loop is seamless.
+// Static trust strip below the hero. Items sit in equal-width columns inside the
+// page container, so every item is fully visible — nothing scrolls or clips.
 export default function StatsMarquee({ items }: StatsMarqueeProps) {
   if (!items.length) return null;
 
   return (
-    <div className={styles.band} aria-label="Rental highlights">
-      <div className={styles.track}>
-        <div className={styles.group}>
-          {items.map((item, index) => (
-            <span key={index} className={styles.item}>
-              <span className={styles.mark} aria-hidden="true">{"//"}</span>
-              {item}
-            </span>
-          ))}
-        </div>
-        <div className={styles.group} aria-hidden="true">
-          {items.map((item, index) => (
-            <span key={index} className={styles.item}>
-              <span className={styles.mark} aria-hidden="true">{"//"}</span>
-              {item}
-            </span>
-          ))}
-        </div>
-      </div>
+    <div className={styles.band}>
+      <ul className={styles.list} aria-label="Rental highlights">
+        {items.map((item) => (
+          <li key={item} className={styles.item}>
+            <svg className={styles.mark} viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+              <path d="m3.5 8.4 2.9 2.9 6.1-6.6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

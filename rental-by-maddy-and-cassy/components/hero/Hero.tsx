@@ -11,16 +11,13 @@ export default function Hero({ products }: HeroProps) {
   return (
     <section id="top" className={styles.hero} aria-label="Introduction">
       <div className={styles.backgroundGlow} aria-hidden="true" />
-      <div className={`${styles.heroBlob} editorialBlob editorialBreathe`} aria-hidden="true" />
 
       <div className={styles.inner}>
         <div className={styles.content}>
           <h1 className={styles.heading}>
             Rent the Gear.
             <br />
-            Create the
-            <br />
-            <em className={styles.emphasis}>Moment.</em>
+            Create the <em className={styles.emphasis}>Moment.</em>
           </h1>
 
           <p className={styles.supporting}>
@@ -29,11 +26,6 @@ export default function Hero({ products }: HeroProps) {
 
           <Button href="/catalog" variant="none" className={styles.primaryButton}>
             Check Availability
-            <span className={styles.arrowChip} aria-hidden="true">
-              <svg viewBox="0 0 20 20" width="14" height="14">
-                <path d="M5 15 15 5M7 5h8v8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </span>
           </Button>
         </div>
 
