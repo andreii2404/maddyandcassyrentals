@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
-import Image from "next/image";
-import { getActiveProducts } from "@/src/services/productService";
+import AboutCarousel from "./AboutCarousel";
 import styles from "./about.module.css";
-
-export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: "About | Rental by Maddy & Cassy",
@@ -11,10 +8,7 @@ export const metadata: Metadata = {
     "Meet Kyla and Kim, the founders behind Rental by Maddy & Cassy, and learn the story behind our name and mission.",
 };
 
-export default async function AboutPage() {
-  const products = await getActiveProducts();
-  const aboutVisualProduct = products.find((product) => product.category === "Cameras") ?? products[0];
-
+export default function AboutPage() {
   return (
     <main className={styles.page}>
       <section className={styles.about} aria-labelledby="about-heading">
@@ -28,18 +22,7 @@ export default async function AboutPage() {
           </p>
         </div>
 
-        {aboutVisualProduct ? (
-          <div className={styles.aboutVisual}>
-            <Image
-              src={aboutVisualProduct.image || "/images/product-placeholder.png"}
-              alt={`${aboutVisualProduct.name}, available to rent from Maddy & Cassy`}
-              fill
-              priority
-              sizes="(max-width: 760px) 100vw, 1200px"
-              className={styles.aboutVisualImage}
-            />
-          </div>
-        ) : null}
+        <AboutCarousel />
 
         <div className={styles.aboutBody}>
           <p className={styles.storyKicker}>The people behind it</p>

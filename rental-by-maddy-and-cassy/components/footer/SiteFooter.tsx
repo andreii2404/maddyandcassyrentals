@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { CONTACT_EMAIL, GMAIL_COMPOSE_URL } from "@/src/lib/contactEmail";
 import styles from "./SiteFooter.module.css";
 
 const footerGroups = [
@@ -39,7 +40,7 @@ const footerGroups = [
 const socialLinks = [
   { href: "https://www.tiktok.com/@iosrental.maddycassy", label: "TikTok", value: "@iosrental.maddycassy" },
   { href: "https://www.facebook.com/share/19bCnTQZum/", label: "Facebook", value: "Rental by Maddy & Cassy" },
-  { href: "mailto:iosrentalbymaddycassy@gmail.com", label: "Email", value: "iosrentalbymaddycassy@gmail.com" },
+  { href: GMAIL_COMPOSE_URL, label: "Email", value: CONTACT_EMAIL },
 ] as const;
 
 export default function SiteFooter() {
@@ -117,10 +118,6 @@ export default function SiteFooter() {
             ))}
           </div>
         </nav>
-      </div>
-
-      <div className={styles.wordmarkWrap} aria-hidden="true">
-        <span className={styles.wordmark}>Maddy &amp; Cassy</span>
       </div>
 
       <div className={styles.bottom}>

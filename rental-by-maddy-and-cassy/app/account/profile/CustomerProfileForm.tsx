@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/Button";
 import formStyles from "@/components/ui/Form.module.css";
 import Spinner from "@/components/ui/Spinner";
 import styles from "./profile.module.css";
-import PushNotificationButton from "@/components/push/PushNotificationButton";
 import {
   getMaxBirthDate,
   isAtLeastMinimumAge,
@@ -345,19 +344,6 @@ function CustomerProfileEditor({
           </Button>
         </div>
       </form>
-
-      <section className={styles.section} aria-labelledby="profile-notifications-heading">
-        <div className={styles.sectionIntro}>
-          <h2 id="profile-notifications-heading" className={styles.sectionTitle}>
-            Notifications
-          </h2>
-          <p className={styles.sectionDescription}>Applies to this device only.</p>
-        </div>
-
-        <div className={styles.sectionFields}>
-          <PushNotificationButton />
-        </div>
-      </section>
     </div>
   );
 }

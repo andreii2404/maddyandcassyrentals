@@ -292,6 +292,414 @@
   justify-content: center;
 }
 
+/* Steps layout (How to Book): one continuous vertical journey, no cards. */
+.mainSteps {
+  max-width: 800px;
+}
+
+.noticeCompact {
+  margin-bottom: 2.25rem;
+  padding: 0.35rem 0 0.35rem 0.85rem;
+  border: 0;
+  border-left: 2px solid var(--color-dusty-rose);
+  border-radius: 0;
+  background: none;
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+.steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr);
+  gap: 1.25rem;
+  padding-bottom: 2.25rem;
+}
+
+.step:last-child {
+  padding-bottom: 0;
+}
+
+/* Connector running from this marker down to the next one. */
+.step:not(:last-child)::before {
+  position: absolute;
+  top: 2.5rem;
+  bottom: 0;
+  left: calc(1.25rem - 1px);
+  width: 2px;
+  background: var(--color-blush);
+  content: "";
+}
+
+.stepMarker {
+  display: inline-flex;
+  width: 2.5rem;
+  height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--color-dusty-rose);
+  border-radius: 50%;
+  background: var(--color-white);
+  color: var(--color-primary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.stepBody {
+  min-width: 0;
+  max-width: 640px;
+  padding-top: 0.2rem;
+}
+
+.stepLabel {
+  display: block;
+  margin-bottom: 0.3rem;
+  color: var(--color-primary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.stepBody h2 {
+  margin: 0 0 0.5rem;
+  color: var(--color-text-primary);
+  font-size: 1.15rem;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+
+.stepBody p,
+.stepBody li {
+  color: var(--color-charcoal);
+  font-size: 0.93rem;
+  line-height: 1.75;
+}
+
+.stepBody p {
+  margin: 0;
+}
+
+.stepBody p + p {
+  margin-top: 0.6rem;
+}
+
+.stepBody ul {
+  margin: 0.6rem 0 0;
+  padding-left: 1.15rem;
+}
+
+.stepBody li + li {
+  margin-top: 0.3rem;
+}
+
+.stepBody li::marker {
+  color: var(--color-dusty-rose);
+}
+
+.mainSteps .related {
+  margin-top: 3rem;
+  padding: 1.5rem 0 0;
+  border: 0;
+  border-top: 1px solid var(--color-light-gray);
+  border-radius: 0;
+  background: none;
+}
+
+/* Checklist layout (Rental Requirements): numbered rows with hairline dividers, no cards. */
+.mainChecklist {
+  max-width: 800px;
+}
+
+.checklist {
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--color-light-gray);
+  list-style: none;
+}
+
+.checkItem {
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr);
+  gap: 1.1rem;
+  padding: 1.5rem 0;
+  border-bottom: 1px solid var(--color-light-gray);
+}
+
+.checkNumber {
+  display: inline-flex;
+  width: 2.25rem;
+  height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--color-blush);
+  color: var(--color-primary);
+  font-size: 0.76rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.checkBody {
+  min-width: 0;
+  max-width: 640px;
+  padding-top: 0.3rem;
+}
+
+.checkBody h2 {
+  margin: 0 0 0.4rem;
+  color: var(--color-text-primary);
+  font-size: 1.08rem;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+
+.checkBody > p {
+  margin: 0;
+  color: var(--color-charcoal);
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+
+.checkBody > p + p {
+  margin-top: 0.5rem;
+}
+
+.checkBullets {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem 1.25rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.checkBullets li {
+  position: relative;
+  padding-left: 1.3rem;
+  color: var(--color-charcoal);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+/* Small check mark drawn with borders. */
+.checkBullets li::before {
+  position: absolute;
+  top: 0.38em;
+  left: 0.15rem;
+  width: 0.35rem;
+  height: 0.62rem;
+  border: solid var(--color-primary);
+  border-width: 0 2px 2px 0;
+  content: "";
+  transform: rotate(45deg);
+}
+
+/* Secondary warning: quiet, compact, smaller than body text. */
+.checkNote {
+  margin-top: 0.75rem;
+  padding: 0.15rem 0 0.15rem 0.8rem;
+  border-left: 2px solid var(--color-dusty-rose);
+}
+
+.checkNote p {
+  margin: 0;
+  color: var(--color-charcoal);
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.checkNote ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1rem;
+}
+
+.checkNote li {
+  color: var(--color-charcoal);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.checkNote li + li {
+  margin-top: 0.1rem;
+}
+
+.checkNote li::marker {
+  color: var(--color-dusty-rose);
+}
+
+.mainChecklist .related {
+  margin-top: 2.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+/* Policy layout (Terms): editorial numbered sections with hairline dividers, no cards. */
+.mainPolicy {
+  max-width: 840px;
+  padding-bottom: 4rem;
+}
+
+.mainPolicy .header {
+  margin-bottom: 1.5rem;
+}
+
+.policy {
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--color-light-gray);
+  list-style: none;
+}
+
+.policyItem {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr);
+  gap: 1.5rem;
+  padding: 2rem 0;
+  border-bottom: 1px solid var(--color-light-gray);
+}
+
+.policyNumber {
+  padding-top: 0.2rem;
+  color: var(--color-primary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  font-variant-numeric: tabular-nums;
+}
+
+.policyBody {
+  min-width: 0;
+  max-width: 64ch;
+}
+
+.policyBody h2 {
+  margin: 0 0 0.7rem;
+  color: var(--color-text-primary);
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+
+.policyBody p,
+.policyBody li {
+  color: var(--color-charcoal);
+  font-size: 0.95rem;
+  line-height: 1.8;
+}
+
+.policyBody p {
+  margin: 0;
+}
+
+.policyBody p + p {
+  margin-top: 0.75rem;
+}
+
+.policyBody ul {
+  margin: 0;
+  padding-left: 1.15rem;
+}
+
+.policyBody p + ul {
+  margin-top: 0.75rem;
+}
+
+.policyBody li {
+  padding-left: 0.25rem;
+}
+
+.policyBody li + li {
+  margin-top: 0.55rem;
+}
+
+.policyBody li::marker {
+  color: var(--color-dusty-rose);
+}
+
+.mainPolicy .related {
+  margin-top: 3rem;
+  padding: 1.5rem 0 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+/* Need help? contact channels. */
+.help {
+  margin-top: 2.5rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--color-light-gray);
+}
+
+.help h2 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 1.15rem;
+}
+
+.helpIntro {
+  margin: 0.4rem 0 1.1rem;
+  color: var(--color-charcoal);
+  font-size: 0.88rem;
+  line-height: 1.65;
+}
+
+.helpList {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.helpLink {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--color-light-gray);
+  border-radius: 12px;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.helpLink:hover {
+  border-color: var(--color-dusty-rose);
+  background: var(--color-blush);
+}
+
+.helpLink:focus-visible {
+  outline: 2px solid var(--color-dusty-rose);
+  outline-offset: 2px;
+}
+
+.helpLabel {
+  color: var(--color-primary);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.helpDescription {
+  color: var(--color-charcoal);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 720px) {
   .main {
     padding-top: 3rem;
@@ -320,5 +728,115 @@
 
   .accordionBody {
     padding: 0 0 1.25rem;
+  }
+
+  .step {
+    grid-template-columns: 2.1rem minmax(0, 1fr);
+    gap: 0.9rem;
+    padding-bottom: 1.9rem;
+  }
+
+  .step:not(:last-child)::before {
+    top: 2.1rem;
+    left: calc(1.05rem - 1px);
+  }
+
+  .stepMarker {
+    width: 2.1rem;
+    height: 2.1rem;
+    font-size: 0.74rem;
+  }
+
+  .stepBody {
+    padding-top: 0.05rem;
+  }
+
+  .stepBody h2 {
+    font-size: 1.05rem;
+  }
+
+  .stepBody p,
+  .stepBody li {
+    font-size: 0.9rem;
+  }
+
+  .helpList {
+    grid-template-columns: 1fr;
+  }
+
+  .policyItem {
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+    padding: 1.5rem 0;
+  }
+
+  .policyNumber {
+    padding-top: 0;
+    font-size: 0.74rem;
+  }
+
+  .policyBody h2 {
+    font-size: 1.08rem;
+  }
+
+  .policyBody p,
+  .policyBody li {
+    font-size: 0.92rem;
+    line-height: 1.75;
+  }
+
+  .policyItem {
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+    padding: 1.5rem 0;
+  }
+
+  .policyNumber {
+    padding-top: 0;
+    font-size: 0.74rem;
+  }
+
+  .policyBody h2 {
+    font-size: 1.08rem;
+  }
+
+  .policyBody p,
+  .policyBody li {
+    font-size: 0.92rem;
+    line-height: 1.75;
+  }
+
+  .checkItem {
+    grid-template-columns: 2rem minmax(0, 1fr);
+    gap: 0.85rem;
+    padding: 1.25rem 0;
+  }
+
+  .checkNumber {
+    width: 2rem;
+    height: 2rem;
+    font-size: 0.72rem;
+  }
+
+  .checkBody {
+    padding-top: 0.2rem;
+  }
+
+  .checkBody h2 {
+    font-size: 1rem;
+  }
+
+  .checkBody > p {
+    font-size: 0.9rem;
+  }
+
+  .checkBullets {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .helpLink {
+    transition: none;
   }
 }

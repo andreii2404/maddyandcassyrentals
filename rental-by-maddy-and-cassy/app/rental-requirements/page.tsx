@@ -61,6 +61,8 @@ export default function RentalRequirementsPage() {
         title="Rental Requirements"
         introduction="Prepare these requirements before submitting your booking so the team can verify your request without delays."
         sections={sections}
+        layout="checklist"
+        showHelp
       />
     </div>
   );

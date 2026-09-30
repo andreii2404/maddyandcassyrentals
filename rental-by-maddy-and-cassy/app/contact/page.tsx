@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import ChatIcon from "@/components/icons/ChatIcon";
+import { CONTACT_EMAIL, GMAIL_COMPOSE_URL } from "@/src/lib/contactEmail";
 import styles from "./contact.module.css";
 
-const CONTACT_EMAIL = "iosrentalbymaddycassy@gmail.com";
 const [emailUser, emailDomain] = CONTACT_EMAIL.split("@");
 
 export const metadata: Metadata = {
@@ -47,6 +49,23 @@ export default function ContactPage() {
 
         <div className={styles.row}>
           <div className={styles.rowText}>
+            <p className={`${styles.label} ${styles.labelWithIcon}`}>
+              <ChatIcon size={14} />
+              Website Chat
+            </p>
+            <h2 className={styles.value}>Chat with us</h2>
+            <p className={styles.description}>
+              Message us directly through the website for booking and rental
+              concerns.
+            </p>
+          </div>
+          <Link href="/messages" className={styles.secondaryAction}>
+            Start Chat
+          </Link>
+        </div>
+
+        <div className={styles.row}>
+          <div className={styles.rowText}>
             <p className={styles.label}>Email</p>
             <h2 className={`${styles.value} ${styles.email}`}>
               {emailUser}
@@ -56,7 +75,12 @@ export default function ContactPage() {
               Send us your rental question and we&rsquo;ll reply as soon as we can.
             </p>
           </div>
-          <a href={`mailto:${CONTACT_EMAIL}`} className={styles.secondaryAction}>
+          <a
+            href={GMAIL_COMPOSE_URL}
+            className={styles.secondaryAction}
+            target="_blank"
+            rel="noreferrer"
+          >
             Send Email
           </a>
         </div>

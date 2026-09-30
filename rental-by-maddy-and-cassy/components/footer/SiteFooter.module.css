@@ -184,26 +184,6 @@
   outline-offset: 3px;
 }
 
-/* Decorative wordmark: quiet signature, not a headline. */
-.wordmarkWrap {
-  overflow: hidden;
-  width: min(100% - 2.5rem, 1240px);
-  margin: 0 auto;
-  padding-bottom: 0.35rem;
-  line-height: 1;
-}
-
-.wordmark {
-  display: block;
-  color: rgba(255, 255, 255, 0.04);
-  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.09);
-  font-family: var(--font-serif), Georgia, "Times New Roman", serif;
-  font-size: clamp(2rem, 5.5vw, 4.25rem);
-  font-weight: 400;
-  letter-spacing: -0.015em;
-  white-space: nowrap;
-}
-
 .bottom {
   display: flex;
   align-items: center;

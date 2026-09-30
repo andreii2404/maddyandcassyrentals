@@ -15,18 +15,83 @@
   margin-bottom: 1.25rem;
 }
 
-.aboutVisual {
-  position: relative;
+.aboutCarousel {
   width: 100%;
-  aspect-ratio: 16 / 7;
   margin-bottom: 1.75rem;
   overflow: hidden;
-  border-radius: 24px;
+  animation: aboutCarouselIn 0.4s ease-out 0.1s both;
+}
+
+.aboutSwiper {
+  width: 100%;
+  padding: 0.5rem 0 !important;
+}
+
+.aboutDots {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 1.1rem;
+}
+
+.aboutDot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-text-primary);
+  opacity: 0.25;
+  cursor: pointer;
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+}
+
+.aboutDot:hover { opacity: 0.5; }
+
+.aboutDot[aria-current="true"] {
+  background: var(--color-primary);
+  opacity: 1;
+}
+
+.aboutDot:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+.aboutSlide {
+  position: relative;
+  width: 300px !important;
+  height: auto !important;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border-radius: 20px;
   background: var(--color-light-gray);
 }
 
-.aboutVisualImage {
+.aboutSlideImage {
   object-fit: cover;
+  pointer-events: none;
+  user-select: none;
+}
+
+.aboutSlide :global(.swiper-slide-shadow-left),
+.aboutSlide :global(.swiper-slide-shadow-right) {
+  border-radius: inherit;
+}
+
+@keyframes aboutCarouselIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aboutCarousel { animation: none; }
 }
 
 .aboutBody {
@@ -259,9 +324,10 @@
 @media (max-width: 760px) {
   .about { padding-top: 2rem; }
 
-  .aboutVisual {
-    aspect-ratio: 4 / 3;
+  .aboutCarousel { margin-bottom: 1.25rem; }
+
+  .aboutSlide {
+    width: 240px !important;
     border-radius: 18px;
-    margin-bottom: 1.25rem;
   }
 }

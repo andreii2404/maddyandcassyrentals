@@ -57,6 +57,8 @@ export default function HowToBookPage() {
         title="How to Book"
         introduction="Follow these steps to request your unit, complete verification, and arrange pickup or delivery."
         sections={sections}
+        layout="steps"
+        showHelp
         notice="Reservation payments and applicable non-refundable deposits are paid manually via GCash and verified by our team. Delivery courier costs are arranged separately."
       />
     </div>

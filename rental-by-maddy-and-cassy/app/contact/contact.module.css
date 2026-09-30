@@ -23,6 +23,16 @@
   text-transform: uppercase;
 }
 
+.labelWithIcon {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.labelWithIcon svg {
+  flex-shrink: 0;
+}
+
 .heading {
   margin: 0 0 1rem;
   color: var(--color-text-primary);

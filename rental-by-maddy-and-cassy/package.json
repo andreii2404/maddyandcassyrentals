@@ -34,6 +34,7 @@
     "react-dom": "19.2.4",
     "react-hook-form": "^7.83.0",
     "react-signature-canvas": "^1.1.0-alpha.2",
+    "swiper": "^14.3.0",
     "web-push": "^3.6.7",
     "zod": "^4.4.3"
   },
