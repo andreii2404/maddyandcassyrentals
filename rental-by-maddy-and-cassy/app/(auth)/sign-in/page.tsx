@@ -13,7 +13,7 @@ export default function SignInPage() {
   return (
     <div>
       <main className={styles.main}>
-        <div className={styles.authLayout}>
+        <div className={`${styles.authLayout} ${styles.nudgeDown}`}>
           <section className={styles.authIntro} aria-labelledby="customer-access-heading">
             <p className={styles.introEyebrow}>CUSTOMER ACCOUNT</p>
             <h1 id="customer-access-heading">Your rentals, all in one place.</h1>

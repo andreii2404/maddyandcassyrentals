@@ -130,12 +130,6 @@ export default function SignInForm() {
           Create one
         </Link>
       </p>
-      <p className={styles.footer}>
-        Are you an administrator?{" "}
-        <Link href="/admin/sign-in" className={styles.footerLink}>
-          Admin Login
-        </Link>
-      </p>
     </div>
   );
 }

@@ -452,3 +452,28 @@
     grid-template-columns: 1fr;
   }
 }
+
+/*
+ * Sign-in only: nudge both centered columns down so the gap left above the
+ * site footer matches the gap below the navbar. Extra top padding shifts the
+ * vertically centered content down by roughly half the added amount.
+ */
+.nudgeDown > .authIntro,
+.nudgeDown > .card {
+  padding-top: calc(clamp(2rem, 3vw, 3.25rem) + clamp(2rem, 5vh, 4.5rem));
+}
+
+.nudgeDown > .authIntro {
+  padding-top: calc(clamp(2.25rem, 4.5vw, 4.5rem) + clamp(2rem, 5vh, 4.5rem));
+}
+
+/* Stacked layout has no shared centering to balance, so keep original padding. */
+@media (max-width: 900px) {
+  .nudgeDown > .authIntro {
+    padding-top: clamp(2rem, 7vw, 3rem);
+  }
+
+  .nudgeDown > .card {
+    padding-top: clamp(2rem, 7vw, 3rem);
+  }
+}
