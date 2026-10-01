@@ -13,6 +13,11 @@ import styles from "./BookingCancelAction.module.css";
 interface Props {
   booking: Booking;
   onUpdated: () => Promise<void>;
+  /**
+   * "detail" (default) always shows the trigger, disabled with a reason when unavailable.
+   * "inline" is for compact list cards: it renders nothing unless the booking can be cancelled.
+   */
+  layout?: "detail" | "inline";
 }
 
 /** Why the customer can't cancel online, using the same rules as CustomerBookingManagement. */
@@ -32,7 +37,7 @@ function getUnavailableReason(status: BookingStatus, pendingRequest: boolean): s
   }
 }
 
-export default function BookingCancelAction({ booking, onUpdated }: Props) {
+export default function BookingCancelAction({ booking, onUpdated, layout = "detail" }: Props) {
   const { showToast } = useToast();
   const [open, setOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -75,12 +80,15 @@ export default function BookingCancelAction({ booking, onUpdated }: Props) {
     }
   }
 
+  const inline = layout === "inline";
+  if (inline && !canCancel) return null;
+
   return (
-    <div className={styles.action}>
+    <div className={inline ? styles.actionInline : styles.action}>
       <Button
         variant="none"
         type="button"
-        className={styles.cancelTrigger}
+        className={inline ? `${styles.cancelTrigger} ${styles.cancelTriggerInline}` : styles.cancelTrigger}
         disabled={!canCancel}
         aria-describedby={canCancel ? undefined : unavailableId}
         onClick={() => setOpen(true)}

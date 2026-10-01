@@ -16,6 +16,7 @@ import {
 } from "@/src/lib/bookingManagement";
 import { bookingHeadline, bookingTotalDailyRate, bookingTotalQuantity } from "@/src/lib/bookingDisplay";
 import BookingSummaryCard from "@/components/booking-summary/BookingSummaryCard";
+import BookingCancelAction from "@/components/booking-management/BookingCancelAction";
 import StatusBadge from "@/components/status-badge/StatusBadge";
 import Spinner from "@/components/ui/Spinner";
 import { useBookingRealtime } from "@/hooks/useBookingRealtime";
@@ -209,14 +210,26 @@ export default function BookingsListPage() {
                     customerLocation={booking.fulfillmentMethod === "pickup" ? "Business pickup point" : [booking.location, booking.cityMunicipality, booking.province].filter(Boolean).join(", ")}
                     statusSlot={<StatusBadge status={booking.status} />}
                   />
-                  <div className={styles.cardFooter}>
-                    <div>
-                      <span>{getFulfillmentProgressLabel(booking.status, booking.fulfillmentMethod)}</span>
-                      <p>{getBookingStatusMessage(booking.status, booking.fulfillmentMethod)}</p>
-                    </div>
-                    <strong>View booking <span aria-hidden="true">→</span></strong>
-                  </div>
                 </Link>
+                {/* Actions sit outside the card link so they stay valid, separately focusable controls. */}
+                <div className={styles.cardFooter}>
+                  <Link href={`/account/bookings/${booking.id}`} className={styles.cardFooterInfo} tabIndex={-1}>
+                    <span>{getFulfillmentProgressLabel(booking.status, booking.fulfillmentMethod)}</span>
+                    <p>{getBookingStatusMessage(booking.status, booking.fulfillmentMethod)}</p>
+                  </Link>
+                  <div className={styles.cardActions}>
+                    <BookingCancelAction booking={booking} onUpdated={loadBookings} layout="inline" />
+                    <Button
+                      variant="primary"
+                      size="none"
+                      href={`/account/bookings/${booking.id}`}
+                      className={styles.viewButton}
+                      aria-label={`View booking ${booking.bookingRef}`}
+                    >
+                      View Booking
+                    </Button>
+                  </div>
+                </div>
               </li>
             ))}
           </ul>

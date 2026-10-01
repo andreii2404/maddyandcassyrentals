@@ -13,6 +13,7 @@ import { hasGuestCheckoutBooking } from "@/src/services/bookingService";
 import { createClient } from "@/src/lib/supabase/client";
 import { GUEST_BOOKING_CREATED_EVENT } from "@/src/lib/guestBookingEvents";
 import { Button } from "@/components/ui/Button";
+import SignOutConfirmModal from "./SignOutConfirmModal";
 import styles from "./Navbar.module.css";
 
 const primaryLinks = [
@@ -111,6 +112,9 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [signOutConfirmOpen, setSignOutConfirmOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
   const guideRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const syncedHash = useSyncExternalStore(subscribeToHash, getHashSnapshot, getServerHashSnapshot);
@@ -216,6 +220,34 @@ export default function Navbar() {
     setMenuOpen(false);
     setProfileOpen(false);
     router.push("/");
+  }
+
+  // Customers confirm before signing out; admins keep the direct sign-out.
+  function requestSignOut() {
+    setMenuOpen(false);
+    setProfileOpen(false);
+    if (isAdmin) {
+      void handleSignOut();
+      return;
+    }
+    setSignOutError(null);
+    setSignOutConfirmOpen(true);
+  }
+
+  async function confirmSignOut() {
+    if (signingOut) return;
+    setSigningOut(true);
+    setSignOutError(null);
+    try {
+      await logout();
+      setSignOutConfirmOpen(false);
+      router.push("/");
+      router.refresh();
+    } catch (error) {
+      setSignOutError(error instanceof Error ? error.message : "You could not be signed out. Please try again.");
+    } finally {
+      setSigningOut(false);
+    }
   }
 
   const displayName = profile?.displayName || user?.user_metadata?.display_name || "Account";
@@ -417,7 +449,7 @@ export default function Navbar() {
                   {!isAdmin ? (
                     <Link href="/account/payments" className={styles.profileMenuLink} onClick={() => setProfileOpen(false)}>Payment History</Link>
                   ) : null}
-                   <Button variant="none" className={styles.profileMenuButton} onClick={handleSignOut}>Sign Out</Button>
+                   <Button variant="none" className={styles.profileMenuButton} onClick={requestSignOut}>Sign Out</Button>
                 </div>
               ) : null}
             </div>
@@ -574,7 +606,7 @@ export default function Navbar() {
                     {!isAdmin ? <Link href="/messages" onClick={closeMenu}>Messages</Link> : null}
                     {!isAdmin ? <Link href={profileHref} onClick={closeMenu}>{profileLabel}</Link> : null}
                     {!isAdmin ? <Link href="/account/payments" onClick={closeMenu}>Payment History</Link> : null}
-                     <Button variant="none" onClick={handleSignOut}>Sign Out</Button>
+                     <Button variant="none" onClick={requestSignOut}>Sign Out</Button>
                   </div>
                 </>
               ) : (
@@ -598,6 +630,15 @@ export default function Navbar() {
       ) : null}
     </header>
     <div className={styles.navbarSpacer} aria-hidden="true" />
+    {/* Rendered outside the header: its backdrop-filter would otherwise trap the fixed overlay. */}
+    {signOutConfirmOpen ? (
+      <SignOutConfirmModal
+        busy={signingOut}
+        error={signOutError}
+        onConfirm={() => void confirmSignOut()}
+        onCancel={() => setSignOutConfirmOpen(false)}
+      />
+    ) : null}
     </>
   );
 }

@@ -7,6 +7,10 @@
 .cancelTrigger:focus-visible { outline: 2px solid var(--color-status-red); outline-offset: 2px; }
 .cancelTrigger:disabled { border-color: var(--color-light-gray); background: var(--color-background-soft); color: var(--color-charcoal); cursor: not-allowed; opacity: 0.8; }
 
+/* Compact list-card trigger, sized to sit beside the card's "View Booking" button. */
+.actionInline { display: inline-flex; }
+.cancelTriggerInline { padding: 0.5rem 0.95rem; }
+
 .unavailableNote { margin: 0; color: var(--color-charcoal); font-size: 0.64rem; line-height: 1.45; text-align: right; }
 
 .confirmation { display: grid; gap: 1rem; }
@@ -35,4 +39,8 @@
   .unavailableNote { text-align: left; }
   .actions { flex-direction: column-reverse; }
   .actions button { width: 100%; }
+}
+
+@media (pointer: coarse) {
+  .cancelTriggerInline { min-height: 44px; }
 }

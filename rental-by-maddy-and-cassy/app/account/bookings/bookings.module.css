@@ -109,9 +109,11 @@
 .cardLink:focus-visible { outline: 3px solid var(--color-focus); outline-offset: -3px; border-radius: 16px; }
 .cardLink > div:first-child { border: 0; border-radius: 0; box-shadow: none; }
 .cardFooter { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.75rem 1.25rem; border-top: 1px solid var(--color-light-gray); }
-.cardFooter > div > span { color: var(--color-primary); font-size: 0.64rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.cardFooterInfo { display: block; min-width: 0; color: inherit; text-decoration: none; }
+.cardFooterInfo > span { color: var(--color-primary); font-size: 0.64rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
 .cardFooter p { margin: 0.18rem 0 0; color: var(--color-charcoal); font-size: 0.7rem; line-height: 1.5; }
-.cardFooter > strong { color: var(--color-primary); font-size: 0.72rem; white-space: nowrap; }
+.cardActions { display: flex; flex: 0 0 auto; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 0.5rem; }
+.viewButton { min-height: 40px; padding: 0.5rem 1.05rem; font-size: 0.74rem; font-weight: 700; white-space: nowrap; }
 
 .visuallyHidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
 
@@ -128,6 +130,11 @@
   .summaryItem strong { font-size: 1.15rem; }
   .loyaltyCopy { flex-direction: column; }
   .cardFooter { align-items: flex-start; flex-direction: column; gap: 0.5rem; }
+  .cardActions { width: 100%; }
+}
+
+@media (pointer: coarse) {
+  .viewButton { min-height: 44px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
