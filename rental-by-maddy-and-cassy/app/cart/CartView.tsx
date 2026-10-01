@@ -10,6 +10,7 @@ import { useInventoryMap } from "@/hooks/useInventory";
 import { useAuth } from "@/hooks/useAuth";
 import CheckoutAccessDialog from "@/components/checkout/CheckoutAccessDialog";
 import { Button } from "@/components/ui/Button";
+import ConfirmModal from "@/components/ui/ConfirmModal";
 import styles from "./cart.module.css";
 import { getVariantQuantityLimit } from "@/src/lib/variantInventory";
 
@@ -22,6 +23,7 @@ export default function CartView({ products }: { products: Product[] }) {
   const { user, loading: authLoading } = useAuth();
   const [accessDialogOpen, setAccessDialogOpen] = useState(false);
   const [subtotalOpen, setSubtotalOpen] = useState(false);
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   // Visitors with no session (not even the anonymous session behind guest
   // checkout) choose between guest checkout and logging in here, before the
   // flow starts. While auth is still resolving we keep the plain link so a
@@ -77,7 +79,15 @@ export default function CartView({ products }: { products: Product[] }) {
           <p>Adjust quantities here. Exact dates, fulfillment, payment, documents, and the agreement are completed per rental booking.</p>
         </div>
         {cartLines.length > 0 ? (
-          <Button variant="none" className={styles.clearButton} onClick={clearCart}>Clear cart</Button>
+          <Button
+            variant="none"
+            className={styles.clearButton}
+            aria-haspopup="dialog"
+            aria-expanded={clearConfirmOpen}
+            onClick={() => setClearConfirmOpen(true)}
+          >
+            Clear cart
+          </Button>
         ) : null}
       </header>
 
@@ -232,6 +242,20 @@ export default function CartView({ products }: { products: Product[] }) {
       )}
       {accessDialogOpen ? (
         <CheckoutAccessDialog onClose={() => setAccessDialogOpen(false)} />
+      ) : null}
+      {clearConfirmOpen ? (
+        <ConfirmModal
+          title="Clear cart?"
+          description="Are you sure you want to remove all items from your cart?"
+          confirmLabel="Clear Cart"
+          cancelLabel="Keep Items"
+          tone="danger"
+          onConfirm={() => {
+            clearCart();
+            setClearConfirmOpen(false);
+          }}
+          onCancel={() => setClearConfirmOpen(false)}
+        />
       ) : null}
     </section>
   );
