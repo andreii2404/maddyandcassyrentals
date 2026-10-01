@@ -59,13 +59,24 @@ export async function sendEmail(message: EmailMessage): Promise<EmailSendResult>
       | { id?: unknown; name?: unknown; message?: unknown }
       | null;
     if (!response.ok || typeof payload?.id !== "string") {
+      const providerError = typeof payload?.name === "string" ? payload.name : undefined;
+      const providerMessage = typeof payload?.message === "string" ? payload.message : undefined;
       console.error("Booking email provider rejected the request", {
         ...message.logContext,
         providerStatus: response.status,
-        providerError: typeof payload?.name === "string" ? payload.name : undefined,
-        providerMessage: typeof payload?.message === "string" ? payload.message : undefined,
+        providerError,
+        providerMessage,
       });
-      return { sent: false, reason: "provider_error" };
+      return {
+        sent: false,
+        reason: "provider_error",
+        providerStatus: response.status,
+        providerError,
+        detail: providerMessage,
+        ...(response.status === 429
+          ? { retryAfterSeconds: readRetryAfterSeconds(response.headers) ?? 60 }
+          : {}),
+      };
     }
     return { sent: true, providerId: payload.id };
   } catch (error) {
@@ -73,7 +84,11 @@ export async function sendEmail(message: EmailMessage): Promise<EmailSendResult>
       ...message.logContext,
       error: error instanceof Error ? error.message : "Unknown provider error",
     });
-    return { sent: false, reason: "provider_error" };
+    return {
+      sent: false,
+      reason: "provider_error",
+      detail: error instanceof Error ? error.message : undefined,
+    };
   }
 }
 

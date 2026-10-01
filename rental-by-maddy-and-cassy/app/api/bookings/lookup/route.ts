@@ -1,17 +1,18 @@
-import { randomInt } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { enforceRateLimit, RequestSecurityError } from "@/src/lib/server/requestSecurity";
 import { optionalLookupUser } from "@/src/lib/server/bookingLookupSession";
 import { createAdminClient } from "@/src/lib/supabase/admin";
-import { sendEmail } from "@/src/lib/server/emailTransport";
 import { bookingTrackingPath } from "@/src/lib/bookingAccess";
-import { buildBookingLookupCodeEmail } from "@/src/lib/bookingLookupEmail";
 import {
-  BOOKING_LOOKUP_CODE_MINUTES,
+  BOOKING_REFERENCE_NOT_FOUND_MESSAGE,
   BOOKING_REFERENCE_PATTERN,
+  buildTrackingTimeline,
   normalizeBookingReference,
-  type BookingLookupResult,
+  publicStatusLabel,
+  publicStatusMessage,
+  type PublicBookingTracking,
+  type TrackingPaymentState,
 } from "@/src/lib/bookingLookup";
 
 export const runtime = "nodejs";
@@ -25,121 +26,106 @@ const lookupSchema = z.object({
     .pipe(z.string().regex(BOOKING_REFERENCE_PATTERN)),
 });
 
-// One message for "no such booking" whoever is asking, so a lookup never
-// reveals which customer (if any) owns a reference.
-const NOT_FOUND_MESSAGE =
-  "We couldn't find a booking with that reference. Check the reference in your confirmation email and try again.";
-const ACCOUNT_NOT_FOUND_MESSAGE =
-  "We couldn't find that booking in your account. If you booked as a guest, sign out and use Track Booking to verify it by email.";
+function notFound(): NextResponse {
+  return NextResponse.json({ error: BOOKING_REFERENCE_NOT_FOUND_MESSAGE }, { status: 404 });
+}
 
+/**
+ * Public Track Booking: anyone with a booking reference sees its progress.
+ * Only the public tracking fields below are selected; customer contact
+ * details, addresses, payment amounts/proofs, documents, and ids never leave
+ * the server. Account-only pages keep their own sign-in checks.
+ */
 export async function POST(request: Request): Promise<NextResponse> {
   try {
-    enforceRateLimit(request, "booking-lookup", 10, 15 * 60_000);
+    enforceRateLimit(request, "booking-lookup", 30, 15 * 60_000);
     const parsed = lookupSchema.safeParse(await request.json().catch(() => null));
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: "Enter a valid booking reference, such as BK-CFC07994EC." },
-        { status: 400 },
-      );
-    }
-    const bookingReference = parsed.data.bookingReference;
-    const user = await optionalLookupUser();
-    const admin = createAdminClient();
+    if (!parsed.success) return notFound();
 
+    const admin = createAdminClient();
     // References are validated to [A-Z0-9-] above, so ilike has no wildcards
     // and only makes the match case-insensitive like the guest recovery RPC.
     const { data: bookings, error: bookingError } = await admin
       .from("bookings")
-      .select("id, customer_id, is_guest_checkout, booking_reference")
-      .ilike("booking_reference", bookingReference)
+      .select(`
+        id,
+        customer_id,
+        booking_reference,
+        status,
+        created_at,
+        updated_at,
+        pickup_at,
+        return_at,
+        approved_at,
+        confirmed_at,
+        ready_for_release_at,
+        released_at,
+        returned_at,
+        cancelled_at,
+        rejected_at,
+        booking_items(product_name_snapshot, quantity, selected_variant, created_at),
+        booking_fulfillments(method)
+      `)
+      .ilike("booking_reference", parsed.data.bookingReference)
       .limit(1);
     if (bookingError) throw new Error(bookingError.message);
     const booking = bookings?.[0] ?? null;
+    // Drafts are unfinished checkouts, not submitted bookings.
+    if (!booking || booking.status === "draft") return notFound();
 
-    // Signed-in customers (and guests in the session that owns it) open their
-    // own booking directly.
-    if (user && booking && booking.customer_id === user.id) {
-      const result: BookingLookupResult = {
-        status: "open",
-        path: bookingTrackingPath(booking.id, Boolean(user.is_anonymous)),
-      };
-      return NextResponse.json(result);
+    const { data: payments, error: paymentError } = await admin
+      .from("booking_payment_submissions")
+      .select("status")
+      .eq("booking_id", booking.id);
+    if (paymentError) {
+      // The timeline still derives payment progress from the booking status.
+      console.error("Booking lookup payment status unavailable", paymentError.message);
     }
+    const paymentStatuses = (payments ?? []).map((payment) => payment.status);
+    const paymentState: TrackingPaymentState = paymentStatuses.includes("verified")
+      ? "verified"
+      : paymentStatuses.some((status) => status === "submitted" || status === "under_review")
+        ? "in_review"
+        : "none";
 
-    // Customer accounts only search their own bookings; a guest booking made
-    // with another email is verified after signing out.
-    if (user && !user.is_anonymous) {
-      return NextResponse.json({ error: ACCOUNT_NOT_FOUND_MESSAGE }, { status: 404 });
-    }
+    const fulfillmentMethod = booking.booking_fulfillments?.method ?? "pickup";
+    // The session only decides whether to offer a direct link to the full
+    // booking; tracking itself never depends on it.
+    const user = await optionalLookupUser().catch(() => null);
+    const detailsPath = user && user.id === booking.customer_id
+      ? bookingTrackingPath(booking.id, Boolean(user.is_anonymous))
+      : null;
 
-    if (!booking) {
-      return NextResponse.json({ error: NOT_FOUND_MESSAGE }, { status: 404 });
-    }
-
-    // The email saved on the booking's customer profile (where guest checkout
-    // keeps the guest's address), falling back to the account email.
-    const { data: profile } = await admin
-      .from("profiles")
-      .select("contact_email")
-      .eq("id", booking.customer_id)
-      .maybeSingle();
-    let recipient = profile?.contact_email?.trim() ?? "";
-    if (!recipient) {
-      const { data: owner } = await admin.auth.admin.getUserById(booking.customer_id);
-      recipient = owner?.user?.email?.trim() ?? "";
-    }
-    if (!recipient) {
-      return NextResponse.json(
-        { error: "This booking can't be verified online. Please contact Rental by Maddy & Cassy for help." },
-        { status: 422 },
-      );
-    }
-
-    const code = randomInt(0, 1_000_000).toString().padStart(6, "0");
-    const { data: challengeId, error: challengeError } = await admin.rpc(
-      "create_booking_lookup_challenge",
-      { p_booking_id: booking.id, p_code: code },
-    );
-    if (challengeError || typeof challengeId !== "string") {
-      if (challengeError?.message.includes("LOOKUP_COOLDOWN")) {
-        return NextResponse.json(
-          { error: "A code was just sent for this booking. Please wait a minute before requesting another." },
-          { status: 429 },
-        );
-      }
-      throw new Error(challengeError?.message ?? "Verification code could not be created.");
-    }
-
-    const email = buildBookingLookupCodeEmail({
+    const result: PublicBookingTracking = {
       bookingReference: booking.booking_reference,
-      code,
-      expiresInMinutes: BOOKING_LOOKUP_CODE_MINUTES,
-    });
-    const sent = await sendEmail({
-      to: recipient,
-      subject: email.subject,
-      html: email.html,
-      text: email.text,
-      idempotencyKey: `booking-lookup-${challengeId}`,
-      tags: [{ name: "category", value: "booking_lookup_code" }],
-      logContext: { scope: "booking-lookup", bookingId: booking.id },
-    });
-    if (!sent.sent) {
-      // Drop the unsent code so the resend cooldown doesn't block a retry.
-      await admin.from("booking_lookup_challenges").delete().eq("id", challengeId);
-      if (process.env.NODE_ENV !== "production") {
-        console.error("[booking lookup] verification email not sent", { reason: sent.reason });
-      }
-      return NextResponse.json(
-        { error: "We couldn't send the verification code right now. Please try again in a few minutes." },
-        { status: 503 },
-      );
-    }
-
-    const result: BookingLookupResult = {
-      status: "verify",
-      challengeId,
-      expiresInMinutes: BOOKING_LOOKUP_CODE_MINUTES,
+      status: booking.status,
+      statusLabel: publicStatusLabel(booking.status, fulfillmentMethod),
+      statusMessage: publicStatusMessage(booking.status, fulfillmentMethod),
+      fulfillmentMethod,
+      items: [...(booking.booking_items ?? [])]
+        .sort((a, b) => a.created_at.localeCompare(b.created_at))
+        .map((item) => ({
+          name: item.product_name_snapshot,
+          variant: item.selected_variant,
+          quantity: item.quantity,
+        })),
+      pickupAt: booking.pickup_at,
+      returnAt: booking.return_at,
+      updatedAt: booking.updated_at,
+      steps: buildTrackingTimeline({
+        status: booking.status,
+        fulfillmentMethod,
+        paymentState,
+        createdAt: booking.created_at,
+        approvedAt: booking.approved_at,
+        confirmedAt: booking.confirmed_at,
+        readyForReleaseAt: booking.ready_for_release_at,
+        releasedAt: booking.released_at,
+        returnedAt: booking.returned_at,
+        cancelledAt: booking.cancelled_at,
+        rejectedAt: booking.rejected_at,
+      }),
+      detailsPath,
     };
     return NextResponse.json(result);
   } catch (error) {
@@ -148,7 +134,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
     console.error("Booking lookup failed", error);
     return NextResponse.json(
-      { error: "Booking lookup is unavailable right now. Please try again." },
+      { error: "Booking tracking is unavailable right now. Please try again." },
       { status: 500 },
     );
   }
