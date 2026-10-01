@@ -301,7 +301,7 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
   return (
     <div className={styles.wrapper}>
       <Link href={guestMode ? "/guest/bookings" : "/account/bookings"} className={styles.backLink}>
-        <span aria-hidden="true">←</span> {guestMode ? "Back to Guest Bookings" : "Back to My Bookings"}
+        {guestMode ? "Back to Guest Bookings" : "Back to My Bookings"}
       </Link>
 
       {justRecovered ? (
@@ -401,7 +401,7 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
             <p>BOOKING PATH</p>
             <h2 id="booking-stepper-heading">{completedSteps} of {processSteps.length} steps complete</h2>
           </div>
-          <strong>{completionPercentage}%</strong>
+          <strong aria-hidden="true">{completionPercentage}%</strong>
         </div>
         <div className={styles.stepperProgressTrack} aria-label={`${completionPercentage}% complete`}>
             <span style={{ width: `${completionPercentage}%` }} />
@@ -433,6 +433,23 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
             </div>
             <Link href="/catalog" className={styles.browseLink}>Browse more rentals</Link>
           </div>
+
+          {booking.requirementsStatus === "not_submitted" ? (
+            <section className={styles.continueCard} aria-labelledby="continue-booking-heading">
+              <div>
+                <p className={styles.continueEyebrow}>NEXT STEP</p>
+                <h3 id="continue-booking-heading">Continue your booking</h3>
+                <p>Complete the next guided step so the team can review and confirm your reservation.</p>
+              </div>
+              <Button
+                href={`/catalog/${booking.productId}/reserve?bookingId=${booking.id}`}
+                variant="primary"
+                className={styles.continueButton}
+              >
+                Continue Booking
+              </Button>
+            </section>
+          ) : null}
 
            <section className={styles.logisticsCard} aria-labelledby="rental-dates-heading">
              <div className={styles.datesHeading}>
@@ -470,22 +487,6 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
                grandTotal={booking.totalAmount}
              />
            </details>
-
-          {booking.requirementsStatus === "not_submitted" ? (
-            <section className={styles.continueCard}>
-              <span className={styles.continueIcon} aria-hidden="true">→</span>
-              <div>
-                <h3>Continue your booking</h3>
-                <p>Complete the next guided step so the team can review and confirm your reservation.</p>
-              </div>
-              <Button
-                href={`/catalog/${booking.productId}/reserve?bookingId=${booking.id}`}
-                variant="primary"
-              >
-                Continue Booking
-              </Button>
-            </section>
-          ) : null}
         </div>
 
         <aside className={styles.paymentColumn}>

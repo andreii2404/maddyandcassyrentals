@@ -3,11 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/Button";
-import {
-  isSupabasePublicImage,
-  supabaseImageLoader,
-  supabaseSquareImageLoader,
-} from "@/src/lib/supabaseImageLoader";
+import { isSupabasePublicImage, supabaseImageLoader } from "@/src/lib/supabaseImageLoader";
 import styles from "./ImageGallery.module.css";
 
 interface ImageGalleryProps {
@@ -169,7 +165,7 @@ export default function ImageGallery({ images, productName, badge }: ImageGaller
               sizes="80px"
               className={styles.thumbnailImage}
               draggable={false}
-              loader={isSupabasePublicImage(image) ? supabaseSquareImageLoader : undefined}
+              loader={isSupabasePublicImage(image) ? supabaseImageLoader : undefined}
               onError={() => markFailed(image)}
             />
           </Button>

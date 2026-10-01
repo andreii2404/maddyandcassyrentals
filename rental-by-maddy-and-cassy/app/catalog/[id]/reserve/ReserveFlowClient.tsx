@@ -43,6 +43,7 @@ import {
 } from "@/src/lib/reservationProgress";
 import type { RewardProgress } from "@/src/lib/promotions";
 import { manilaTimeInputValue } from "@/src/lib/rentalTiming";
+import { notifyGuestBookingCreated } from "@/src/lib/guestBookingEvents";
 import styles from "./reserve.module.css";
 import { clampQuantityToInventory, getVariantQuantityLimit } from "@/src/lib/variantInventory";
 import {
@@ -398,6 +399,7 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
       if (!activeBookingId) {
         const supabase = createClient();
         const reservation = await createBookingReservation(supabase, product, draft, isGuest, bookingColor);
+        if (isGuest) notifyGuestBookingCreated();
         activeBookingId = reservation.bookingId;
         activeBookingNumber = reservation.bookingNumber ?? reservation.bookingId;
         setBookingId(activeBookingId);

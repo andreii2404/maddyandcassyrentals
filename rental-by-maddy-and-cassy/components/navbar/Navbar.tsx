@@ -8,6 +8,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useCart } from "@/hooks/useCart";
 import { logout } from "@/src/services/authService";
+import { hasGuestCheckoutBooking } from "@/src/services/bookingService";
+import { createClient } from "@/src/lib/supabase/client";
+import { GUEST_BOOKING_CREATED_EVENT } from "@/src/lib/guestBookingEvents";
 import { Button } from "@/components/ui/Button";
 import styles from "./Navbar.module.css";
 
@@ -88,6 +91,13 @@ export default function Navbar() {
   // object but are not a customer account, so account-only nav must treat
   // them the same as signed-out visitors.
   const isAccountHolder = Boolean(user) && !user?.is_anonymous;
+  // Track Guest Booking only appears once this browser's guest session owns a
+  // real guest-checkout booking. Starting guest checkout alone creates the
+  // anonymous session, so `is_anonymous` by itself is not enough. The owner id
+  // is stored (not a boolean) so a stale result never leaks across sessions.
+  const guestUserId = user?.is_anonymous ? user.id : null;
+  const [guestBookingOwnerId, setGuestBookingOwnerId] = useState<string | null>(null);
+  const showGuestTracking = guestUserId !== null && guestBookingOwnerId === guestUserId;
   const { favorites } = useFavorites();
   const { totalQuantity } = useCart();
   const router = useRouter();
@@ -110,6 +120,31 @@ export default function Navbar() {
   // records the target of the most recent primary-link click so the effect
   // below can drive the scroll itself once the destination is on screen.
   const pendingScrollHash = useRef<string | null>(null);
+
+  // Re-check on session change and on each route change until a guest booking
+  // is confirmed, plus immediately when a checkout flow reports a new booking
+  // (the booking step does not change the URL).
+  useEffect(() => {
+    if (!guestUserId || guestBookingOwnerId === guestUserId) return undefined;
+    const ownerId = guestUserId;
+    let cancelled = false;
+
+    async function checkGuestBooking() {
+      try {
+        const hasBooking = await hasGuestCheckoutBooking(createClient(), ownerId);
+        if (!cancelled && hasBooking) setGuestBookingOwnerId(ownerId);
+      } catch {
+        // Leave the link hidden; the next route change or booking event retries.
+      }
+    }
+
+    void checkGuestBooking();
+    window.addEventListener(GUEST_BOOKING_CREATED_EVENT, checkGuestBooking);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(GUEST_BOOKING_CREATED_EVENT, checkGuestBooking);
+    };
+  }, [guestUserId, guestBookingOwnerId, pathname]);
 
   function closeDropdowns() {
     setGuideOpen(false);
@@ -185,6 +220,7 @@ export default function Navbar() {
   const profileHref = "/account/profile";
   const profileLabel = "My Profile";
   const guideActive = [...guideLinks, ...storyLinks].some((item) => pathname === item.href);
+  const guestTrackingActive = pathname.startsWith("/guest/bookings");
 
   function isPrimaryLinkActive(href: string): boolean {
     if (href === "/") return pathname === "/";
@@ -368,6 +404,16 @@ export default function Navbar() {
             </div>
           ) : (
             <div className={styles.loginActions}>
+              {showGuestTracking ? (
+                <Link
+                  href="/guest/bookings"
+                  className={`${styles.guestTrackLink} ${guestTrackingActive ? styles.guestTrackLinkActive : ""}`}
+                  aria-current={guestTrackingActive ? "page" : undefined}
+                  onClick={closeDropdowns}
+                >
+                  Track Guest Booking
+                </Link>
+              ) : null}
               <Link href="/sign-in" className={styles.customerLink}>Login</Link>
             </div>
           )}
@@ -514,6 +560,16 @@ export default function Navbar() {
                 </>
               ) : (
                 <div className={styles.mobileLoginActions}>
+                  {showGuestTracking ? (
+                    <Link
+                      href="/guest/bookings"
+                      className={styles.mobileGuestTrackLink}
+                      aria-current={guestTrackingActive ? "page" : undefined}
+                      onClick={closeMenu}
+                    >
+                      Track Guest Booking
+                    </Link>
+                  ) : null}
                   <Link href="/sign-in" onClick={closeMenu}>Login</Link>
                 </div>
               )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { createClient } from "@/src/lib/supabase/client";
@@ -8,8 +9,8 @@ import { getBookingsForUser } from "@/src/services/bookingService";
 import type { Booking } from "@/src/types/booking";
 import { bookingHeadline, bookingTotalDailyRate, bookingTotalQuantity } from "@/src/lib/bookingDisplay";
 import { getBookingStatusMessage, getFulfillmentProgressLabel } from "@/src/lib/bookingManagement";
+import { formatManilaDateTime } from "@/src/lib/rentalTiming";
 import { useBookingRealtime } from "@/hooks/useBookingRealtime";
-import BookingSummaryCard from "@/components/booking-summary/BookingSummaryCard";
 import StatusBadge from "@/components/status-badge/StatusBadge";
 import Spinner from "@/components/ui/Spinner";
 import GuestBookingRecoveryForm from "@/components/guest-booking/GuestBookingRecoveryForm";
@@ -85,18 +86,18 @@ export default function GuestBookingsPage() {
           <p>Review every reservation made during this guest session and open its live tracker.</p>
         </div>
         <div className={styles.headerActions}>
-          <Link href="/catalog">Book another rental</Link>
+          <Link href="/catalog" className={styles.secondaryAction}>Book another rental</Link>
         </div>
       </header>
 
       <aside className={styles.accessNote}>
-        <strong>Keep access until your rental is complete.</strong>
-        <span>
-          Save each booking reference, checkout email, and mobile number. If this browser loses the
-          temporary guest session, Track Guest Booking can securely restore access. An optional
-          customer account provides automatic history plus birthday and loyalty perks; guest
-          bookings do not earn those perks.
-        </span>
+        <span className={styles.accessIcon} aria-hidden="true">i</span>
+        <p>
+          <strong>Keep access until your rental is complete.</strong>{" "}
+          Save your booking reference, checkout email, and mobile number. If this browser loses the
+          guest session, Track Guest Booking restores access. An optional account adds automatic
+          history plus birthday and loyalty perks, which guest bookings don&apos;t earn.
+        </p>
       </aside>
 
       <section className={styles.panel} aria-labelledby="guest-bookings-heading">
@@ -105,7 +106,7 @@ export default function GuestBookingsPage() {
             <p className={styles.eyebrow}>YOUR RESERVATIONS</p>
             <h2 id="guest-bookings-heading">{bookings?.length ?? 0} saved in this session</h2>
           </div>
-          <Link href="/sign-up">Create an optional account</Link>
+          <Link href="/sign-up" className={styles.accountLink}>Create an optional account</Link>
         </div>
 
         {bookings === null ? (
@@ -123,36 +124,82 @@ export default function GuestBookingsPage() {
           </div>
         ) : (
           <ul className={styles.list} aria-live="polite">
-            {bookings.map((booking) => (
-              <li key={booking.id}>
-                <Link href={`/guest/bookings/${booking.id}`} className={styles.bookingLink}>
-                  <BookingSummaryCard
-                    bookingRef={booking.bookingRef}
-                    productName={bookingHeadline(booking.items)}
-                    brand={booking.items.length === 1 ? booking.productSnapshot.brand : ""}
-                    productImage={booking.productSnapshot.image}
-                    pricePerDay={bookingTotalDailyRate(booking.items)}
-                    currency={booking.productSnapshot.currency}
-                    startDate={new Date(booking.startDate)}
-                    endDate={new Date(booking.endDate)}
-                    dayCount={booking.dayCount}
-                    quantity={bookingTotalQuantity(booking.items)}
-                    fulfillmentMethod={booking.fulfillmentMethod}
-                    customerLocation={booking.fulfillmentMethod === "pickup"
-                      ? "Business pickup point"
-                      : [booking.location, booking.cityMunicipality, booking.province].filter(Boolean).join(", ")}
-                    statusSlot={<StatusBadge status={booking.status} />}
-                  />
-                  <div className={styles.bookingFooter}>
-                    <div>
-                      <strong>{getFulfillmentProgressLabel(booking.status, booking.fulfillmentMethod)}</strong>
-                      <span>{getBookingStatusMessage(booking.status, booking.fulfillmentMethod)}</span>
+            {bookings.map((booking) => {
+              const productName = bookingHeadline(booking.items);
+              const brand = booking.items.length === 1 ? booking.productSnapshot.brand : "";
+              const productImage = booking.productSnapshot.image.trim() || "/images/product-placeholder.png";
+              const quantity = bookingTotalQuantity(booking.items);
+              const location = booking.fulfillmentMethod === "pickup"
+                ? "Business pickup point"
+                : [booking.location, booking.cityMunicipality, booking.province].filter(Boolean).join(", ");
+
+              return (
+                <li key={booking.id}>
+                  <Link href={`/guest/bookings/${booking.id}`} className={styles.bookingLink}>
+                    <div className={styles.bookingTop}>
+                      <div className={styles.bookingImage}>
+                        <Image src={productImage} alt={productName} fill sizes="56px" />
+                      </div>
+                      <div className={styles.bookingIdentity}>
+                        <p className={styles.bookingRef}>{booking.bookingRef}</p>
+                        <h3>{productName}</h3>
+                        {brand ? <p className={styles.bookingBrand}>{brand}</p> : null}
+                      </div>
+                      <span className={styles.bookingStatus}>
+                        <StatusBadge status={booking.status} />
+                      </span>
                     </div>
-                    <b>Open tracker <span aria-hidden="true">→</span></b>
-                  </div>
-                </Link>
-              </li>
-            ))}
+
+                    <dl className={styles.bookingDetails}>
+                      <div className={styles.detailSection}>
+                        <dt>Rental schedule</dt>
+                        <dd>
+                          <span className={styles.detailRow}>
+                            <em>Pickup</em>
+                            {formatManilaDateTime(new Date(booking.startDate))}
+                          </span>
+                          <span className={styles.detailRow}>
+                            <em>Return</em>
+                            {formatManilaDateTime(new Date(booking.endDate))}
+                          </span>
+                          <span className={styles.detailMuted}>
+                            {booking.dayCount === 1 ? "22 hours" : `${booking.dayCount} days`}
+                          </span>
+                        </dd>
+                      </div>
+                      <div className={styles.detailSection}>
+                        <dt>Fulfillment</dt>
+                        <dd>
+                          <span>{booking.fulfillmentMethod === "pickup" ? "Pickup" : "Delivery"}</span>
+                          <span className={styles.detailMuted}>
+                            {getFulfillmentProgressLabel(booking.status, booking.fulfillmentMethod)}
+                          </span>
+                        </dd>
+                      </div>
+                      <div className={styles.detailSection}>
+                        <dt>Quantity &amp; rate</dt>
+                        <dd>
+                          <span>{quantity} {quantity === 1 ? "unit" : "units"}</span>
+                          <span className={styles.detailMuted}>
+                            {booking.productSnapshot.currency}
+                            {bookingTotalDailyRate(booking.items).toLocaleString()} / day
+                          </span>
+                        </dd>
+                      </div>
+                      <div className={styles.detailSection}>
+                        <dt>Location</dt>
+                        <dd><span>{location}</span></dd>
+                      </div>
+                    </dl>
+
+                    <div className={styles.bookingFooter}>
+                      <p>{getBookingStatusMessage(booking.status, booking.fulfillmentMethod)}</p>
+                      <span className={styles.trackerButton}>Open tracker</span>
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

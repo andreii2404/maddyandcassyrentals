@@ -51,6 +51,7 @@ import {
   manilaTimeInputValue,
 } from "@/src/lib/rentalTiming";
 import { getDraftRentalSchedule } from "@/src/lib/rentalSchedule";
+import { notifyGuestBookingCreated } from "@/src/lib/guestBookingEvents";
 import styles from "../catalog/[id]/reserve/reserve.module.css";
 import { getVariantQuantityLimit } from "@/src/lib/variantInventory";
 import {
@@ -401,6 +402,7 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
       if (!activeBookingId) {
         const supabase = createClient();
         const reservation = await createMultiItemBookingReservation(supabase, lines, draft, isGuest);
+        if (isGuest) notifyGuestBookingCreated();
         activeBookingId = reservation.bookingId;
         activeBookingNumber = reservation.bookingNumber ?? reservation.bookingId;
         setBookingId(activeBookingId);

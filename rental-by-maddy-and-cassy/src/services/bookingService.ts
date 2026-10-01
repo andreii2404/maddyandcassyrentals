@@ -336,6 +336,24 @@ export async function getBookingsForUser(
   return assembleBookings(supabase, (data ?? []) as unknown as JoinedBookingRow[]);
 }
 
+/**
+ * Cheap existence check (no row payload) for whether this user owns at least
+ * one guest-checkout booking. RLS already restricts rows to the owner.
+ */
+export async function hasGuestCheckoutBooking(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+): Promise<boolean> {
+  const { count, error } = await supabase
+    .from("bookings")
+    .select("id", { count: "exact", head: true })
+    .eq("customer_id", userId)
+    .eq("is_guest_checkout", true);
+
+  if (error) throw new Error(error.message);
+  return (count ?? 0) > 0;
+}
+
 export async function getCustomerRewardProgress(
   supabase: SupabaseClient<Database>,
   userId: string,

@@ -13,18 +13,15 @@ export function isSupabasePublicImage(src: string): boolean {
  * browser downloads a right-sized image instead of the multi-megabyte original.
  * Routing them through the Next.js optimizer instead times out (504) when several
  * originals are requested at once, which left gallery thumbnails broken.
+ *
+ * `resize=contain` is required: with only `width` set, Supabase defaults to
+ * `cover` and keeps the original height, returning a distorted tall strip
+ * (e.g. 640x4284 for a 4284x4284 photo) instead of a proportional resize.
  */
 export const supabaseImageLoader: ImageLoader = ({ src, width, quality }) => {
   const url = new URL(src.replace(PUBLIC_OBJECT_SEGMENT, RENDER_IMAGE_SEGMENT));
   url.searchParams.set("width", String(Math.min(width, 2500)));
+  url.searchParams.set("resize", "contain");
   url.searchParams.set("quality", String(quality ?? 75));
-  return url.toString();
-};
-
-/** Square, center-cropped variant for thumbnails. */
-export const supabaseSquareImageLoader: ImageLoader = (props) => {
-  const url = new URL(supabaseImageLoader(props));
-  url.searchParams.set("height", url.searchParams.get("width") ?? String(props.width));
-  url.searchParams.set("resize", "cover");
   return url.toString();
 };

@@ -207,7 +207,6 @@ export default function BookingPaymentPanel({
     <section id="booking-payment" className={styles.panel}>
       <div className={styles.heading}>
         <div className={styles.titleGroup}>
-          <span className={styles.secureIcon} aria-hidden="true">✓</span>
           <div>
             <p>GCASH PAYMENT</p>
             <h3>
