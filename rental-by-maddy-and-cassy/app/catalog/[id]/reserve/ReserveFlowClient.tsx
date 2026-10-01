@@ -42,7 +42,8 @@ import {
   serializeReservationProgress,
 } from "@/src/lib/reservationProgress";
 import type { RewardProgress } from "@/src/lib/promotions";
-import { manilaTimeInputValue } from "@/src/lib/rentalTiming";
+import { formatManilaDateTime, formatManilaPickupTime, manilaTimeInputValue } from "@/src/lib/rentalTiming";
+import { getDraftRentalSchedule } from "@/src/lib/rentalSchedule";
 import { notifyGuestBookingCreated } from "@/src/lib/guestBookingEvents";
 import styles from "./reserve.module.css";
 import { clampQuantityToInventory, getVariantQuantityLimit } from "@/src/lib/variantInventory";
@@ -464,6 +465,8 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
   }
 
   const pricing = calculateReservationPricing(product, draft, rewardProgress, isGuest);
+  const schedule = getDraftRentalSchedule(draft);
+  const isComplete = step === STEP_LABELS.length;
   const agreementData = {
     bookingRef: bookingNumber ?? "Created before payment",
     customerName: draft.customerInfo.fullName || "-",
@@ -513,7 +516,7 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
   }
 
   return (
-    <div className={styles.wrapper}>
+    <div className={`${styles.wrapper} ${isComplete ? styles.wrapperComplete : ""}`}>
       <header className={styles.reserveHeader}>
         <div>
           <p className={styles.eyebrow}>GUIDED RESERVATION</p>
@@ -522,7 +525,7 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
             Choose your schedule, pay securely, submit verification, and sign the agreement.
           </p>
         </div>
-        <div className={styles.headerRate}>
+        <div className={`${styles.headerRate} ${isComplete ? styles.headerRatePlain : ""}`}>
           <span>Daily rate</span>
           <strong>{product.currency}{product.pricePerDay.toLocaleString()}</strong>
           <small>per rental day</small>
@@ -543,8 +546,46 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
 
       <ReservationStepper steps={STEP_LABELS} currentStep={step} />
 
-      <div className={`${styles.flowLayout} ${step === 2 ? styles.flowLayoutNoSidebar : ""}`}>
-        {step === 2 ? null : (
+      <div className={`${styles.flowLayout} ${step === 2 ? styles.flowLayoutNoSidebar : ""} ${isComplete ? styles.flowLayoutComplete : ""}`}>
+        {step === 2 ? null : isComplete ? (
+        <aside className={`${styles.bookingSummary} ${styles.bookingSummaryComplete}`} aria-label="Selected rental summary">
+          <p className={styles.summaryEyebrow}>YOUR RENTAL</p>
+          <h2>{product.name}</h2>
+          {bookingColor ? <p className={styles.completeMeta}>Color: {bookingColor}</p> : null}
+          <dl className={styles.completeFacts}>
+            <div>
+              <dt>Quantity</dt>
+              <dd>{draft.quantity} {draft.quantity === 1 ? "unit" : "units"}</dd>
+            </div>
+            <div>
+              <dt>Rental date{schedule.rentalDays > 1 ? "s" : ""}</dt>
+              <dd>{schedule.datesLabel}</dd>
+            </div>
+            <div>
+              <dt>{draft.fulfillmentMethod === "delivery" ? "Delivery" : "Pickup"}</dt>
+              <dd>{schedule.pickupAt ? formatManilaPickupTime(schedule.pickupAt) : "Not selected yet"}</dd>
+            </div>
+            <div>
+              <dt>Return</dt>
+              <dd>{schedule.returnAt ? formatManilaDateTime(schedule.returnAt) : "Not selected yet"}</dd>
+            </div>
+            <div className={styles.completeTotal}>
+              <dt>Total amount</dt>
+              <dd>{pricing.rentalDays > 0 ? `${product.currency}${pricing.finalAmount.toLocaleString()}` : "—"}</dd>
+            </div>
+            <div>
+              <dt>Status</dt>
+              <dd><span className={styles.completeStatus}>Pending verification</span></dd>
+            </div>
+          </dl>
+          <Link href={`/catalog/${product.id}`} className={styles.completeDetailsLink}>
+            See item details →
+          </Link>
+          <p className={styles.completeNote}>
+            Payment is completed manually via GCash before document submission.
+          </p>
+        </aside>
+        ) : (
         <aside className={styles.bookingSummary} aria-label="Selected rental summary">
           <p className={styles.summaryEyebrow}>YOUR SELECTED RENTAL</p>
           <h2>{product.name}</h2>
@@ -593,11 +634,13 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
         </aside>
         )}
 
-        <div className={styles.card}>
+        <div className={`${styles.card} ${isComplete ? styles.cardComplete : ""}`}>
+          {isComplete ? null : (
           <div className={styles.cardTopline}>
             <span>Step {step} of {STEP_LABELS.length}</span>
             <strong>{STEP_LABELS[step - 1]}</strong>
           </div>
+          )}
         {step === 1 ? (
           <StepCustomerInfo
             uid={user!.id}

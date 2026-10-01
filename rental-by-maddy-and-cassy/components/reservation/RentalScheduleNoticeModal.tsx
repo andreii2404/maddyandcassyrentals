@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import type { FulfillmentMethod } from "@/src/types/booking";
 import {
   DELIVERY_TRANSPORT_ALLOWANCE_HOURS,
+  RENTAL_DURATION_HOURS,
   calculateEstimatedDeliveryDateTime,
   formatManilaDateTime,
   formatManilaPickupTime,
@@ -15,6 +16,7 @@ import styles from "./RentalScheduleNoticeModal.module.css";
 // channel on /contact -- do not swap in a Messenger deep link that isn't
 // configured elsewhere in the app.
 const MESSENGER_URL = "https://www.facebook.com/share/19bCnTQZum/";
+const HOUR_MS = 60 * 60 * 1000;
 
 function manilaDateKey(value: Date): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(value);
@@ -45,6 +47,14 @@ export default function RentalScheduleNoticeModal({
     manilaDateKey(estimatedArrivalAt) === manilaDateKey(pickupAt)
       ? formatManilaPickupTime(estimatedArrivalAt)
       : formatManilaDateTime(estimatedArrivalAt);
+  // Mirrors calculateReturnDateTime (first day = 22h, each extra day = +24h)
+  // so the explanation always matches the returnAt shown above it.
+  const extraDays = Math.max(
+    0,
+    Math.round(
+      (returnAt.getTime() - pickupAt.getTime() - RENTAL_DURATION_HOURS * HOUR_MS) / (24 * HOUR_MS),
+    ),
+  );
 
   return (
     <Modal
@@ -75,8 +85,24 @@ export default function RentalScheduleNoticeModal({
           <div className={styles.scheduleRow}>
             <dt>Return schedule</dt>
             <dd>{formatManilaDateTime(returnAt)}</dd>
+            <dd className={styles.scheduleHint}>
+              Calculated for you: your {isDelivery ? "delivery" : "pickup"} time +{" "}
+              {RENTAL_DURATION_HOURS} hours
+              {extraDays > 0
+                ? `, plus 24 hours for each extra rental day (${extraDays} extra ${
+                    extraDays === 1 ? "day" : "days"
+                  })`
+                : ""}
+              . Please return the item on or before this time.
+            </dd>
           </div>
         </dl>
+
+        <p className={styles.note}>
+          <strong>Estimated travel time: minimum {DELIVERY_TRANSPORT_ALLOWANCE_HOURS} hours.</strong>{" "}
+          Actual travel time may vary depending on your location and traffic conditions. This is
+          only the minimum allowance, not a guaranteed travel duration.
+        </p>
 
         {isDelivery ? (
           <p className={styles.note}>

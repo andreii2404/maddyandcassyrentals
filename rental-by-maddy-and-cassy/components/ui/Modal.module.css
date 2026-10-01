@@ -78,3 +78,50 @@
 .body {
   padding: 1.5rem;
 }
+
+/* ---- belowHeader: clears the fixed navbar and clips every corner to one radius ---- */
+
+.overlayBelowHeader {
+  /* Matches .navbarSpacer heights in Navbar.module.css (68px, 64px ≤1050px, 60px ≤700px). */
+  --modal-header-offset: 68px;
+  --modal-radius: 16px;
+  padding-top: calc(var(--modal-header-offset) + 1rem);
+  padding-bottom: 1rem;
+}
+
+.dialogContained {
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+  overflow: hidden;
+  border-radius: var(--modal-radius);
+}
+
+.dialogContained .header {
+  position: static;
+  flex: 0 0 auto;
+  border-radius: var(--modal-radius) var(--modal-radius) 0 0;
+}
+
+.dialogContained .body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  border-radius: 0 0 var(--modal-radius) var(--modal-radius);
+}
+
+@media (max-width: 1050px) {
+  .overlayBelowHeader {
+    --modal-header-offset: 64px;
+  }
+}
+
+@media (max-width: 700px) {
+  .overlayBelowHeader {
+    --modal-header-offset: 60px;
+    padding-right: 0.75rem;
+    padding-left: 0.75rem;
+  }
+}

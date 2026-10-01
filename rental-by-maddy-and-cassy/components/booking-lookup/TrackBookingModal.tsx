@@ -165,7 +165,7 @@ export default function TrackBookingModal({ onClose }: TrackBookingModalProps) {
   const handoverLabel = result?.fulfillmentMethod === "delivery" ? "Delivery" : "Pickup";
 
   return (
-    <Modal title="Track Booking" onClose={() => { if (!busy) onClose(); }} describedBy={descriptionId} size="medium">
+    <Modal title="Track Booking" onClose={() => { if (!busy) onClose(); }} describedBy={descriptionId} size="medium" belowHeader>
       <div className={styles.body}>
         <form className={styles.searchForm} onSubmit={trackBooking} noValidate>
           <p id={descriptionId} className={styles.intro}>

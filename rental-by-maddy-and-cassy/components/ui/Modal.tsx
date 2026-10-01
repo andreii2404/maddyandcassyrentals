@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import styles from "./Modal.module.css";
 import { Button } from "@/components/ui/Button";
 
@@ -11,9 +12,11 @@ interface ModalProps {
   describedBy?: string;
   /** "wide" suits document viewers, "medium" detail views that need a little more room, and "small" short single-field dialogs; every existing dialog keeps the default width. */
   size?: "default" | "medium" | "wide" | "small";
+  /** Portals to <body> and keeps the dialog clear of the fixed navbar; the body scrolls so every corner clips to the same radius. */
+  belowHeader?: boolean;
 }
 
-export default function Modal({ title, onClose, children, describedBy, size = "default" }: ModalProps) {
+export default function Modal({ title, onClose, children, describedBy, size = "default", belowHeader = false }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
 
@@ -50,19 +53,20 @@ export default function Modal({ title, onClose, children, describedBy, size = "d
     };
   }, []);
 
-  return (
-    <div className={styles.overlay} onMouseDown={onClose}>
+  const dialogClassName =
+    size === "wide"
+      ? `${styles.dialog} ${styles.dialogWide}`
+      : size === "medium"
+        ? `${styles.dialog} ${styles.dialogMedium}`
+        : size === "small"
+          ? `${styles.dialog} ${styles.dialogSmall}`
+          : styles.dialog;
+
+  const modal = (
+    <div className={belowHeader ? `${styles.overlay} ${styles.overlayBelowHeader}` : styles.overlay} onMouseDown={onClose}>
       <div
         ref={dialogRef}
-        className={
-          size === "wide"
-            ? `${styles.dialog} ${styles.dialogWide}`
-            : size === "medium"
-              ? `${styles.dialog} ${styles.dialogMedium}`
-              : size === "small"
-                ? `${styles.dialog} ${styles.dialogSmall}`
-                : styles.dialog
-        }
+        className={belowHeader ? `${dialogClassName} ${styles.dialogContained}` : dialogClassName}
         role="dialog"
         aria-modal="true"
         aria-label={title}
@@ -85,4 +89,7 @@ export default function Modal({ title, onClose, children, describedBy, size = "d
       </div>
     </div>
   );
+
+  // A parent stacking context (e.g. the hero's z-index: 1) would otherwise trap the overlay beneath the navbar.
+  return belowHeader && typeof document !== "undefined" ? createPortal(modal, document.body) : modal;
 }

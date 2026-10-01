@@ -41,7 +41,7 @@
 }
 
 .step.completed:not(:last-child)::after {
-  background: var(--color-primary);
+  background: var(--color-dusty-rose);
 }
 
 .indicator {
@@ -60,15 +60,29 @@
   font-weight: 700;
 }
 
-.current .indicator {
-  border-color: var(--color-primary);
+/* Completed phases stay visible but recede; the current phase carries the emphasis. */
+.completed .indicator {
+  border-color: var(--color-dusty-rose);
+  background: var(--color-blush);
   color: var(--color-primary);
 }
 
-.completed .indicator {
+.completed .label,
+.completed .phaseStatus {
+  opacity: 0.75;
+}
+
+.current .indicator {
   border-color: var(--color-primary);
   background: var(--color-primary);
   color: var(--color-white);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
+}
+
+.final .indicator {
+  border-color: var(--color-status-green);
+  background: var(--color-status-green);
+  box-shadow: 0 0 0 3px var(--color-status-green-bg);
 }
 
 .label {
@@ -127,4 +141,9 @@
     left: 60%;
     width: 80%;
   }
+}
+
+.final .label,
+.final .phaseStatus {
+  color: var(--color-status-green);
 }

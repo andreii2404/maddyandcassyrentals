@@ -467,6 +467,7 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
   const pricing = calculateMultiItemReservationPricing(lines, draft, rewardProgress, isGuest);
   const currency = lines[0]?.product.currency ?? "PHP";
   const schedule = getDraftRentalSchedule(draft);
+  const isComplete = step === STEP_LABELS.length;
   const agreementData = {
     bookingRef: bookingNumber ?? "Created before payment",
     customerName: draft.customerInfo.fullName || "-",
@@ -533,7 +534,7 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
   }
 
   return (
-    <div className={styles.wrapper}>
+    <div className={`${styles.wrapper} ${isComplete ? styles.wrapperComplete : ""}`}>
       <header className={styles.reserveHeader}>
         <div>
           <p className={styles.eyebrow}>COMBINED RENTAL CHECKOUT</p>
@@ -564,7 +565,7 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
 
       <ReservationStepper steps={STEP_LABELS} currentStep={step} />
 
-      <div className={`${styles.flowLayout} ${step === 1 ? styles.flowLayoutNoSidebar : ""}`}>
+      <div className={`${styles.flowLayout} ${step === 1 ? styles.flowLayoutNoSidebar : ""} ${isComplete ? styles.flowLayoutComplete : ""}`}>
         {step === 1 ? null : (
         <aside className={styles.bookingSummary} aria-label="Selected rental summary">
           <p className={styles.summaryEyebrow}>YOUR CART</p>
@@ -628,26 +629,41 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
               <dt>Current total</dt>
               <dd>{pricing.rentalDays > 0 ? `${currency}${pricing.finalAmount.toLocaleString()}` : "Choose dates"}</dd>
             </div>
-            <div>
-              <dt>Current step</dt>
-              <dd>{step} of {STEP_LABELS.length}</dd>
-            </div>
+            {isComplete ? (
+              <div>
+                <dt>Status</dt>
+                <dd><span className={styles.completeStatus}>Pending verification</span></dd>
+              </div>
+            ) : (
+              <div>
+                <dt>Current step</dt>
+                <dd>{step} of {STEP_LABELS.length}</dd>
+              </div>
+            )}
           </dl>
           <Link href="/cart" className={styles.detailsLink}>
             Edit cart
           </Link>
-          <div className={styles.secureNote}>
-            <strong>Secure booking flow</strong>
-            <span>Payment is completed manually via GCash before document submission.</span>
-          </div>
+          {isComplete ? (
+            <p className={styles.completeNote}>
+              Payment is completed manually via GCash before document submission.
+            </p>
+          ) : (
+            <div className={styles.secureNote}>
+              <strong>Secure booking flow</strong>
+              <span>Payment is completed manually via GCash before document submission.</span>
+            </div>
+          )}
         </aside>
         )}
 
-        <div className={styles.card}>
+        <div className={`${styles.card} ${isComplete ? styles.cardComplete : ""}`}>
+          {isComplete ? null : (
           <div className={styles.cardTopline}>
             <span>Step {step} of {STEP_LABELS.length}</span>
             <strong>{STEP_LABELS[step - 1]}</strong>
           </div>
+          )}
         {step === 1 ? (
           <StepCartRentalDetails
             lines={lines}
