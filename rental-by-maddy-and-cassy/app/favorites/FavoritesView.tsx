@@ -1,7 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/Button";
-import { useEffect, useMemo } from "react";
+import ConfirmModal from "@/components/ui/ConfirmModal";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { Product } from "@/types/product";
 import type { UnitCounts } from "@/lib/availability";
@@ -22,6 +23,7 @@ export default function FavoritesView({ products }: FavoritesViewProps) {
     clearFavorites,
     removeStaleFavorites,
   } = useFavorites();
+  const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
   const defaultsById: Record<string, UnitCounts> = Object.fromEntries(
     products.map((product) => [
       product.id,
@@ -43,6 +45,13 @@ export default function FavoritesView({ products }: FavoritesViewProps) {
     removeStaleFavorites(products.map((product) => product.id));
   }, [products, removeStaleFavorites]);
 
+  // Clearing every favorite is destructive and irreversible, so it only runs
+  // once the shortlist owner confirms in the dialog.
+  const handleConfirmClear = useCallback(() => {
+    clearFavorites();
+    setIsClearConfirmOpen(false);
+  }, [clearFavorites]);
+
   return (
     <section className={styles.page} aria-labelledby="favorites-heading">
       <header className={styles.header}>
@@ -60,7 +69,12 @@ export default function FavoritesView({ products }: FavoritesViewProps) {
               {favoriteProducts.length} {favoriteProducts.length === 1 ? "saved item" : "saved items"}
             </span>
             <span className={styles.divider} aria-hidden="true" />
-            <Button variant="none" type="button" className={styles.clearButton} onClick={clearFavorites}>
+            <Button
+              variant="none"
+              type="button"
+              className={styles.clearButton}
+              onClick={() => setIsClearConfirmOpen(true)}
+            >
               Clear all
             </Button>
           </div>
@@ -94,6 +108,18 @@ export default function FavoritesView({ products }: FavoritesViewProps) {
           <Link href="/catalog" className={styles.browseButton}>Browse all rentals</Link>
         </div>
       )}
+
+      {isClearConfirmOpen ? (
+        <ConfirmModal
+          title="Clear all favorites?"
+          description="Are you sure you want to remove all saved items?"
+          confirmLabel="Clear all"
+          cancelLabel="Cancel"
+          tone="danger"
+          onConfirm={handleConfirmClear}
+          onCancel={() => setIsClearConfirmOpen(false)}
+        />
+      ) : null}
     </section>
   );
 }

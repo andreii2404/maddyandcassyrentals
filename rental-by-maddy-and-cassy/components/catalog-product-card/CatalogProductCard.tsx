@@ -138,35 +138,38 @@ export default function CatalogProductCard({
       <div className={styles.info}>
         <p className={styles.category}>{product.category}</p>
         <h3 className={styles.name}>{product.name}</h3>
-        {product.brand ? <p className={styles.brand}>{product.brand}</p> : null}
-
-        {product.reviewCount > 0 ? (
-          <p className={styles.rating}>
-            {product.rating.toFixed(1)} ★{" "}
-            <span className={styles.reviewCount}>({product.reviewCount})</span>
-          </p>
-        ) : (
-          <p className={styles.ratingPlaceholder}>No reviews yet</p>
-        )}
-
-        <div className={styles.priceBlock}>
-          {product.discountPercent > 0 ? (
-            <p className={styles.listPrice}>{product.currency}{product.listPricePerDay.toLocaleString()}/day</p>
-          ) : null}
-          <p className={styles.price}>
-            {product.currency}
-            {product.pricePerDay.toLocaleString()}
-            <span className={styles.perDay}>/day</span>
-          </p>
-          {product.discountPercent > 0 ? (
-            <span className={styles.discountText}>{product.discountLabel || `${product.discountPercent}% catalog discount`}</span>
-          ) : null}
+        <div className={styles.metaRow}>
+          {product.brand ? <p className={styles.brand}>{product.brand}</p> : null}
+          {product.reviewCount > 0 ? (
+            <p className={styles.rating}>
+              {product.rating.toFixed(1)} ★{" "}
+              <span className={styles.reviewCount}>({product.reviewCount})</span>
+            </p>
+          ) : (
+            <p className={styles.ratingPlaceholder}>No reviews yet</p>
+          )}
         </div>
 
-        <span className={`${styles.availabilityPill} ${styles[LEVEL_CLASS[level]]}`}>
-          <span className={styles.availabilityDot} aria-hidden="true" />
-          {availabilityText}
-        </span>
+        <div className={styles.priceRow}>
+          <div className={styles.priceBlock}>
+            {product.discountPercent > 0 ? (
+              <p className={styles.listPrice}>{product.currency}{product.listPricePerDay.toLocaleString()}/day</p>
+            ) : null}
+            <p className={styles.price}>
+              {product.currency}
+              {product.pricePerDay.toLocaleString()}
+              <span className={styles.perDay}>/day</span>
+            </p>
+            {product.discountPercent > 0 ? (
+              <span className={styles.discountText}>{product.discountLabel || `${product.discountPercent}% catalog discount`}</span>
+            ) : null}
+          </div>
+
+          <span className={`${styles.availabilityPill} ${styles[LEVEL_CLASS[level]]}`}>
+            <span className={styles.availabilityDot} aria-hidden="true" />
+            {availabilityText}
+          </span>
+        </div>
 
         <div className={styles.actions}>
           <Link

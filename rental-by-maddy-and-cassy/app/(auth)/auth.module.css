@@ -1,3 +1,15 @@
+/*
+ * Sign-in shell: the split section runs flush into the site footer, so the two
+ * panels extend the full height below the navbar with no empty strip beneath.
+ */
+.authPage {
+  display: flow-root;
+}
+
+.authPage + :global(footer) {
+  margin-top: 0;
+}
+
 .main {
   /* Mirrors .navbarSpacer so the split fills the viewport below the fixed navbar. */
   --auth-nav-height: 68px;

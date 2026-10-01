@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 export default function SignInPage() {
   return (
-    <div>
+    <div className={styles.authPage}>
       <main className={styles.main}>
         <div className={`${styles.authLayout} ${styles.nudgeDown}`}>
           <section className={styles.authIntro} aria-labelledby="customer-access-heading">
@@ -26,7 +26,7 @@ export default function SignInPage() {
               <li>Access payment history, receipts, and invoices</li>
               <li>Return to saved booking steps without starting over</li>
             </ul>
-            <Link href="/catalog" className={styles.introLink}>Browse the catalog first →</Link>
+            <Link href="/catalog" className={styles.introLink}>Browse the catalog first</Link>
           </section>
           <Suspense fallback={null}>
             <SignInForm />

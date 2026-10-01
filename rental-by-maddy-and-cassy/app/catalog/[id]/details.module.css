@@ -1,10 +1,10 @@
 .main {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 1rem 1.25rem 2.75rem;
+  padding: 1.25rem 1.25rem 3.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 1.75rem;
 }
 
 .backLink {
@@ -22,81 +22,214 @@
   color: var(--color-primary);
 }
 
+/* ---------------------------------------------------------------
+   Layout: product information on the left, gallery on the right.
+   The gallery sticks while the longer information column scrolls.
+---------------------------------------------------------------- */
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 440px) 1fr;
-  gap: clamp(1rem, 2vw, 1.6rem);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 460px);
+  gap: clamp(1.75rem, 4vw, 3.5rem);
   align-items: start;
 }
 
 .left {
   position: sticky;
-  top: 1.5rem;
+  top: 1.75rem;
 }
 
 .info {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  min-width: 0;
 }
 
+/* ---------------------------------------------------------------
+   Header: category eyebrow, product name, rating
+---------------------------------------------------------------- */
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.category {
+  margin: 0;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.name {
+  margin: 0;
+  font-size: clamp(1.75rem, 3.2vw, 2.5rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  color: var(--color-text-primary);
+}
+
+.rating {
+  margin: 0;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  font-size: 0.92rem;
+}
+
+.reviewCount {
+  font-weight: 400;
+  color: var(--color-charcoal);
+}
+
+.description {
+  margin: 1rem 0 0;
+  color: var(--color-charcoal);
+  line-height: 1.7;
+  font-size: 0.95rem;
+  max-width: 62ch;
+}
+
+/* ---------------------------------------------------------------
+   Rental terms: Daily Rate / Availability / Deposit.
+   Structured rows separated by hairline dividers -- not cards.
+---------------------------------------------------------------- */
+.infoCards {
+  margin: 1.75rem 0 0;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--color-light-gray);
+}
+
+.infoCard {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.4fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 0.5rem 1.5rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--color-light-gray);
+}
+
+.infoCardLabel {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-charcoal);
+}
+
+.infoCardBody {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.7rem;
+  min-width: 0;
+}
+
+.infoCardValue {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.infoCardPrice {
+  font-size: clamp(1.5rem, 3vw, 1.85rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--color-primary);
+}
+
+.perDay {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--color-charcoal);
+  margin-left: 0.25rem;
+  letter-spacing: 0;
+}
+
+.originalRate {
+  margin: 0;
+  color: var(--color-charcoal);
+  font-size: 0.82rem;
+  text-decoration: line-through;
+}
+
+.discountNote {
+  margin: 0;
+  color: var(--color-status-green);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------------
+   Specifications -- light inline chips, no heavy card chrome
+---------------------------------------------------------------- */
 .specificationPills {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.55rem;
-  margin: 0.55rem 0 0;
+  gap: 0.5rem;
+  margin: 1.5rem 0 0;
 }
 
 .specificationPill {
   display: flex;
   align-items: baseline;
-  gap: 0.4rem;
-  padding: 0.48rem 0.72rem;
-  border: 1px solid var(--color-dusty-rose);
+  gap: 0.45rem;
+  padding: 0.42rem 0.75rem;
+  border: 1px solid var(--color-light-gray);
   border-radius: 999px;
-  background: color-mix(in srgb, var(--color-blush) 45%, white);
+  background: var(--color-background-soft);
 }
 
 .specificationPill dt {
   color: var(--color-charcoal);
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .specificationPill dd {
   margin: 0;
   color: var(--color-text-primary);
-  font-size: 0.78rem;
-  font-weight: 700;
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
+/* ---------------------------------------------------------------
+   Color selection
+---------------------------------------------------------------- */
 .colorPicker {
-  margin: 0.65rem 0 0;
+  margin: 1.5rem 0 0;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.55rem;
 }
 
 .colorPickerLabel {
+  flex-basis: 100%;
   color: var(--color-charcoal);
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  margin-bottom: 0.15rem;
 }
 
 .colorButton {
-  min-height: 40px;
-  padding: 0.45rem 0.8rem;
+  min-height: 42px;
+  padding: 0.5rem 0.9rem;
   border: 1px solid var(--color-dusty-rose);
   border-radius: var(--radius-control);
   background: white;
   color: var(--color-text-primary);
-  font-size: 0.78rem;
-  font-weight: 700;
+  font-size: 0.8rem;
+  font-weight: 600;
   cursor: pointer;
   transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
 }
@@ -129,125 +262,68 @@
 .colorHint {
   flex-basis: 100%;
   color: var(--color-charcoal);
-  font-size: 0.75rem;
-}
-
-.category {
-  margin: 0;
   font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--color-primary);
 }
 
-.name {
-  margin: 0.3rem 0 0;
-  font-size: clamp(1.45rem, 2.6vw, 1.95rem);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--color-text-primary);
-}
-
-.rating {
-  margin: 0.3rem 0 0;
-  font-weight: 600;
-  color: var(--color-text-primary);
-  font-size: 0.95rem;
-}
-
-.reviewCount {
-  font-weight: 400;
-  color: var(--color-charcoal);
-}
-
-.description {
-  margin: 0.65rem 0 0;
-  color: var(--color-charcoal);
-  line-height: 1.55;
-  font-size: 0.88rem;
-  max-width: 560px;
-}
-
-.infoCards {
-  margin-top: 0.85rem;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.9rem;
-}
-
-.infoCard {
-  min-height: 68px;
-  justify-content: center;
-  padding: 0.65rem 0.75rem;
-  border-radius: 16px;
-  background: var(--color-white);
-  border: 1px solid var(--color-light-gray);
+/* ---------------------------------------------------------------
+   Action + rental kit sections -- stacked, divider-led, no boxes
+---------------------------------------------------------------- */
+.detailsSplit {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
-}
-
-.infoCardLabel {
-  margin: 0;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-charcoal);
-}
-
-.infoCardValue {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--color-primary);
-}
-
-.perDay {
-  font-size: 0.85rem;
-  font-weight: 400;
-  color: var(--color-charcoal);
-  margin-left: 0.2rem;
-}
-
-.detailsSplit {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(245px, 1fr));
-  gap: 0.9rem;
-  margin-top: 0.8rem;
-}
-
-.originalRate {
-  margin: 0;
-  color: var(--color-charcoal);
-  font-size: 0.72rem;
-  text-decoration: line-through;
-}
-
-.discountNote {
-  margin: 0;
-  color: var(--color-status-green);
-  font-size: 0.68rem;
-  font-weight: 700;
 }
 
 .reserveCard {
-  padding: 0.8rem 0.9rem;
-  border-radius: 20px;
-  background: var(--color-blush);
-  border: 1px solid var(--color-dusty-rose);
+  margin-top: 2rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--color-light-gray);
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
+  gap: 0.75rem;
+}
+
+.reserveHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.favoriteRow {
+  display: flex;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+}
+
+.reserveHeading {
+  margin: 0.2rem 0 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--color-text-primary);
+}
+
+.reserveCopy {
+  margin: -0.15rem 0 0.25rem;
+  color: var(--color-charcoal);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  max-width: 52ch;
+}
+
+.estimateNote {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--color-charcoal);
 }
 
 .includedCard {
-  padding: 0.8rem 0.9rem;
-  border: 1px solid var(--color-light-gray);
-  border-radius: 20px;
-  background: var(--color-white);
-  box-shadow: 0 10px 28px rgba(36, 36, 36, 0.04);
+  margin-top: 2rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--color-light-gray);
+  background: none;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .panelHeadingRow {
@@ -258,34 +334,37 @@
 }
 
 .panelHeadingRow h2 {
-  margin: 0.12rem 0 0;
+  margin: 0.2rem 0 0;
   color: var(--color-text-primary);
-  font-size: 1rem;
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
 }
 
 .panelHeadingRow > span {
   flex: 0 0 auto;
-  padding: 0.3rem 0.55rem;
+  padding: 0.32rem 0.6rem;
   border-radius: 999px;
   background: var(--color-background-soft);
   color: var(--color-charcoal);
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   font-weight: 700;
 }
 
 .panelEyebrow {
   margin: 0;
   color: var(--color-primary);
-  font-size: 0.66rem;
+  font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .includedGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.48rem 0.7rem;
-  margin: 0.85rem 0 0;
+  gap: 0.6rem 1.25rem;
+  margin: 1.1rem 0 0;
   padding: 0;
   list-style: none;
 }
@@ -294,17 +373,18 @@
   display: flex;
   min-width: 0;
   align-items: flex-start;
-  gap: 0.4rem;
+  gap: 0.5rem;
   color: var(--color-charcoal);
-  font-size: 0.73rem;
-  line-height: 1.35;
+  font-size: 0.85rem;
+  line-height: 1.45;
 }
 
 .includedGrid li > span {
   display: inline-grid;
-  width: 17px;
-  height: 17px;
-  flex: 0 0 17px;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  margin-top: 0.1rem;
   place-items: center;
   border-radius: 50%;
   background: var(--color-blush);
@@ -313,47 +393,28 @@
   font-weight: 700;
 }
 
-.favoriteRow {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: -0.2rem;
-}
-
-.reserveHeading {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.reserveCopy {
-  margin: 0;
-  color: var(--color-charcoal);
-  font-size: 0.84rem;
-  line-height: 1.55;
-}
-
-.estimateNote {
-  margin: 0;
-  font-size: 0.78rem;
-  color: var(--color-charcoal);
-}
-
-@media (max-width: 860px) {
+/* ---------------------------------------------------------------
+   Responsive: single column, gallery first on small screens
+---------------------------------------------------------------- */
+@media (max-width: 980px) {
   .layout {
     grid-template-columns: 1fr;
+    gap: 1.75rem;
   }
 
   .left {
     position: static;
-  }
-
-  .infoCards {
-    grid-template-columns: 1fr;
+    order: -1;
   }
 }
 
-@media (max-width: 520px) {
+@media (max-width: 560px) {
+  .infoCard {
+    grid-template-columns: 1fr;
+    align-items: flex-start;
+    gap: 0.3rem;
+  }
+
   .includedGrid {
     grid-template-columns: 1fr;
   }
