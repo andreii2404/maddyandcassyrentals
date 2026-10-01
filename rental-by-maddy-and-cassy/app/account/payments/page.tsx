@@ -11,6 +11,7 @@ import type { PaymentRecord } from "@/src/types/payment";
 import { bookingHeadline } from "@/src/lib/bookingDisplay";
 import { getPagination } from "@/src/lib/pagination";
 import Spinner from "@/components/ui/Spinner";
+import PaymentDetailsModal from "@/components/payment/PaymentDetailsModal";
 import styles from "./payments.module.css";
 
 const PAYMENTS_PER_PAGE = 5;
@@ -32,6 +33,7 @@ export default function PaymentHistoryPage() {
   const [rows, setRows] = useState<PaymentRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedRow, setSelectedRow] = useState<PaymentRow | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -92,6 +94,12 @@ export default function PaymentHistoryPage() {
           <div className={styles.list}>
             {visibleRows.map(({ booking, payment }) => (
               <article key={`${booking.id}-${payment.id}`} className={styles.card}>
+                <button
+                  type="button"
+                  className={styles.cardTrigger}
+                  onClick={() => setSelectedRow({ booking, payment })}
+                  aria-label={`View payment details for ${booking.bookingRef}`}
+                />
                 <div>
                   <Link href={`/account/bookings/${booking.id}`}>{booking.bookingRef}</Link>
                   <p>{bookingHeadline(booking.items)}</p>
@@ -156,6 +164,14 @@ export default function PaymentHistoryPage() {
           <h2>No payment records yet</h2>
           <p>Your checkout, proof, and receipt history will appear here after you reserve an item.</p>
         </div>
+      ) : null}
+
+      {selectedRow ? (
+        <PaymentDetailsModal
+          booking={selectedRow.booking}
+          payment={selectedRow.payment}
+          onClose={() => setSelectedRow(null)}
+        />
       ) : null}
     </div>
   );

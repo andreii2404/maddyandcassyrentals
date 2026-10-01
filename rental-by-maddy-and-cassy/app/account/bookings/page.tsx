@@ -209,6 +209,7 @@ export default function BookingsListPage() {
                     fulfillmentMethod={booking.fulfillmentMethod}
                     customerLocation={booking.fulfillmentMethod === "pickup" ? "Business pickup point" : [booking.location, booking.cityMunicipality, booking.province].filter(Boolean).join(", ")}
                     statusSlot={<StatusBadge status={booking.status} />}
+                    variant="list"
                   />
                 </Link>
                 {/* Actions sit outside the card link so they stay valid, separately focusable controls. */}

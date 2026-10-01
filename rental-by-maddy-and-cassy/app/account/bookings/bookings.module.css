@@ -1,4 +1,4 @@
-.wrapper { display: flex; flex-direction: column; gap: 1.25rem; }
+.wrapper { display: flex; flex-direction: column; gap: 1.5rem; }
 
 /* Header */
 .hero {
@@ -34,10 +34,12 @@
   font-weight: 700;
   text-decoration: none;
   white-space: nowrap;
-  transition: background-color 160ms ease;
+  transition: background-color 160ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
 .newBookingLink:hover,
-.browseLink:hover { background: var(--color-primary-hover); }
+.browseLink:hover { background: var(--color-primary-hover); box-shadow: 0 4px 12px rgba(154, 89, 101, 0.2); }
+.newBookingLink:active,
+.browseLink:active { transform: translateY(1px); box-shadow: none; }
 .newBookingLink:focus-visible,
 .browseLink:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
 
@@ -65,13 +67,15 @@
   cursor: pointer;
   transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
 }
-.summaryItem:hover { background: rgba(255, 255, 255, 0.6); color: var(--color-text-primary); }
+.summaryItem:hover { background: rgba(255, 255, 255, 0.7); color: var(--color-text-primary); box-shadow: inset 0 0 0 1px rgba(154, 89, 101, 0.12); }
 .summaryItem:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 1px; }
 .summaryItemActive,
-.summaryItemActive:hover { background: white; color: var(--color-text-primary); box-shadow: 0 1px 3px rgba(66, 44, 48, 0.08); }
-.summaryItem strong { color: var(--color-text-primary); font-size: 1.3rem; font-weight: 700; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.summaryItemActive:hover { background: white; color: var(--color-primary); box-shadow: inset 0 0 0 1px rgba(154, 89, 101, 0.32), 0 2px 6px rgba(66, 44, 48, 0.08); }
+.summaryItem strong { color: var(--color-text-primary); font-size: 1.3rem; font-weight: 700; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; transition: color 160ms ease; }
+.summaryItem:hover strong,
 .summaryItemActive strong { color: var(--color-primary); }
 .summaryItem span { font-size: 0.72rem; font-weight: 600; }
+.summaryItemActive span { font-weight: 700; }
 
 /* Loyalty */
 .loyalty { display: grid; gap: 0.5rem; padding: 0.85rem 1rem; border: 1px solid rgba(154, 89, 101, 0.16); border-radius: 14px; background: white; }
@@ -85,12 +89,16 @@
 .loyaltyCopy small { color: var(--color-charcoal); font-size: 0.65rem; font-weight: 500; }
 
 /* History */
-.historyPanel { display: flex; flex-direction: column; gap: 0.75rem; padding-top: 0.25rem; }
+.historyPanel { display: flex; flex-direction: column; gap: 1rem; padding-top: 0.5rem; }
 .historyToolbar { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
 .historyToolbar h2 { margin: 0; font-size: 1.05rem; font-weight: 700; letter-spacing: -0.01em; }
 .searchField { display: flex; align-items: center; gap: 0.5rem; min-width: min(280px, 40vw); min-height: 40px; padding: 0 0.75rem; border: 1px solid var(--color-light-gray); border-radius: 10px; background: white; transition: border-color 160ms ease, box-shadow 160ms ease; }
+.searchField:hover { border-color: rgba(154, 89, 101, 0.35); }
 .searchField:focus-within { border-color: var(--color-dusty-rose); box-shadow: 0 0 0 3px rgba(215,165,165,0.16); }
-.searchField svg { width: 16px; height: 16px; flex: 0 0 auto; fill: none; stroke: var(--color-charcoal); stroke-width: 1.7; }
+.searchField:has(input:focus-visible) { border-color: var(--color-focus); box-shadow: 0 0 0 3px rgba(154, 89, 101, 0.18); }
+.searchField svg { width: 16px; height: 16px; flex: 0 0 auto; fill: none; stroke: var(--color-charcoal); stroke-width: 1.7; transition: stroke 160ms ease; }
+.searchField:hover svg,
+.searchField:focus-within svg { stroke: var(--color-primary); }
 .searchField input { width: 100%; padding: 0; border: 0; outline: 0; background: transparent; color: var(--color-text-primary); font: inherit; font-size: 0.75rem; }
 
 .loading { display: flex; justify-content: center; padding: 2.5rem 0; }
@@ -100,20 +108,35 @@
 .empty strong { font-size: 0.98rem; }
 .empty p { max-width: 420px; margin: 0.4rem 0 1.1rem; color: var(--color-charcoal); font-size: 0.78rem; line-height: 1.6; }
 .empty p:last-child { margin-bottom: 0; }
-.empty button { padding: 0; border: 0; background: none; color: var(--color-primary); font: inherit; font-size: 0.75rem; font-weight: 700; cursor: pointer; }
+.empty button { padding: 0; border: 0; background: none; color: var(--color-primary); font: inherit; font-size: 0.75rem; font-weight: 700; cursor: pointer; text-decoration: underline transparent; text-underline-offset: 3px; transition: color 160ms ease, text-decoration-color 160ms ease; }
+.empty button:hover { color: var(--color-primary-hover); text-decoration-color: currentColor; }
 
-.list { display: grid; gap: 0.75rem; margin: 0; padding: 0; list-style: none; }
-.bookingCard { overflow: hidden; border: 1px solid var(--color-light-gray); border-radius: 16px; background: white; transition: border-color 160ms ease, box-shadow 160ms ease; }
-.bookingCard:hover { border-color: rgba(154,89,101,0.3); box-shadow: 0 8px 22px rgba(66,44,48,0.06); }
-.cardLink { display: block; color: inherit; text-decoration: none; }
+.list { display: grid; gap: 0.9rem; margin: 0; padding: 0; list-style: none; }
+.bookingCard { position: relative; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--color-light-gray); border-radius: 16px; background: white; transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease; }
+/* Accent rail that fades in on hover/focus — a quiet "this row is interactive" cue. */
+.bookingCard::before { content: ""; position: absolute; inset: 0 auto 0 0; z-index: 1; width: 3px; background: var(--color-primary); opacity: 0; pointer-events: none; transition: opacity 180ms ease; }
+.bookingCard:hover { border-color: rgba(154, 89, 101, 0.3); box-shadow: 0 10px 24px rgba(66, 44, 48, 0.08); }
+.bookingCard:hover::before { opacity: 1; }
+/* Kept separate so browsers without :has() still get the plain hover rules above. */
+.bookingCard:has(:focus-visible) { border-color: rgba(154, 89, 101, 0.3); box-shadow: 0 10px 24px rgba(66, 44, 48, 0.08); }
+.bookingCard:has(:focus-visible)::before { opacity: 1; }
+/* The cancel modal renders inside the card; a transform here would trap its fixed overlay, so lift only while no dialog is open. */
+@media (hover: hover) {
+  .bookingCard:hover:not(:has([role="dialog"])) { transform: translateY(-2px); }
+}
+.bookingCard:has([role="dialog"]) { transform: none; transition: none; }
+.cardLink { display: block; flex: 1 1 auto; color: inherit; text-decoration: none; }
 .cardLink:focus-visible { outline: 3px solid var(--color-focus); outline-offset: -3px; border-radius: 16px; }
 .cardLink > div:first-child { border: 0; border-radius: 0; box-shadow: none; }
-.cardFooter { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.75rem 1.25rem; border-top: 1px solid var(--color-light-gray); }
+.cardFooter { display: flex; min-height: 64px; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.75rem 1.25rem; border-top: 1px solid var(--color-light-gray); background: rgba(251, 245, 243, 0.55); }
 .cardFooterInfo { display: block; min-width: 0; color: inherit; text-decoration: none; }
-.cardFooterInfo > span { color: var(--color-primary); font-size: 0.64rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.cardFooterInfo > span { color: var(--color-primary); font-size: 0.64rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; transition: color 160ms ease; }
+.cardFooterInfo:hover > span { color: var(--color-primary-hover); }
 .cardFooter p { margin: 0.18rem 0 0; color: var(--color-charcoal); font-size: 0.7rem; line-height: 1.5; }
 .cardActions { display: flex; flex: 0 0 auto; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 0.5rem; }
 .viewButton { min-height: 40px; padding: 0.5rem 1.05rem; font-size: 0.74rem; font-weight: 700; white-space: nowrap; }
+/* Softer lift than the global primary button so the list doesn't feel heavy. */
+.cardActions .viewButton:hover:not(:disabled):not([aria-disabled="true"]) { box-shadow: 0 4px 12px rgba(154, 89, 101, 0.22); }
 
 .visuallyHidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
 
@@ -139,9 +162,17 @@
 
 @media (prefers-reduced-motion: reduce) {
   .summaryItem,
+  .summaryItem strong,
   .bookingCard,
+  .bookingCard::before,
   .searchField,
+  .searchField svg,
+  .cardFooterInfo > span,
+  .empty button,
   .newBookingLink,
   .browseLink,
   .progressTrack span { transition: none; }
+  .newBookingLink:active,
+  .browseLink:active { transform: none; }
+  .bookingCard:hover:not(:has([role="dialog"])) { transform: none; }
 }

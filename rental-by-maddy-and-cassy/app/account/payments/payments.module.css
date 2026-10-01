@@ -44,6 +44,7 @@
 }
 
 .card {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -52,6 +53,47 @@
   border: 1px solid var(--color-border);
   border-radius: 16px;
   background: var(--color-white);
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.card:hover,
+.card:has(.cardTrigger:focus-visible) {
+  border-color: var(--color-primary);
+  box-shadow: 0 8px 22px rgba(36, 36, 36, 0.08);
+  transform: translateY(-1px);
+}
+
+/* Full-card hit area for opening Payment Details; the booking link sits above it and stays independently clickable. */
+.cardTrigger {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  padding: 0;
+  border: none;
+  border-radius: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.cardTrigger:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.card a {
+  position: relative;
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
+
+  .card:hover,
+  .card:has(.cardTrigger:focus-visible) {
+    transform: none;
+  }
 }
 
 .card p,

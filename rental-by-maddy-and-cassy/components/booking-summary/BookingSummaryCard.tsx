@@ -17,6 +17,8 @@ export interface BookingSummaryCardProps {
   fulfillmentMethod: FulfillmentMethod;
   customerLocation: string;
   statusSlot?: React.ReactNode;
+  /** "list" gives booking-history rows a scannable layout; "default" keeps the compact review look. */
+  variant?: "default" | "list";
 }
 
 export default function BookingSummaryCard({
@@ -33,13 +35,15 @@ export default function BookingSummaryCard({
   fulfillmentMethod,
   customerLocation,
   statusSlot,
+  variant = "default",
 }: BookingSummaryCardProps) {
   const safeProductImage = productImage.trim() || "/images/product-placeholder.png";
+  const isList = variant === "list";
 
   return (
-    <div className={styles.card}>
+    <div className={isList ? `${styles.card} ${styles.cardList}` : styles.card}>
       <div className={styles.imageWrapper}>
-        <Image src={safeProductImage} alt={productName} fill sizes="72px" />
+        <Image src={safeProductImage} alt={productName} fill sizes={isList ? "88px" : "72px"} />
       </div>
 
       <div className={styles.info}>
@@ -73,7 +77,7 @@ export default function BookingSummaryCard({
             <dt>Fulfillment</dt>
             <dd>{fulfillmentMethod === "pickup" ? "Pickup" : "Delivery"}</dd>
           </div>
-          <div>
+          <div className={styles.detailWide}>
             <dt>Location</dt>
             <dd>{customerLocation}</dd>
           </div>
