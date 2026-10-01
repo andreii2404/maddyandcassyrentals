@@ -14,8 +14,18 @@ export interface ChatConversation {
   lastMessagePreview: string | null;
   lastMessageAt: string | null;
   unreadCount: number;
+  /** Consecutive customer messages in this conversation since the latest support reply. */
+  pendingCustomerMessages: number;
+  /** Consecutive customer messages allowed before support has to reply. */
+  customerMessageLimit: number;
   createdAt: string;
 }
+
+/** Mirrors private.chat_customer_message_limit() for pre-migration databases. */
+export const DEFAULT_CUSTOMER_MESSAGE_LIMIT = 2;
+
+export const REPLY_REQUIRED_MESSAGE =
+  "Please wait for our reply before sending another message.";
 
 export interface ChatMessage {
   id: string;
@@ -47,6 +57,9 @@ function conversationFromRow(
     lastMessagePreview: row.last_message_preview,
     lastMessageAt: row.last_message_at,
     unreadCount: Number(row.unread_count ?? 0),
+    pendingCustomerMessages: Number(row.pending_customer_messages ?? 0),
+    customerMessageLimit: Number(row.customer_message_limit ?? DEFAULT_CUSTOMER_MESSAGE_LIMIT)
+      || DEFAULT_CUSTOMER_MESSAGE_LIMIT,
     createdAt: row.created_at,
   };
 }
@@ -82,6 +95,9 @@ function messagingError(message: string): Error {
   }
   if (normalized.includes("authentication_required") || normalized.includes("jwt")) {
     return new Error("Your chat session expired. Refresh the page to continue.");
+  }
+  if (normalized.includes("chat_reply_required")) {
+    return new Error(REPLY_REQUIRED_MESSAGE);
   }
   if (normalized.includes("chat_rate_limit")) {
     return new Error("You are sending messages too quickly. Please wait a moment and try again.");

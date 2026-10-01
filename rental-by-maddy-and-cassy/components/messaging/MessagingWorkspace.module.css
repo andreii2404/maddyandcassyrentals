@@ -291,6 +291,28 @@
   text-align: center;
 }
 
+/* Shown when the customer has used the full run of consecutive messages. */
+.replyNoticeLocked {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.65rem 0.9rem;
+  border-top: 1px solid rgba(176, 106, 60, 0.28);
+  background: rgba(176, 106, 60, 0.08);
+  text-align: center;
+}
+
+.replyNoticeLocked strong {
+  color: var(--color-text-primary);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.replyNoticeLocked span {
+  color: var(--color-charcoal);
+  font-size: 0.66rem;
+  line-height: 1.4;
+}
+
 .composer {
   display: grid;
   align-items: end;
@@ -328,6 +350,14 @@
 }
 
 .composer button:disabled { cursor: not-allowed; opacity: 0.48; }
+
+.composerLocked textarea {
+  background: #f3efed;
+  color: var(--color-charcoal);
+  cursor: not-allowed;
+}
+
+.composerLocked textarea::placeholder { color: var(--color-charcoal); opacity: 0.85; }
 
 .emptyChat {
   display: flex;

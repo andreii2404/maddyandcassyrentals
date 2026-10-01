@@ -361,7 +361,10 @@ function createHtmlEmail(
           "
         >
           <strong>Booking Reference:</strong>
-          ${safeBookingReference}
+          <span style="font-family:'Courier New',Courier,monospace;font-weight:700;letter-spacing:.5px;white-space:nowrap;-webkit-user-select:all;-moz-user-select:all;user-select:all">${safeBookingReference}</span>
+        </p>
+        <p style="margin:6px 0 0;font-size:12px;color:#8b7d80">
+          Tap and hold or double-click the reference to copy it.
         </p>
       </div>
 

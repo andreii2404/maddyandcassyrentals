@@ -1,5 +1,6 @@
 import type { PaymentRejectionEmailDetails } from "@/src/lib/emailNotificationQueue";
 import { paymentRejectionBookingUrl } from "@/supabase/functions/_shared/paymentRejectionBookingUrl";
+import { COPY_REFERENCE_HINT_HTML, renderCopyableReference } from "@/src/lib/emailShell";
 
 function escapeHtml(value: string): string {
   return value
@@ -57,7 +58,7 @@ export function buildPaymentRejectionEmail(details: PaymentRejectionEmailDetails
                 <div style="font-size:11px;font-weight:800;letter-spacing:1.2px;color:#9d5967">CUSTOMER</div>
                 <div style="margin-top:6px;font-size:16px;font-weight:700;color:#292425">${fullName}</div>
                 <div style="margin-top:18px;font-size:11px;font-weight:800;letter-spacing:1.2px;color:#9d5967">BOOKING REFERENCE</div>
-                <div style="margin-top:6px;font-size:19px;font-weight:800;color:#292425">${reference}</div>
+                <div style="margin-top:6px;font-size:19px;font-weight:800;color:#292425">${renderCopyableReference(reference)}</div>${COPY_REFERENCE_HINT_HTML}
               </td></tr>
             </table>
           </td></tr>

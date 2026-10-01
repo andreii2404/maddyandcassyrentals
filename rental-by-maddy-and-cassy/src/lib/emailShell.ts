@@ -7,6 +7,21 @@ export function escapeHtml(value: string): string {
     .replaceAll("'", "&#039;");
 }
 
+/**
+ * Email clients cannot run a copy button, so booking references are rendered so one tap-and-hold
+ * or double-click selects the whole reference (and nothing around it) for copying.
+ */
+const COPYABLE_REFERENCE_STYLE =
+  "font-family:'Courier New',Courier,monospace;letter-spacing:.5px;white-space:nowrap;-webkit-user-select:all;-moz-user-select:all;user-select:all";
+
+/** `escapedReference` must already be HTML-escaped. */
+export function renderCopyableReference(escapedReference: string): string {
+  return `<span style="${COPYABLE_REFERENCE_STYLE}">${escapedReference}</span>`;
+}
+
+export const COPY_REFERENCE_HINT_HTML =
+  '<div style="margin-top:6px;font-size:12px;font-weight:400;color:#8b7d80">Tap and hold or double-click the reference to copy it.</div>';
+
 export function firstName(fullName: string): string {
   return fullName.trim().split(/\s+/)[0] || "there";
 }

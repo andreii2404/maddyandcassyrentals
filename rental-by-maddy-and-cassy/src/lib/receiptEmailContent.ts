@@ -1,4 +1,5 @@
 import { formatManilaDateTime } from "@/src/lib/rentalTiming";
+import { renderCopyableReference } from "@/src/lib/emailShell";
 
 export interface ReceiptEmailDetails {
   bookingReference: string;
@@ -81,7 +82,7 @@ View your booking${isGuest ? " in the same browser used for guest checkout" : ""
                     <td style="padding-bottom:12px;text-align:right;font-size:11px;font-weight:800;letter-spacing:1.2px;color:#9d5967">RECEIPT NO.</td>
                   </tr>
                   <tr>
-                    <td style="font-size:17px;font-weight:800;color:#292425">${reference}</td>
+                    <td style="font-size:17px;font-weight:800;color:#292425">${renderCopyableReference(reference)}</td>
                     <td style="text-align:right;font-size:17px;font-weight:800;color:#292425">${receiptNumber}</td>
                   </tr>
                   <tr><td colspan="2" style="padding-top:16px;border-top:1px solid #eedfdb"></td></tr>

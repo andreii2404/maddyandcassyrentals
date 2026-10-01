@@ -1,0 +1,201 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.intro {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+}
+
+.intro p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  background: rgba(154, 89, 101, 0.1);
+  color: var(--color-primary);
+}
+
+.icon svg,
+.submit svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.submit svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.reference {
+  color: var(--color-text-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  user-select: all;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.field label {
+  color: var(--color-text-primary);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.field small {
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.referenceInput,
+.codeInput {
+  width: 100%;
+  min-height: 48px;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--color-light-gray);
+  border-radius: var(--radius-control);
+  outline: 0;
+  background: #fff;
+  color: var(--color-text-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* 16px keeps iOS Safari from zooming into the field. */
+  font-size: 1rem;
+  letter-spacing: 0.06em;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.codeInput {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.45em;
+  text-align: center;
+}
+
+.referenceInput::placeholder,
+.codeInput::placeholder {
+  color: #b9adb0;
+  font-weight: 400;
+}
+
+.referenceInput:focus,
+.codeInput:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(154, 89, 101, 0.14);
+}
+
+.referenceInput[aria-invalid="true"],
+.codeInput[aria-invalid="true"] {
+  border-color: var(--color-status-red);
+}
+
+.error,
+.notice {
+  margin: 0;
+  padding: 0.65rem 0.8rem;
+  border-radius: var(--radius-control);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.error {
+  border: 1px solid var(--color-status-red-border);
+  background: var(--color-status-red-bg);
+  color: var(--color-status-red);
+}
+
+.notice {
+  border: 1px solid var(--color-border);
+  background: var(--color-background-soft);
+  color: var(--color-text-primary);
+}
+
+.submit {
+  width: 100%;
+  min-height: 48px;
+}
+
+.secondaryActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.textButton {
+  min-height: 44px;
+  padding: 0.4rem 0.2rem;
+  border: 0;
+  background: transparent;
+  color: var(--color-primary);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.textButton:hover:not(:disabled) {
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.textButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.textButton:disabled {
+  color: var(--color-text-secondary);
+  cursor: not-allowed;
+}
+
+.privacyNote {
+  margin: 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 480px) {
+  .secondaryActions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .referenceInput,
+  .codeInput {
+    transition: none;
+  }
+}

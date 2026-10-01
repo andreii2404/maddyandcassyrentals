@@ -4,6 +4,7 @@ import {
   firstName,
   formatManilaDate,
   formatPeso,
+  renderCopyableReference,
   renderEmailShell,
   renderSummaryTable,
 } from "@/src/lib/emailShell";
@@ -56,7 +57,7 @@ export function buildRentalCompletedEmail(details: RentalCompletedEmailDetails) 
     preheader: "Your rental is complete. Here is your summary.",
     eyebrow: "RENTAL COMPLETED",
     heading: `Thank you, ${escapeHtml(name)}!`,
-    introHtml: `Your rental is complete. Here is a quick summary for booking <strong>${escapeHtml(details.bookingReference)}</strong>.`,
+    introHtml: `Your rental is complete. Here is a quick summary for booking <strong>${renderCopyableReference(escapeHtml(details.bookingReference))}</strong>.`,
     bodyHtml: `${renderSummaryTable(summaryRows)}${loyaltyHtml}<p style="margin:16px 0 0;color:#655c5e;font-size:14px;line-height:1.7">${escapeHtml(thanks)}</p>${guestNote}`,
     buttonLabel: "View completed rental",
     buttonUrl: details.bookingUrl,

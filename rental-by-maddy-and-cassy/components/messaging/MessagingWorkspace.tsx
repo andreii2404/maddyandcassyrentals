@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/src/lib/supabase/client";
 import {
+  DEFAULT_CUSTOMER_MESSAGE_LIMIT,
+  REPLY_REQUIRED_MESSAGE,
   getOrCreateConversation,
   listConversations,
   listMessages,
@@ -61,6 +63,28 @@ export default function MessagingWorkspace({ mode, isGuest = false }: MessagingW
     () => conversations.find((conversation) => conversation.id === activeId) ?? null,
     [activeId, conversations],
   );
+
+  // Customers may send a limited run of messages before support replies. The
+  // server is the authority (see send_chat_message), but the locally loaded
+  // thread is also counted so the composer locks the moment the limit is hit,
+  // without waiting for the conversation list to refresh.
+  const replyGate = useMemo(() => {
+    const limit = activeConversation?.customerMessageLimit || DEFAULT_CUSTOMER_MESSAGE_LIMIT;
+    if (mode !== "customer" || !activeConversation) {
+      return { blocked: false, pending: 0, limit };
+    }
+
+    let pendingInThread = 0;
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      const message = messages[index];
+      if (message.conversationId !== activeConversation.id) continue;
+      if (message.senderRole === "admin") break;
+      if (message.senderRole === "customer") pendingInThread += 1;
+    }
+
+    const pending = Math.max(activeConversation.pendingCustomerMessages, pendingInThread);
+    return { blocked: pending >= limit, pending, limit };
+  }, [activeConversation, messages, mode]);
 
   const refreshConversations = useCallback(async (ensureCustomerThread = false) => {
     try {
@@ -164,7 +188,7 @@ export default function MessagingWorkspace({ mode, isGuest = false }: MessagingW
 
   async function handleSend() {
     const body = draft.trim();
-    if (!activeId || !body || sending) return;
+    if (!activeId || !body || sending || replyGate.blocked) return;
     setSending(true);
     setDraft("");
     keepLatestMessageVisibleRef.current = true;
@@ -299,10 +323,20 @@ export default function MessagingWorkspace({ mode, isGuest = false }: MessagingW
               </div>
 
               {mode === "customer" && activeConversation.status === "open" ? (
-                <p className={styles.replyNotice}>Please wait for our reply. Our rental team will respond here.</p>
+                replyGate.blocked ? (
+                  <div className={`${styles.replyNotice} ${styles.replyNoticeLocked}`} role="status">
+                    <strong>{REPLY_REQUIRED_MESSAGE}</strong>
+                    <span>
+                      You have sent {replyGate.pending} of {replyGate.limit} messages. Messaging reopens
+                      automatically as soon as Maddy &amp; Cassy Support replies.
+                    </span>
+                  </div>
+                ) : (
+                  <p className={styles.replyNotice}>Please wait for our reply. Our rental team will respond here.</p>
+                )
               ) : null}
 
-              <div className={styles.composer}>
+              <div className={`${styles.composer} ${replyGate.blocked ? styles.composerLocked : ""}`}>
                 <textarea
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}
@@ -314,11 +348,22 @@ export default function MessagingWorkspace({ mode, isGuest = false }: MessagingW
                   }}
                   rows={1}
                   maxLength={2000}
-                  placeholder={activeConversation.status === "open" ? "Write a message…" : "This conversation is closed"}
-                  disabled={sending || activeConversation.status !== "open"}
+                  placeholder={
+                    activeConversation.status !== "open"
+                      ? "This conversation is closed"
+                      : replyGate.blocked
+                        ? REPLY_REQUIRED_MESSAGE
+                        : "Write a message…"
+                  }
+                  disabled={sending || activeConversation.status !== "open" || replyGate.blocked}
                   aria-label="Message"
                 />
-                <button type="button" onClick={() => void handleSend()} disabled={sending || !draft.trim() || activeConversation.status !== "open"}>
+                <button
+                  type="button"
+                  onClick={() => void handleSend()}
+                  disabled={sending || !draft.trim() || activeConversation.status !== "open" || replyGate.blocked}
+                  title={replyGate.blocked ? REPLY_REQUIRED_MESSAGE : undefined}
+                >
                   {sending ? "Sending…" : "Send"}
                 </button>
               </div>

@@ -14,6 +14,7 @@ import { createClient } from "@/src/lib/supabase/client";
 import { GUEST_BOOKING_CREATED_EVENT } from "@/src/lib/guestBookingEvents";
 import { Button } from "@/components/ui/Button";
 import SignOutConfirmModal from "./SignOutConfirmModal";
+import TrackBookingModal from "@/components/booking-lookup/TrackBookingModal";
 import styles from "./Navbar.module.css";
 
 const primaryLinks = [
@@ -57,6 +58,16 @@ function MessageIcon() {
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.7 9.7 0 0 1-3.7-.8L3 21l1.7-4.6A8.3 8.3 0 1 1 21 11.5Z" />
       <path d="M8 12h.01M12 12h.01M16 12h.01" />
+    </svg>
+  );
+}
+
+function TrackIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
+      <path d="M8.5 11h5M11 8.5v5" />
     </svg>
   );
 }
@@ -115,6 +126,7 @@ export default function Navbar() {
   const [signOutConfirmOpen, setSignOutConfirmOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
+  const [trackBookingOpen, setTrackBookingOpen] = useState(false);
   const guideRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const syncedHash = useSyncExternalStore(subscribeToHash, getHashSnapshot, getServerHashSnapshot);
@@ -271,6 +283,12 @@ export default function Navbar() {
     setMenuOpen(false);
   }
 
+  function openTrackBooking() {
+    setMenuOpen(false);
+    closeDropdowns();
+    setTrackBookingOpen(true);
+  }
+
   function handlePrimaryLinkClick(href: string) {
     const hrefHash = getHrefHash(href);
     setClickedHash(hrefHash);
@@ -402,6 +420,20 @@ export default function Navbar() {
 
           <span className={styles.actionDivider} aria-hidden="true" />
 
+          {!isAdmin ? (
+            <Button
+              variant="none"
+              className={styles.trackBookingButton}
+              aria-haspopup="dialog"
+              aria-label="Track Booking"
+              title="Track Booking"
+              onClick={openTrackBooking}
+            >
+              <TrackIcon />
+              <span className={styles.trackBookingLabel}>Track Booking</span>
+            </Button>
+          ) : null}
+
           {isAccountHolder ? (
             <div className={styles.profileMenu} ref={profileRef}>
               <Button
@@ -531,6 +563,13 @@ export default function Navbar() {
                 <span><strong>Rental Cart</strong><small>{totalQuantity} {totalQuantity === 1 ? "item" : "items"}</small></span>
                 <span className={styles.mobileQuickArrow} aria-hidden="true">→</span>
               </Link>
+              {!isAdmin ? (
+                <Button variant="none" className={styles.mobileQuickButton} aria-haspopup="dialog" onClick={openTrackBooking}>
+                  <span className={styles.mobileQuickIcon}><TrackIcon /></span>
+                  <span><strong>Track Booking</strong><small>Find by booking reference</small></span>
+                  <span className={styles.mobileQuickArrow} aria-hidden="true">→</span>
+                </Button>
+              ) : null}
             </div>
 
             <nav className={styles.mobileLinks} aria-label="Mobile navigation">
@@ -639,6 +678,7 @@ export default function Navbar() {
         onCancel={() => setSignOutConfirmOpen(false)}
       />
     ) : null}
+    {trackBookingOpen ? <TrackBookingModal onClose={() => setTrackBookingOpen(false)} /> : null}
     </>
   );
 }

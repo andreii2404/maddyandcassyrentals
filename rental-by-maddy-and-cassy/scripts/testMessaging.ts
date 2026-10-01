@@ -4,6 +4,8 @@ import { readFileSync } from "node:fs";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../src/lib/supabase/database.types";
 import {
+  DEFAULT_CUSTOMER_MESSAGE_LIMIT,
+  REPLY_REQUIRED_MESSAGE,
   getOrCreateConversation,
   listConversations,
   listMessages,
@@ -13,6 +15,14 @@ import {
 
 const chatSendMigration = readFileSync(
   new URL("../supabase/migrations/20260926075045_fix_chat_message_send.sql", import.meta.url),
+  "utf8",
+);
+
+const consecutiveLimitMigration = readFileSync(
+  new URL(
+    "../supabase/migrations/20261001120000_limit_consecutive_customer_messages.sql",
+    import.meta.url,
+  ),
   "utf8",
 );
 
@@ -43,6 +53,8 @@ test("conversation rows are mapped into UI-safe camel-case records", async () =>
     last_message_preview: "Hello",
     last_message_at: "2026-09-26T01:00:00.000Z",
     unread_count: 2,
+    pending_customer_messages: 1,
+    customer_message_limit: 2,
     created_at: "2026-09-26T00:00:00.000Z",
   }], error: null }]);
 
@@ -50,6 +62,30 @@ test("conversation rows are mapped into UI-safe camel-case records", async () =>
   assert.equal(conversations[0].customerName, "Guest customer");
   assert.equal(conversations[0].isGuest, true);
   assert.equal(conversations[0].unreadCount, 2);
+  assert.equal(conversations[0].pendingCustomerMessages, 1);
+  assert.equal(conversations[0].customerMessageLimit, 2);
+});
+
+test("conversations from a database without the limit columns fall back to the default", async () => {
+  const { client } = clientWithResults([{ data: [{
+    id: "conversation-legacy",
+    booking_id: null,
+    booking_reference: null,
+    customer_id: "customer-1",
+    customer_name: "Guest customer",
+    customer_email: null,
+    is_guest: true,
+    subject: "Rental support",
+    status: "open",
+    last_message_preview: "Hello",
+    last_message_at: "2026-09-26T01:00:00.000Z",
+    unread_count: 0,
+    created_at: "2026-09-26T00:00:00.000Z",
+  }], error: null }]);
+
+  const conversations = await listConversations(client);
+  assert.equal(conversations[0].pendingCustomerMessages, 0);
+  assert.equal(conversations[0].customerMessageLimit, DEFAULT_CUSTOMER_MESSAGE_LIMIT);
 });
 
 test("guest and registered callers use the same secure conversation RPC", async () => {
@@ -130,4 +166,54 @@ test("chat send SQL returns a sender even when a guest profile is absent", () =>
     /left join public\.profiles as profile on profile\.id = v_uid/i,
   );
   assert.match(chatSendMigration, /'Guest customer'/i);
+});
+
+test("reaching the consecutive message limit surfaces the wait-for-reply notice", async () => {
+  const { client } = clientWithResults([{
+    data: null,
+    error: { message: "CHAT_REPLY_REQUIRED" },
+  }]);
+  await assert.rejects(
+    () => sendMessage(client, "conversation-1", "Any update?", "22222222-2222-4222-8222-222222222222"),
+    (sendError: Error) => {
+      assert.equal(sendError.message, REPLY_REQUIRED_MESSAGE);
+      return true;
+    },
+  );
+});
+
+test("the consecutive message limit is enforced inside the send RPC", () => {
+  assert.match(consecutiveLimitMigration, /raise exception 'CHAT_REPLY_REQUIRED'/i);
+  assert.match(
+    consecutiveLimitMigration,
+    /not v_is_admin[\s\S]{0,200}private\.count_pending_customer_messages\(p_conversation_id\)\s*>=\s*private\.chat_customer_message_limit\(\)/i,
+  );
+  assert.match(consecutiveLimitMigration, /select 2;/);
+});
+
+test("pending customer messages are counted per conversation after the latest admin reply", () => {
+  assert.match(
+    consecutiveLimitMigration,
+    /customer_message\.conversation_id = p_conversation_id/i,
+  );
+  assert.match(
+    consecutiveLimitMigration,
+    /select max\(admin_message\.created_at\)[\s\S]{0,200}admin_message\.sender_role = 'admin'/i,
+  );
+  assert.match(
+    consecutiveLimitMigration,
+    /private\.count_pending_customer_messages\(conversation\.id\) as pending_customer_messages/i,
+  );
+});
+
+test("the limit never blocks admins, retried sends, or conversation creation", () => {
+  // Admin replies must keep working, so the guard is gated on `not v_is_admin`.
+  assert.match(consecutiveLimitMigration, /not v_is_admin\s*\n\s*and v_existing_message_id is null/i);
+  // An already stored client_message_id is a retry, not a new message.
+  assert.match(
+    consecutiveLimitMigration,
+    /stored_message\.client_message_id = p_client_message_id/i,
+  );
+  // get_or_create_chat_conversation is untouched, so no duplicate threads appear.
+  assert.doesNotMatch(consecutiveLimitMigration, /get_or_create_chat_conversation/i);
 });

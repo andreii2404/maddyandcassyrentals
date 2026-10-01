@@ -2,6 +2,7 @@ import {
   escapeHtml,
   firstName,
   formatPeso,
+  renderCopyableReference,
   renderEmailShell,
   renderSummaryTable,
 } from "@/src/lib/emailShell";
@@ -42,7 +43,7 @@ export function buildCustomerUpdateEmail(details: CustomerUpdateEmailDetails) {
     preheader: details.subject,
     eyebrow: "BOOKING UPDATE",
     heading: escapeHtml(details.subject),
-    introHtml: `Hi ${escapeHtml(name)}, we have an update about your booking <strong>${escapeHtml(details.bookingReference)}</strong>.`,
+    introHtml: `Hi ${escapeHtml(name)}, we have an update about your booking <strong>${renderCopyableReference(escapeHtml(details.bookingReference))}</strong>.`,
     bodyHtml: `${messageHtml(details.message)}${chargeHtml}`,
     buttonLabel: "View your booking",
     buttonUrl: details.bookingUrl,

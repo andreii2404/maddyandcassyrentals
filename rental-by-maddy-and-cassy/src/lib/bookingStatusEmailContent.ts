@@ -1,4 +1,5 @@
 import type { BookingStatus } from "@/src/types/booking";
+import { COPY_REFERENCE_HINT_HTML, renderCopyableReference } from "@/src/lib/emailShell";
 
 export type EmailBookingStatus = Extract<BookingStatus, "approved" | "returned">;
 
@@ -149,7 +150,7 @@ export function buildBookingStatusEmail(details: BookingStatusEmailDetails) {
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fbf6f4;border:1px solid #eedfdb;border-radius:16px">
               <tr><td style="padding:20px">
                 <div style="font-size:11px;font-weight:800;letter-spacing:1.2px;color:#9d5967">BOOKING REFERENCE</div>
-                <div style="margin-top:6px;font-size:19px;font-weight:800;color:#292425">${reference}</div>
+                <div style="margin-top:6px;font-size:19px;font-weight:800;color:#292425">${renderCopyableReference(reference)}</div>${COPY_REFERENCE_HINT_HTML}
               </td></tr>
             </table>
           </td></tr>

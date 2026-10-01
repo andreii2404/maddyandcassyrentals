@@ -970,6 +970,44 @@ export type Database = {
           },
         ]
       }
+      booking_lookup_challenges: {
+        Row: {
+          attempts: number
+          booking_id: string
+          code_hash: string
+          consumed_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+        }
+        Insert: {
+          attempts?: number
+          booking_id: string
+          code_hash: string
+          consumed_at?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+        }
+        Update: {
+          attempts?: number
+          booking_id?: string
+          code_hash?: string
+          consumed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_lookup_challenges_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booking_payment_submissions: {
         Row: {
           booking_id: string
@@ -2520,6 +2558,8 @@ export type Database = {
           is_guest: boolean
           last_message_at: string | null
           last_message_preview: string | null
+          pending_customer_messages: number
+          customer_message_limit: number
           status: string
           subject: string
           unread_count: number
@@ -2559,6 +2599,18 @@ export type Database = {
           sender_id: string | null
           sender_name: string
           sender_role: string
+        }[]
+      }
+      create_booking_lookup_challenge: {
+        Args: { p_booking_id: string; p_code: string }
+        Returns: string
+      }
+      redeem_booking_lookup_challenge: {
+        Args: { p_challenge_id: string; p_code: string; p_target_user_id: string | null }
+        Returns: {
+          booking_id: string | null
+          customer_id: string | null
+          status: string
         }[]
       }
       recover_guest_booking_access: {

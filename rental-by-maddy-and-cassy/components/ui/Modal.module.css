@@ -24,6 +24,10 @@
   max-height: 92vh;
 }
 
+.dialogSmall {
+  max-width: 440px;
+}
+
 .dialogWide .body {
   padding: 1rem 1.25rem 1.25rem;
 }
