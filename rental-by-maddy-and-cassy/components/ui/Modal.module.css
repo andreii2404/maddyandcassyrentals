@@ -24,6 +24,10 @@
   max-height: 92vh;
 }
 
+.dialogMedium {
+  max-width: 680px;
+}
+
 .dialogSmall {
   max-width: 440px;
 }

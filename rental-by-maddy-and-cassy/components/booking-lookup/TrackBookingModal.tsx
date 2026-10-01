@@ -65,6 +65,11 @@ const STEP_STATE_TEXT: Record<TrackingStep["state"], string> = {
   closed: "Closed",
 };
 
+// Plain-language badge wording for customers; other statuses keep StatusBadge's default label.
+const TRACKING_BADGE_LABELS: Partial<Record<PublicBookingTracking["status"], string>> = {
+  pending: "Pending Review",
+};
+
 function StepMarker({ state }: { state: TrackingStep["state"] }) {
   return (
     <span className={`${styles.marker} ${styles[`marker_${state}`]}`} aria-hidden="true">
@@ -160,7 +165,7 @@ export default function TrackBookingModal({ onClose }: TrackBookingModalProps) {
   const handoverLabel = result?.fulfillmentMethod === "delivery" ? "Delivery" : "Pickup";
 
   return (
-    <Modal title="Track Booking" onClose={() => { if (!busy) onClose(); }} describedBy={descriptionId}>
+    <Modal title="Track Booking" onClose={() => { if (!busy) onClose(); }} describedBy={descriptionId} size="medium">
       <div className={styles.body}>
         <form className={styles.searchForm} onSubmit={trackBooking} noValidate>
           <p id={descriptionId} className={styles.intro}>
@@ -209,17 +214,24 @@ export default function TrackBookingModal({ onClose }: TrackBookingModalProps) {
 
         {result ? (
           <section className={styles.result} aria-labelledby={resultHeadingId}>
-            <header className={`${styles.statusCard} ${styles[`statusCard_${result.status}`] ?? ""}`}>
+            <header className={styles.summary}>
               <div className={styles.statusTopline}>
-                <span className={styles.eyebrow}>Booking Reference</span>
-                <StatusBadge status={result.status} />
+                <div className={styles.summaryField}>
+                  <span className={styles.eyebrow}>Booking Reference</span>
+                  <p className={styles.reference}>{result.bookingReference}</p>
+                </div>
+                <div className={`${styles.summaryField} ${styles.summaryStatus}`}>
+                  <span className={styles.eyebrow}>Current Status</span>
+                  <StatusBadge status={result.status} label={TRACKING_BADGE_LABELS[result.status]} />
+                </div>
               </div>
-              <p className={styles.reference}>{result.bookingReference}</p>
-              <h3 id={resultHeadingId} ref={resultHeadingRef} tabIndex={-1} className={styles.statusLabel}>
-                {result.statusLabel}
-              </h3>
-              <p className={styles.statusMessage}>{result.statusMessage}</p>
-              <p className={styles.updated}>Last updated {formatManilaDateTime(result.updatedAt)}</p>
+              <div className={styles.statusDetail}>
+                <h3 id={resultHeadingId} ref={resultHeadingRef} tabIndex={-1} className={styles.statusLabel}>
+                  {result.statusLabel}
+                </h3>
+                <p className={styles.statusMessage}>{result.statusMessage}</p>
+                <p className={styles.updated}>Last updated {formatManilaDateTime(result.updatedAt)}</p>
+              </div>
             </header>
 
             <dl className={styles.facts}>
@@ -265,12 +277,16 @@ export default function TrackBookingModal({ onClose }: TrackBookingModalProps) {
                         <span className={styles.srOnly}> ({STEP_STATE_TEXT[step.state]})</span>
                         {step.state === "current" ? (
                           <span className={styles.currentPill} aria-hidden="true">In progress</span>
+                        ) : step.state !== "closed" ? (
+                          <span className={`${styles.stepTag} ${styles[`stepTag_${step.state}`]}`} aria-hidden="true">
+                            {STEP_STATE_TEXT[step.state]}
+                          </span>
                         ) : null}
                       </div>
-                      {step.state !== "upcoming" ? <p>{step.description}</p> : null}
                       {step.timestamp ? (
                         <time dateTime={step.timestamp}>{formatManilaDateTime(step.timestamp)}</time>
                       ) : null}
+                      {step.state !== "upcoming" ? <p>{step.description}</p> : null}
                     </div>
                   </li>
                 ))}

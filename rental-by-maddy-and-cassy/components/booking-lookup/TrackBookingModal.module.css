@@ -130,28 +130,34 @@
   }
 }
 
-.statusCard {
-  padding: 1rem 1.1rem;
-  border: 1px solid var(--color-border);
-  border-left: 4px solid var(--color-primary);
-  border-radius: 12px;
-  background: var(--color-background-soft);
-}
-
-.statusCard_returned {
-  border-left-color: var(--color-charcoal);
-}
-
-.statusCard_cancelled,
-.statusCard_rejected {
-  border-left-color: var(--color-danger);
+/* Summary sits flat on the dialog: no card, just spacing and one divider. */
+.summary {
+  display: grid;
+  gap: 1rem;
 }
 
 .statusTopline {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 0.75rem 1.5rem;
+}
+
+.summaryField {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.summaryStatus {
+  justify-items: end;
+  text-align: right;
+}
+
+.statusDetail {
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
 }
 
 .eyebrow {
@@ -163,10 +169,10 @@
 }
 
 .reference {
-  margin: 0.2rem 0 0;
+  margin: 0;
   color: var(--color-text-primary);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   overflow-wrap: anywhere;
@@ -174,9 +180,9 @@
 }
 
 .statusLabel {
-  margin: 0.75rem 0 0;
+  margin: 0;
   color: var(--color-text-primary);
-  font-size: 1.35rem;
+  font-size: 1.3rem;
   font-weight: 750;
   line-height: 1.2;
 }
@@ -199,18 +205,25 @@
   font-size: 0.76rem;
 }
 
+/* Label / value rows separated by hairline dividers instead of a boxed card. */
 .facts {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem 1rem;
+  grid-template-columns: minmax(0, 1fr);
   margin: 0;
-  padding: 1rem 1.1rem;
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
 }
 
 .facts > div {
+  display: grid;
+  grid-template-columns: 11rem minmax(0, 1fr);
+  align-items: baseline;
+  gap: 1rem;
   min-width: 0;
+  padding: 0.7rem 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.facts > div:last-child {
+  border-bottom: 1px solid var(--color-border);
 }
 
 .factWide {
@@ -226,7 +239,7 @@
 }
 
 .facts dd {
-  margin: 0.2rem 0 0;
+  margin: 0;
   color: var(--color-text-primary);
   font-size: 0.92rem;
   font-weight: 600;
@@ -244,16 +257,18 @@
 
 /* ---- Timeline ---- */
 
+/* Tracking History is the visual focus after the summary. */
 .timelineSection {
   display: grid;
-  gap: 0.75rem;
+  gap: 1rem;
+  margin-top: 0.5rem;
 }
 
 .sectionTitle {
   margin: 0;
   color: var(--color-text-primary);
-  font-size: 0.95rem;
-  font-weight: 700;
+  font-size: 1.1rem;
+  font-weight: 750;
 }
 
 .timeline {
@@ -267,7 +282,7 @@
   display: grid;
   grid-template-columns: 1.75rem minmax(0, 1fr);
   gap: 0.85rem;
-  padding-bottom: 1.1rem;
+  padding-bottom: 1.35rem;
 }
 
 .step:last-child {
@@ -336,6 +351,14 @@
   padding-top: 0.2rem;
 }
 
+/* Current step: a soft tint instead of a border keeps it prominent but light. */
+.step_current .stepBody {
+  margin-top: -0.35rem;
+  padding: 0.55rem 0.8rem 0.65rem;
+  border-radius: 10px;
+  background: rgba(154, 89, 101, 0.07);
+}
+
 .stepHeading {
   display: flex;
   flex-wrap: wrap;
@@ -347,6 +370,10 @@
   color: var(--color-text-primary);
   font-size: 0.92rem;
   font-weight: 700;
+}
+
+.step_current .stepHeading strong {
+  font-size: 0.98rem;
 }
 
 .step_upcoming .stepHeading strong {
@@ -367,8 +394,22 @@
   font-weight: 700;
 }
 
+.stepTag {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.stepTag_complete {
+  color: var(--color-status-green);
+}
+
+.stepTag_upcoming {
+  color: var(--color-text-secondary);
+}
+
 .stepBody p {
-  margin: 0.2rem 0 0;
+  margin: 0.25rem 0 0;
   color: var(--color-text-secondary);
   font-size: 0.84rem;
   line-height: 1.45;
@@ -376,9 +417,10 @@
 
 .stepBody time {
   display: block;
-  margin-top: 0.2rem;
-  color: var(--color-text-secondary);
-  font-size: 0.76rem;
+  margin-top: 0.15rem;
+  color: var(--color-text-primary);
+  font-size: 0.78rem;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
 
@@ -398,9 +440,8 @@
   align-items: flex-start;
   gap: 0.8rem;
   padding: 0.9rem 1rem;
-  border: 1px dashed var(--color-dusty-rose);
   border-radius: 12px;
-  background: #fff;
+  background: var(--color-background-soft);
 }
 
 .privateIcon {
@@ -489,6 +530,16 @@
 
   .facts {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .facts > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.2rem;
+  }
+
+  .summaryStatus {
+    justify-items: start;
+    text-align: left;
   }
 }
 

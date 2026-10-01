@@ -9,8 +9,8 @@ interface ModalProps {
   onClose: () => void;
   children: ReactNode;
   describedBy?: string;
-  /** "wide" suits document viewers and "small" short single-field dialogs; every existing dialog keeps the default width. */
-  size?: "default" | "wide" | "small";
+  /** "wide" suits document viewers, "medium" detail views that need a little more room, and "small" short single-field dialogs; every existing dialog keeps the default width. */
+  size?: "default" | "medium" | "wide" | "small";
 }
 
 export default function Modal({ title, onClose, children, describedBy, size = "default" }: ModalProps) {
@@ -57,9 +57,11 @@ export default function Modal({ title, onClose, children, describedBy, size = "d
         className={
           size === "wide"
             ? `${styles.dialog} ${styles.dialogWide}`
-            : size === "small"
-              ? `${styles.dialog} ${styles.dialogSmall}`
-              : styles.dialog
+            : size === "medium"
+              ? `${styles.dialog} ${styles.dialogMedium}`
+              : size === "small"
+                ? `${styles.dialog} ${styles.dialogSmall}`
+                : styles.dialog
         }
         role="dialog"
         aria-modal="true"
