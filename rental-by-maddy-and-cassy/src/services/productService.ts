@@ -61,6 +61,7 @@ async function fetchApprovedReviews(
     rating: review.rating,
     comment: review.comment ?? "",
     date: review.created_at,
+    verified: true,
   }));
 }
 

@@ -6,6 +6,8 @@ export interface ProductReview {
   rating: number;
   comment: string;
   date: string;
+  /** Reviews are only accepted for returned bookings; unset is treated as verified. */
+  verified?: boolean;
 }
 
 export interface ProductImage {
