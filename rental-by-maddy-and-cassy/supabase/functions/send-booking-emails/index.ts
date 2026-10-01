@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { withSupabase } from "npm:@supabase/server";
 import nodemailer from "npm:nodemailer@7.0.6";
+import { paymentRejectionBookingUrl } from "../_shared/paymentRejectionBookingUrl.ts";
 
 const SMTP_HOST = Deno.env.get("GMAIL_SMTP_HOST")!;
 const SMTP_PORT = Number(Deno.env.get("GMAIL_SMTP_PORT") || "465");
@@ -8,11 +9,6 @@ const SMTP_USER = Deno.env.get("GMAIL_SMTP_USER")!;
 const SMTP_PASSWORD = Deno.env.get("GMAIL_SMTP_PASSWORD")!;
 const FROM_NAME =
   Deno.env.get("GMAIL_FROM_NAME") || "Maddy & Cassy Rentals";
-const APP_URL = (
-  Deno.env.get("APP_URL") ||
-  Deno.env.get("NEXT_PUBLIC_APP_URL") ||
-  ""
-).replace(/\/$/, "");
 
 type QueryBuilder = {
   select: (columns: string) => QueryBuilder;
@@ -607,6 +603,9 @@ export default {
             booking?.booking_reference || "";
 
           if (email.email_type === "payment_rejected") {
+            if (!booking) {
+              throw new Error("Booking is missing for the payment rejection email.");
+            }
             const {
               data: payment,
               error: paymentError,
@@ -624,7 +623,7 @@ export default {
             }
 
             rejectionReason = payment?.review_notes || "";
-            bookingUrl = `${APP_URL}/account/bookings/${encodeURIComponent(email.booking_id)}?resubmitPayment=1#booking-payment`;
+            bookingUrl = paymentRejectionBookingUrl(email.booking_id, booking.is_guest_checkout === true);
           }
 
           /*

@@ -13,12 +13,12 @@ export interface EmailNotificationQueueRow {
 
 export interface PaymentRejectionEmailDetails {
   bookingId: string;
+  isGuestCheckout: boolean;
   paymentId: string;
   bookingReference: string;
   customerName: string;
   customerEmail: string;
   rejectionReason: string;
-  bookingUrl: string;
 }
 
 export interface PaymentVerifiedEmailQueueDetails {

@@ -11,6 +11,7 @@ import {
   buildPaymentRejectionQueueRow,
 } from "../src/lib/emailNotificationQueue";
 import { buildPaymentRejectionEmail } from "../src/lib/paymentRejectionEmail";
+import { paymentRejectionBookingUrl } from "../supabase/functions/_shared/paymentRejectionBookingUrl";
 
 test("sends booking email through the configured Supabase Edge Function", async () => {
   const request = buildSupabaseEmailRequest(
@@ -90,17 +91,17 @@ test("queues a signed agreement email with the contract email type", () => {
 
 test("queues one payment rejection email with the booking, recipient, and reason", () => {
   const details = {
-    bookingId: "booking-1",
+    bookingId: "2d48e851-0e3f-4b74-9646-307f92e8789c",
     paymentId: "payment-1",
     bookingReference: "BK-001",
     customerName: "Customer Example",
     customerEmail: "customer@example.com",
     rejectionReason: "The uploaded proof is not readable.",
-    bookingUrl: "https://example.com/account/bookings/2d48e851-0e3f-4b74-9646-307f92e8789c",
+    isGuestCheckout: false,
   };
 
   assert.deepEqual(buildPaymentRejectionQueueRow(details, "Payment proof rejected for BK-001"), {
-    booking_id: "booking-1",
+    booking_id: "2d48e851-0e3f-4b74-9646-307f92e8789c",
     event_key: "payment-rejected-payment-1",
     email_type: "payment_rejected",
     recipient_email: "customer@example.com",
@@ -119,8 +120,38 @@ test("queues one payment rejection email with the booking, recipient, and reason
   assert.match(email.html, />Customer Example</);
   assert.match(email.html, />BK-001</);
   assert.match(email.html, />Resubmit Payment</);
-  assert.match(email.html, /href="https:\/\/example\.com\/account\/bookings\/2d48e851-0e3f-4b74-9646-307f92e8789c"/);
+  assert.match(email.html, /href="https:\/\/maddyandcassyrentals-nine\.vercel\.app\/account\/bookings\/2d48e851-0e3f-4b74-9646-307f92e8789c"/);
+  assert.match(email.text, /https:\/\/maddyandcassyrentals-nine\.vercel\.app\/account\/bookings\/2d48e851-0e3f-4b74-9646-307f92e8789c/);
+  assert.doesNotMatch(email.html, /localhost|incorrect|resubmitPayment|#booking-payment/);
+  assert.doesNotMatch(email.html, /\/account\/account\/|undefined/);
   assert.doesNotMatch(email.html, /href="[^"]*BK-001/);
   assert.match(email.html, /Maddy &amp; Cassy/);
   assert.match(email.html, /This is an automatic update for booking/);
+
+  const anotherEmail = buildPaymentRejectionEmail({
+    ...details,
+    bookingId: "6d03aadd-c369-4140-8a65-fa43a9fdd195",
+  });
+  assert.match(anotherEmail.html, /href="https:\/\/maddyandcassyrentals-nine\.vercel\.app\/account\/bookings\/6d03aadd-c369-4140-8a65-fa43a9fdd195"/);
+  assert.doesNotMatch(anotherEmail.html, /2d48e851-0e3f-4b74-9646-307f92e8789c/);
+  assert.throws(() => buildPaymentRejectionEmail({ ...details, bookingId: "undefined" }), /valid booking ID/);
+});
+
+test("payment rejection email sends guest bookings to their guest booking page", () => {
+  const bookingId = "6d03aadd-c369-4140-8a65-fa43a9fdd195";
+  const email = buildPaymentRejectionEmail({
+    bookingId,
+    paymentId: "payment-guest",
+    bookingReference: "BK-GUEST",
+    customerName: "Guest Customer",
+    customerEmail: "customer@example.com",
+    rejectionReason: "The proof is blurry.",
+    isGuestCheckout: true,
+  });
+
+  assert.match(email.html, /href="https:\/\/maddyandcassyrentals-nine\.vercel\.app\/guest\/bookings\/6d03aadd-c369-4140-8a65-fa43a9fdd195"[^>]*>Resubmit Payment<\/a>/);
+  assert.match(email.text, /https:\/\/maddyandcassyrentals-nine\.vercel\.app\/guest\/bookings\/6d03aadd-c369-4140-8a65-fa43a9fdd195/);
+  assert.doesNotMatch(email.html, /\/account\/bookings\//);
+  assert.equal(paymentRejectionBookingUrl(bookingId, true), `https://maddyandcassyrentals-nine.vercel.app/guest/bookings/${bookingId}`);
+  assert.equal(paymentRejectionBookingUrl(bookingId, false), `https://maddyandcassyrentals-nine.vercel.app/account/bookings/${bookingId}`);
 });
