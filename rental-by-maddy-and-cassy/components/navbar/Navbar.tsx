@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useCart } from "@/hooks/useCart";
+import { useCustomerBookingCount } from "@/hooks/useCustomerBookingCount";
 import { logout } from "@/src/services/authService";
 import { hasGuestCheckoutBooking } from "@/src/services/bookingService";
 import { createClient } from "@/src/lib/supabase/client";
@@ -102,6 +103,11 @@ export default function Navbar() {
   const { totalQuantity } = useCart();
   const router = useRouter();
   const pathname = usePathname();
+  // Badge count for the customer "My Bookings" menu item. Admins and guest
+  // (anonymous) sessions never subscribe. Re-counts on route change too, so a
+  // booking created during checkout shows up even if realtime is unavailable.
+  const bookingCountCustomerId = isAccountHolder && !isAdmin && user ? user.id : null;
+  const bookingCount = useCustomerBookingCount(bookingCountCustomerId, pathname);
   const [menuOpen, setMenuOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -217,6 +223,7 @@ export default function Navbar() {
   const initial = firstName.charAt(0).toUpperCase() || "A";
   const accountHomeHref = isAdmin ? "/admin" : "/account/bookings";
   const accountHomeLabel = isAdmin ? "Admin Dashboard" : "My Bookings";
+  const showBookingCount = !isAdmin && bookingCount !== null && bookingCount > 0;
   const profileHref = "/account/profile";
   const profileLabel = "My Profile";
   const guideActive = [...guideLinks, ...storyLinks].some((item) => pathname === item.href);
@@ -391,7 +398,19 @@ export default function Navbar() {
                       <small>{isAdmin ? "Admin account" : "Customer account"}</small>
                     </div>
                   </div>
-                  <Link href={accountHomeHref} className={styles.profileMenuLink} onClick={() => setProfileOpen(false)}>{accountHomeLabel}</Link>
+                  {showBookingCount ? (
+                    <Link
+                      href={accountHomeHref}
+                      className={`${styles.profileMenuLink} ${styles.profileMenuLinkWithCount}`}
+                      aria-label={`${accountHomeLabel}, ${bookingCount} ${bookingCount === 1 ? "booking" : "bookings"}`}
+                      onClick={() => setProfileOpen(false)}
+                    >
+                      <span>{accountHomeLabel}</span>
+                      <span className={styles.menuCount} aria-hidden="true">{bookingCount}</span>
+                    </Link>
+                  ) : (
+                    <Link href={accountHomeHref} className={styles.profileMenuLink} onClick={() => setProfileOpen(false)}>{accountHomeLabel}</Link>
+                  )}
                   {!isAdmin ? (
                     <Link href={profileHref} className={styles.profileMenuLink} onClick={() => setProfileOpen(false)}>{profileLabel}</Link>
                   ) : null}

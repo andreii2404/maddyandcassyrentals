@@ -337,6 +337,23 @@ export async function getBookingsForUser(
 }
 
 /**
+ * Cheap count (no row payload) of every booking owned by this user. Uses the
+ * same filter as getBookingsForUser so it matches the My Bookings "All" total.
+ */
+export async function countBookingsForUser(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+): Promise<number> {
+  const { count, error } = await supabase
+    .from("bookings")
+    .select("id", { count: "exact", head: true })
+    .eq("customer_id", userId);
+
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+}
+
+/**
  * Cheap existence check (no row payload) for whether this user owns at least
  * one guest-checkout booking. RLS already restricts rows to the owner.
  */
