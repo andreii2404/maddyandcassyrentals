@@ -1,0 +1,38 @@
+.action { display: flex; flex-direction: column; align-items: flex-end; gap: 0.35rem; max-width: 260px; }
+
+.cancelTrigger { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; min-height: 40px; padding: 0.5rem 0.9rem; border: 1px solid var(--color-status-red-border); border-radius: var(--radius-control); background: white; color: var(--color-status-red); font: inherit; font-size: 0.74rem; font-weight: 700; white-space: nowrap; cursor: pointer; transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 150ms ease; }
+.cancelTrigger svg { flex: 0 0 16px; width: 16px; height: 16px; }
+.cancelTrigger:hover:not(:disabled) { border-color: var(--color-status-red); background: var(--color-status-red-bg); }
+.cancelTrigger:active:not(:disabled) { transform: translateY(1px); }
+.cancelTrigger:focus-visible { outline: 2px solid var(--color-status-red); outline-offset: 2px; }
+.cancelTrigger:disabled { border-color: var(--color-light-gray); background: var(--color-background-soft); color: var(--color-charcoal); cursor: not-allowed; opacity: 0.8; }
+
+.unavailableNote { margin: 0; color: var(--color-charcoal); font-size: 0.64rem; line-height: 1.45; text-align: right; }
+
+.confirmation { display: grid; gap: 1rem; }
+.confirmationIntro { display: grid; gap: 0.85rem; }
+.prompt { margin: 0; color: var(--color-text-primary); font-size: 0.95rem; font-weight: 700; line-height: 1.5; }
+.bookingRef { display: grid; gap: 0.3rem; padding: 0.85rem 1rem; border: 1px solid var(--color-status-red-border); border-radius: 12px; background: var(--color-background-soft); }
+.bookingRef span { color: var(--color-charcoal); font-size: 0.66rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.bookingRef strong { color: var(--color-primary); font-size: 1rem; overflow-wrap: anywhere; }
+.notice { margin: 0; color: var(--color-charcoal); font-size: 0.76rem; line-height: 1.6; }
+
+.field { display: grid; gap: 0.3rem; }
+.field > span { color: var(--color-charcoal); font-size: 0.68rem; font-weight: 700; }
+.field em { color: #817a79; font-size: 0.62rem; font-style: normal; font-weight: 400; }
+.field select,
+.field textarea { width: 100%; padding: 0.65rem 0.7rem; border: 1px solid var(--color-light-gray); border-radius: 10px; outline: 0; background: white; color: var(--color-text-primary); font: inherit; font-size: 0.74rem; }
+.field select:focus,
+.field textarea:focus { border-color: var(--color-dusty-rose); box-shadow: 0 0 0 3px rgba(215, 165, 165, 0.15); }
+.field select[aria-invalid="true"] { border-color: var(--color-status-red); }
+.fieldError { color: var(--color-status-red); font-size: 0.66rem; font-weight: 600; }
+
+.actions { display: flex; justify-content: flex-end; gap: 0.75rem; padding-top: 1rem; border-top: 1px solid var(--color-border); }
+.actions button { min-height: 44px; }
+
+@media (max-width: 560px) {
+  .action { align-items: flex-start; max-width: none; }
+  .unavailableNote { text-align: left; }
+  .actions { flex-direction: column-reverse; }
+  .actions button { width: 100%; }
+}

@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/ToastProvider";
 import CustomerReviewPanel from "@/components/reviews/CustomerReviewPanel";
 import CustomerBookingManagement from "@/components/booking-management/CustomerBookingManagement";
+import BookingCancelAction from "@/components/booking-management/BookingCancelAction";
 import { useBookingRealtime } from "@/hooks/useBookingRealtime";
 import { bookingHeadline, bookingItemsSummaryData } from "@/src/lib/bookingDisplay";
 import { formatManilaDateTime } from "@/src/lib/rentalTiming";
@@ -300,9 +301,20 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
 
   return (
     <div className={styles.wrapper}>
-      <Link href={guestMode ? "/guest/bookings" : "/account/bookings"} className={styles.backLink}>
-        {guestMode ? "Back to Guest Bookings" : "Back to My Bookings"}
-      </Link>
+      <nav className={styles.topNav} aria-label="Breadcrumb">
+        <Link
+          href={guestMode ? "/guest/bookings" : "/account/bookings"}
+          className={styles.myBookingsButton}
+          aria-label={guestMode ? "Back to Guest Bookings" : "Back to My Bookings"}
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          {guestMode ? "Guest Bookings" : "My Bookings"}
+        </Link>
+        <span className={styles.topNavDivider} aria-hidden="true">/</span>
+        <span className={styles.topNavCurrent} aria-current="page">{booking.bookingRef}</span>
+      </nav>
 
       {justRecovered ? (
         <div className={styles.confirmationBanner} role="status">
@@ -375,6 +387,7 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
           </div>
           <div className={styles.headerStatusGroup}>
             <StatusBadge status={booking.status} />
+            <BookingCancelAction booking={booking} onUpdated={loadDetails} />
           </div>
         </div>
 
