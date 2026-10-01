@@ -59,12 +59,19 @@
   color: var(--color-charcoal);
 }
 
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.85rem;
+  margin-top: 2.25rem;
+}
+
 .primaryButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: 52px;
-  margin-top: 2.25rem;
   padding: 0 2rem;
   border-radius: 999px;
   background: var(--color-primary);
@@ -84,6 +91,54 @@
 
 .primaryButton:active {
   box-shadow: none;
+  transform: translateY(1px);
+}
+
+.primaryButton:focus-visible,
+.secondaryButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+/* Outlined so it reads as secondary next to the filled primary CTA. */
+.secondaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 52px;
+  padding: 0 1.75rem;
+  border: 1.5px solid rgba(154, 89, 101, 0.4);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--color-primary);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.secondaryButton svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.secondaryButton:hover {
+  border-color: var(--color-primary);
+  background: var(--color-background-soft);
+  color: var(--color-primary-hover);
+  transform: translateY(-2px);
+}
+
+.secondaryButton:active {
   transform: translateY(1px);
 }
 
@@ -109,6 +164,10 @@
     margin: 0 auto;
     text-align: center;
   }
+
+  .actions {
+    justify-content: center;
+  }
 }
 
 @media (max-width: 560px) {
@@ -121,8 +180,28 @@
     font-size: 1rem;
   }
 
-  .primaryButton {
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
     width: 100%;
+    gap: 0.75rem;
     margin-top: 1.75rem;
+  }
+
+  .primaryButton,
+  .secondaryButton {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .primaryButton,
+  .secondaryButton {
+    transition: none;
+  }
+
+  .primaryButton:hover,
+  .secondaryButton:hover {
+    transform: none;
   }
 }

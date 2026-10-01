@@ -359,6 +359,45 @@
 
 .composerLocked textarea::placeholder { color: var(--color-charcoal); opacity: 0.85; }
 
+/* Inline notice shown when a customer message contains blocked language. */
+.composerError {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.6rem 0.9rem;
+  border-top: 1px solid var(--color-danger-border);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.composerError svg {
+  flex: 0 0 auto;
+  width: 1rem;
+  height: 1rem;
+  margin-top: 0.05rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.composerInvalid textarea {
+  border-color: var(--color-danger);
+  background: #fffafa;
+  box-shadow: 0 0 0 3px var(--color-danger-bg);
+}
+
+.composerInvalid textarea:focus,
+.composerInvalid textarea:focus-visible {
+  border-color: var(--color-danger);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-danger-border);
+}
+
 .emptyChat {
   display: flex;
   height: 100%;

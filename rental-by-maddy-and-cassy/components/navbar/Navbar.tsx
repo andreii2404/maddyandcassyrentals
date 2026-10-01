@@ -420,20 +420,6 @@ export default function Navbar() {
 
           <span className={styles.actionDivider} aria-hidden="true" />
 
-          {!isAdmin ? (
-            <Button
-              variant="none"
-              className={styles.trackBookingButton}
-              aria-haspopup="dialog"
-              aria-label="Track Booking"
-              title="Track Booking"
-              onClick={openTrackBooking}
-            >
-              <TrackIcon />
-              <span className={styles.trackBookingLabel}>Track Booking</span>
-            </Button>
-          ) : null}
-
           {isAccountHolder ? (
             <div className={styles.profileMenu} ref={profileRef}>
               <Button

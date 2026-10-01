@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { containsProfanity } from "@/src/lib/chatProfanity";
 import { createClient } from "@/src/lib/supabase/client";
 import {
   DEFAULT_CUSTOMER_MESSAGE_LIMIT,
+  INAPPROPRIATE_LANGUAGE_MESSAGE,
   REPLY_REQUIRED_MESSAGE,
   getOrCreateConversation,
   listConversations,
@@ -54,6 +56,10 @@ export default function MessagingWorkspace({ mode, isGuest = false }: MessagingW
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Inline composer error, currently the profanity notice.
+  const [composerError, setComposerError] = useState<string | null>(null);
+  const composerErrorId = useId();
+  const composerInputRef = useRef<HTMLTextAreaElement>(null);
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const messageAreaRef = useRef<HTMLDivElement>(null);
   const keepLatestMessageVisibleRef = useRef(true);
@@ -175,6 +181,7 @@ export default function MessagingWorkspace({ mode, isGuest = false }: MessagingW
 
   function chooseConversation(conversationId: string) {
     keepLatestMessageVisibleRef.current = true;
+    setComposerError(null);
     setActiveId(conversationId);
     setMobileChatOpen(true);
   }
@@ -189,6 +196,14 @@ export default function MessagingWorkspace({ mode, isGuest = false }: MessagingW
   async function handleSend() {
     const body = draft.trim();
     if (!activeId || !body || sending || replyGate.blocked) return;
+    // Checked here for instant feedback; send_chat_message repeats the check on
+    // the server, so a blocked message is never saved.
+    if (mode === "customer" && containsProfanity(body)) {
+      setComposerError(INAPPROPRIATE_LANGUAGE_MESSAGE);
+      composerInputRef.current?.focus();
+      return;
+    }
+    setComposerError(null);
     setSending(true);
     setDraft("");
     keepLatestMessageVisibleRef.current = true;
@@ -201,7 +216,12 @@ export default function MessagingWorkspace({ mode, isGuest = false }: MessagingW
       setError(null);
     } catch (sendError) {
       setDraft(body);
-      setError(sendError instanceof Error ? sendError.message : "Your message could not be sent.");
+      const message = sendError instanceof Error ? sendError.message : "Your message could not be sent.";
+      if (message === INAPPROPRIATE_LANGUAGE_MESSAGE) {
+        setComposerError(message);
+      } else {
+        setError(message);
+      }
     } finally {
       setSending(false);
     }
@@ -336,10 +356,24 @@ export default function MessagingWorkspace({ mode, isGuest = false }: MessagingW
                 )
               ) : null}
 
-              <div className={`${styles.composer} ${replyGate.blocked ? styles.composerLocked : ""}`}>
+              {composerError ? (
+                <div id={composerErrorId} className={styles.composerError} role="alert">
+                  <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                    <path d="M10 2.5 18 17H2L10 2.5Z" />
+                    <path d="M10 8v3.6M10 14.2v.1" />
+                  </svg>
+                  <span>{composerError}</span>
+                </div>
+              ) : null}
+
+              <div className={`${styles.composer} ${replyGate.blocked ? styles.composerLocked : ""} ${composerError ? styles.composerInvalid : ""}`}>
                 <textarea
+                  ref={composerInputRef}
                   value={draft}
-                  onChange={(event) => setDraft(event.target.value)}
+                  onChange={(event) => {
+                    setDraft(event.target.value);
+                    if (composerError && !containsProfanity(event.target.value)) setComposerError(null);
+                  }}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" && !event.shiftKey) {
                       event.preventDefault();
@@ -357,6 +391,8 @@ export default function MessagingWorkspace({ mode, isGuest = false }: MessagingW
                   }
                   disabled={sending || activeConversation.status !== "open" || replyGate.blocked}
                   aria-label="Message"
+                  aria-invalid={composerError ? true : undefined}
+                  aria-describedby={composerError ? composerErrorId : undefined}
                 />
                 <button
                   type="button"

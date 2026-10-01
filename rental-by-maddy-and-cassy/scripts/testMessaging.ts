@@ -4,7 +4,16 @@ import { readFileSync } from "node:fs";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../src/lib/supabase/database.types";
 import {
+  HOMOGLYPH_FROM,
+  HOMOGLYPH_TO,
+  LEET_FROM,
+  LEET_TO,
+  PROFANITY_TERMS,
+  containsProfanity,
+} from "../src/lib/chatProfanity";
+import {
   DEFAULT_CUSTOMER_MESSAGE_LIMIT,
+  INAPPROPRIATE_LANGUAGE_MESSAGE,
   REPLY_REQUIRED_MESSAGE,
   getOrCreateConversation,
   listConversations,
@@ -23,6 +32,11 @@ const consecutiveLimitMigration = readFileSync(
     "../supabase/migrations/20261001120000_limit_consecutive_customer_messages.sql",
     import.meta.url,
   ),
+  "utf8",
+);
+
+const profanityMigration = readFileSync(
+  new URL("../supabase/migrations/20261001160000_chat_profanity_filter.sql", import.meta.url),
   "utf8",
 );
 
@@ -216,4 +230,126 @@ test("the limit never blocks admins, retried sends, or conversation creation", (
   );
   // get_or_create_chat_conversation is untouched, so no duplicate threads appear.
   assert.doesNotMatch(consecutiveLimitMigration, /get_or_create_chat_conversation/i);
+});
+
+test("profane English and Tagalog messages are detected, including common bypasses", () => {
+  const blocked = [
+    "fuck",
+    "FuCk you",
+    "fuuuuuck",
+    "f.u.c.k",
+    "f u c k",
+    "f**k this",
+    "f*ck",
+    "fucking**",
+    "motherfucker",
+    "sh!t",
+    "5h1t",
+    "$hit!",
+    "b1tch",
+    "BITCHES",
+    "asshole",
+    "a s s h o l e",
+    "fuсk", // Cyrillic "с" standing in for "c"
+    "fúck",
+    "putangina mo",
+    "Putang ina mo",
+    "tang ina",
+    "tang-ina",
+    "tanginamo",
+    "gago ka",
+    "gaaagooo",
+    "g a g o",
+    "#gago",
+    "hi,gago",
+    "ulol",
+    "bobo mo",
+    "t4ng4",
+    "hayop ka",
+    "pakyu",
+    "pak shet",
+    "taena",
+    "kantutan",
+  ];
+  for (const message of blocked) {
+    assert.equal(containsProfanity(message), true, `expected "${message}" to be blocked`);
+  }
+});
+
+test("ordinary words that resemble profanity are not blocked", () => {
+  const allowed = [
+    "Hello! Is the iPhone 15 available tomorrow?",
+    "Can I pay at 3pm? ₱500 po",
+    "class, pass, assistant, assessment",
+    "Scunthorpe cocktail Dickens shiitake",
+    "Fukuoka trip next week",
+    "Masarap ang putahe",
+    "Niger and Nigeria",
+    "hawak ko, tangan ko",
+    "gagawin ko bukas",
+    "masakit ang ulo ko",
+    "salsa",
+    "bilang ng araw",
+    "hindi pa po",
+    "iyong camera",
+    "tainga, tenga",
+    "bubong",
+    "Tita ko po",
+    "tanghali, tangke",
+    "5*3=15",
+    "**important**",
+    "Lady Gaga concert",
+    "flame retardant",
+    "thank you po, sige po",
+  ];
+  for (const message of allowed) {
+    assert.equal(containsProfanity(message), false, `expected "${message}" to be allowed`);
+  }
+});
+
+test("the server-side profanity rejection surfaces the inline notice", async () => {
+  const { client } = clientWithResults([{
+    data: null,
+    error: { message: "CHAT_INAPPROPRIATE_LANGUAGE" },
+  }]);
+  await assert.rejects(
+    () => sendMessage(client, "conversation-1", "anything", "33333333-3333-4333-8333-333333333333"),
+    (sendError: Error) => {
+      assert.equal(sendError.message, INAPPROPRIATE_LANGUAGE_MESSAGE);
+      assert.equal(
+        INAPPROPRIATE_LANGUAGE_MESSAGE,
+        "Please remove inappropriate or offensive language before sending your message.",
+      );
+      return true;
+    },
+  );
+});
+
+test("the SQL profanity filter uses the same terms and character maps as the client", () => {
+  for (const entry of PROFANITY_TERMS) {
+    const suffixes = entry.suffixes.map((suffix) => `'${suffix}'`).join(", ");
+    const row = `('${entry.kind}', '${entry.term}', array[${suffixes}])`;
+    assert.ok(profanityMigration.includes(row), `migration is missing ${row}`);
+  }
+  const sqlRows = profanityMigration.match(/^\s*\('(?:contains|word|phrase)', '/gm) ?? [];
+  assert.equal(sqlRows.length, PROFANITY_TERMS.length);
+  assert.ok(profanityMigration.includes(`translate(v_text, '${HOMOGLYPH_FROM}', '${HOMOGLYPH_TO}')`));
+  assert.ok(profanityMigration.includes(`translate(v_word, '${LEET_FROM}', '${LEET_TO}')`));
+});
+
+test("send_chat_message rejects profane customer messages before storing them", () => {
+  assert.match(
+    profanityMigration,
+    /if not v_is_admin and private\.chat_message_has_profanity\(v_body\) then\s*\n\s*raise exception 'CHAT_INAPPROPRIATE_LANGUAGE'/i,
+  );
+  const checkIndex = profanityMigration.indexOf("private.chat_message_has_profanity(v_body)");
+  const insertIndex = profanityMigration.indexOf("insert into public.chat_messages");
+  assert.ok(checkIndex > 0 && checkIndex < insertIndex);
+  // The consecutive-message limit is carried over unchanged.
+  assert.match(
+    profanityMigration,
+    /not v_is_admin\s*\n\s*and v_existing_message_id is null\s*\n\s*and private\.count_pending_customer_messages\(p_conversation_id\)\s*\n?\s*>=\s*private\.chat_customer_message_limit\(\)/i,
+  );
+  // Historical messages are never rewritten.
+  assert.doesNotMatch(profanityMigration, /update public\.chat_messages/i);
 });

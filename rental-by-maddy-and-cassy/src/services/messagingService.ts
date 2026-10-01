@@ -27,6 +27,10 @@ export const DEFAULT_CUSTOMER_MESSAGE_LIMIT = 2;
 export const REPLY_REQUIRED_MESSAGE =
   "Please wait for our reply before sending another message.";
 
+/** Shown when a customer message is blocked by the profanity filter. */
+export const INAPPROPRIATE_LANGUAGE_MESSAGE =
+  "Please remove inappropriate or offensive language before sending your message.";
+
 export interface ChatMessage {
   id: string;
   conversationId: string;
@@ -98,6 +102,9 @@ function messagingError(message: string): Error {
   }
   if (normalized.includes("chat_reply_required")) {
     return new Error(REPLY_REQUIRED_MESSAGE);
+  }
+  if (normalized.includes("chat_inappropriate_language")) {
+    return new Error(INAPPROPRIATE_LANGUAGE_MESSAGE);
   }
   if (normalized.includes("chat_rate_limit")) {
     return new Error("You are sending messages too quickly. Please wait a moment and try again.");

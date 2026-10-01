@@ -1,6 +1,7 @@
 import ProductShowcase from "@/components/product-showcase/ProductShowcase";
 import type { Product } from "@/types/product";
 import { Button } from "@/components/ui/Button";
+import HeroTrackBooking from "./HeroTrackBooking";
 import styles from "./Hero.module.css";
 
 interface HeroProps {
@@ -24,9 +25,12 @@ export default function Hero({ products }: HeroProps) {
             Premium cameras and phones, rented by the day, with delivery and pickup across Metro Manila.
           </p>
 
-          <Button href="/catalog" variant="none" className={styles.primaryButton}>
-            Check Availability
-          </Button>
+          <div className={styles.actions}>
+            <Button href="/catalog" variant="none" className={styles.primaryButton}>
+              Check Availability
+            </Button>
+            <HeroTrackBooking />
+          </div>
         </div>
 
         <ProductShowcase products={products.slice(0, 6)} />
