@@ -162,6 +162,7 @@ export interface EmergencyContact {
   fullName: string;
   relationship: string;
   phoneNumber: string;
+  facebookLink?: string;
   address?: string;
 }
 

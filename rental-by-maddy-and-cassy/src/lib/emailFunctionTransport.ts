@@ -18,15 +18,24 @@ export function buildSupabaseEmailRequest(
   config: SupabaseEmailFunctionConfig,
   message: EmailFunctionMessage,
 ): { url: string; init: RequestInit } {
+  const headers: Record<string, string> = {
+    apikey: config.serviceKey,
+    "Content-Type": "application/json",
+  };
+
+  // New Supabase secret keys are opaque values, not JWTs. Sending one as a
+  // Bearer token causes the Edge Functions gateway to reject the request as an
+  // invalid JWT before the function handler runs. Legacy service_role keys
+  // remain compatible with the Authorization header.
+  if (!config.serviceKey.startsWith("sb_secret_")) {
+    headers.Authorization = `Bearer ${config.serviceKey}`;
+  }
+
   return {
     url: `${config.supabaseUrl.replace(/\/$/, "")}/functions/v1/${config.functionName}`,
     init: {
       method: "POST",
-      headers: {
-        apikey: config.serviceKey,
-        Authorization: `Bearer ${config.serviceKey}`,
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify(message),
       cache: "no-store",
     },

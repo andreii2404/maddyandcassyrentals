@@ -1,7 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { withSupabase } from "npm:@supabase/server";
 import nodemailer from "npm:nodemailer@7.0.6";
-import { paymentRejectionBookingUrl } from "../_shared/paymentRejectionBookingUrl.ts";
 
 const SMTP_HOST = Deno.env.get("GMAIL_SMTP_HOST")!;
 const SMTP_PORT = Number(Deno.env.get("GMAIL_SMTP_PORT") || "465");
@@ -9,6 +8,32 @@ const SMTP_USER = Deno.env.get("GMAIL_SMTP_USER")!;
 const SMTP_PASSWORD = Deno.env.get("GMAIL_SMTP_PASSWORD")!;
 const FROM_NAME =
   Deno.env.get("GMAIL_FROM_NAME") || "Maddy & Cassy Rentals";
+const PAYMENT_VERIFIED_MESSAGE =
+  "Your payment has been successfully verified. To fully reserve your device, please continue with the required verification and submit the necessary documents. The device cannot be handed over until verification is completed.";
+
+const PRODUCTION_ORIGIN =
+  "https://maddyandcassyrentals-nine.vercel.app";
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function bookingPageUrl(
+  bookingId: string,
+  isGuestCheckout: boolean,
+  hash = "",
+): string {
+  if (
+    typeof bookingId !== "string" ||
+    !UUID_PATTERN.test(bookingId)
+  ) {
+    throw new Error(
+      "A valid booking ID is required for the booking email.",
+    );
+  }
+
+  return `${PRODUCTION_ORIGIN}/${
+    isGuestCheckout ? "guest" : "account"
+  }/bookings/${bookingId}${hash}`;
+}
 
 type QueryBuilder = {
   select: (columns: string) => QueryBuilder;
@@ -144,17 +169,12 @@ function getEmailContent(
     case "payment_verified":
       if (stage === "down_payment") {
         title = "Down Payment Verified";
-        message =
-          "Your down payment has been successfully verified.";
       } else if (stage === "balance") {
         title = "Balance Payment Verified";
-        message =
-          "Your balance payment has been successfully verified.";
       } else {
         title = "Payment Verified";
-        message =
-          "Your payment has been successfully verified.";
       }
+      message = PAYMENT_VERIFIED_MESSAGE;
       break;
 
     case "booking_pending":
@@ -254,6 +274,7 @@ function createHtmlEmail(
   const isContractEmail =
     emailType === "booking_confirmation_contract";
   const isPaymentRejectionEmail = emailType === "payment_rejected";
+  const isPaymentVerifiedEmail = emailType === "payment_verified";
   const safeRejectionReason = escapeHtml(
     rejectionReason || "Please submit a clear, valid payment proof.",
   );
@@ -428,6 +449,15 @@ function createHtmlEmail(
         <a href="${safeBookingUrl}" style="display:inline-block;background:#a75e6d;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 22px;border-radius:8px">Resubmit Payment</a>
       </p>
       `
+          : isPaymentVerifiedEmail
+            ? `
+      <p style="font-size:15px;line-height:1.6;color:#555555">
+        Continue with verification to submit the required documents for your booking.
+      </p>
+      <p style="margin:24px 0 0">
+        <a href="${safeBookingUrl}" style="display:inline-block;background:#a75e6d;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 22px;border-radius:8px">Continue Verification</a>
+      </p>
+      `
           : `
       <p
         style="
@@ -590,6 +620,10 @@ export default {
         let rejectionReason = "";
         let bookingUrl = "";
 
+        if (email.email_type === "payment_verified" && !email.booking_id) {
+          throw new Error("Booking ID is missing for the payment verification email.");
+        }
+
         if (email.booking_id) {
           const { data: booking, error: bookingError } =
             await ctx.supabaseAdmin
@@ -626,7 +660,35 @@ export default {
             }
 
             rejectionReason = payment?.review_notes || "";
-            bookingUrl = paymentRejectionBookingUrl(email.booking_id, booking.is_guest_checkout === true);
+            bookingUrl = bookingPageUrl(email.booking_id, booking.is_guest_checkout === true);
+          }
+
+          if (email.email_type === "payment_verified") {
+            if (!booking) {
+              throw new Error("Booking is missing for the payment verification email.");
+            }
+
+            const { data: bookingItem, error: bookingItemError } =
+              await ctx.supabaseAdmin
+                .from("booking_items")
+                .select("product_id")
+                .eq("booking_id", email.booking_id)
+                .order("created_at", { ascending: true })
+                .limit(1)
+                .maybeSingle();
+
+            if (bookingItemError) {
+              throw bookingItemError;
+            }
+
+            if (
+              !bookingItem?.product_id ||
+              !UUID_PATTERN.test(bookingItem.product_id)
+            ) {
+              throw new Error("Product ID is missing for the payment verification email.");
+            }
+
+            bookingUrl = `${PRODUCTION_ORIGIN}/catalog/${bookingItem.product_id}/reserve?bookingId=${email.booking_id}`;
           }
 
           /*
@@ -687,6 +749,11 @@ export default {
           `${
             email.email_type === "payment_rejected"
               ? `Rejection Reason: ${rejectionReason || "Please submit a clear, valid payment proof."}\n\nPlease correct the issue above and submit a new payment proof: ${bookingUrl}\n\n`
+              : ""
+          }` +
+          `${
+            email.email_type === "payment_verified"
+              ? `Continue Verification: ${bookingUrl}\n\n`
               : ""
           }` +
           `${

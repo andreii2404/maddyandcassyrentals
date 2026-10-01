@@ -144,6 +144,7 @@ function mapEmergencyContact(row: Tables<"booking_emergency_contacts">): Emergen
     fullName: row.full_name,
     relationship: row.relationship,
     phoneNumber: row.phone_number,
+    facebookLink: row.facebook_link ?? undefined,
     address: row.address ?? undefined,
   };
 }

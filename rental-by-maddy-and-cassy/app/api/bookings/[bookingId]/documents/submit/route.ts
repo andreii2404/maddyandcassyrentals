@@ -11,6 +11,10 @@ import {
 } from "@/src/services/unitAssignmentService";
 import { toJson } from "@/src/lib/supabase/types";
 import type { AgreementSnapshot } from "@/src/types/booking";
+import {
+  buildEmergencyContactPersistencePayload,
+  hasFreshDocumentSlots,
+} from "@/src/lib/customerReservationPrefill";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,7 +27,7 @@ const metadataSchema = z.object({
     idOne: z.string().min(1).optional(),
     idTwo: z.string().min(1).optional(),
     selfie: z.string().min(1).optional(),
-    emergencyId: z.string().min(1),
+    emergencyId: z.string().min(1).optional(),
     signature: z.string().min(1),
   }),
   reusedDocuments: z
@@ -31,6 +35,7 @@ const metadataSchema = z.object({
       idOne: z.string().uuid().optional(),
       idTwo: z.string().uuid().optional(),
       selfie: z.string().uuid().optional(),
+      emergencyId: z.string().uuid().optional(),
     })
     .default({}),
   facebookLink: z.string().url().max(1000),
@@ -57,6 +62,7 @@ const REUSED_SLOT_TYPES = {
   idOne: "government_id",
   idTwo: "secondary_id",
   selfie: "selfie_with_id",
+  emergencyId: "authorization_letter",
 } as const;
 
 type ReusedSlot = keyof typeof REUSED_SLOT_TYPES;
@@ -88,9 +94,10 @@ function expectedPrefix(userId: string, bookingId: string, fileName: string, sub
   return `${userId}/${bookingId}/${fileName}-${submissionId}.`;
 }
 
-function slotToFileName(slot: "idOne" | "idTwo" | "selfie"): string {
+function slotToFileName(slot: ReusedSlot): string {
   if (slot === "idOne") return "id-one";
   if (slot === "idTwo") return "id-two";
+  if (slot === "emergencyId") return "emergency-contact-id";
   return "selfie";
 }
 
@@ -138,12 +145,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
         path: input.files[slot]!,
         prefix: expectedPrefix(user.id, bookingId, slotToFileName(slot), input.submissionId),
       }));
-    freshUploads.push({
-      bucket: "booking-documents" as const,
-      path: input.files.emergencyId,
-      prefix: expectedPrefix(user.id, bookingId, "emergency-contact-id", input.submissionId),
-    });
-
     await Promise.all([
       ...freshUploads.map((upload) =>
         verifyUploadedFile(admin, upload.bucket, upload.path, upload.prefix),
@@ -273,15 +274,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
     ];
 
     const freshSlots = documentSlots.filter((def) => {
-      if (def.slot === "emergencyId") return true;
       return Boolean(input.files[def.slot]);
     });
     const freshPaths = new Map<string, string>(
       freshSlots.map((def) => [
         def.slot,
-        def.slot === "emergencyId"
-          ? input.files.emergencyId
-          : input.files[def.slot]!,
+        input.files[def.slot]!,
       ]),
     );
 
@@ -290,19 +288,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
     // round trips each) cuts sequential DB calls down. Postgres preserves
     // input order in RETURNING for a single multi-row INSERT, so
     // freshSlots[i] <-> customerDocuments[i] line up.
-    const { data: freshDocuments, error: customerDocumentsError } = await admin
-      .from("customer_documents")
-      .insert(
-        freshSlots.map((def) => ({
-          owner_user_id: user.id,
-          document_type: def.type,
-          storage_bucket: "booking-documents" as const,
-          storage_path: freshPaths.get(def.slot)!,
-          original_filename: def.slot === "emergencyId" ? "emergency-contact-id" : slotToFileName(def.slot as "idOne" | "idTwo" | "selfie"),
-          status: "active" as const,
-        })),
-      )
-      .select("id");
+    const { data: freshDocuments, error: customerDocumentsError } = hasFreshDocumentSlots(freshSlots)
+      ? await admin
+          .from("customer_documents")
+          .insert(
+            freshSlots.map((def) => ({
+              owner_user_id: user.id,
+              document_type: def.type,
+              storage_bucket: "booking-documents" as const,
+              storage_path: freshPaths.get(def.slot)!,
+              original_filename: slotToFileName(def.slot),
+              status: "active" as const,
+            })),
+          )
+          .select("id")
+      : { data: [], error: null };
     if (customerDocumentsError || !freshDocuments || freshDocuments.length !== freshSlots.length) {
       if (customerDocumentsError) {
         throwSupabaseFailure("Recording verification documents", customerDocumentsError);
@@ -438,13 +438,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
         signed_at: now,
       }),
       admin.from("booking_emergency_contacts").upsert(
-        {
-          booking_id: bookingId,
-          full_name: input.emergencyContact.fullName,
-          relationship: input.emergencyContact.relationship,
-          phone_number: input.emergencyContact.phone,
-          address: "",
-        },
+        buildEmergencyContactPersistencePayload(bookingId, {
+          ...input.emergencyContact,
+          idDocumentId: documentIdBySlot.get("emergencyId")!,
+        }),
         { onConflict: "booking_id" },
       ),
       admin.from("booking_status_history").insert({
