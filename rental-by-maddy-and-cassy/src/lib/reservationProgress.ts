@@ -32,7 +32,6 @@ interface StoredReservationProgress {
     manualPayment: {
       referenceNumber: string;
       accountName: string;
-      accountNumber: string;
     };
     requirements: {
       facebookLink: string;
@@ -112,7 +111,6 @@ export function serializeReservationProgress(input: {
       manualPayment: {
         referenceNumber: input.draft.manualPayment.referenceNumber,
         accountName: input.draft.manualPayment.accountName,
-        accountNumber: input.draft.manualPayment.accountNumber,
       },
       requirements: {
         facebookLink: input.draft.requirements.facebookLink,
@@ -212,7 +210,6 @@ export function restoreReservationProgress(
           ...empty.manualPayment,
           referenceNumber: text(manualPayment.referenceNumber),
           accountName: text(manualPayment.accountName),
-          accountNumber: text(manualPayment.accountNumber),
         },
         requirements: {
           ...empty.requirements,

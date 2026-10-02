@@ -8,6 +8,8 @@ import ConfirmModal from "@/components/ui/ConfirmModal";
 import { useLeaveConfirmation } from "@/hooks/useLeaveConfirmation";
 import type { Product } from "@/types/product";
 import { useAuth } from "@/hooks/useAuth";
+import { useAgreementProfileName } from "@/hooks/useAgreementProfileName";
+import { patchAgreementDraft } from "@/src/lib/patchAgreementDraft";
 import { createClient } from "@/src/lib/supabase/client";
 import Spinner from "@/components/ui/Spinner";
 import ReservationStepper from "@/components/reservation/ReservationStepper";
@@ -37,7 +39,7 @@ import {
   assertUnitAssignmentsComplete,
   getBookingUnitAssignments,
 } from "@/src/services/unitAssignmentService";
-import type { AgreementLineItem } from "@/src/types/booking";
+import type { AgreementLineItem, Booking } from "@/src/types/booking";
 import {
   reservationProgressKey,
   restoreReservationProgress,
@@ -104,6 +106,7 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
   const documentSubmissionInFlightRef = useRef(false);
   const [prefilled, setPrefilled] = useState(false);
   const [progressHydrated, setProgressHydrated] = useState(false);
+  useAgreementProfileName(step === 5, progressHydrated, user!.id, isGuest, setDraft);
   const [progressRestored, setProgressRestored] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   /** Saves immediately (skipping the debounce) so nothing typed is lost when leaving checkout. */
@@ -114,7 +117,8 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
   });
   const [unitsReady, setUnitsReady] = useState(false);
   const [unitsCheckError, setUnitsCheckError] = useState<string | null>(null);
-  const [assignedUnitsByProductId, setAssignedUnitsByProductId] = useState<
+  const [agreementBooking, setAgreementBooking] = useState<Booking | null>(null);
+  const [assignedUnitsByBookingItemId, setAssignedUnitsByBookingItemId] = useState<
     Map<string, AgreementLineItem["units"]>
   >(new Map());
   const [resumeMismatch, setResumeMismatch] = useState<string | null>(null);
@@ -323,29 +327,33 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
   useEffect(() => {
     if (step !== 5 || !bookingId) return;
     let cancelled = false;
+    setAgreementBooking(null);
+    setAssignedUnitsByBookingItemId(new Map());
 
     async function confirmUnits() {
       try {
         const supabase = createClient();
         const booking = await getBookingById(supabase, bookingId!);
         if (!booking || booking.items.length === 0) throw new Error("This booking could not be found.");
+        if (cancelled) return;
+        setAgreementBooking(booking);
         const assignments = await getBookingUnitAssignments(supabase, bookingId!);
         assertUnitAssignmentsComplete(
           booking.items.map((item) => ({ bookingItemId: item.bookingItemId, quantity: item.quantity })),
           assignments,
         );
         if (cancelled) return;
-        const byProductId = new Map<string, AgreementLineItem["units"]>();
+        const byBookingItemId = new Map<string, AgreementLineItem["units"]>();
         for (const item of booking.items) {
-          byProductId.set(
-            item.productId,
+          byBookingItemId.set(
+            item.bookingItemId,
             activeUnitAssignments(assignments.get(item.bookingItemId)).map((assignment) => ({
               unitCode: assignment.unitCode,
               serialNumber: assignment.serialNumber,
             })),
           );
         }
-        setAssignedUnitsByProductId(byProductId);
+        setAssignedUnitsByBookingItemId(byBookingItemId);
         setUnitsReady(true);
       } catch (error) {
         if (cancelled) return;
@@ -416,7 +424,6 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
         await submitManualPayment(activeBookingId, {
           referenceNumber: draft.manualPayment.referenceNumber.trim(),
           accountName: draft.manualPayment.accountName.trim(),
-          accountNumber: draft.manualPayment.accountNumber.trim(),
           paymentOption: draft.paymentOption,
           proofFile: draft.manualPayment.proofFile,
         });
@@ -465,37 +472,41 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
   }
 
   const pricing = calculateMultiItemReservationPricing(lines, draft, rewardProgress, isGuest);
-  const currency = lines[0]?.product.currency ?? "PHP";
+  const currency = agreementBooking?.productSnapshot.currency ?? lines[0]?.product.currency ?? "PHP";
   const schedule = getDraftRentalSchedule(draft);
   const isComplete = step === STEP_LABELS.length;
   const agreementData = {
     bookingRef: bookingNumber ?? "Created before payment",
     customerName: draft.customerInfo.fullName || "-",
-    items: pricing.lines.map((line) => {
-      const cartLine = lines.find((cartLine) => cartLine.product.id === line.productId);
-      const product = cartLine?.product;
+    items: (agreementBooking?.items ?? []).map((item) => {
       return {
-        productName: cartLine?.color ? `${line.productName} — ${cartLine.color}` : line.productName,
-        brand: product?.brand ?? "",
-        quantity: line.quantity,
-        pricePerDay: line.pricePerDay,
-        rentalDays: line.rentalDays,
-        lineTotal: line.lineTotal,
-        includedAccessories: product?.included ?? [],
-        units: assignedUnitsByProductId.get(line.productId) ?? [],
+        productName: item.productName,
+        brand: item.brand,
+        quantity: item.quantity,
+        pricePerDay: item.dailyRate,
+        rentalDays: agreementBooking?.dayCount ?? 1,
+        lineTotal: item.lineRentalSubtotal,
+        includedAccessories: item.included,
+        units: assignedUnitsByBookingItemId.get(item.bookingItemId) ?? [],
       };
     }),
-    startDate: draft.startDate ?? new Date(),
-    endDate: draft.endDate ?? new Date(),
-    dayCount: getDayCount(draft.startDate, draft.endDate),
-    fulfillmentMethod: draft.fulfillmentMethod ?? "pickup",
-    customerLocation: draft.fulfillmentMethod ? formatCustomerLocation(draft) || "-" : "-",
+    startDate: agreementBooking?.startDate ? new Date(agreementBooking.startDate) : draft.startDate ?? new Date(),
+    endDate: agreementBooking?.endDate ? new Date(agreementBooking.endDate) : draft.endDate ?? new Date(),
+    dayCount: agreementBooking?.dayCount ?? getDayCount(draft.startDate, draft.endDate),
+    fulfillmentMethod: agreementBooking?.fulfillmentMethod ?? draft.fulfillmentMethod ?? "pickup",
+    customerLocation: agreementBooking
+      ? [agreementBooking.location, agreementBooking.cityMunicipality, agreementBooking.province]
+          .filter(Boolean)
+          .join(", ") || "-"
+      : draft.fulfillmentMethod ? formatCustomerLocation(draft) || "-" : "-",
     currency,
-    subtotal: pricing.productSubtotal,
-    discountAmount: pricing.discountAmount,
-    depositAmount: pricing.depositAmount,
-    fees: pricing.fees,
-    finalAmount: pricing.finalAmount,
+    subtotal: agreementBooking?.rentalSubtotal ?? pricing.rentalSubtotal,
+    discountAmount: agreementBooking?.specialDiscountAmount ?? pricing.specialDiscountAmount,
+    depositAmount: agreementBooking?.refundableDeposit ?? pricing.depositAmount,
+    fees: agreementBooking
+      ? agreementBooking.deliveryFee + (agreementBooking.pickupConvenienceFee ?? 0)
+      : pricing.fees,
+    finalAmount: agreementBooking?.totalAmount ?? pricing.finalAmount,
   };
 
   if (resumeMismatch) {
@@ -728,7 +739,8 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
           <StepAgreement
             agreementData={agreementData}
             agreement={draft.agreement}
-            onUpdate={(patch) => updateDraft({ agreement: { ...draft.agreement, ...patch } })}
+            isGuest={isGuest}
+            onUpdate={(patch) => setDraft((current) => patchAgreementDraft(current, patch))}
             onBack={() => goToStep(4)}
             onContinue={() => void handleDocumentSubmission()}
             submitting={submittingDocuments}

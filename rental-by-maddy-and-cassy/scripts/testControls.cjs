@@ -86,7 +86,6 @@ async function main() {
     assert.equal(await page.evaluate(() => window.paymentCalls), 0);
     await page.getByLabel("Reference number", { exact: false }).fill("TEST-123");
     await page.getByLabel("Name of account used", { exact: false }).fill("Test Customer");
-    await page.getByLabel("Payment account / mobile number", { exact: false }).fill("09123456789");
     await page.locator('input[type="file"]').first().setInputFiles({ name: "proof.pdf", mimeType: "application/pdf", buffer: Buffer.from("test proof") });
     await page.getByLabel("Reference number", { exact: false }).press("Enter");
     const submitting = page.getByRole("button", { name: "Submitting payment…", exact: true });

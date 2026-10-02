@@ -6,6 +6,8 @@ import Link from "next/link";
 import type { Product } from "@/types/product";
 import type { UnitCounts } from "@/lib/availability";
 import { useAuth } from "@/hooks/useAuth";
+import { useAgreementProfileName } from "@/hooks/useAgreementProfileName";
+import { patchAgreementDraft } from "@/src/lib/patchAgreementDraft";
 import { createClient } from "@/src/lib/supabase/client";
 import Spinner from "@/components/ui/Spinner";
 import ReservationStepper from "@/components/reservation/ReservationStepper";
@@ -90,6 +92,7 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
   const documentSubmissionInFlightRef = useRef(false);
   const [prefilled, setPrefilled] = useState(false);
   const [progressHydrated, setProgressHydrated] = useState(false);
+  useAgreementProfileName(step === 5, progressHydrated, user!.id, isGuest, setDraft);
   const [progressRestored, setProgressRestored] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [rewardProgress, setRewardProgress] = useState<RewardProgress>({
@@ -414,7 +417,6 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
         await submitManualPayment(activeBookingId, {
           referenceNumber: draft.manualPayment.referenceNumber.trim(),
           accountName: draft.manualPayment.accountName.trim(),
-          accountNumber: draft.manualPayment.accountNumber.trim(),
           paymentOption: draft.paymentOption,
           proofFile: draft.manualPayment.proofFile,
         });
@@ -710,7 +712,8 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
           <StepAgreement
             agreementData={agreementData}
             agreement={draft.agreement}
-            onUpdate={(patch) => updateDraft({ agreement: { ...draft.agreement, ...patch } })}
+            isGuest={isGuest}
+            onUpdate={(patch) => setDraft((current) => patchAgreementDraft(current, patch))}
             onBack={() => goToStep(4)}
             onContinue={() => void handleDocumentSubmission()}
             submitting={submittingDocuments}

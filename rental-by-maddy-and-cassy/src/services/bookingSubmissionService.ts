@@ -328,12 +328,15 @@ export async function submitBookingDocuments(bookingId: string, draft: Reservati
     throw new Error("Complete and sign the rental agreement before submitting.");
   }
 
-  const signatureBlob = dataUrlToBlob(agreement.signatureDataUrl);
-  const signatureFile = new File(
-    [signatureBlob],
-    `signature.${extensionFromContentType(signatureBlob.type)}`,
-    { type: signatureBlob.type || "image/png" },
-  );
+  let signatureFile = agreement.signatureMethod === "uploaded" ? agreement.signatureFile : null;
+  if (!signatureFile) {
+    const signatureBlob = dataUrlToBlob(agreement.signatureDataUrl);
+    signatureFile = new File(
+      [signatureBlob],
+      `signature.${extensionFromContentType(signatureBlob.type)}`,
+      { type: signatureBlob.type || "image/png" },
+    );
+  }
   const submissionId = crypto.randomUUID();
 
   const overallController = new AbortController();

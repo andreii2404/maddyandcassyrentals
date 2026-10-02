@@ -43,7 +43,7 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 ## Payments, documents, and notifications
 
 Customers pay manually via GCash: they submit a reference number, the paying
-account's name/number, and a screenshot of the transfer as proof of payment.
+account's name, and a screenshot of the transfer as proof of payment.
 An administrator reviews the submission in `/admin/bookings/[id]` and marks it
 verified or rejected — verification is the source of truth, not any
 automated provider callback. The system privately generates invoices,

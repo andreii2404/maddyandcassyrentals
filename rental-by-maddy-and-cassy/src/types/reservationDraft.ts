@@ -48,7 +48,6 @@ export interface CustomerInfoDraft {
 export interface ManualPaymentDraft {
   referenceNumber: string;
   accountName: string;
-  accountNumber: string;
   proofFile: File | null;
 }
 
@@ -120,7 +119,6 @@ export function createEmptyDraft(): ReservationDraft {
     manualPayment: {
       referenceNumber: "",
       accountName: "",
-      accountNumber: "",
       proofFile: null,
     },
     requirements: {

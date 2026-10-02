@@ -13,11 +13,7 @@ import GcashRecipientCard from "@/components/payment/GcashRecipientCard";
 import {
   ACCOUNT_NAME_MAX_LENGTH,
   isValidAccountName,
-  isValidPaymentAccountNumber,
   isValidReferenceNumber,
-  normalizePaymentAccountInput,
-  PAYMENT_ACCOUNT_MAX_DIGITS,
-  PAYMENT_ACCOUNT_MIN_DIGITS,
   REFERENCE_NUMBER_MAX_LENGTH,
   sanitizeAccountNameInput,
   sanitizeReferenceNumberInput,
@@ -30,7 +26,7 @@ import styles from "./StepPaymentSubmission.module.css";
 
 type PaymentErrors = Partial<Record<string, string>>;
 
-const FIELD_ORDER = ["cart-pay-reference", "cart-pay-account-name", "cart-pay-account-number", "cart-pay-proof"];
+const FIELD_ORDER = ["cart-pay-reference", "cart-pay-account-name", "cart-pay-proof"];
 
 function money(currency: string, value: number): string {
   return `${currency}${value.toLocaleString("en-PH", {
@@ -91,13 +87,6 @@ export default function StepCartPaymentSubmission({
     return null;
   }
 
-  function validateAccountNumberField(value: string): string | null {
-    if (!isValidPaymentAccountNumber(value)) {
-      return `Enter a valid payment account or mobile number (${PAYMENT_ACCOUNT_MIN_DIGITS}-${PAYMENT_ACCOUNT_MAX_DIGITS} digits).`;
-    }
-    return null;
-  }
-
   function setFieldError(field: string, message: string | null) {
     setErrors((prev) => {
       if (!message) {
@@ -132,8 +121,6 @@ export default function StepCartPaymentSubmission({
     if (referenceError) nextErrors["cart-pay-reference"] = referenceError;
     const accountNameError = validateAccountNameField(draft.manualPayment.accountName);
     if (accountNameError) nextErrors["cart-pay-account-name"] = accountNameError;
-    const accountNumberError = validateAccountNumberField(draft.manualPayment.accountNumber);
-    if (accountNumberError) nextErrors["cart-pay-account-number"] = accountNumberError;
     if (!draft.manualPayment.proofFile) {
       nextErrors["cart-pay-proof"] = "Upload a screenshot or proof of payment.";
     }
@@ -141,7 +128,6 @@ export default function StepCartPaymentSubmission({
     setTouched({
       "cart-pay-reference": true,
       "cart-pay-account-name": true,
-      "cart-pay-account-number": true,
       "cart-pay-proof": true,
     });
     if (Object.keys(nextErrors).length > 0) {
@@ -351,32 +337,6 @@ export default function StepCartPaymentSubmission({
         </div>
       </div>
 
-      <div className={formStyles.field}>
-        <label className={formStyles.label} htmlFor="cart-pay-account-number">
-          Payment account / mobile number<span className={formStyles.required}>*</span>
-        </label>
-        <input
-          id="cart-pay-account-number"
-          className={`${formStyles.input} ${errors["cart-pay-account-number"] ? formStyles.inputError : ""}`}
-          inputMode="numeric"
-          autoComplete="off"
-          maxLength={PAYMENT_ACCOUNT_MAX_DIGITS}
-          value={draft.manualPayment.accountNumber}
-          aria-invalid={Boolean(errors["cart-pay-account-number"])}
-          onChange={(event) => {
-            const value = normalizePaymentAccountInput(event.target.value);
-            onManualPaymentUpdate({ accountNumber: value });
-            handleFieldChange("cart-pay-account-number", validateAccountNumberField(value));
-          }}
-          onBlur={() =>
-            handleFieldBlur("cart-pay-account-number", validateAccountNumberField(draft.manualPayment.accountNumber))
-          }
-          disabled={opening}
-        />
-        {errors["cart-pay-account-number"] ? (
-          <p className={formStyles.errorText}>{errors["cart-pay-account-number"]}</p>
-        ) : null}
-      </div>
 
       <FileUploadField
         id="cart-pay-proof"

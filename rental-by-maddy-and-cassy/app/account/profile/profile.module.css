@@ -186,6 +186,18 @@
   line-height: 1.5;
 }
 
+.signaturePreview {
+  display: block;
+  max-width: 100%;
+  max-height: 110px;
+  object-fit: contain;
+  object-position: left center;
+  padding: 0.5rem;
+  border: 1px solid var(--color-light-gray);
+  border-radius: 11px;
+  background: var(--color-white);
+}
+
 /* ===== Actions ===== */
 
 .actions {

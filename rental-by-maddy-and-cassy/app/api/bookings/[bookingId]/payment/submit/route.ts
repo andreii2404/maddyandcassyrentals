@@ -54,7 +54,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
     const formData = await request.formData();
     const referenceNumber = String(formData.get("referenceNumber") ?? "").trim();
     const accountName = String(formData.get("accountName") ?? "").trim();
-    const accountNumber = String(formData.get("accountNumber") ?? "").trim();
     const paymentOptionRaw = formData.get("paymentOption");
     const proof = formData.get("proof");
 
@@ -63,9 +62,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
     }
     if (!accountName || accountName.length > 160) {
       throw new RequestSecurityError("Enter the name of the account used to pay.", 400);
-    }
-    if (!accountNumber || accountNumber.length > 40) {
-      throw new RequestSecurityError("Enter the mobile number or account number used to pay.", 400);
     }
     if (!isPaymentOption(paymentOptionRaw)) {
       throw new RequestSecurityError("Choose a valid payment option.", 400);
@@ -134,7 +130,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
       proof_document_id: customerDocument.id,
       status: "submitted",
       currency_code: "PHP",
-      provider_metadata: { accountName, accountNumber },
+      provider_metadata: { accountName },
     });
     if (submissionError) throw new Error(submissionError.message);
 
