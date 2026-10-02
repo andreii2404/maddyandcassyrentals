@@ -29,7 +29,15 @@
 
 .dateSection { grid-column: 1; grid-row: 1 / span 3; }
 .timeSection { grid-column: 2; grid-row: 1; }
-.fulfillmentSection { grid-column: 2; grid-row: 2; }
+.fulfillmentSection {
+  grid-column: 2;
+  grid-row: 2;
+  /* Open layout: no outer card so the delivery options don't feel boxed in. */
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
 .quantitySection { grid-column: 2; grid-row: 3; }
 
 .sectionHeading {
@@ -495,24 +503,11 @@
   display: grid;
   gap: 0.65rem;
   margin-top: 0.7rem;
-  padding-top: 0.7rem;
-  border-top: 1px solid var(--color-light-gray);
-}
-
-.deliveryRow {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.65rem;
-  align-items: start;
 }
 
 .deliveryFields input,
 .deliveryFields select {
   height: var(--control-height);
-}
-
-.deliveryFields textarea {
-  min-height: 4.25rem;
 }
 
 .requiredMark {
@@ -912,7 +907,6 @@
   .pickupTimeField { grid-template-columns: 1fr; }
   .pickupTimeField label { grid-column: auto; }
   .quantityPanel { grid-template-columns: 1fr; }
-  .deliveryRow { grid-template-columns: 1fr; }
   .timeSelectRow { grid-template-columns: minmax(54px, 1fr) auto minmax(54px, 1fr) minmax(66px, 1fr); }
 }
 

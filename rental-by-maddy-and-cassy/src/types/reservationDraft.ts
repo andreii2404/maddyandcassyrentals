@@ -198,15 +198,13 @@ export function parseCustomerAddress(address: string | null | undefined): Pick<
  * so it always shows the fixed pickup site instead of blank fields.
  */
 export function formatCustomerLocation(
-  draft: Pick<ReservationDraft, "fulfillmentMethod" | "customerLocation" | "cityMunicipality" | "province">,
+  draft: Pick<ReservationDraft, "fulfillmentMethod" | "customerInfo">,
 ): string {
   if (draft.fulfillmentMethod === "pickup") {
     return "Pickup — Right Focus Off Campus, Manuel Hizon, Sta. Cruz, Manila";
   }
-  return [draft.customerLocation, draft.cityMunicipality, draft.province]
-    .map((part) => (part ?? "").trim())
-    .filter(Boolean)
-    .join(", ");
+  // Delivery goes to the customer's saved address (see deliveryAddress()).
+  return formatCustomerAddress(draft.customerInfo);
 }
 
 export function getDayCount(startDate: Date | null, endDate: Date | null): number {

@@ -22,6 +22,25 @@ function draftCourier(draft: ReservationDraft): CourierArrangement | undefined {
   return draft.fulfillmentMethod === "delivery" ? normalizeCourierArrangement(draft) : undefined;
 }
 
+/**
+ * Delivery bookings are sent to the customer's own saved address (collected in
+ * the customer-info step); the rental-details step no longer asks for a
+ * separate one. Pickup bookings never carry an address.
+ */
+function deliveryAddress(draft: ReservationDraft): {
+  location?: string;
+  cityMunicipality?: string;
+  province?: string;
+} {
+  if (draft.fulfillmentMethod !== "delivery") return {};
+  const { customerInfo } = draft;
+  return {
+    location: customerInfo.streetBarangay.trim(),
+    cityMunicipality: customerInfo.cityMunicipality.trim(),
+    province: customerInfo.province.trim(),
+  };
+}
+
 export interface SubmitBookingResult {
   bookingId: string;
   bookingNumber?: string;
@@ -30,13 +49,6 @@ export interface SubmitBookingResult {
 function validateReservationDetails(draft: ReservationDraft): void {
   if (!draft.startDate || !draft.endDate || !draft.fulfillmentMethod) {
     throw new Error("Missing rental details.");
-  }
-
-  if (
-    draft.fulfillmentMethod === "delivery" &&
-    (!draft.customerLocation.trim() || !draft.cityMunicipality.trim() || !draft.province.trim())
-  ) {
-    throw new Error("Please provide a complete delivery address (street/barangay, city/municipality, and province).");
   }
 
   if (draft.fulfillmentMethod === "delivery") {
@@ -89,9 +101,7 @@ export async function createBookingReservation(
     fulfillmentMethod,
     // Pickup never carries a delivery address (create_booking stores null for
     // pickup regardless), so only send it through for delivery bookings.
-    location: fulfillmentMethod === "delivery" ? draft.customerLocation.trim() : undefined,
-    cityMunicipality: fulfillmentMethod === "delivery" ? draft.cityMunicipality.trim() : undefined,
-    province: fulfillmentMethod === "delivery" ? draft.province.trim() : undefined,
+    ...deliveryAddress(draft),
     courier: draftCourier(draft),
     discountAmount,
     productSnapshot: {
@@ -158,9 +168,7 @@ export async function createMultiItemBookingReservation(
     pickupAt: startDate.toISOString(),
     rentalDays,
     fulfillmentMethod,
-    location: fulfillmentMethod === "delivery" ? draft.customerLocation.trim() : undefined,
-    cityMunicipality: fulfillmentMethod === "delivery" ? draft.cityMunicipality.trim() : undefined,
-    province: fulfillmentMethod === "delivery" ? draft.province.trim() : undefined,
+    ...deliveryAddress(draft),
     courier: draftCourier(draft),
     customerNotes,
     customerSnapshot: {

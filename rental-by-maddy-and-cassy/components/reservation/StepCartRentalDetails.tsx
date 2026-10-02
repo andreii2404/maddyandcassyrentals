@@ -40,7 +40,6 @@ import {
 import { formatPeso } from "@/src/lib/emailShell";
 import CourierArrangementFields from "@/components/reservation/CourierArrangementFields";
 import styles from "./StepRentalDetails.module.css";
-import { PHILIPPINE_PROVINCES } from "@/src/data/philippineLocations";
 import {
   EMPTY_COURIER_ARRANGEMENT,
   formatCourier,
@@ -243,12 +242,6 @@ export default function StepCartRentalDetails({
   }, [draft.startDate, rentalDays, lineAvailabilityKey]);
 
   const isDelivery = draft.fulfillmentMethod === "delivery";
-  const hasValidLocation =
-    draft.fulfillmentMethod === "pickup" ||
-    (isDelivery &&
-      draft.customerLocation.trim().length > 0 &&
-      draft.cityMunicipality.trim().length > 0 &&
-      draft.province.trim().length > 0);
   const courierIssues = isDelivery ? getCourierArrangementIssues(draft) : [];
 
   const unavailableLines = lines.filter((line) => {
@@ -264,7 +257,6 @@ export default function StepCartRentalDetails({
     !isPickupTimePast &&
     !!returnAt &&
     !!draft.fulfillmentMethod &&
-    hasValidLocation &&
     courierIssues.length === 0 &&
     allChecked &&
     unavailableLines.length === 0;
@@ -281,10 +273,9 @@ export default function StepCartRentalDetails({
   if (!draft.fulfillmentMethod) {
     missingItems.push("Choose pickup or delivery.");
   } else if (isDelivery) {
-    if (!hasValidLocation) missingItems.push("Add your complete delivery address.");
     missingItems.push(...courierIssues);
   }
-  if (pickupAt && !isPickupTimePast && draft.fulfillmentMethod && hasValidLocation) {
+  if (pickupAt && !isPickupTimePast && draft.fulfillmentMethod) {
     if (availabilityError) {
       missingItems.push("Availability could not be checked. Select the time again or try again.");
     } else if (!allChecked) {
@@ -345,9 +336,6 @@ export default function StepCartRentalDetails({
     if (method === "pickup") {
       onUpdate({
         fulfillmentMethod: method,
-        customerLocation: "",
-        cityMunicipality: "",
-        province: "",
         ...EMPTY_COURIER_ARRANGEMENT,
         pickupConvenienceFee: scheduleFee,
       });
@@ -369,10 +357,6 @@ export default function StepCartRentalDetails({
     }
     if (!draft.fulfillmentMethod) {
       setError("Please choose pickup or delivery.");
-      return;
-    }
-    if (isDelivery && (!draft.customerLocation.trim() || !draft.cityMunicipality.trim() || !draft.province.trim())) {
-      setError("Please provide your complete delivery address, including city/municipality and province.");
       return;
     }
     if (courierIssues.length > 0) {
@@ -544,58 +528,6 @@ export default function StepCartRentalDetails({
 
             {isDelivery ? (
               <div className={styles.deliveryFields}>
-                <div className={formStyles.field}>
-                  <label className={formStyles.label} htmlFor="cartCustomerLocation">
-                    Delivery address<span className={styles.requiredMark}>*</span>
-                  </label>
-                  <textarea
-                    id="cartCustomerLocation"
-                    autoComplete="address-line1"
-                    aria-required="true"
-                    className={formStyles.textarea}
-                    value={draft.customerLocation}
-                    onChange={(event) => onUpdate({ customerLocation: event.target.value })}
-                    placeholder="House/unit number, street, barangay, and any landmark details"
-                  />
-                </div>
-
-                <div className={styles.deliveryRow}>
-                  <div className={formStyles.field}>
-                    <label className={formStyles.label} htmlFor="cartCityMunicipality">
-                      City/Municipality<span className={styles.requiredMark}>*</span>
-                    </label>
-                    <input
-                      id="cartCityMunicipality"
-                      type="text"
-                      autoComplete="address-level2"
-                      aria-required="true"
-                      className={formStyles.input}
-                      value={draft.cityMunicipality}
-                      onChange={(event) => onUpdate({ cityMunicipality: event.target.value })}
-                      placeholder="e.g. Manila"
-                    />
-                  </div>
-
-                  <div className={formStyles.field}>
-                    <label className={formStyles.label} htmlFor="cartProvince">
-                      Province<span className={styles.requiredMark}>*</span>
-                    </label>
-                    <select
-                      id="cartProvince"
-                      autoComplete="address-level1"
-                      aria-required="true"
-                      className={formStyles.select}
-                      value={draft.province}
-                      onChange={(event) => onUpdate({ province: event.target.value })}
-                    >
-                      <option value="">Select province</option>
-                      {PHILIPPINE_PROVINCES.map((province) => (
-                        <option key={province} value={province}>{province}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
                 <CourierArrangementFields idPrefix="cart" value={draft} onChange={onUpdate} />
               </div>
             ) : null}
