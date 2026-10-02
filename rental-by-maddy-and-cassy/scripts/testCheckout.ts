@@ -20,6 +20,18 @@ test("cart checkout renders one continue action for rental details", () => {
   assert.equal((cartRentalDetailsSource.match(/className=\{styles\.summaryActions\}/g) ?? []).length, 0);
 });
 
+test("cart summary displays the shared perk discount and adjusted rental subtotal", () => {
+  const summarySource = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "../components/reservation/CheckoutSummaryDetails.tsx"),
+    "utf8",
+  );
+
+  assert.match(summarySource, /<dt>Discounts<\/dt>[\s\S]*pricing\.specialDiscountAmount/);
+  assert.match(summarySource, /<dt>Rental subtotal<\/dt>[\s\S]*pricing\.rentalSubtotal/);
+  assert.match(cartRentalDetailsSource, /Estimated total/);
+  assert.match(cartRentalDetailsSource, /pricing\.finalAmount/);
+});
+
 test("single-rental checkout does not duplicate the continue action", () => {
   assert.equal((rentalDetailsSource.match(/className=\{styles\.summaryActions\}/g) ?? []).length, 0);
 });

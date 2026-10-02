@@ -42,7 +42,7 @@ interface PriceBreakdownProps {
 /**
  * Collapsible line-by-line view of the live checkout pricing. Every amount comes
  * straight from `pricing` (calculateMultiItemReservationPricing), so the rows
- * always add up to the Current total shown beneath it.
+ * always add up to the Estimated total shown beneath it.
  */
 export function PriceBreakdown({ lines, pricing, fulfillmentMethod, pickupTime }: PriceBreakdownProps) {
   const hasDates = pricing.rentalDays > 0;
@@ -99,24 +99,17 @@ export function PriceBreakdown({ lines, pricing, fulfillmentMethod, pickupTime }
                 <dd>{formatPeso(pricing.productSubtotal)}</dd>
               </div>
 
-              {pricing.birthdayDiscountAmount > 0 ? (
-                <div>
-                  <dt>Birthday Month Discount</dt>
-                  <dd className={styles.breakdownDiscount}>−{formatPeso(pricing.birthdayDiscountAmount)}</dd>
-                </div>
-              ) : null}
-              {pricing.loyaltyDiscountAmount > 0 ? (
-                <div>
-                  <dt>Loyalty reward</dt>
-                  <dd className={styles.breakdownDiscount}>−{formatPeso(pricing.loyaltyDiscountAmount)}</dd>
-                </div>
-              ) : null}
-              {pricing.specialDiscountAmount <= 0 ? (
-                <div>
-                  <dt>Discounts</dt>
-                  <dd>None applied</dd>
-                </div>
-              ) : null}
+              <div>
+                <dt>Discounts</dt>
+                <dd className={pricing.specialDiscountAmount > 0 ? styles.breakdownDiscount : undefined}>
+                  {pricing.specialDiscountAmount > 0 ? `−${formatPeso(pricing.specialDiscountAmount)}` : "None applied"}
+                </dd>
+              </div>
+
+              <div className={styles.breakdownSubtotal}>
+                <dt>Rental subtotal</dt>
+                <dd>{formatPeso(pricing.rentalSubtotal)}</dd>
+              </div>
 
               <div>
                 <dt>

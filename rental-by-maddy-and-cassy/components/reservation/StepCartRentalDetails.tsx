@@ -643,7 +643,7 @@ export default function StepCartRentalDetails({
             />
 
             <div className={styles.summaryTotal}>
-              <span>Current total</span>
+              <span>Estimated total</span>
               <strong>
                 {pricing.rentalDays > 0 ? formatPeso(pricing.finalAmount) : "Choose dates"}
               </strong>
