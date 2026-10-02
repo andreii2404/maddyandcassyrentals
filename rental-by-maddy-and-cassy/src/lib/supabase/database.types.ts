@@ -1604,6 +1604,10 @@ export type Database = {
       }
       chat_messages: {
         Row: {
+          attachment_mime_type: string | null
+          attachment_name: string | null
+          attachment_path: string | null
+          attachment_size_bytes: number | null
           body: string
           client_message_id: string
           conversation_id: string
@@ -1615,6 +1619,10 @@ export type Database = {
           sender_role: string
         }
         Insert: {
+          attachment_mime_type?: string | null
+          attachment_name?: string | null
+          attachment_path?: string | null
+          attachment_size_bytes?: number | null
           body: string
           client_message_id?: string
           conversation_id: string
@@ -1626,6 +1634,10 @@ export type Database = {
           sender_role: string
         }
         Update: {
+          attachment_mime_type?: string | null
+          attachment_name?: string | null
+          attachment_path?: string | null
+          attachment_size_bytes?: number | null
           body?: string
           client_message_id?: string
           conversation_id?: string
@@ -2536,6 +2548,10 @@ export type Database = {
       list_chat_messages: {
         Args: { p_conversation_id: string; p_limit?: number }
         Returns: {
+          attachment_mime_type: string | null
+          attachment_name: string | null
+          attachment_path: string | null
+          attachment_size_bytes: number | null
           body: string
           conversation_id: string
           created_at: string
@@ -2550,6 +2566,30 @@ export type Database = {
       mark_chat_conversation_read: {
         Args: { p_conversation_id: string }
         Returns: undefined
+      }
+      send_chat_attachment_message: {
+        Args: {
+          p_attachment_name: string
+          p_attachment_path: string
+          p_body: string
+          p_client_message_id: string
+          p_conversation_id: string
+        }
+        Returns: {
+          attachment_mime_type: string | null
+          attachment_name: string | null
+          attachment_path: string | null
+          attachment_size_bytes: number | null
+          body: string
+          conversation_id: string
+          created_at: string
+          edited_at: string | null
+          id: string
+          message_type: string
+          sender_id: string | null
+          sender_name: string
+          sender_role: string
+        }[]
       }
       send_chat_message: {
         Args: {
