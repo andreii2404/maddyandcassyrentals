@@ -20,6 +20,7 @@ import {
 import { bookingHeadline } from "@/src/lib/bookingDisplay";
 import { resolveAccountName } from "@/src/lib/accountDisplay";
 import GuestBadge from "@/components/status-badge/GuestBadge";
+import { formatCourier } from "@/src/lib/courierArrangement";
 import styles from "./bookings.module.css";
 
 const PAGE_SIZE = 10;
@@ -312,7 +313,12 @@ export default function AdminBookingsList() {
                       </td>
                       <td data-label="Fulfillment Update">
                         <strong>{getFulfillmentProgressLabel(booking.status, booking.fulfillmentMethod)}</strong>
-                        <small>{booking.fulfillmentMethod === "delivery" ? "Delivery" : "Pickup"}</small>
+                        <small>
+                          {booking.fulfillmentMethod === "delivery" ? "Delivery" : "Pickup"}
+                          {booking.fulfillmentMethod === "delivery" && booking.courier?.deliveryCourier
+                            ? ` · ${formatCourier(booking.courier.deliveryCourier, booking.courier.deliveryCourierOther)}`
+                            : ""}
+                        </small>
                       </td>
                       <td data-label="Submitted">{formatDate(booking.createdAt)}</td>
                     </tr>

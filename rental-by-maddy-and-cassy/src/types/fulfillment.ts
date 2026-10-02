@@ -4,6 +4,7 @@ export type ApprovalEmailStatus = "sent" | "failed" | "legacy" | null;
 export type ItemCondition = "good" | "damaged";
 export type ChargeType = "late_fee" | "damage_fee" | "other";
 export type ChargePaymentMethod = "cash" | "gcash" | "other";
+export type DepositPaymentMethod = "gcash" | "maya" | "bank_transfer" | "cash";
 
 export interface BookingEmailState {
   approvalEmailStatus: ApprovalEmailStatus;
@@ -43,6 +44,18 @@ export interface BookingCharge {
   voidReason?: string;
 }
 
+/** A paid security deposit. No record means the deposit has not been paid. */
+export interface SecurityDeposit {
+  bookingId: string;
+  amount: number;
+  paymentMethod: DepositPaymentMethod;
+  /** Only digital payments have one; cash never does. */
+  referenceNumber?: string;
+  paidAt: string;
+  recordedBy?: string;
+  recordedAt: string;
+}
+
 export interface CustomerUpdate {
   id: string;
   bookingId: string;
@@ -65,6 +78,9 @@ export interface FulfillmentData {
   available: boolean;
   email: BookingEmailState;
   record: FulfillmentRecord | null;
+  /** False when the security deposit table could not be read (its migration is not applied). */
+  securityDepositAvailable: boolean;
+  securityDeposit: SecurityDeposit | null;
   charges: BookingCharge[];
   updates: CustomerUpdate[];
   /** Admin user id to display name, for "recorded by" labels. */
@@ -75,6 +91,8 @@ export const EMPTY_FULFILLMENT_DATA: FulfillmentData = {
   available: false,
   email: { approvalEmailStatus: null },
   record: null,
+  securityDepositAvailable: false,
+  securityDeposit: null,
   charges: [],
   updates: [],
   adminNames: {},

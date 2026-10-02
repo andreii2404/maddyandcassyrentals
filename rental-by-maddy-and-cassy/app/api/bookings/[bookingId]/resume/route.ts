@@ -77,6 +77,7 @@ export async function GET(
         location: booking.location ?? null,
         cityMunicipality: booking.cityMunicipality ?? null,
         province: booking.province ?? null,
+        courier: booking.courier ?? null,
         totalAmount: booking.totalAmount,
         customerSnapshot: booking.customerSnapshot,
       },

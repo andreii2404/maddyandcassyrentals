@@ -10,6 +10,7 @@ import {
   formatManilaDateTime,
   formatManilaPickupTime,
 } from "@/src/lib/rentalTiming";
+import { COURIER_RESPONSIBILITY_NOTE } from "@/src/lib/courierArrangement";
 import styles from "./RentalScheduleNoticeModal.module.css";
 
 // Reuses the same Facebook page already listed as the official contact
@@ -105,11 +106,16 @@ export default function RentalScheduleNoticeModal({
         </p>
 
         {isDelivery ? (
-          <p className={styles.note}>
-            <strong>{estimatedArrivalLabel} is only the earliest estimate, not a guaranteed
-            delivery time.</strong>{" "}
-            Traffic, distance, weather, and courier availability may affect it.
-          </p>
+          <>
+            <p className={styles.note}>
+              <strong>{estimatedArrivalLabel} is only the earliest estimate, not a guaranteed
+              delivery time.</strong>{" "}
+              Traffic, distance, weather, and courier availability may affect it.
+            </p>
+            <p className={styles.note}>
+              <strong>{COURIER_RESPONSIBILITY_NOTE}</strong>
+            </p>
+          </>
         ) : (
           <p className={styles.note}>
             Travel time depends on how far you are from the pickup location.

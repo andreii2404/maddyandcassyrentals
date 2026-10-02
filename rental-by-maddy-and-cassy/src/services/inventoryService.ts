@@ -9,6 +9,14 @@ import type {
   FulfillmentMethod,
 } from "@/src/types/booking";
 import { formatManilaDateTime, formatManilaPickupTime } from "@/src/lib/rentalTiming";
+import {
+  courierErrorMessage,
+  EMPTY_COURIER_ARRANGEMENT,
+  isMissingRpcError,
+  toCourierPayload,
+  withCourierNote,
+  type CourierArrangement,
+} from "@/src/lib/courierArrangement";
 
 export class InsufficientUnitsError extends Error {
   constructor(productId: string) {
@@ -131,7 +139,10 @@ export interface SubmitBookingInput {
   cityMunicipality?: string;
   /** Required only when fulfillmentMethod is "delivery". */
   province?: string;
+  /** Required only when fulfillmentMethod is "delivery"; the customer books and pays this courier. */
+  courier?: CourierArrangement;
   customerNotes?: string;
+  /** Ignored for delivery: courier fees are paid by the customer directly, never through the booking. */
   deliveryFee?: number;
   discountAmount?: number;
   productSnapshot: BookingProductSnapshot;
@@ -169,7 +180,7 @@ export async function submitBookingWithDateGuard(
     }
   }
 
-  const { data, error } = await supabase.rpc("create_multi_day_time_based_booking", {
+  const bookingArgs = {
     p_product_id: input.productId,
     p_quantity: input.quantity ?? 1,
     // Keep the argument present even when no variant is selected. This avoids
@@ -182,7 +193,6 @@ export async function submitBookingWithDateGuard(
     p_city_municipality: input.cityMunicipality ?? "",
     p_province: input.province ?? "",
     p_customer_notes: input.customerNotes ?? "",
-    p_delivery_fee: input.deliveryFee ?? 0,
     p_discount_amount: input.discountAmount ?? 0,
     p_product_snapshot: toJson(input.productSnapshot),
     p_customer_snapshot: toJson(input.customerSnapshot),
@@ -194,7 +204,32 @@ export async function submitBookingWithDateGuard(
           address: input.emergencyContact.address ?? "",
         }
       : null,
-  });
+  };
+  const isDelivery = input.fulfillmentMethod === "delivery";
+  const courier = input.courier ?? EMPTY_COURIER_ARRANGEMENT;
+
+  // Delivery saves the customer's courier in the same transaction. The
+  // customer pays the courier directly, so delivery never carries a fee.
+  let { data, error } = isDelivery
+    ? await supabase.rpc("create_booking_with_courier", {
+        ...bookingArgs,
+        p_courier: toJson(toCourierPayload(courier)),
+      })
+    : await supabase.rpc("create_multi_day_time_based_booking", {
+        ...bookingArgs,
+        p_delivery_fee: input.deliveryFee ?? 0,
+      });
+
+  if (isDelivery && isMissingRpcError(error)) {
+    // Database not migrated yet: still take the booking, and keep the courier
+    // visible to admins in the booking notes.
+    console.warn("create_booking_with_courier is missing; saving the courier in customer notes.");
+    ({ data, error } = await supabase.rpc("create_multi_day_time_based_booking", {
+      ...bookingArgs,
+      p_customer_notes: withCourierNote(input.customerNotes, courier),
+      p_delivery_fee: 0,
+    }));
+  }
 
   if (error) {
     logSupabaseError("submitBookingWithDateGuard: booking RPC failed", error);
@@ -216,6 +251,8 @@ export async function submitBookingWithDateGuard(
     if (error.message.includes("INVALID_QUANTITY")) throw new Error("Choose a valid rental quantity.");
     if (error.message.includes("PICKUP_TIME_IN_PAST")) throw new Error("Choose a future pickup date and time.");
     if (error.message.includes("PICKUP_TIME_REQUIRED")) throw new Error("Choose a pickup date and time.");
+    const courierMessage = courierErrorMessage(error.message);
+    if (courierMessage) throw new Error(courierMessage);
     // Anything else is an unexpected server-side failure, not something the
     // customer caused or can fix by re-entering details -- never surface the
     // raw database error text on the booking/payment screens.
@@ -243,6 +280,8 @@ export interface SubmitMultiItemBookingInput {
   cityMunicipality?: string;
   /** Required only when fulfillmentMethod is "delivery". */
   province?: string;
+  /** Required only when fulfillmentMethod is "delivery"; the customer books and pays this courier. */
+  courier?: CourierArrangement;
   customerNotes?: string;
   customerSnapshot: BookingCustomerSnapshot;
   emergencyContact?: EmergencyContact;
@@ -271,7 +310,9 @@ export async function submitMultiItemBookingWithDateGuard(
     }
   }
 
-  const { data, error } = await supabase.rpc("create_multi_item_booking", {
+  const isDelivery = input.fulfillmentMethod === "delivery";
+  const courier = input.courier ?? EMPTY_COURIER_ARRANGEMENT;
+  const bookingArgs = {
     p_items: toJson(input.items.map((item) => ({
       productId: item.productId,
       quantity: item.quantity,
@@ -280,11 +321,10 @@ export async function submitMultiItemBookingWithDateGuard(
     p_pickup_at: input.pickupAt,
     p_rental_days: input.rentalDays,
     p_fulfillment_method: input.fulfillmentMethod,
-    p_location: input.fulfillmentMethod === "delivery" ? (input.location ?? "") : "",
-    p_city_municipality: input.fulfillmentMethod === "delivery" ? (input.cityMunicipality ?? "") : "",
-    p_province: input.fulfillmentMethod === "delivery" ? (input.province ?? "") : "",
+    p_location: isDelivery ? (input.location ?? "") : "",
+    p_city_municipality: isDelivery ? (input.cityMunicipality ?? "") : "",
+    p_province: isDelivery ? (input.province ?? "") : "",
     p_customer_notes: input.customerNotes ?? "",
-    p_delivery_fee: 0,
     p_customer_snapshot: toJson(input.customerSnapshot),
     p_emergency_contact: input.emergencyContact
       ? {
@@ -294,7 +334,27 @@ export async function submitMultiItemBookingWithDateGuard(
           address: input.emergencyContact.address ?? "",
         }
       : null,
-  });
+  };
+
+  // Delivery saves the customer's courier in the same transaction. The
+  // customer pays the courier directly, so no delivery fee is ever sent.
+  let { data, error } = isDelivery
+    ? await supabase.rpc("create_multi_item_booking_with_courier", {
+        ...bookingArgs,
+        p_courier: toJson(toCourierPayload(courier)),
+      })
+    : await supabase.rpc("create_multi_item_booking", { ...bookingArgs, p_delivery_fee: 0 });
+
+  if (isDelivery && isMissingRpcError(error)) {
+    // Database not migrated yet: still take the booking, and keep the courier
+    // visible to admins in the booking notes.
+    console.warn("create_multi_item_booking_with_courier is missing; saving the courier in customer notes.");
+    ({ data, error } = await supabase.rpc("create_multi_item_booking", {
+      ...bookingArgs,
+      p_customer_notes: withCourierNote(input.customerNotes, courier),
+      p_delivery_fee: 0,
+    }));
+  }
 
   if (error) {
     logSupabaseError("submitMultiItemBookingWithDateGuard: booking RPC failed", error);
@@ -334,6 +394,8 @@ export async function submitMultiItemBookingWithDateGuard(
     }
     if (error.message.includes("PICKUP_TIME_IN_PAST")) throw new Error("Choose a future pickup date and time.");
     if (error.message.includes("PICKUP_TIME_REQUIRED")) throw new Error("Choose a pickup date and time.");
+    const courierMessage = courierErrorMessage(error.message);
+    if (courierMessage) throw new Error(courierMessage);
     throw new Error("We couldn't save your reservation due to a server error. Please try again in a moment.");
   }
 

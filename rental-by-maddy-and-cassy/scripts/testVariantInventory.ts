@@ -123,3 +123,38 @@ test("single-item booking RPC treats an empty variant as null", () => {
   );
   assert.match(migration, /v_variant\s*:=\s*nullif\(trim\(v_variant\),\s*''\)/);
 });
+
+test("a requested reservation color resolves to the product's own color option", async () => {
+  const inventory = await loadVariantInventory();
+  assert.ok(inventory, "variant inventory module should exist");
+  const product = productFixture();
+  assert.equal(inventory.resolveRequestedColor(product, "Orange"), "Orange");
+  assert.equal(inventory.resolveRequestedColor(product, " orange "), "Orange");
+  assert.equal(inventory.resolveRequestedColor(product, "Purple"), undefined);
+  assert.equal(inventory.resolveRequestedColor(product, ""), undefined);
+  assert.equal(inventory.resolveRequestedColor(product, null), undefined);
+  assert.equal(inventory.resolveRequestedColor(product, undefined), undefined);
+});
+
+test("a single-color product always reserves its only color", async () => {
+  const inventory = await loadVariantInventory();
+  assert.ok(inventory, "variant inventory module should exist");
+  const product = productFixture({ colorOptions: ["White"] });
+  assert.equal(inventory.resolveRequestedColor(product, undefined), "White");
+  assert.equal(inventory.resolveRequestedColor(product, "white"), "White");
+});
+
+test("a product without color options never carries a reservation color", async () => {
+  const inventory = await loadVariantInventory();
+  assert.ok(inventory, "variant inventory module should exist");
+  const product = productFixture({ colorOptions: [], variantAvailability: [] });
+  assert.equal(inventory.resolveRequestedColor(product, "Blue"), undefined);
+});
+
+test("the reserve page takes its color from the server request, not window.location", () => {
+  const client = readFileSync(new URL("../app/catalog/[id]/reserve/ReserveFlowClient.tsx", import.meta.url), "utf8");
+  const page = readFileSync(new URL("../app/catalog/[id]/reserve/page.tsx", import.meta.url), "utf8");
+  assert.doesNotMatch(client, /searchParams?\)?\.get\("color"\)|\.get\("color"\)/);
+  assert.match(client, /resolveRequestedColor\(product, requestedColor\)/);
+  assert.match(page, /requestedColor=/);
+});

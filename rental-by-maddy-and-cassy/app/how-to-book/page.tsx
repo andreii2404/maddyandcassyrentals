@@ -59,7 +59,7 @@ export default function HowToBookPage() {
         sections={sections}
         layout="steps"
         showHelp
-        notice="Reservation payments and applicable non-refundable deposits are paid manually via GCash and verified by our team. Delivery courier costs are arranged separately."
+        notice="Reservation payments and applicable non-refundable deposits are paid manually via GCash and verified by our team. For delivery, courier booking and payment are handled by the customer; delivery fees are separate from the rental fee."
       />
     </div>
   );

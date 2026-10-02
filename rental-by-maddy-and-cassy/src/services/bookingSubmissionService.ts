@@ -11,6 +11,16 @@ import {
 } from "@/src/services/inventoryService";
 import { formatManilaDateTime } from "@/src/lib/rentalTiming";
 import { isValidPhoneNumber } from "@/src/lib/authValidation";
+import {
+  getCourierArrangementIssues,
+  normalizeCourierArrangement,
+  type CourierArrangement,
+} from "@/src/lib/courierArrangement";
+
+/** The courier a delivery booking carries; pickup bookings never send one. */
+function draftCourier(draft: ReservationDraft): CourierArrangement | undefined {
+  return draft.fulfillmentMethod === "delivery" ? normalizeCourierArrangement(draft) : undefined;
+}
 
 export interface SubmitBookingResult {
   bookingId: string;
@@ -27,6 +37,11 @@ function validateReservationDetails(draft: ReservationDraft): void {
     (!draft.customerLocation.trim() || !draft.cityMunicipality.trim() || !draft.province.trim())
   ) {
     throw new Error("Please provide a complete delivery address (street/barangay, city/municipality, and province).");
+  }
+
+  if (draft.fulfillmentMethod === "delivery") {
+    const [courierIssue] = getCourierArrangementIssues(draft);
+    if (courierIssue) throw new Error(courierIssue);
   }
 
   const { customerInfo } = draft;
@@ -77,6 +92,7 @@ export async function createBookingReservation(
     location: fulfillmentMethod === "delivery" ? draft.customerLocation.trim() : undefined,
     cityMunicipality: fulfillmentMethod === "delivery" ? draft.cityMunicipality.trim() : undefined,
     province: fulfillmentMethod === "delivery" ? draft.province.trim() : undefined,
+    courier: draftCourier(draft),
     discountAmount,
     productSnapshot: {
       name: product.name,
@@ -145,6 +161,7 @@ export async function createMultiItemBookingReservation(
     location: fulfillmentMethod === "delivery" ? draft.customerLocation.trim() : undefined,
     cityMunicipality: fulfillmentMethod === "delivery" ? draft.cityMunicipality.trim() : undefined,
     province: fulfillmentMethod === "delivery" ? draft.province.trim() : undefined,
+    courier: draftCourier(draft),
     customerNotes,
     customerSnapshot: {
       fullName: customerInfo.fullName.trim(),

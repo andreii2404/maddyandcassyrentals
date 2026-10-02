@@ -625,6 +625,15 @@
   font-weight: 800;
 }
 
+/* Delivery only: the total never includes the customer-paid courier fee. */
+.courierTotalNote {
+  margin: -0.25rem 0 0;
+  color: var(--color-charcoal);
+  font-size: 0.66rem;
+  line-height: 1.4;
+  text-align: right;
+}
+
 /* Collapsible summary sections (pickup/delivery time, return, price breakdown). */
 .summaryDetails {
   border-top: 1px solid var(--color-light-gray);

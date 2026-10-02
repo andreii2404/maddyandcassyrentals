@@ -4,8 +4,10 @@ import type {
   ChargePaymentMethod,
   ChargeType,
   CustomerUpdate,
+  DepositPaymentMethod,
   FulfillmentRecord,
   ItemCondition,
+  SecurityDeposit,
 } from "@/src/types/fulfillment";
 
 export function mapCharge(row: Tables<"booking_charges">): BookingCharge {
@@ -40,6 +42,18 @@ export function mapFulfillmentRecord(row: Tables<"booking_fulfillment_records">)
     conditionNotes: row.condition_notes ?? undefined,
     conditionPhotoPaths: row.condition_photo_paths ?? [],
     updatedAt: row.updated_at,
+  };
+}
+
+export function mapSecurityDeposit(row: Tables<"booking_security_deposits">): SecurityDeposit {
+  return {
+    bookingId: row.booking_id,
+    amount: Number(row.amount),
+    paymentMethod: row.payment_method as DepositPaymentMethod,
+    referenceNumber: row.reference_number ?? undefined,
+    paidAt: row.paid_at,
+    recordedBy: row.recorded_by ?? undefined,
+    recordedAt: row.recorded_at,
   };
 }
 

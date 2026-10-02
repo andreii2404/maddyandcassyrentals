@@ -27,6 +27,13 @@ import { createClient } from "@/src/lib/supabase/client";
 import { useToast } from "@/components/ui/ToastProvider";
 import StatusBadge from "@/components/status-badge/StatusBadge";
 import Modal from "@/components/ui/Modal";
+import CourierArrangementFields from "@/components/reservation/CourierArrangementFields";
+import {
+  EMPTY_COURIER_ARRANGEMENT,
+  formatCourier,
+  getCourierArrangementIssues,
+  type CourierArrangement,
+} from "@/src/lib/courierArrangement";
 import styles from "./CustomerBookingManagement.module.css";
 
 interface Props {
@@ -80,6 +87,7 @@ export default function CustomerBookingManagement({
   const [cityMunicipality, setCityMunicipality] = useState(booking.cityMunicipality ?? "");
   const [province, setProvince] = useState(booking.province ?? "");
   const [customerNotes, setCustomerNotes] = useState(booking.customerNotes ?? "");
+  const [courier, setCourier] = useState<CourierArrangement>(booking.courier ?? EMPTY_COURIER_ARRANGEMENT);
 
   const lockedProgress = useMemo(
     () => payments.some((payment) => ["submitted", "under_review", "verified"].includes(payment.status))
@@ -117,6 +125,11 @@ export default function CustomerBookingManagement({
       showToast("Enter the complete street/barangay, city or municipality, and province.", "warning");
       return;
     }
+    const [courierIssue] = fulfillmentMethod === "delivery" ? getCourierArrangementIssues(courier) : [];
+    if (courierIssue) {
+      showToast(courierIssue, "warning");
+      return;
+    }
     setSaving(true);
     try {
       await updateBookingDetailsAsCustomer(createClient(), booking.id, {
@@ -124,6 +137,7 @@ export default function CustomerBookingManagement({
         location: fulfillmentMethod === "delivery" ? location.trim() : undefined,
         cityMunicipality: fulfillmentMethod === "delivery" ? cityMunicipality.trim() : undefined,
         province: fulfillmentMethod === "delivery" ? province.trim() : undefined,
+        courier: fulfillmentMethod === "delivery" ? courier : undefined,
         customerNotes: customerNotes.trim(),
       });
       await onUpdated();
@@ -207,7 +221,15 @@ export default function CustomerBookingManagement({
         ) : null}
         <dl className={styles.statusFacts}>
           <div><dt>Reference number</dt><dd>{booking.bookingRef}</dd></div>
-          <div><dt>Fulfillment</dt><dd>{booking.fulfillmentMethod === "delivery" ? "Delivery" : "Pickup"}</dd></div>
+          <div>
+            <dt>Fulfillment</dt>
+            <dd>
+              {booking.fulfillmentMethod === "delivery" ? "Delivery" : "Pickup"}
+              {booking.fulfillmentMethod === "delivery" && booking.courier?.deliveryCourier
+                ? ` via ${formatCourier(booking.courier.deliveryCourier, booking.courier.deliveryCourierOther)}`
+                : ""}
+            </dd>
+          </div>
           <div><dt>Last updated</dt><dd>{formatDateTime(booking.updatedAt)}</dd></div>
         </dl>
       </section>
@@ -295,6 +317,14 @@ export default function CustomerBookingManagement({
                 <label><span>City / Municipality</span><input value={cityMunicipality} onChange={(event) => setCityMunicipality(event.target.value)} maxLength={120} required /></label>
                 <label><span>Province</span><input value={province} onChange={(event) => setProvince(event.target.value)} maxLength={120} required /></label>
               </div>
+            ) : null}
+            {fulfillmentMethod === "delivery" ? (
+              <CourierArrangementFields
+                idPrefix={`edit-${booking.id}`}
+                value={courier}
+                onChange={(patch) => setCourier((current) => ({ ...current, ...patch }))}
+                disabled={saving}
+              />
             ) : null}
             <label className={styles.notesField}><span>Booking notes</span><textarea value={customerNotes} onChange={(event) => setCustomerNotes(event.target.value)} maxLength={1000} rows={3} placeholder="Optional instructions or notes" /></label>
             <Button variant="primary" type="submit" className={styles.saveButton} loading={saving} loadingText="Saving…">Save changes</Button>

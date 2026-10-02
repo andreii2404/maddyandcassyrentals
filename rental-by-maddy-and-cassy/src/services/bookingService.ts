@@ -9,6 +9,17 @@ import type {
   RequirementsStatus,
 } from "@/src/types/booking";
 import type { RewardProgress } from "@/src/lib/promotions";
+import { toJson } from "@/src/lib/supabase/types";
+import {
+  courierArrangementFromRow,
+  courierErrorMessage,
+  EMPTY_COURIER_ARRANGEMENT,
+  getCourierArrangementIssues,
+  isMissingRpcError,
+  toCourierPayload,
+  withCourierNote,
+  type CourierArrangement,
+} from "@/src/lib/courierArrangement";
 
 // public.bookings no longer carries product_snapshot / customer_snapshot /
 // rental_start_date / rental_end_date / requirements_status directly — a
@@ -156,6 +167,8 @@ function assembleBooking(
     item?.unit_reservations?.find((reservation) => ACTIVE_RESERVATION_STATUSES.has(reservation.status))
       ?.inventory_unit_id ?? null;
 
+  const courier = fulfillment?.method === "delivery" ? courierArrangementFromRow(fulfillment) : undefined;
+
   return {
     id: row.id,
     bookingRef: row.booking_reference,
@@ -196,6 +209,7 @@ function assembleBooking(
     location: fulfillment?.address_line_1 ?? undefined,
     cityMunicipality: fulfillment?.city_municipality ?? undefined,
     province: fulfillment?.province ?? undefined,
+    courier: courier && (courier.deliveryCourier || courier.returnMethod) ? courier : undefined,
     customerNotes: row.customer_notes ?? undefined,
     adminNotes: row.admin_notes ?? undefined,
     productSnapshot: {
@@ -456,6 +470,8 @@ export interface CustomerBookingDetailsUpdate {
   cityMunicipality?: string;
   province?: string;
   customerNotes?: string;
+  /** Required for delivery; the customer books and pays this courier directly. */
+  courier?: CourierArrangement;
 }
 
 /** Updates only safe fulfillment details on an unpaid, pending booking owned by the current user. */
@@ -464,14 +480,37 @@ export async function updateBookingDetailsAsCustomer(
   bookingId: string,
   input: CustomerBookingDetailsUpdate,
 ): Promise<Booking> {
-  const { data, error } = await supabase.rpc("update_own_booking_details", {
+  const isDelivery = input.fulfillmentMethod === "delivery";
+  const courier = isDelivery ? (input.courier ?? EMPTY_COURIER_ARRANGEMENT) : EMPTY_COURIER_ARRANGEMENT;
+  if (isDelivery) {
+    const [courierIssue] = getCourierArrangementIssues(courier);
+    if (courierIssue) throw new Error(courierIssue);
+  }
+
+  const baseArgs = {
     p_booking_id: bookingId,
     p_fulfillment_method: input.fulfillmentMethod,
     p_location: input.location,
     p_city_municipality: input.cityMunicipality,
     p_province: input.province,
+  };
+
+  // The courier-aware RPC also clears the courier when switching to pickup.
+  let { data, error } = await supabase.rpc("update_own_booking_details_with_courier", {
+    ...baseArgs,
     p_customer_notes: input.customerNotes,
+    p_courier: toJson(toCourierPayload(courier)),
   });
+
+  if (isMissingRpcError(error)) {
+    // Database not migrated yet: keep the courier visible to admins in the
+    // booking notes instead of losing it.
+    console.warn("update_own_booking_details_with_courier is missing; saving the courier in customer notes.");
+    ({ data, error } = await supabase.rpc("update_own_booking_details", {
+      ...baseArgs,
+      p_customer_notes: isDelivery ? withCourierNote(input.customerNotes, courier) : input.customerNotes,
+    }));
+  }
 
   if (error || !data) {
     const message = error?.message ?? "";
@@ -481,6 +520,8 @@ export async function updateBookingDetailsAsCustomer(
     if (message.includes("INCOMPLETE_DELIVERY_ADDRESS")) {
       throw new Error("Enter the complete street/barangay, city or municipality, and province for delivery.");
     }
+    const courierMessage = courierErrorMessage(message);
+    if (courierMessage) throw new Error(courierMessage);
     throw new Error(message || "The booking details could not be updated.");
   }
 

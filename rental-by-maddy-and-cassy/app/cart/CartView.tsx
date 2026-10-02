@@ -211,7 +211,7 @@ export default function CartView({ products }: { products: Product[] }) {
               <strong>More savings at checkout</strong>
               <span>Birthday-month rentals can receive ₱100 off, and the 11th rental under the same account receives ₱200 off.</span>
             </div>
-            <p className={styles.summaryNote}>Final amounts update after you choose dates. Delivery courier fees are arranged separately and are not charged online.</p>
+            <p className={styles.summaryNote}>Final amounts update after you choose dates. For delivery, you book and pay your courier directly. Courier fees are separate from the rental fee and are not charged online.</p>
             {oversubscribedLine ? (
               <>
                 <span className={`${styles.primaryLink} ${styles.primaryLinkDisabled}`} aria-disabled="true">Start checkout</span>

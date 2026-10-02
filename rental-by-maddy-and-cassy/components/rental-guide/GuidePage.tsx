@@ -8,6 +8,24 @@ export interface GuideSection {
   paragraphs?: string[];
   bullets?: string[];
   subBullets?: string[];
+  /** Accented callout shown below the section body, e.g. a fee the renter must notice. */
+  highlight?: {
+    emphasis?: string;
+    text: string;
+  };
+}
+
+function GuideHighlight({ highlight }: { highlight?: GuideSection["highlight"] }) {
+  if (!highlight) return null;
+
+  return (
+    <div className={styles.highlightNote} role="note">
+      {highlight.emphasis ? (
+        <strong className={styles.highlightEmphasis}>{highlight.emphasis}</strong>
+      ) : null}
+      <span>{highlight.text}</span>
+    </div>
+  );
 }
 
 interface GuidePageProps {
@@ -119,6 +137,8 @@ export default function GuidePage({
                     </ul>
                   </div>
                 ) : null}
+
+                <GuideHighlight highlight={section.highlight} />
               </div>
             </li>
           ))}
@@ -155,6 +175,8 @@ export default function GuidePage({
                     </ul>
                   </div>
                 ) : null}
+
+                <GuideHighlight highlight={section.highlight} />
               </div>
             </li>
           ))}
@@ -192,6 +214,8 @@ export default function GuidePage({
                     </ul>
                   </div>
                 ) : null}
+
+                <GuideHighlight highlight={section.highlight} />
               </div>
             </li>
           ))}
@@ -246,6 +270,8 @@ export default function GuidePage({
                 </ul>
               </div>
             ) : null}
+
+            <GuideHighlight highlight={section.highlight} />
           </article>
         ))}
       </section>

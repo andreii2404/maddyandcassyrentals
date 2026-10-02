@@ -121,9 +121,9 @@ export function PriceBreakdown({ lines, pricing, fulfillmentMethod, pickupTime }
 
               <div>
                 <dt>
-                  Delivery charge
+                  Delivery / courier fee
                   {fulfillmentMethod === "delivery" ? (
-                    <small>Courier/Lalamove fee is arranged directly with you and paid separately</small>
+                    <small>You book your courier and pay the courier directly. It is separate from the rental fee.</small>
                   ) : null}
                 </dt>
                 <dd>
@@ -267,7 +267,7 @@ export function HandoverTimeDetails({
               <div>
                 <dt>
                   Transportation allowance
-                  <small>Minimum courier/Lalamove travel time</small>
+                  <small>Minimum courier travel time</small>
                 </dt>
                 <dd>+ {DELIVERY_TRANSPORT_ALLOWANCE_HOURS} hours</dd>
               </div>

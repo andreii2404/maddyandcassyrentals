@@ -3,12 +3,18 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/ToastProvider";
+import { formatPhp, SECURITY_DEPOSIT_AMOUNT } from "@/src/lib/rentalFulfillment";
 import { fromDateTimeLocalValue, recordReturn, toDateTimeLocalValue } from "@/src/services/fulfillmentService";
 import type { FulfillmentPanelContext } from "@/src/types/fulfillment";
 import { formatDateTime } from "./format";
 import styles from "./fulfillment.module.css";
 
-export default function ReturnPanel({ ctx }: { ctx: FulfillmentPanelContext }) {
+interface ReturnPanelProps {
+  ctx: FulfillmentPanelContext;
+  onOpenDeposit: () => void;
+}
+
+export default function ReturnPanel({ ctx, onOpenDeposit }: ReturnPanelProps) {
   const { showToast } = useToast();
   const record = ctx.data.record;
   const [atValue, setAtValue] = useState(() => toDateTimeLocalValue());
@@ -16,7 +22,9 @@ export default function ReturnPanel({ ctx }: { ctx: FulfillmentPanelContext }) {
   const [busy, setBusy] = useState(false);
 
   const returned = record?.returned === true;
-  const canRecord = ctx.status === "released" && record?.pickedUp === true && !returned;
+  const pickedUpAndOpen = ctx.status === "released" && record?.pickedUp === true && !returned;
+  const blockedByDeposit = pickedUpAndOpen && ctx.data.securityDeposit === null;
+  const canRecord = pickedUpAndOpen && !blockedByDeposit;
 
   async function save() {
     const at = fromDateTimeLocalValue(atValue);
@@ -53,7 +61,14 @@ export default function ReturnPanel({ ctx }: { ctx: FulfillmentPanelContext }) {
         </>
       ) : null}
 
-      {!returned && !canRecord ? (
+      {blockedByDeposit ? (
+        <p className={styles.noticeWarning}>
+          Record the {formatPhp(SECURITY_DEPOSIT_AMOUNT)} security deposit as paid before recording the return.{" "}
+          <Button variant="none" type="button" onClick={onOpenDeposit}>Open Security Deposit</Button>
+        </p>
+      ) : null}
+
+      {!returned && !canRecord && !blockedByDeposit ? (
         <p className={styles.notice}>
           {ctx.status === "returned"
             ? "This rental is completed."

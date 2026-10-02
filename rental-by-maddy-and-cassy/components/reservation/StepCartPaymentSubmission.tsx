@@ -274,7 +274,7 @@ export default function StepCartPaymentSubmission({
       </dl>
 
       <p className={styles.feeNote}>
-        Delivery courier costs are arranged separately with the business and are not part of this online payment.
+        For delivery, courier booking and payment are handled by the customer. Delivery fees are separate from the rental fee and are not part of this online payment.
       </p>
 
       <h3 className={sharedStyles.sectionHeading}>Proof of Payment</h3>

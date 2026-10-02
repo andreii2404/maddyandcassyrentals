@@ -1,3 +1,4 @@
+import { isValidReferenceNumber } from "@/src/lib/paymentValidation";
 import type { BookingStatus } from "@/src/types/booking";
 import type {
   ApprovalEmailStatus,
@@ -6,6 +7,7 @@ import type {
   ChargePaymentMethod,
   ChargeType,
   CustomerUpdate,
+  DepositPaymentMethod,
 } from "@/src/types/fulfillment";
 
 export const FULFILLMENT_STATUSES: BookingStatus[] = [
@@ -30,6 +32,32 @@ export const CHARGE_METHOD_LABELS: Record<ChargePaymentMethod, string> = {
   gcash: "GCash",
   other: "Other",
 };
+
+/** Refundable deposit collected after pickup. Mirrored in admin_record_security_deposit. */
+export const SECURITY_DEPOSIT_AMOUNT = 1000;
+
+export const DEPOSIT_METHOD_LABELS: Record<DepositPaymentMethod, string> = {
+  gcash: "GCash",
+  maya: "Maya",
+  bank_transfer: "Bank Transfer",
+  cash: "Cash",
+};
+
+export function isDepositPaymentMethod(value: unknown): value is DepositPaymentMethod {
+  return typeof value === "string" && Object.prototype.hasOwnProperty.call(DEPOSIT_METHOD_LABELS, value);
+}
+
+/** Digital payments need a reference number; cash does not. Returns a message or null. */
+export function validateSecurityDepositInput(input: { method: unknown; referenceNumber: string }): string | null {
+  if (!isDepositPaymentMethod(input.method)) return "Choose GCash, Maya, Bank Transfer or Cash.";
+  if (input.method === "cash") return null;
+  const reference = input.referenceNumber.trim();
+  if (!reference) return `Enter the ${DEPOSIT_METHOD_LABELS[input.method]} reference number.`;
+  if (!isValidReferenceNumber(reference)) {
+    return "The reference number must be 4 to 120 letters, numbers or dashes.";
+  }
+  return null;
+}
 
 export const MAX_CONDITION_PHOTOS = 6;
 export const MAX_CONDITION_PHOTO_BYTES = 5 * 1024 * 1024;
@@ -77,6 +105,7 @@ export function computeAmountOwed(input: {
 export interface CompletionInput {
   status: BookingStatus;
   pickedUp?: boolean;
+  securityDepositPaid: boolean;
   returned: boolean;
   itemCondition: "good" | "damaged" | null;
   charges: BookingCharge[];
@@ -92,6 +121,9 @@ export function getCompletionBlockers(input: CompletionInput): string[] {
 
   const blockers: string[] = [];
   if (input.pickedUp === false) blockers.push("Record the actual pickup in the Pickup tab.");
+  if (!input.securityDepositPaid) {
+    blockers.push(`Record the ${formatPhp(SECURITY_DEPOSIT_AMOUNT)} security deposit as paid in the Security Deposit tab.`);
+  }
   if (!input.returned) blockers.push("Record the item return in the Return tab.");
   if (!input.itemCondition) blockers.push("Record the item condition in the Item Condition tab.");
 

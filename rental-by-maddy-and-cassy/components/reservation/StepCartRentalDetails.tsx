@@ -37,8 +37,15 @@ import {
   ReturnScheduleDetails,
 } from "@/components/reservation/CheckoutSummaryDetails";
 import { formatPeso } from "@/src/lib/emailShell";
+import CourierArrangementFields from "@/components/reservation/CourierArrangementFields";
 import styles from "./StepRentalDetails.module.css";
 import { PHILIPPINE_PROVINCES } from "@/src/data/philippineLocations";
+import {
+  EMPTY_COURIER_ARRANGEMENT,
+  formatCourier,
+  formatReturnArrangement,
+  getCourierArrangementIssues,
+} from "@/src/lib/courierArrangement";
 
 interface StepCartRentalDetailsProps {
   lines: { product: Product; quantity: number; color?: string }[];
@@ -241,6 +248,7 @@ export default function StepCartRentalDetails({
       draft.customerLocation.trim().length > 0 &&
       draft.cityMunicipality.trim().length > 0 &&
       draft.province.trim().length > 0);
+  const courierIssues = isDelivery ? getCourierArrangementIssues(draft) : [];
 
   const unavailableLines = lines.filter((line) => {
     const availability = availabilityByProductId.get(line.product.id);
@@ -256,6 +264,7 @@ export default function StepCartRentalDetails({
     !!returnAt &&
     !!draft.fulfillmentMethod &&
     hasValidLocation &&
+    courierIssues.length === 0 &&
     allChecked &&
     unavailableLines.length === 0;
 
@@ -270,8 +279,9 @@ export default function StepCartRentalDetails({
   }
   if (!draft.fulfillmentMethod) {
     missingItems.push("Choose pickup or delivery.");
-  } else if (isDelivery && !hasValidLocation) {
-    missingItems.push("Add your complete delivery address.");
+  } else if (isDelivery) {
+    if (!hasValidLocation) missingItems.push("Add your complete delivery address.");
+    missingItems.push(...courierIssues);
   }
   if (pickupAt && !isPickupTimePast && draft.fulfillmentMethod && hasValidLocation) {
     if (availabilityError) {
@@ -337,6 +347,7 @@ export default function StepCartRentalDetails({
         customerLocation: "",
         cityMunicipality: "",
         province: "",
+        ...EMPTY_COURIER_ARRANGEMENT,
         pickupConvenienceFee: scheduleFee,
       });
     } else {
@@ -361,6 +372,10 @@ export default function StepCartRentalDetails({
     }
     if (isDelivery && (!draft.customerLocation.trim() || !draft.cityMunicipality.trim() || !draft.province.trim())) {
       setError("Please provide your complete delivery address, including city/municipality and province.");
+      return;
+    }
+    if (courierIssues.length > 0) {
+      setError(courierIssues[0]);
       return;
     }
 
@@ -512,7 +527,7 @@ export default function StepCartRentalDetails({
                 />
                 <span>
                   <strong>Delivery</strong>
-                  <span className={styles.fulfillmentDetail}>Fees arranged with you directly</span>
+                  <span className={styles.fulfillmentDetail}>You book &amp; pay the courier</span>
                 </span>
               </label>
             </fieldset>
@@ -526,11 +541,6 @@ export default function StepCartRentalDetails({
 
             {isDelivery ? (
               <div className={styles.deliveryFields}>
-                <p className={styles.fulfillmentNote}>
-                  Delivery is arranged manually by the business. Fees and courier arrangements are
-                  handled directly with you, outside this website.
-                </p>
-
                 <div className={formStyles.field}>
                   <label className={formStyles.label} htmlFor="cartCustomerLocation">
                     Delivery address<span className={styles.requiredMark}>*</span>
@@ -582,6 +592,8 @@ export default function StepCartRentalDetails({
                     </select>
                   </div>
                 </div>
+
+                <CourierArrangementFields idPrefix="cart" value={draft} onChange={onUpdate} />
               </div>
             ) : null}
           </section>
@@ -622,6 +634,18 @@ export default function StepCartRentalDetails({
                       : "Not selected yet"}
                 </dd>
               </div>
+              {isDelivery ? (
+                <>
+                  <div>
+                    <dt>Delivery courier</dt>
+                    <dd>{formatCourier(draft.deliveryCourier, draft.deliveryCourierOther) || "Not selected yet"}</dd>
+                  </div>
+                  <div>
+                    <dt>Return</dt>
+                    <dd>{formatReturnArrangement(draft) || "Not selected yet"}</dd>
+                  </div>
+                </>
+              ) : null}
             </dl>
 
             <HandoverTimeDetails
@@ -648,6 +672,11 @@ export default function StepCartRentalDetails({
                 {pricing.rentalDays > 0 ? formatPeso(pricing.finalAmount) : "Choose dates"}
               </strong>
             </div>
+            {isDelivery ? (
+              <p className={styles.courierTotalNote}>
+                Courier fees are not included. You pay your courier directly.
+              </p>
+            ) : null}
 
             {!canContinue && missingItems.length > 0 ? (
               <div className={styles.missingNotice} role="status">

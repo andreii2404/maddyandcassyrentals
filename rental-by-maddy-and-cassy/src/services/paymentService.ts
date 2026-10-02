@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Tables } from "@/src/lib/supabase/database.types";
 import type { BookingReceipt, PaymentOption, PaymentRecord, PaymentReviewerName } from "@/src/types/payment";
 import type { BalancePaymentPreference } from "@/src/types/booking";
+import type { CourierArrangement } from "@/src/lib/courierArrangement";
 
 export type { PaymentOption };
 
@@ -23,6 +24,8 @@ export interface ReservationResumeState {
     location: string | null;
     cityMunicipality: string | null;
     province: string | null;
+    /** Delivery bookings only; null for pickup and bookings saved before the courier was recorded. */
+    courier?: CourierArrangement | null;
     totalAmount: number;
     customerSnapshot: {
       fullName: string;

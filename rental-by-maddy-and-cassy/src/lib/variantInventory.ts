@@ -16,6 +16,24 @@ export function findVariantAvailability(
 }
 
 /**
+ * Resolves a color requested through the reservation URL to one of the
+ * product's own color options (matched ignoring case and surrounding
+ * whitespace), so a hand-edited URL can never attach an arbitrary color to a
+ * booking. A single-color product always reserves its only color.
+ */
+export function resolveRequestedColor(
+  product: Pick<Product, "colorOptions">,
+  requested?: string | null,
+): string | undefined {
+  const normalized = normalizeVariant(requested);
+  const match = normalized
+    ? product.colorOptions.find((option) => normalizeVariant(option) === normalized)
+    : undefined;
+  if (match) return match;
+  return product.colorOptions.length === 1 ? product.colorOptions[0] : undefined;
+}
+
+/**
  * Maximum quantity before dates are chosen. Variant products are always
  * limited by that color's active physical units; non-variant products retain
  * the existing product-level limit.

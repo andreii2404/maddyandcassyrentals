@@ -1673,6 +1673,23 @@
   }
 }
 
+/* Delivery only: the customer-booked courier, under the rental facts row. */
+.detailBody .detailGrid.courierFacts {
+  margin-top: 0.6rem;
+}
+
+.detailGrid > .courierNote {
+  grid-column: span 2;
+  border: 1px solid var(--color-dusty-rose);
+  background: var(--color-background-soft);
+}
+
+@media (max-width: 560px) {
+  .detailGrid > .courierNote {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 560px) {
   .cancellationRequestHeader { flex-direction: column; }
   .cancellationDecisionButtons { justify-content: stretch; }

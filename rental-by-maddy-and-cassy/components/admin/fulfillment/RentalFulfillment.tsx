@@ -10,12 +10,14 @@ import ItemConditionPanel from "./ItemConditionPanel";
 import PickupPanel from "./PickupPanel";
 import ReturnPanel from "./ReturnPanel";
 import ChargesPaymentsPanel from "./ChargesPaymentsPanel";
+import SecurityDepositPanel from "./SecurityDepositPanel";
 import styles from "./fulfillment.module.css";
 
-type TabId = "pickup" | "return" | "condition" | "charges" | "complete";
+type TabId = "pickup" | "deposit" | "return" | "condition" | "charges" | "complete";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "pickup", label: "Pickup" },
+  { id: "deposit", label: "Security Deposit" },
   { id: "return", label: "Return" },
   { id: "condition", label: "Item Condition" },
   { id: "charges", label: "Charges & Payments" },
@@ -25,6 +27,7 @@ const TABS: { id: TabId; label: string }[] = [
 function firstIncompleteTab(ctx: FulfillmentPanelContext): TabId {
   if (ctx.status === "returned") return "complete";
   if (!ctx.data.record?.pickedUp) return "pickup";
+  if (!ctx.data.securityDeposit) return "deposit";
   if (!ctx.data.record.returned) return "return";
   if (!ctx.data.record.itemCondition) return "condition";
   return "complete";
@@ -39,6 +42,7 @@ export default function RentalFulfillment({ ctx }: { ctx: FulfillmentPanelContex
   const blockers = getCompletionBlockers({
     status: ctx.status,
     pickedUp: ctx.data.record?.pickedUp ?? false,
+    securityDepositPaid: ctx.data.securityDeposit !== null,
     returned: ctx.data.record?.returned ?? false,
     itemCondition: ctx.data.record?.itemCondition ?? null,
     charges: ctx.data.charges,
@@ -66,6 +70,7 @@ export default function RentalFulfillment({ ctx }: { ctx: FulfillmentPanelContex
 
   const done: Record<TabId, boolean> = {
     pickup: ctx.data.record?.pickedUp === true,
+    deposit: ctx.data.securityDeposit !== null,
     return: ctx.data.record?.returned === true,
     condition: ctx.data.record?.itemCondition != null,
     charges: owed.totalOwed === 0,
@@ -97,8 +102,11 @@ export default function RentalFulfillment({ ctx }: { ctx: FulfillmentPanelContex
       <div id="fulfillment-panel-pickup" role="tabpanel" aria-labelledby="fulfillment-tab-pickup" hidden={activeTab !== "pickup"}>
         <PickupPanel ctx={ctx} onOpenCharges={() => setActiveTab("charges")} />
       </div>
+      <div id="fulfillment-panel-deposit" role="tabpanel" aria-labelledby="fulfillment-tab-deposit" hidden={activeTab !== "deposit"}>
+        <SecurityDepositPanel ctx={ctx} />
+      </div>
       <div id="fulfillment-panel-return" role="tabpanel" aria-labelledby="fulfillment-tab-return" hidden={activeTab !== "return"}>
-        <ReturnPanel ctx={ctx} />
+        <ReturnPanel ctx={ctx} onOpenDeposit={() => setActiveTab("deposit")} />
       </div>
       <div id="fulfillment-panel-condition" role="tabpanel" aria-labelledby="fulfillment-tab-condition" hidden={activeTab !== "condition"}>
         <ItemConditionPanel ctx={ctx} onOpenCharges={() => setActiveTab("charges")} />
@@ -109,7 +117,7 @@ export default function RentalFulfillment({ ctx }: { ctx: FulfillmentPanelContex
       <section id="fulfillment-panel-complete" role="tabpanel" aria-labelledby="fulfillment-tab-complete" hidden={activeTab !== "complete"} className={styles.panel}>
         <div className={styles.panelHeader}>
           <h2>Complete Rental</h2>
-          <p>Confirm the rental after the return, item condition and payment details are recorded.</p>
+          <p>Confirm the rental after the security deposit, return, item condition and payment details are recorded.</p>
         </div>
         {ctx.status === "returned" ? (
           <p className={styles.noticeSuccess}>This rental is complete.</p>
@@ -121,6 +129,7 @@ export default function RentalFulfillment({ ctx }: { ctx: FulfillmentPanelContex
             </ul>
             <div className={styles.actions}>
               {blockers.some((blocker) => blocker.includes("Pickup")) ? <Button variant="secondary" type="button" onClick={() => setActiveTab("pickup")}>Open Pickup</Button> : null}
+              {blockers.some((blocker) => blocker.includes("security deposit")) ? <Button variant="secondary" type="button" onClick={() => setActiveTab("deposit")}>Open Security Deposit</Button> : null}
               {blockers.some((blocker) => blocker.includes("return")) ? <Button variant="secondary" type="button" onClick={() => setActiveTab("return")}>Open Return</Button> : null}
               {blockers.some((blocker) => blocker.includes("condition")) ? <Button variant="secondary" type="button" onClick={() => setActiveTab("condition")}>Open Item Condition</Button> : null}
               {blockers.some((blocker) => /charge|balance/i.test(blocker)) ? <Button variant="secondary" type="button" onClick={() => setActiveTab("charges")}>Open Charges &amp; Payments</Button> : null}

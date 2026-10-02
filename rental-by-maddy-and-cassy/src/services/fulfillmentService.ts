@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { mapCharge, mapCustomerUpdate, mapFulfillmentRecord } from "@/src/lib/fulfillmentMappers";
+import { mapCharge, mapCustomerUpdate, mapFulfillmentRecord, mapSecurityDeposit } from "@/src/lib/fulfillmentMappers";
 import { validateConditionPhoto } from "@/src/lib/rentalFulfillment";
 import type { Database } from "@/src/lib/supabase/database.types";
 import { createSignedUrl, STORAGE_BUCKETS } from "@/src/lib/supabase/storage";
@@ -8,6 +8,7 @@ import {
   type ApprovalEmailStatus,
   type ChargePaymentMethod,
   type ChargeType,
+  type DepositPaymentMethod,
   type FulfillmentData,
   type ItemCondition,
 } from "@/src/types/fulfillment";
@@ -54,10 +55,20 @@ export async function getFulfillmentData(
   ]);
   if (recordResult.error || chargesResult.error || updatesResult.error) return EMPTY_FULFILLMENT_DATA;
 
+  // Read on its own so a missing deposit table leaves the rest of fulfillment usable. The deposit
+  // then counts as unpaid, which keeps the return and completion blocked.
+  const depositResult = await supabase
+    .from("booking_security_deposits")
+    .select("*")
+    .eq("booking_id", bookingId)
+    .maybeSingle();
+  const securityDeposit = !depositResult.error && depositResult.data ? mapSecurityDeposit(depositResult.data) : null;
+
   const charges = (chargesResult.data ?? []).map(mapCharge);
   const updates = (updatesResult.data ?? []).map(mapCustomerUpdate);
 
   const adminIds = new Set<string>();
+  if (securityDeposit?.recordedBy) adminIds.add(securityDeposit.recordedBy);
   for (const charge of charges) {
     for (const id of [charge.createdBy, charge.paidRecordedBy, charge.voidedBy]) if (id) adminIds.add(id);
   }
@@ -84,6 +95,8 @@ export async function getFulfillmentData(
       completionEmailTo: email.completion_email_to ?? undefined,
     },
     record: recordResult.data ? mapFulfillmentRecord(recordResult.data) : null,
+    securityDepositAvailable: !depositResult.error,
+    securityDeposit,
     charges,
     updates,
     adminNames,
@@ -124,6 +137,18 @@ export async function recordPickup(bookingId: string, atIso: string, notes: stri
 
 export async function recordReturn(bookingId: string, atIso: string, notes: string): Promise<void> {
   await callApi(`${base(bookingId)}/fulfillment`, "POST", { action: "return", at: atIso, notes });
+}
+
+export async function recordSecurityDeposit(
+  bookingId: string,
+  input: { method: DepositPaymentMethod; referenceNumber: string; paidAt: string },
+): Promise<void> {
+  await callApi(
+    `${base(bookingId)}/security-deposit`,
+    "POST",
+    input,
+    "The security deposit could not be saved. Please try again.",
+  );
 }
 
 export async function saveItemCondition(

@@ -1,5 +1,6 @@
 import type { FulfillmentMethod } from "@/src/types/booking";
 import type { PaymentOption } from "@/src/types/payment";
+import { EMPTY_COURIER_ARRANGEMENT, type CourierArrangement } from "@/src/lib/courierArrangement";
 
 export interface EmergencyContactDraft {
   fullName: string;
@@ -66,7 +67,12 @@ export interface AgreementDraft {
   typedFullName: string;
 }
 
-export interface ReservationDraft {
+/**
+ * The courier fields (deliveryCourier, returnMethod, ...) are only required
+ * (and only sent) when fulfillmentMethod is "delivery"; the customer books and
+ * pays the courier directly, outside the rental total.
+ */
+export interface ReservationDraft extends CourierArrangement {
   /** Number of physical units of the selected product to reserve. */
   quantity: number;
   startDate: Date | null;
@@ -103,6 +109,7 @@ export function createEmptyDraft(): ReservationDraft {
     customerLocation: "",
     cityMunicipality: "",
     province: "",
+    ...EMPTY_COURIER_ARRANGEMENT,
     paymentOption: "deposit_50",
     customerInfo: {
       fullName: "",

@@ -4,10 +4,13 @@ import {
   activeCharges,
   buildEmailHistory,
   computeAmountOwed,
+  DEPOSIT_METHOD_LABELS,
   getCompletionBlockers,
   getFollowUpItems,
   isFulfillmentMode,
+  SECURITY_DEPOSIT_AMOUNT,
   validateConditionPhoto,
+  validateSecurityDepositInput,
 } from "../src/lib/rentalFulfillment";
 import type { BookingCharge } from "../src/types/fulfillment";
 
@@ -67,6 +70,7 @@ test("overpayment never produces a negative balance", () => {
 
 const readyToComplete = {
   status: "released" as const,
+  securityDepositPaid: true,
   returned: true,
   itemCondition: "good" as const,
   charges: [],
@@ -82,17 +86,58 @@ test("a rental that meets every rule has no completion blockers", () => {
 test("each unmet rule adds a plain blocker message", () => {
   const blockers = getCompletionBlockers({
     ...readyToComplete,
+    securityDepositPaid: false,
     returned: false,
     itemCondition: null,
     charges: [charge({ amount: 500 })],
     verifiedPaid: 2000,
     pendingPaymentReviews: 2,
   });
-  assert.equal(blockers.length, 5);
+  assert.equal(blockers.length, 6);
+  assert.match(blockers.join(" "), /PHP 1,000 security deposit/);
   assert.match(blockers.join(" "), /return/i);
   assert.match(blockers.join(" "), /condition/i);
   assert.match(blockers.join(" "), /PHP 500/);
   assert.match(blockers.join(" "), /2 payment/);
+});
+
+test("an unpaid security deposit alone blocks completion", () => {
+  const blockers = getCompletionBlockers({ ...readyToComplete, securityDepositPaid: false });
+  assert.equal(blockers.length, 1);
+  assert.match(blockers[0], /security deposit/);
+  // The Complete Rental tab routes each blocker to its tab by keyword; this one must not be
+  // mistaken for the Pickup, Return, Item Condition or Charges blockers.
+  assert.doesNotMatch(blockers[0], /Pickup|return|condition|charge|balance/i);
+});
+
+test("the security deposit is a fixed PHP 1,000 with four payment methods", () => {
+  assert.equal(SECURITY_DEPOSIT_AMOUNT, 1000);
+  assert.deepEqual(DEPOSIT_METHOD_LABELS, {
+    gcash: "GCash",
+    maya: "Maya",
+    bank_transfer: "Bank Transfer",
+    cash: "Cash",
+  });
+});
+
+test("digital deposit payments need a valid reference number; cash does not", () => {
+  for (const method of ["gcash", "maya", "bank_transfer"]) {
+    assert.match(validateSecurityDepositInput({ method, referenceNumber: "" }) ?? "", /reference number/i);
+    assert.match(validateSecurityDepositInput({ method, referenceNumber: "   " }) ?? "", /reference number/i);
+    assert.ok(validateSecurityDepositInput({ method, referenceNumber: "abc" }), "too short");
+    assert.ok(validateSecurityDepositInput({ method, referenceNumber: "12 34 56" }), "spaces are not allowed");
+    assert.ok(validateSecurityDepositInput({ method, referenceNumber: "x".repeat(121) }), "too long");
+    assert.equal(validateSecurityDepositInput({ method, referenceNumber: "1234567890123" }), null);
+    assert.equal(validateSecurityDepositInput({ method, referenceNumber: "BT-2026-0042" }), null);
+  }
+  assert.equal(validateSecurityDepositInput({ method: "cash", referenceNumber: "" }), null);
+  assert.equal(validateSecurityDepositInput({ method: "cash", referenceNumber: "ignored" }), null);
+});
+
+test("unknown deposit payment methods are rejected", () => {
+  for (const method of ["other", "paypal", "", null, undefined, 1, "toString", "constructor"]) {
+    assert.match(validateSecurityDepositInput({ method, referenceNumber: "1234567890" }) ?? "", /GCash, Maya/);
+  }
 });
 
 test("a rental that is not released cannot be completed", () => {

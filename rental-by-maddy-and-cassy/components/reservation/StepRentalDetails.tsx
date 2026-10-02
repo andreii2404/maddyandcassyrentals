@@ -32,9 +32,16 @@ import formStyles from "@/components/ui/Form.module.css";
 import { Button } from "@/components/ui/Button";
 import ReservationFooter from "@/components/reservation/ReservationFooter";
 import RentalScheduleNoticeModal from "@/components/reservation/RentalScheduleNoticeModal";
+import CourierArrangementFields from "@/components/reservation/CourierArrangementFields";
 import styles from "./StepRentalDetails.module.css";
 import { PHILIPPINE_PROVINCES } from "@/src/data/philippineLocations";
 import { getVariantQuantityLimit } from "@/src/lib/variantInventory";
+import {
+  EMPTY_COURIER_ARRANGEMENT,
+  formatCourier,
+  formatReturnArrangement,
+  getCourierArrangementIssues,
+} from "@/src/lib/courierArrangement";
 
 interface StepRentalDetailsProps {
   product: Product;
@@ -189,6 +196,7 @@ export default function StepRentalDetails({
       draft.customerLocation.trim().length > 0 &&
       draft.cityMunicipality.trim().length > 0 &&
       draft.province.trim().length > 0);
+  const courierIssues = isDelivery ? getCourierArrangementIssues(draft) : [];
   const canContinue =
     !!draft.startDate &&
     !!pickupAt &&
@@ -196,6 +204,7 @@ export default function StepRentalDetails({
     !!returnAt &&
     !!draft.fulfillmentMethod &&
     hasValidLocation &&
+    courierIssues.length === 0 &&
     draft.quantity >= 1 &&
     !!timeAvailability &&
     draft.quantity <= timeAvailability.availableUnits;
@@ -211,8 +220,9 @@ export default function StepRentalDetails({
   }
   if (!draft.fulfillmentMethod) {
     missingItems.push("Choose pickup or delivery.");
-  } else if (isDelivery && !hasValidLocation) {
-    missingItems.push("Add your complete delivery address.");
+  } else if (isDelivery) {
+    if (!hasValidLocation) missingItems.push("Add your complete delivery address.");
+    missingItems.push(...courierIssues);
   }
   if (pickupAt && !isPickupTimePast && draft.fulfillmentMethod && hasValidLocation) {
     if (availabilityError) {
@@ -272,14 +282,15 @@ export default function StepRentalDetails({
       ? PICKUP_CONVENIENCE_FEE
       : 0;
     if (method === "pickup") {
-      // Pickup never carries a delivery address -- clear any address the
-      // customer may have typed while "delivery" was selected so a
+      // Pickup never carries a delivery address or courier -- clear anything
+      // the customer may have entered while "delivery" was selected so a
       // subsequent switch back to delivery doesn't reuse stale values.
       onUpdate({
         fulfillmentMethod: method,
         customerLocation: "",
         cityMunicipality: "",
         province: "",
+        ...EMPTY_COURIER_ARRANGEMENT,
         pickupConvenienceFee: scheduleFee,
       });
     } else {
@@ -307,6 +318,10 @@ export default function StepRentalDetails({
     }
     if (isDelivery && (!draft.customerLocation.trim() || !draft.cityMunicipality.trim() || !draft.province.trim())) {
       setError("Please provide your complete delivery address, including city/municipality and province.");
+      return;
+    }
+    if (courierIssues.length > 0) {
+      setError(courierIssues[0]);
       return;
     }
 
@@ -471,7 +486,7 @@ export default function StepRentalDetails({
                 />
                 <span>
                   <strong>Delivery</strong>
-                  <span className={styles.fulfillmentDetail}>Fees arranged with you directly</span>
+                  <span className={styles.fulfillmentDetail}>You book &amp; pay the courier</span>
                 </span>
               </label>
             </fieldset>
@@ -485,11 +500,6 @@ export default function StepRentalDetails({
 
             {isDelivery ? (
               <div className={styles.deliveryFields}>
-                <p className={styles.fulfillmentNote}>
-                  Delivery is arranged manually by the business. Fees and courier arrangements are
-                  handled directly with you, outside this website.
-                </p>
-
                 <div className={formStyles.field}>
                   <label className={formStyles.label} htmlFor="customerLocation">
                     Delivery address<span className={styles.requiredMark}>*</span>
@@ -541,6 +551,8 @@ export default function StepRentalDetails({
                     </select>
                   </div>
                 </div>
+
+                <CourierArrangementFields idPrefix="reserve" value={draft} onChange={onUpdate} />
               </div>
             ) : null}
           </section>
@@ -600,6 +612,18 @@ export default function StepRentalDetails({
                       : "Not selected yet"}
                 </dd>
               </div>
+              {isDelivery ? (
+                <>
+                  <div>
+                    <dt>Delivery courier</dt>
+                    <dd>{formatCourier(draft.deliveryCourier, draft.deliveryCourierOther) || "Not selected yet"}</dd>
+                  </div>
+                  <div>
+                    <dt>Return</dt>
+                    <dd>{formatReturnArrangement(draft) || "Not selected yet"}</dd>
+                  </div>
+                </>
+              ) : null}
             </dl>
 
             <div className={styles.summaryTotal}>
@@ -608,6 +632,11 @@ export default function StepRentalDetails({
                 {pricing.rentalDays > 0 ? `${product.currency}${pricing.finalAmount.toLocaleString()}` : "Choose dates"}
               </strong>
             </div>
+            {isDelivery ? (
+              <p className={styles.courierTotalNote}>
+                Courier fees are not included. You pay your courier directly.
+              </p>
+            ) : null}
 
             {!canContinue && missingItems.length > 0 ? (
               <div className={styles.missingNotice} role="status">

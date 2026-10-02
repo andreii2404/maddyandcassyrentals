@@ -23,6 +23,7 @@ import PhaseHandoff from "@/components/reservation/PhaseHandoff";
 import { useToast } from "@/components/ui/ToastProvider";
 import { friendlyMessage } from "@/src/lib/friendlyMessage";
 import { createEmptyDraft, formatCustomerLocation, getDayCount, parseCustomerAddress, type ReservationDraft } from "@/src/types/reservationDraft";
+import { EMPTY_COURIER_ARRANGEMENT } from "@/src/lib/courierArrangement";
 import {
   createBookingReservation,
   submitBookingDocuments,
@@ -48,7 +49,11 @@ import { formatManilaDateTime, formatManilaPickupTime, manilaTimeInputValue } fr
 import { getDraftRentalSchedule } from "@/src/lib/rentalSchedule";
 import { notifyGuestBookingCreated } from "@/src/lib/guestBookingEvents";
 import styles from "./reserve.module.css";
-import { clampQuantityToInventory, getVariantQuantityLimit } from "@/src/lib/variantInventory";
+import {
+  clampQuantityToInventory,
+  getVariantQuantityLimit,
+  resolveRequestedColor,
+} from "@/src/lib/variantInventory";
 import {
   shouldShowPaymentHandoff,
   shouldShowPaymentSubmission,
@@ -67,9 +72,17 @@ interface ReserveFlowClientProps {
   product: Product;
   units: UnitCounts;
   returnQuery?: string;
+  /** Raw ?color= value from the request; validated before it is used. */
+  requestedColor?: string;
 }
 
-function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & { isGuest: boolean }) {
+function ReserveFlowInner({
+  product,
+  units,
+  returnQuery,
+  requestedColor,
+  isGuest,
+}: ReserveFlowClientProps & { isGuest: boolean }) {
   const { user, profile } = useAuth();
   const { showToast } = useToast();
   const { items: cartItems, removeItem: removeCartItem } = useCart();
@@ -109,13 +122,14 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
   const progressKey = reservationProgressKey(user!.id, product.id);
 
   // The color variant chosen on the product page travels through the ?color=
-  // query param. It is validated against the product's own color options so a
-  // hand-edited URL can never attach an arbitrary color to the booking.
-  const [bookingColor] = useState(() => {
-    if (typeof window === "undefined") return undefined;
-    const requested = new URLSearchParams(window.location.search).get("color") ?? "";
-    return product.colorOptions.includes(requested) ? requested : undefined;
-  });
+  // query param, read on the server so it is correct on the very first render.
+  // (window.location still holds the product page URL while a client-side
+  // router.push renders this page, which used to drop the color.) It is
+  // validated against the product's own color options so a hand-edited URL
+  // can never attach an arbitrary color to the booking.
+  const bookingColor = resolveRequestedColor(product, requestedColor);
+  // Resume links carry only ?bookingId=; that booking already stores its color.
+  const resumingBooking = new URLSearchParams(returnQuery ?? "").has("bookingId");
 
   useEffect(() => {
     let rawProgress: string | null = null;
@@ -154,6 +168,9 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
 
   useEffect(() => {
     if (!progressHydrated) return;
+    // Without a resolved color (a resumed booking), a variant product has no
+    // per-color limit to apply; the booking's own quantity stays as created.
+    if (product.colorOptions.length > 0 && !bookingColor) return;
     const currentLimit = Math.min(getVariantQuantityLimit(product, bookingColor), units.totalUnits);
     const safeQuantity = clampQuantityToInventory(draft.quantity, currentLimit);
     if (safeQuantity === draft.quantity) return;
@@ -322,6 +339,9 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
         customerLocation: booking.location ?? current.customerLocation,
         cityMunicipality: booking.cityMunicipality ?? "",
         province: booking.province ?? "",
+        // A delivery booking saved before the courier was recorded keeps
+        // whatever the customer chose in this browser.
+        ...(booking.fulfillmentMethod === "delivery" ? booking.courier ?? {} : EMPTY_COURIER_ARRANGEMENT),
         customerInfo: {
           ...current.customerInfo,
           ...booking.customerSnapshot,
@@ -523,7 +543,7 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
     finalAmount: agreementBooking?.totalAmount ?? pricing.finalAmount,
   };
 
-  if (product.colorOptions.length > 0 && !bookingColor) {
+  if (product.colorOptions.length > 0 && !bookingColor && !resumingBooking && !bookingId) {
     return (
       <section className={styles.checkoutGate}>
         <h1>Choose an available color first.</h1>
@@ -771,8 +791,9 @@ export default function ReserveFlowClient(props: ReserveFlowClientProps) {
     return <div className={styles.gateLoading}><Spinner size={28} label="Preparing checkout" /></div>;
   }
 
+  const reservePath = `/catalog/${props.product.id}/reserve${props.returnQuery ? `?${props.returnQuery}` : ""}`;
+
   if (!user) {
-    const reservePath = `/catalog/${props.product.id}/reserve${props.returnQuery ? `?${props.returnQuery}` : ""}`;
     const isReturningBooking = new URLSearchParams(props.returnQuery ?? "").has("bookingId");
 
     if (isReturningBooking) {
@@ -855,7 +876,7 @@ export default function ReserveFlowClient(props: ReserveFlowClientProps) {
       <section className={styles.checkoutGate}>
         <h1>Verify your email to continue.</h1>
         <p>Your customer account needs a verified email before a payment or document submission can begin.</p>
-        <Link href={`/verify-email?redirect=${encodeURIComponent(`/catalog/${props.product.id}/reserve`)}`}>Verify Email</Link>
+        <Link href={`/verify-email?redirect=${encodeURIComponent(reservePath)}`}>Verify Email</Link>
       </section>
     );
   }

@@ -25,6 +25,7 @@ import PhaseHandoff from "@/components/reservation/PhaseHandoff";
 import { useToast } from "@/components/ui/ToastProvider";
 import { friendlyMessage } from "@/src/lib/friendlyMessage";
 import { createEmptyDraft, formatCustomerLocation, getDayCount, parseCustomerAddress, type ReservationDraft } from "@/src/types/reservationDraft";
+import { EMPTY_COURIER_ARRANGEMENT } from "@/src/lib/courierArrangement";
 import {
   createMultiItemBookingReservation,
   submitBookingDocuments,
@@ -307,6 +308,9 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
         customerLocation: booking.location ?? current.customerLocation,
         cityMunicipality: booking.cityMunicipality ?? "",
         province: booking.province ?? "",
+        // A delivery booking saved before the courier was recorded keeps
+        // whatever the customer chose in this browser.
+        ...(booking.fulfillmentMethod === "delivery" ? booking.courier ?? {} : EMPTY_COURIER_ARRANGEMENT),
         customerInfo: {
           ...current.customerInfo,
           ...booking.customerSnapshot,

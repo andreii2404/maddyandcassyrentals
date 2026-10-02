@@ -613,6 +613,8 @@ export type Database = {
           contact_number: string | null
           country_code: string
           created_at: string
+          delivery_courier: string | null
+          delivery_courier_other: string | null
           delivery_fee_snapshot: number
           pickup_convenience_fee_snapshot: number
           delivery_notes: string | null
@@ -620,6 +622,9 @@ export type Database = {
           postal_code: string | null
           province: string | null
           recipient_name: string | null
+          return_courier: string | null
+          return_courier_other: string | null
+          return_method: string | null
           scheduled_at: string | null
           updated_at: string
         }
@@ -633,6 +638,8 @@ export type Database = {
           contact_number?: string | null
           country_code?: string
           created_at?: string
+          delivery_courier?: string | null
+          delivery_courier_other?: string | null
           delivery_fee_snapshot?: number
           pickup_convenience_fee_snapshot?: number
           delivery_notes?: string | null
@@ -640,6 +647,9 @@ export type Database = {
           postal_code?: string | null
           province?: string | null
           recipient_name?: string | null
+          return_courier?: string | null
+          return_courier_other?: string | null
+          return_method?: string | null
           scheduled_at?: string | null
           updated_at?: string
         }
@@ -653,6 +663,8 @@ export type Database = {
           contact_number?: string | null
           country_code?: string
           created_at?: string
+          delivery_courier?: string | null
+          delivery_courier_other?: string | null
           delivery_fee_snapshot?: number
           pickup_convenience_fee_snapshot?: number
           delivery_notes?: string | null
@@ -660,6 +672,9 @@ export type Database = {
           postal_code?: string | null
           province?: string | null
           recipient_name?: string | null
+          return_courier?: string | null
+          return_courier_other?: string | null
+          return_method?: string | null
           scheduled_at?: string | null
           updated_at?: string
         }
@@ -908,6 +923,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "booking_fulfillment_records_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_security_deposits: {
+        Row: {
+          amount: number
+          booking_id: string
+          paid_at: string
+          payment_method: string
+          recorded_at: string
+          recorded_by: string | null
+          reference_number: string | null
+        }
+        Insert: {
+          amount: number
+          booking_id: string
+          paid_at: string
+          payment_method: string
+          recorded_at?: string
+          recorded_by?: string | null
+          reference_number?: string | null
+        }
+        Update: {
+          amount?: number
+          booking_id?: string
+          paid_at?: string
+          payment_method?: string
+          recorded_at?: string
+          recorded_by?: string | null
+          reference_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_security_deposits_booking_id_fkey"
             columns: ["booking_id"]
             isOneToOne: true
             referencedRelation: "bookings"
@@ -1604,10 +1657,6 @@ export type Database = {
       }
       chat_messages: {
         Row: {
-          attachment_mime_type: string | null
-          attachment_name: string | null
-          attachment_path: string | null
-          attachment_size_bytes: number | null
           body: string
           client_message_id: string
           conversation_id: string
@@ -1619,10 +1668,6 @@ export type Database = {
           sender_role: string
         }
         Insert: {
-          attachment_mime_type?: string | null
-          attachment_name?: string | null
-          attachment_path?: string | null
-          attachment_size_bytes?: number | null
           body: string
           client_message_id?: string
           conversation_id: string
@@ -1634,10 +1679,6 @@ export type Database = {
           sender_role: string
         }
         Update: {
-          attachment_mime_type?: string | null
-          attachment_name?: string | null
-          attachment_path?: string | null
-          attachment_size_bytes?: number | null
           body?: string
           client_message_id?: string
           conversation_id?: string
@@ -2471,6 +2512,16 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_record_security_deposit: {
+        Args: { p_booking_id: string; p_method: string; p_paid_at: string; p_reference_number: string }
+        Returns: Database["public"]["Tables"]["booking_security_deposits"]["Row"]
+        SetofOptions: {
+          from: "*"
+          to: "booking_security_deposits"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_save_item_condition: {
         Args: { p_booking_id: string; p_condition: string; p_notes?: string; p_photo_paths?: string[] }
         Returns: Database["public"]["Tables"]["booking_fulfillment_records"]["Row"]
@@ -2548,10 +2599,6 @@ export type Database = {
       list_chat_messages: {
         Args: { p_conversation_id: string; p_limit?: number }
         Returns: {
-          attachment_mime_type: string | null
-          attachment_name: string | null
-          attachment_path: string | null
-          attachment_size_bytes: number | null
           body: string
           conversation_id: string
           created_at: string
@@ -2566,30 +2613,6 @@ export type Database = {
       mark_chat_conversation_read: {
         Args: { p_conversation_id: string }
         Returns: undefined
-      }
-      send_chat_attachment_message: {
-        Args: {
-          p_attachment_name: string
-          p_attachment_path: string
-          p_body: string
-          p_client_message_id: string
-          p_conversation_id: string
-        }
-        Returns: {
-          attachment_mime_type: string | null
-          attachment_name: string | null
-          attachment_path: string | null
-          attachment_size_bytes: number | null
-          body: string
-          conversation_id: string
-          created_at: string
-          edited_at: string | null
-          id: string
-          message_type: string
-          sender_id: string | null
-          sender_name: string
-          sender_role: string
-        }[]
       }
       send_chat_message: {
         Args: {
@@ -2863,6 +2886,60 @@ export type Database = {
           p_rental_days: number
         }
         Returns: Database["public"]["Tables"]["bookings"]["Row"]
+      }
+      create_booking_with_courier: {
+        Args: {
+          p_city_municipality?: string
+          p_courier: Json
+          p_customer_notes: string
+          p_customer_snapshot: Json
+          p_discount_amount: number
+          p_emergency_contact?: Json
+          p_fulfillment_method: string
+          p_location: string
+          p_pickup_at: string
+          p_product_id: string
+          p_product_snapshot: Json
+          p_province?: string
+          p_quantity?: number
+          p_rental_days?: number
+          p_variant?: string | null
+        }
+        Returns: Database["public"]["Tables"]["bookings"]["Row"]
+      }
+      create_multi_item_booking_with_courier: {
+        Args: {
+          p_city_municipality: string
+          p_courier: Json
+          p_customer_notes: string
+          p_customer_snapshot: Json
+          p_emergency_contact?: Json
+          p_fulfillment_method: string
+          p_items: Json
+          p_location: string
+          p_pickup_at: string
+          p_province: string
+          p_rental_days: number
+        }
+        Returns: Database["public"]["Tables"]["bookings"]["Row"]
+      }
+      update_own_booking_details_with_courier: {
+        Args: {
+          p_booking_id: string
+          p_city_municipality?: string
+          p_courier?: Json
+          p_customer_notes?: string
+          p_fulfillment_method: string
+          p_location?: string
+          p_province?: string
+        }
+        Returns: Database["public"]["Tables"]["bookings"]["Row"]
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       save_guest_checkout_contact: {
         Args: { p_customer_snapshot: Json }

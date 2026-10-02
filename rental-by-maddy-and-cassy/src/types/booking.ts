@@ -1,4 +1,5 @@
 import type { Database } from "@/src/lib/supabase/database.types";
+import type { CourierArrangement } from "@/src/lib/courierArrangement";
 
 // Mirrors public.bookings joined with its normalized child tables
 // (booking_items, booking_fulfillments, booking_requirements,
@@ -139,6 +140,12 @@ export interface Booking {
   location?: string;
   cityMunicipality?: string;
   province?: string;
+  /**
+   * Customer-booked, customer-paid courier for delivery and return (from
+   * booking_fulfillments). Absent for pickup, legacy delivery bookings, and
+   * databases without the courier columns yet.
+   */
+  courier?: CourierArrangement;
   customerNotes?: string;
   adminNotes?: string;
   productSnapshot: BookingProductSnapshot;

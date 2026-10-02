@@ -30,6 +30,7 @@ export default async function ReservePage({ params, searchParams }: ReservePageP
     const value = query[key];
     if (typeof value === "string" && value) returnParams.set(key, value);
   }
+  const requestedColor = typeof query.color === "string" ? query.color : undefined;
 
   return (
     <div>
@@ -43,6 +44,7 @@ export default async function ReservePage({ params, searchParams }: ReservePageP
             rentedUnits: product.rentedUnits,
           }}
           returnQuery={returnParams.toString()}
+          requestedColor={requestedColor}
         />
       </main>
     </div>

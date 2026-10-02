@@ -14,14 +14,19 @@ export async function loadCompletionInputs(
   const booking = await getBookingById(admin, bookingId);
   if (!booking) return null;
 
-  const [recordResult, chargesResult, paymentsResult] = await Promise.all([
+  const [recordResult, chargesResult, paymentsResult, depositResult] = await Promise.all([
     admin.from("booking_fulfillment_records").select("*").eq("booking_id", bookingId).maybeSingle(),
     admin.from("booking_charges").select("*").eq("booking_id", bookingId),
     admin.from("booking_payment_submissions").select("declared_amount, status").eq("booking_id", bookingId),
+    admin.from("booking_security_deposits").select("booking_id").eq("booking_id", bookingId).maybeSingle(),
   ]);
-  if (recordResult.error || chargesResult.error || paymentsResult.error) {
+  if (recordResult.error || chargesResult.error || paymentsResult.error || depositResult.error) {
     throw new Error(
-      recordResult.error?.message ?? chargesResult.error?.message ?? paymentsResult.error?.message ?? "load failed",
+      recordResult.error?.message ??
+        chargesResult.error?.message ??
+        paymentsResult.error?.message ??
+        depositResult.error?.message ??
+        "load failed",
     );
   }
 
@@ -30,6 +35,7 @@ export async function loadCompletionInputs(
   return {
     status: booking.status,
     pickedUp: record?.pickedUp ?? false,
+    securityDepositPaid: Boolean(depositResult.data),
     returned: record?.returned ?? false,
     itemCondition: record?.itemCondition ?? null,
     charges: (chargesResult.data ?? []).map(mapCharge),

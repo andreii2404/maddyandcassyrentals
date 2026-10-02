@@ -48,6 +48,7 @@ import {
 } from "@/src/lib/bookingManagement";
 import BookingItemsSummary from "@/components/booking-summary/BookingItemsSummary";
 import { bookingHeadline, bookingItemsSummaryData } from "@/src/lib/bookingDisplay";
+import { formatCourier, formatReturnArrangement } from "@/src/lib/courierArrangement";
 import { WAITING_FOR_RESUBMISSION_LABEL } from "@/src/lib/requirementResubmission";
 
 const REQUIREMENTS_STATUS_LABELS: Record<string, string> = {
@@ -507,7 +508,14 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
       ? "Full Payment"
       : "Not Started";
   const accountTypeLabel = booking.isGuestCheckout ? "Guest checkout" : "Registered account";
-  const fulfillmentLabel = formatStatus(booking.fulfillmentMethod);
+  const isDeliveryBooking = booking.fulfillmentMethod === "delivery";
+  const deliveryCourierLabel = isDeliveryBooking
+    ? formatCourier(booking.courier?.deliveryCourier, booking.courier?.deliveryCourierOther)
+    : "";
+  const returnArrangementLabel = isDeliveryBooking && booking.courier
+    ? formatReturnArrangement(booking.courier)
+    : "";
+  const fulfillmentLabel = `${formatStatus(booking.fulfillmentMethod)}${deliveryCourierLabel ? ` via ${deliveryCourierLabel}` : ""}`;
   const handoverPaymentReady = amountPaid >= booking.totalAmount - 0.01 || booking.payLaterAllowed;
   const showFulfillment = fulfillment.available && isFulfillmentMode({
     status: booking.status,
@@ -954,6 +962,16 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
               <div><dt>Handover Method</dt><dd>{formatStatus(booking.fulfillmentMethod)}</dd></div>
               <div><dt>Pickup/Delivery Location</dt><dd>{booking.location || "Not provided"}</dd></div>
             </dl>
+            {isDeliveryBooking ? (
+              <dl className={`${styles.detailGrid} ${styles.rentalFacts} ${styles.courierFacts}`} aria-label="Customer-arranged courier">
+                <div><dt>Delivery Courier</dt><dd>{deliveryCourierLabel || "Not recorded"}</dd></div>
+                <div><dt>Return Arrangement</dt><dd>{returnArrangementLabel || "Not recorded"}</dd></div>
+                <div className={styles.courierNote}>
+                  <dt>Courier Fees</dt>
+                  <dd>Booked and paid by the customer directly. Not included in the booking total.</dd>
+                </div>
+              </dl>
+            ) : null}
             <BookingItemsSummary
               currency="PHP"
               items={itemsSummary.items}
@@ -1291,13 +1309,16 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
           <section id="booking-step-fulfillment" className={styles.detailSection} role="tabpanel" aria-labelledby="booking-tab-fulfillment" hidden={activeStep !== "fulfillment"}>
             <div className={styles.detailSectionHeader}>
               <span className={styles.sectionNumber}>07</span>
-              <div><strong>Rental Fulfillment</strong><small>Record pickup, return, item condition, charges and completion</small></div>
+              <div><strong>Rental Fulfillment</strong><small>Record pickup, security deposit, return, item condition, charges and completion</small></div>
               <span className={`${styles.sectionHeaderStatus} ${booking.status === "returned" ? styles.sectionHeaderReady : styles.sectionHeaderPending}`}>
                 {booking.status === "returned" ? "Completed" : "In progress"}
               </span>
             </div>
             <div className={styles.detailBody}>
-              <RentalFulfillment key={fulfillment.record?.updatedAt ?? "no-fulfillment-record"} ctx={fulfillmentContext} />
+              <RentalFulfillment
+                key={`${fulfillment.record?.updatedAt ?? "no-fulfillment-record"}:${fulfillment.securityDeposit?.recordedAt ?? "no-deposit"}`}
+                ctx={fulfillmentContext}
+              />
             </div>
           </section>
         ) : null}

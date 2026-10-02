@@ -1,0 +1,241 @@
+/* Every selector is scoped under .root so host forms with element-level
+   fieldset/legend/label rules (e.g. the booking edit form) can't restyle it. */
+
+.root {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.root .notice {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--color-dusty-rose);
+  border-left: 3px solid var(--color-primary);
+  border-radius: 12px;
+  background: var(--color-background-soft);
+  color: var(--color-text-primary);
+}
+
+.root .noticeIcon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--color-blush);
+  color: var(--color-primary);
+}
+
+.root .notice strong {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.root .notice p {
+  margin: 0.2rem 0 0;
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+
+.root .notice .noticeSub {
+  color: var(--color-charcoal);
+  font-size: 0.66rem;
+}
+
+.root .block {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.root .group {
+  display: block;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.root .legend {
+  display: block;
+  margin: 0 0 0.4rem;
+  padding: 0;
+  color: var(--color-text-primary);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.root .required {
+  margin-left: 0.2rem;
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.root .chipGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.root .chip {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  min-width: 0;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--color-light-gray);
+  border-radius: 10px;
+  background: var(--color-white);
+  color: var(--color-text-primary);
+  font-size: 0.76rem;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.root .chip:hover {
+  border-color: var(--color-dusty-rose);
+}
+
+.root .chip:has(input:checked) {
+  border-color: var(--color-primary);
+  background: var(--color-background-soft);
+  box-shadow: inset 0 0 0 1px var(--color-primary);
+}
+
+.root .chip:has(input:focus-visible),
+.root .returnOption:has(input:focus-visible) {
+  box-shadow: inset 0 0 0 1px var(--color-primary), 0 0 0 3px rgba(215, 165, 165, 0.35);
+}
+
+.root .chip input,
+.root .returnOption input {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.root .returnGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.root .returnOption {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--color-light-gray);
+  border-radius: 10px;
+  background: var(--color-white);
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.root .returnOption input {
+  margin-top: 0.1rem;
+}
+
+.root .returnOption:hover {
+  border-color: var(--color-dusty-rose);
+}
+
+.root .returnOption:has(input:checked) {
+  border-color: var(--color-primary);
+  box-shadow: inset 0 0 0 1px var(--color-primary);
+}
+
+.root .returnOption strong {
+  display: block;
+  color: var(--color-text-primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.root .returnOption small {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--color-charcoal);
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.root .group:disabled .chip,
+.root .group:disabled .returnOption {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.root .otherField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.root .otherLabel {
+  display: block;
+  color: var(--color-text-primary);
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.root .otherInput {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  min-height: var(--control-height, 44px);
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--color-light-gray);
+  border-radius: var(--radius-control, 10px);
+  background: var(--color-white);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 0.84rem;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.root .otherInput:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(215, 165, 165, 0.25);
+}
+
+@media (max-width: 560px) {
+  .root .chipGrid,
+  .root .returnGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 360px) {
+  .root .returnGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root .chip,
+  .root .returnOption,
+  .root .otherInput {
+    transition: none;
+  }
+}

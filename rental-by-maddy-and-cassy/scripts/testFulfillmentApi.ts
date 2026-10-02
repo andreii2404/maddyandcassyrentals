@@ -39,8 +39,32 @@ test("database error codes become friendly messages with the right status", () =
   assert.equal(mapFulfillmentRpcError("something unexpected"), null);
 });
 
+test("security deposit database codes map to the right status", () => {
+  assert.equal(mapFulfillmentRpcError("error: SECURITY_DEPOSIT_REQUIRED (P0001)")?.status, 409);
+  assert.match(mapFulfillmentRpcError("SECURITY_DEPOSIT_REQUIRED")?.message ?? "", /security deposit/);
+  assert.equal(mapFulfillmentRpcError("DEPOSIT_NOT_READY")?.status, 409);
+  assert.equal(mapFulfillmentRpcError("DEPOSIT_ALREADY_RECORDED")?.status, 409);
+  assert.equal(mapFulfillmentRpcError("INVALID_DEPOSIT_METHOD")?.status, 400);
+  assert.match(mapFulfillmentRpcError("INVALID_DEPOSIT_METHOD")?.message ?? "", /Maya/);
+  assert.equal(mapFulfillmentRpcError("REFERENCE_REQUIRED")?.status, 400);
+  assert.equal(mapFulfillmentRpcError("INVALID_REFERENCE")?.status, 400);
+  // A plain REASON_REQUIRED must still resolve to the charge-reason message.
+  assert.match(mapFulfillmentRpcError("REASON_REQUIRED")?.message ?? "", /reason/i);
+});
+
 test("no friendly message leaks a raw error code", () => {
-  for (const code of ["COMPLETION_BLOCKED", "INVALID_DATE", "RENTAL_COMPLETED", "REASON_REQUIRED"]) {
+  for (const code of [
+    "COMPLETION_BLOCKED",
+    "INVALID_DATE",
+    "RENTAL_COMPLETED",
+    "REASON_REQUIRED",
+    "SECURITY_DEPOSIT_REQUIRED",
+    "DEPOSIT_NOT_READY",
+    "DEPOSIT_ALREADY_RECORDED",
+    "INVALID_DEPOSIT_METHOD",
+    "REFERENCE_REQUIRED",
+    "INVALID_REFERENCE",
+  ]) {
     const mapped = mapFulfillmentRpcError(code);
     assert.ok(mapped, `${code} should be mapped`);
     assert.ok(!/[A-Z]{4,}_[A-Z_]+/.test(mapped.message));

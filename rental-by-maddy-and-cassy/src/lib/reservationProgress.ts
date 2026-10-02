@@ -4,6 +4,12 @@ import {
   type ReservationDraft,
 } from "@/src/types/reservationDraft";
 import type { BookingPaymentState } from "@/components/reservation/StepPaymentSubmission";
+import {
+  EMPTY_COURIER_ARRANGEMENT,
+  isCourierOption,
+  isReturnMethod,
+  normalizeCourierArrangement,
+} from "@/src/lib/courierArrangement";
 
 const STORAGE_VERSION = 2;
 export const RESERVATION_PROGRESS_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -27,6 +33,11 @@ interface StoredReservationProgress {
     customerLocation: string;
     cityMunicipality: string;
     province: string;
+    deliveryCourier?: string | null;
+    deliveryCourierOther?: string;
+    returnMethod?: string | null;
+    returnCourier?: string | null;
+    returnCourierOther?: string;
     paymentOption: ReservationDraft["paymentOption"];
     customerInfo: CustomerInfoDraft;
     manualPayment: {
@@ -106,6 +117,11 @@ export function serializeReservationProgress(input: {
       customerLocation: input.draft.customerLocation,
       cityMunicipality: input.draft.cityMunicipality,
       province: input.draft.province,
+      deliveryCourier: input.draft.deliveryCourier,
+      deliveryCourierOther: input.draft.deliveryCourierOther,
+      returnMethod: input.draft.returnMethod,
+      returnCourier: input.draft.returnCourier,
+      returnCourierOther: input.draft.returnCourierOther,
       paymentOption: input.draft.paymentOption,
       customerInfo: input.draft.customerInfo,
       manualPayment: {
@@ -192,6 +208,15 @@ export function restoreReservationProgress(
         customerLocation: text(draft.customerLocation),
         cityMunicipality: text(draft.cityMunicipality),
         province: text(draft.province),
+        ...(fulfillmentMethod === "delivery"
+          ? normalizeCourierArrangement({
+              deliveryCourier: isCourierOption(draft.deliveryCourier) ? draft.deliveryCourier : null,
+              deliveryCourierOther: text(draft.deliveryCourierOther),
+              returnMethod: isReturnMethod(draft.returnMethod) ? draft.returnMethod : null,
+              returnCourier: isCourierOption(draft.returnCourier) ? draft.returnCourier : null,
+              returnCourierOther: text(draft.returnCourierOther),
+            })
+          : EMPTY_COURIER_ARRANGEMENT),
         paymentOption: option,
         customerInfo: {
           ...empty.customerInfo,

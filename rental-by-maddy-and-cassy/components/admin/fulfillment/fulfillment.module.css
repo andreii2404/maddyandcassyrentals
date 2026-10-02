@@ -477,6 +477,192 @@
   font-size: 0.84rem;
 }
 
+.fieldHint,
+.fieldError {
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+.fieldHint {
+  color: var(--color-charcoal);
+  font-weight: 400;
+}
+
+.fieldError {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+.field input[aria-invalid="true"] {
+  border-color: var(--color-danger);
+}
+
+/* Security deposit */
+.depositAmount {
+  display: flex;
+  padding: 0.9rem 1.1rem;
+  border: 1px solid var(--color-light-gray);
+  border-radius: 14px;
+  background: rgba(215, 165, 165, 0.1);
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
+.depositAmountPaid {
+  border-color: var(--color-status-green-border);
+  background: var(--color-status-green-bg);
+}
+
+.depositAmount > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.depositAmount strong {
+  color: var(--color-text-primary);
+  font-size: 1.35rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.depositAmountLabel {
+  color: var(--color-charcoal);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.depositAmountNote {
+  color: var(--color-charcoal);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.methodGroup {
+  display: flex;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.methodGroup legend {
+  margin-bottom: 0.45rem;
+  padding: 0;
+  color: var(--color-charcoal);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.methodOptions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.6rem;
+}
+
+.methodOption {
+  position: relative;
+  display: flex;
+  cursor: pointer;
+}
+
+/* The native radio stays focusable and announced; the card shows its state. */
+.methodOption input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+}
+
+.methodCard {
+  display: flex;
+  width: 100%;
+  min-height: 56px;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--color-light-gray);
+  border-radius: 12px;
+  background: var(--color-white);
+  align-items: center;
+  gap: 0.65rem;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.methodOption:hover .methodCard {
+  background: rgba(215, 165, 165, 0.1);
+}
+
+.methodOption input:checked + .methodCard {
+  border-color: var(--color-dusty-rose);
+  background: rgba(215, 165, 165, 0.22);
+  box-shadow: inset 0 0 0 1px var(--color-dusty-rose);
+}
+
+.methodOption input:focus-visible + .methodCard {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.methodOption input:disabled + .methodCard {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.methodDot {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--color-light-gray);
+  border-radius: 999px;
+  background: var(--color-white);
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.methodOption input:checked + .methodCard .methodDot {
+  border-color: var(--color-primary);
+}
+
+.methodOption input:checked + .methodCard .methodDot::after {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-primary);
+  content: "";
+}
+
+.methodText {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.methodName {
+  color: var(--color-text-primary);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.methodHint {
+  color: var(--color-charcoal);
+  font-size: 0.74rem;
+  font-weight: 500;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .methodCard {
+    transition: none;
+  }
+}
+
 @media (max-width: 640px) {
   .tab {
     flex: 1 1 calc(50% - 0.5rem);

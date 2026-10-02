@@ -8,6 +8,7 @@ import {
   CHARGE_METHOD_LABELS,
   CHARGE_TYPE_LABELS,
   computeAmountOwed,
+  DEPOSIT_METHOD_LABELS,
   formatPhp,
 } from "@/src/lib/rentalFulfillment";
 import {
@@ -35,7 +36,7 @@ const CLOSED_STATUSES = ["returned", "cancelled", "rejected"];
 
 export default function ChargesPaymentsPanel({ ctx }: ChargesPaymentsPanelProps) {
   const { showToast } = useToast();
-  const { charges, adminNames } = ctx.data;
+  const { charges, adminNames, securityDeposit } = ctx.data;
   const owed = computeAmountOwed({ totalAmount: ctx.totalAmount, verifiedPaid: ctx.verifiedPaid, charges });
 
   const [chargeType, setChargeType] = useState<ChargeType>("late_fee");
@@ -150,6 +151,14 @@ export default function ChargesPaymentsPanel({ ctx }: ChargesPaymentsPanelProps)
         <div><dt>Verified payments</dt><dd>{formatPhp(ctx.verifiedPaid)}</dd></div>
         <div><dt>Remaining balance</dt><dd>{formatPhp(owed.bookingBalance)}</dd></div>
         {ctx.payLaterAllowed ? <div><dt>Pay-later exception</dt><dd>Approved</dd></div> : null}
+        <div>
+          <dt>Security deposit (refundable)</dt>
+          <dd>
+            {securityDeposit
+              ? `${formatPhp(securityDeposit.amount)} paid · ${DEPOSIT_METHOD_LABELS[securityDeposit.paymentMethod] ?? securityDeposit.paymentMethod}`
+              : "Not paid yet"}
+          </dd>
+        </div>
       </dl>
 
       {ctx.pendingPaymentReviews > 0 ? (

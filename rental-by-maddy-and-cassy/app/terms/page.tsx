@@ -6,8 +6,12 @@ const sections: GuideSection[] = [
     number: "01",
     title: "Booking in Advance",
     paragraphs: [
-      "Reservations should be made ahead of time. Same-day bookings may be accepted when a unit is available and all requirements are complete; the time-based service fee applies only when the customer voluntarily chooses a schedule outside normal hours.",
+      "To secure any rental, reservations must be made ahead of time. Same-day bookings may be accepted only if available and once all necessary requirements are fulfilled.",
     ],
+    highlight: {
+      emphasis: "+ ₱100",
+      text: "convenience fee for same-day rental.",
+    },
   },
   {
     number: "02",
@@ -99,7 +103,7 @@ export default function TermsPage() {
         introduction="These policies apply to booking requests, verification, equipment handover, proper use, and return of every rental unit."
         sections={sections}
         layout="policy"
-        notice="Reservation payments and applicable non-refundable deposits are paid manually via GCash and verified by our team. Courier delivery costs are arranged separately with the rental team."
+        notice="Reservation payments and applicable non-refundable deposits are paid manually via GCash and verified by our team. For delivery, courier booking and payment are handled by the customer; delivery fees are separate from the rental fee."
       />
     </div>
   );
