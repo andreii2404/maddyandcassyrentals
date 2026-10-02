@@ -161,20 +161,27 @@ function getEmailContent(
   bookingReference: string,
   stage: string,
   rejectionReason = "",
+  paymentConfirmationOnly = false,
 ) {
   let title = "Booking Update";
   let message = "There has been an update to your booking.";
 
   switch (emailType) {
     case "payment_verified":
-      if (stage === "down_payment") {
+      if (paymentConfirmationOnly) {
+        title = "Payment Confirmation";
+        message =
+          "Your payment has been successfully verified. Your required documents have been approved and your Rental Agreement has been completed and signed.";
+      } else if (stage === "down_payment") {
         title = "Down Payment Verified";
+        message = PAYMENT_VERIFIED_MESSAGE;
       } else if (stage === "balance") {
         title = "Balance Payment Verified";
+        message = PAYMENT_VERIFIED_MESSAGE;
       } else {
         title = "Payment Verified";
+        message = PAYMENT_VERIFIED_MESSAGE;
       }
-      message = PAYMENT_VERIFIED_MESSAGE;
       break;
 
     case "booking_pending":
@@ -256,6 +263,7 @@ function createHtmlEmail(
   stage: string,
   rejectionReason = "",
   bookingUrl = "",
+  paymentConfirmationOnly = false,
 ) {
   const { title, message } = getEmailContent(
     emailType,
@@ -263,6 +271,7 @@ function createHtmlEmail(
     bookingReference,
     stage,
     rejectionReason,
+    paymentConfirmationOnly,
   );
 
   const safeName = escapeHtml(recipientName || "Customer");
@@ -449,7 +458,7 @@ function createHtmlEmail(
         <a href="${safeBookingUrl}" style="display:inline-block;background:#a75e6d;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:14px 22px;border-radius:8px">Resubmit Payment</a>
       </p>
       `
-          : isPaymentVerifiedEmail
+          : isPaymentVerifiedEmail && !paymentConfirmationOnly
             ? `
       <p style="font-size:15px;line-height:1.6;color:#555555">
         Continue with verification to submit the required documents for your booking.
@@ -619,6 +628,7 @@ export default {
         let stage = "";
         let rejectionReason = "";
         let bookingUrl = "";
+        let paymentConfirmationOnly = false;
 
         if (email.email_type === "payment_verified" && !email.booking_id) {
           throw new Error("Booking ID is missing for the payment verification email.");
@@ -714,7 +724,75 @@ export default {
               throw paymentError;
             }
 
+            if (!payment) {
+              throw new Error(
+                "No verified payment was found for the payment verification email.",
+              );
+            }
+
             stage = payment?.stage || "";
+
+            // Use persisted booking requirements and agreement state as the
+            // source of truth. Queue payloads may have been created before
+            // the customer finished verification, while delivery can happen
+            // after the full booking workflow has completed.
+            const { data: requirements, error: requirementsError } =
+              await ctx.supabaseAdmin
+                .from("booking_requirements")
+                .select("status")
+                .eq("booking_id", email.booking_id);
+
+            if (requirementsError) throw requirementsError;
+
+            const documentsVerified = Boolean(
+              requirements?.length &&
+                requirements.every((requirement) =>
+                  requirement.status === "approved" ||
+                  requirement.status === "waived"
+                ),
+            );
+
+            const { data: agreement, error: agreementError } =
+              await ctx.supabaseAdmin
+                .from("booking_agreements")
+                .select("id, status")
+                .eq("booking_id", email.booking_id)
+                .maybeSingle();
+
+            if (agreementError) throw agreementError;
+
+            let agreementCompletedAndSigned = false;
+            if (agreement?.id && agreement.status === "completed") {
+              const { data: version, error: versionError } =
+                await ctx.supabaseAdmin
+                  .from("agreement_versions")
+                  .select("id, status")
+                  .eq("agreement_id", agreement.id)
+                  .order("version_number", { ascending: false })
+                  .limit(1)
+                  .maybeSingle();
+
+              if (versionError) throw versionError;
+
+              if (version?.id && version.status === "completed") {
+                const { data: signatures, error: signaturesError } =
+                  await ctx.supabaseAdmin
+                    .from("agreement_signatures")
+                    .select("signer_role")
+                    .eq("agreement_version_id", version.id);
+
+                if (signaturesError) throw signaturesError;
+
+                const signerRoles = new Set(
+                  (signatures ?? []).map((signature) => signature.signer_role),
+                );
+                agreementCompletedAndSigned =
+                  signerRoles.has("customer") && signerRoles.has("business");
+              }
+            }
+
+            paymentConfirmationOnly = documentsVerified &&
+              agreementCompletedAndSigned;
           }
         }
 
@@ -728,6 +806,7 @@ export default {
           stage,
           rejectionReason,
           bookingUrl,
+          paymentConfirmationOnly,
         );
         const html =
           email.email_type === "payment_rejected" &&
@@ -744,6 +823,7 @@ export default {
             bookingReference,
             stage,
             rejectionReason,
+            paymentConfirmationOnly,
           ).message}\n\n` +
           `Booking Reference: ${bookingReference}\n\n` +
           `${
@@ -752,7 +832,7 @@ export default {
               : ""
           }` +
           `${
-            email.email_type === "payment_verified"
+            email.email_type === "payment_verified" && !paymentConfirmationOnly
               ? `Continue Verification: ${bookingUrl}\n\n`
               : ""
           }` +
