@@ -14,7 +14,7 @@
     "test:bookings": "tsx --test scripts/testBookingManagement.ts scripts/testBookingErrorHandling.ts scripts/testCourierArrangement.ts scripts/testBusinessSignature.ts",
     "test:calendar": "tsx --test scripts/testBookingCalendar.ts",
     "test:documents": "tsx --test scripts/testDocumentResubmission.ts",
-    "test:auth": "tsx --test scripts/testAuthValidation.ts",
+    "test:auth": "tsx --test scripts/testAuthValidation.ts scripts/testEmailOtp.ts",
     "test:rental-timing": "tsx --test scripts/testRentalTiming.ts",
     "test:date-selection": "tsx --test scripts/testDateSelection.ts",
     "test:variant-inventory": "tsx --test scripts/testVariantInventory.ts",

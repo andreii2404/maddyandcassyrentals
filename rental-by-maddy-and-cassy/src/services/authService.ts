@@ -3,6 +3,7 @@
 import type { Subscription, User } from "@supabase/supabase-js";
 import { createClient } from "@/src/lib/supabase/client";
 import { normalizeEmail } from "@/src/lib/authValidation";
+import { recordOtpSent } from "@/src/lib/emailOtp";
 
 export interface SendEmailOtpOptions {
   /** Creates a new account for this email if one does not already exist. */
@@ -66,6 +67,33 @@ export async function sendEmailOtp(
     }
     throw new Error(error.message);
   }
+  // Supabase invalidates any earlier code for this email when a new one is
+  // issued, so only the newest send time is relevant to the Verify Email page.
+  recordOtpSent(email);
+}
+
+/**
+ * Raised when Supabase accepted the one-time code (which is now consumed) but
+ * the session could not be copied to the server cookies. Retrying the same code
+ * would always fail, so callers should resume the verified session instead.
+ */
+export class VerifiedSessionSyncError extends Error {
+  constructor() {
+    super("Your code was accepted, but we could not finish signing you in. Please try again.");
+    this.name = "VerifiedSessionSyncError";
+  }
+}
+
+async function persistVerifiedSession(accessToken: string, refreshToken: string): Promise<void> {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      await syncServerSession(accessToken, refreshToken);
+      return;
+    } catch {
+      // Retry once, then surface a dedicated error below.
+    }
+  }
+  throw new VerifiedSessionSyncError();
 }
 
 export async function verifyEmailOtp(email: string, token: string): Promise<User> {
@@ -74,8 +102,20 @@ export async function verifyEmailOtp(email: string, token: string): Promise<User
   if (error || !data.user || !data.session) {
     throw new Error(error?.message ?? "The verification code could not be confirmed.");
   }
-  await syncServerSession(data.session.access_token, data.session.refresh_token);
+  await persistVerifiedSession(data.session.access_token, data.session.refresh_token);
   return data.user;
+}
+
+/**
+ * Finishes sign-in for a code Supabase already accepted in this browser, without
+ * spending another code. Used after a `VerifiedSessionSyncError`.
+ */
+export async function resumeVerifiedSession(): Promise<User | null> {
+  const supabase = createClient();
+  const { data } = await supabase.auth.getSession();
+  if (!data.session) return null;
+  await persistVerifiedSession(data.session.access_token, data.session.refresh_token);
+  return data.session.user;
 }
 
 export async function loginWithEmail(email: string, password: string): Promise<User> {
