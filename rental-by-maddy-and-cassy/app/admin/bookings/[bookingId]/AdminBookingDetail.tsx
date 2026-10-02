@@ -2,8 +2,10 @@
 
 import { Button } from "@/components/ui/Button";
 import ConfirmModal from "@/components/ui/ConfirmModal";
-import AdminSignaturePad from "@/components/signature-pad/AdminSignaturePad";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import SignaturePad from "@/components/signature-pad/SignaturePad";
+import { normalizeSignatureImageToPng } from "@/src/lib/signatureImage";
+import type { SignatureMethod } from "@/src/types/reservationDraft";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/src/lib/supabase/client";
 import {
@@ -148,6 +150,9 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   const [exporting, setExporting] = useState(false);
   const [businessSignerName, setBusinessSignerName] = useState("");
   const [businessSignatureDataUrl, setBusinessSignatureDataUrl] = useState<string | null>(null);
+  const [businessSignatureMethod, setBusinessSignatureMethod] = useState<SignatureMethod>("drawn");
+  // Guards against an older upload finishing its PNG conversion after a newer change.
+  const businessSignatureChangeRef = useRef(0);
   const [countersignAcknowledged, setCountersignAcknowledged] = useState(false);
   const [countersigning, setCountersigning] = useState(false);
   const [countersignConfirmationOpen, setCountersignConfirmationOpen] = useState(false);
@@ -428,13 +433,40 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
     }
   }
 
+  function handleBusinessSignatureMethodChange(method: SignatureMethod) {
+    businessSignatureChangeRef.current += 1;
+    setBusinessSignatureMethod(method);
+    setBusinessSignatureDataUrl(null);
+  }
+
+  // Drawn signatures arrive as PNG already. Uploaded images may be JPEG/WebP or
+  // oversized, so they are converted to a PNG the agreement API will accept.
+  async function handleBusinessSignatureChange(dataUrl: string | null, file: File | null) {
+    const changeId = ++businessSignatureChangeRef.current;
+    if (!dataUrl || !file) {
+      setBusinessSignatureDataUrl(dataUrl);
+      return;
+    }
+    setBusinessSignatureDataUrl(null);
+    try {
+      const png = await normalizeSignatureImageToPng(dataUrl);
+      if (changeId === businessSignatureChangeRef.current) setBusinessSignatureDataUrl(png);
+    } catch (conversionError) {
+      if (changeId !== businessSignatureChangeRef.current) return;
+      showToast(
+        conversionError instanceof Error ? conversionError.message : "The signature image could not be used.",
+        "warning",
+      );
+    }
+  }
+
   function requestCountersignAgreement() {
     if (businessSignerName.trim().length < 2) {
       showToast("Enter the authorized business signer's complete name.", "warning");
       return;
     }
     if (!businessSignatureDataUrl) {
-      showToast("Draw the Admin / Business Signature before finalizing the agreement.", "warning");
+      showToast("Add the Admin / Business Signature before finalizing the agreement.", "warning");
       return;
     }
     if (!countersignAcknowledged) {
@@ -447,14 +479,14 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   async function confirmCountersignAgreement() {
     if (!businessSignatureDataUrl) {
       setCountersignConfirmationOpen(false);
-      showToast("Draw the Admin / Business Signature before finalizing the agreement.", "warning");
+      showToast("Add the Admin / Business Signature before finalizing the agreement.", "warning");
       return;
     }
     setCountersigning(true);
     try {
       await countersignBookingAgreement(bookingId, businessSignerName.trim(), businessSignatureDataUrl);
       await loadDetails();
-      setBusinessSignatureDataUrl(null);
+      handleBusinessSignatureMethodChange("drawn");
       setCountersignAcknowledged(false);
       setCountersignConfirmationOpen(false);
       showToast("Agreement countersigned. The final PDF is ready for the customer.", "success");
@@ -1143,7 +1175,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                       <div className={styles.countersignIntro}>
                         <span>ADMIN ACTION REQUIRED</span>
                         <h4>Review, countersign, and finalize</h4>
-                        <p>The customer has completed their part. Verify the payment and all required documents, enter the authorized business signer&apos;s name, then draw the business signature.</p>
+                        <p>The customer has completed their part. Verify the payment and all required documents, enter the authorized business signer&apos;s name, then draw or upload the business signature.</p>
                       </div>
                       <div className={styles.countersignGroup}>
                         <span>1 · Review requirements</span>
@@ -1173,11 +1205,16 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
 
                         <div className={styles.countersignGroup}>
                           <span id="business-signature-label">3 · Admin / Business Signature</span>
-                          <AdminSignaturePad
-                            value={businessSignatureDataUrl}
-                            onChange={setBusinessSignatureDataUrl}
+                          <SignaturePad
+                            method={businessSignatureMethod}
+                            signatureDataUrl={businessSignatureDataUrl}
+                            onMethodChange={handleBusinessSignatureMethodChange}
+                            onSignatureChange={(dataUrl, file) => void handleBusinessSignatureChange(dataUrl, file)}
                             disabled={!canCountersignAgreement || countersigning}
                             labelledBy="business-signature-label"
+                            helpText="The Admin / Business Signature is required to finalize the agreement."
+                            minDrawnSizePx={24}
+                            showStatus
                           />
                         </div>
 
@@ -1208,7 +1245,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
                         >
                           {countersigning ? "Finalizing agreement..." : "Countersign & Finalize Agreement"}
                         </Button>
-                        <small className={styles.legalNote}>This records the administrator, signer name, drawn signature, timestamp, IP address, and finalized PDF in the audit trail.</small>
+                        <small className={styles.legalNote}>This records the administrator, signer name, business signature, timestamp, IP address, and finalized PDF in the audit trail.</small>
                       </div>
                     </div>
                   ) : null}

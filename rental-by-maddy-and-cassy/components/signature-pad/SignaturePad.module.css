@@ -38,13 +38,48 @@
   gap: 0.4rem;
 }
 
-.canvas {
-  width: 100%;
-  height: 105px;
+/* The border lives on the frame, not the canvas, so the canvas bitmap maps 1:1
+   onto its CSS box and strokes land exactly under the pointer. */
+.canvasFrame {
+  overflow: hidden;
   border: 1.5px dashed var(--color-light-gray);
   border-radius: 11px;
   background: var(--color-white);
+  transition: border-color 150ms ease;
+}
+
+.canvasFrame:hover:not(.canvasFrameDisabled),
+.canvasFrame:focus-within {
+  border-color: var(--color-dusty-rose);
+}
+
+.canvasFrameDisabled {
+  background: #f5f4f2;
+  cursor: not-allowed;
+}
+
+.canvas {
+  display: block;
+  width: 100%;
+  height: 105px;
   touch-action: none;
+  cursor: crosshair;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.canvasFrameDisabled .canvas {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.statusDone {
+  margin: 0;
+  color: var(--color-status-green);
+  font-size: 0.75rem;
+  font-weight: 700;
 }
 
 .clearButton {
@@ -100,6 +135,30 @@
 .uploadDropzone:hover {
   border-color: var(--color-dusty-rose);
   background: var(--color-blush);
+}
+
+.uploadDropzoneDisabled,
+.uploadDropzoneDisabled:hover {
+  border-color: var(--color-light-gray);
+  background: #f5f4f2;
+  color: var(--color-charcoal);
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.tab:disabled,
+.clearButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tab:disabled:hover {
+  border-color: var(--color-light-gray);
+}
+
+.clearButton:disabled:hover {
+  background: transparent;
+  text-decoration: none;
 }
 
 .uploadPreview img {
