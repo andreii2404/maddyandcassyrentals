@@ -24,8 +24,13 @@ import {
   validateChatAttachment,
 } from "../src/lib/chatAttachments";
 import {
+  ATTACHMENT_ACCESS_DENIED_MESSAGE,
   ATTACHMENT_NOT_UPLOADED_MESSAGE,
+  ATTACHMENT_UPLOAD_FAILED_MESSAGE,
+  ATTACHMENTS_UNAVAILABLE_MESSAGE,
+  CHAT_SESSION_EXPIRED_MESSAGE,
   DEFAULT_CUSTOMER_MESSAGE_LIMIT,
+  chatAttachmentUploadErrorMessage,
   INAPPROPRIATE_LANGUAGE_MESSAGE,
   REPLY_REQUIRED_MESSAGE,
   getOrCreateConversation,
@@ -499,6 +504,30 @@ test("attachment errors from the database become friendly messages", async () =>
       sendMessage(client, "conversation-1", "", undefined, { path: "p", name: "a.pdf" }),
       { message: expected },
     );
+  }
+});
+
+test("storage upload failures map to a specific, actionable message", () => {
+  const cases: Array<[number, string, string]> = [
+    // Bucket missing (attachment migration not applied).
+    [400, JSON.stringify({ statusCode: "404", error: "Bucket not found", message: "Bucket not found" }), ATTACHMENTS_UNAVAILABLE_MESSAGE],
+    [404, "", ATTACHMENTS_UNAVAILABLE_MESSAGE],
+    // Storage policy rejected the insert.
+    [400, JSON.stringify({ statusCode: "403", error: "Unauthorized", message: "new row violates row-level security policy" }), ATTACHMENT_ACCESS_DENIED_MESSAGE],
+    [403, "", ATTACHMENT_ACCESS_DENIED_MESSAGE],
+    // Expired or invalid session token.
+    [400, JSON.stringify({ statusCode: "400", error: "InvalidJWT", message: "\"exp\" claim timestamp check failed" }), CHAT_SESSION_EXPIRED_MESSAGE],
+    [401, "", CHAT_SESSION_EXPIRED_MESSAGE],
+    // Bucket-level size and type limits.
+    [413, "", CHAT_ATTACHMENT_SIZE_ERROR],
+    [400, JSON.stringify({ statusCode: "413", error: "Payload too large", message: "The object exceeded the maximum allowed size" }), CHAT_ATTACHMENT_SIZE_ERROR],
+    [400, JSON.stringify({ statusCode: "415", error: "invalid_mime_type", message: "mime type image/gif is not supported" }), CHAT_ATTACHMENT_TYPE_ERROR],
+    // Anything else is a generic retryable failure.
+    [500, "Internal Server Error", ATTACHMENT_UPLOAD_FAILED_MESSAGE],
+    [0, "", ATTACHMENT_UPLOAD_FAILED_MESSAGE],
+  ];
+  for (const [status, body, expected] of cases) {
+    assert.equal(chatAttachmentUploadErrorMessage(status, body), expected, `${status} ${body}`);
   }
 });
 

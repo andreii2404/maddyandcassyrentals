@@ -137,7 +137,7 @@ function messagingError(message: string): Error {
     return new Error("You no longer have access to this conversation.");
   }
   if (normalized.includes("authentication_required") || normalized.includes("jwt")) {
-    return new Error("Your chat session expired. Refresh the page to continue.");
+    return new Error(CHAT_SESSION_EXPIRED_MESSAGE);
   }
   if (normalized.includes("chat_reply_required")) {
     return new Error(REPLY_REQUIRED_MESSAGE);
@@ -228,25 +228,47 @@ export interface UploadChatAttachmentOptions {
   signal?: AbortSignal;
 }
 
-function uploadErrorMessage(status: number, responseText: string): string {
+export const CHAT_SESSION_EXPIRED_MESSAGE = "Your chat session expired. Refresh the page to continue.";
+export const ATTACHMENT_ACCESS_DENIED_MESSAGE =
+  "You can't attach files to this conversation right now. Refresh the page and try again.";
+/** The chat-attachments bucket is missing (attachment migration not applied). */
+export const ATTACHMENTS_UNAVAILABLE_MESSAGE =
+  "File attachments aren't available right now. Please try again later or send your message without a file.";
+export const ATTACHMENT_UPLOAD_FAILED_MESSAGE =
+  "The file could not be uploaded. Check your connection and try again.";
+
+/**
+ * Maps a failed Storage upload to a customer-facing message. Storage often
+ * answers 400 with the real status in the JSON body's `statusCode`, so both
+ * are checked.
+ */
+export function chatAttachmentUploadErrorMessage(status: number, responseText: string): string {
+  let code = "";
   let detail = "";
   try {
     const parsed = JSON.parse(responseText) as { message?: unknown; error?: unknown; statusCode?: unknown };
-    detail = `${String(parsed.message ?? "")} ${String(parsed.error ?? "")} ${String(parsed.statusCode ?? "")}`;
+    code = String(parsed.statusCode ?? "");
+    detail = `${String(parsed.message ?? "")} ${String(parsed.error ?? "")}`;
   } catch {
     detail = responseText;
   }
   const normalized = detail.toLowerCase();
-  if (status === 413 || normalized.includes("413") || normalized.includes("too large") || normalized.includes("maximum allowed size")) {
+  if (status === 413 || code === "413" || normalized.includes("too large") || normalized.includes("maximum allowed size")) {
     return CHAT_ATTACHMENT_SIZE_ERROR;
   }
-  if (status === 415 || normalized.includes("mime") || normalized.includes("415")) {
+  if (status === 415 || code === "415" || normalized.includes("mime")) {
     return CHAT_ATTACHMENT_TYPE_ERROR;
   }
-  if (status === 401 || status === 403 || normalized.includes("row-level security") || normalized.includes("unauthorized")) {
-    return "You can't attach files to this conversation right now. Refresh the page and try again.";
+  if (status === 401 || normalized.includes("jwt") || normalized.includes("claim")) {
+    return CHAT_SESSION_EXPIRED_MESSAGE;
   }
-  return "The file could not be uploaded. Check your connection and try again.";
+  if (status === 403 || code === "403" || normalized.includes("row-level security") || normalized.includes("unauthorized")) {
+    return ATTACHMENT_ACCESS_DENIED_MESSAGE;
+  }
+  if (status === 404 || code === "404" || normalized.includes("bucket not found")) {
+    return ATTACHMENTS_UNAVAILABLE_MESSAGE;
+  }
+  return ATTACHMENT_UPLOAD_FAILED_MESSAGE;
 }
 
 /**
@@ -273,7 +295,7 @@ export async function uploadChatAttachment(
   const { data: sessionData } = await client.auth.getSession();
   const session = sessionData.session;
   if (!session?.access_token || !session.user?.id) {
-    throw new ChatAttachmentUploadError("Your chat session expired. Refresh the page to continue.");
+    throw new ChatAttachmentUploadError(CHAT_SESSION_EXPIRED_MESSAGE);
   }
 
   const path = buildChatAttachmentPath(conversationId, session.user.id, validation.extension);
@@ -301,12 +323,23 @@ export async function uploadChatAttachment(
         onProgress?.(100);
         resolve();
       } else {
-        reject(new ChatAttachmentUploadError(uploadErrorMessage(request.status, request.responseText)));
+        if (process.env.NODE_ENV !== "production") {
+          console.error(
+            `[uploadChatAttachment] storage rejected upload status=${request.status} path=${path}`,
+            request.responseText,
+          );
+        }
+        reject(new ChatAttachmentUploadError(
+          chatAttachmentUploadErrorMessage(request.status, request.responseText),
+        ));
       }
     };
     request.onerror = () => {
       signal?.removeEventListener("abort", abort);
-      reject(new ChatAttachmentUploadError("The file could not be uploaded. Check your connection and try again."));
+      if (process.env.NODE_ENV !== "production") {
+        console.error(`[uploadChatAttachment] network error uploading path=${path}`);
+      }
+      reject(new ChatAttachmentUploadError(ATTACHMENT_UPLOAD_FAILED_MESSAGE));
     };
     request.onabort = () => {
       signal?.removeEventListener("abort", abort);

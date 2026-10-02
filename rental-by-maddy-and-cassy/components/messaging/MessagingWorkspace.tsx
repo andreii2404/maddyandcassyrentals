@@ -208,6 +208,8 @@ export default function MessagingWorkspace({ mode, isGuest = false }: MessagingW
   const [pendingAttachment, setPendingAttachment] = useState<PendingAttachment | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  // True when attachmentError came from a failed send of the file still in the tray.
+  const [attachmentSendFailed, setAttachmentSendFailed] = useState(false);
   const attachmentErrorId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Signed URLs for attachments shown in the thread, keyed by storage path.
@@ -385,12 +387,14 @@ export default function MessagingWorkspace({ mode, isGuest = false }: MessagingW
   function clearPendingAttachment() {
     setPendingAttachment(null);
     setAttachmentError(null);
+    setAttachmentSendFailed(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   function handleFileChosen(file: File | undefined) {
     if (fileInputRef.current) fileInputRef.current.value = "";
     if (!file) return;
+    setAttachmentSendFailed(false);
     const validation = validateChatAttachment(file);
     if (!validation.ok) {
       setAttachmentError(validation.error);
@@ -409,6 +413,7 @@ export default function MessagingWorkspace({ mode, isGuest = false }: MessagingW
     keepLatestMessageVisibleRef.current = true;
     setComposerError(null);
     setAttachmentError(null);
+    setAttachmentSendFailed(false);
     setActiveId(conversationId);
     setMobileChatOpen(true);
   }
@@ -434,6 +439,7 @@ export default function MessagingWorkspace({ mode, isGuest = false }: MessagingW
     }
     setComposerError(null);
     setAttachmentError(null);
+    setAttachmentSendFailed(false);
     setSending(true);
     setDraft("");
     keepLatestMessageVisibleRef.current = true;
@@ -446,6 +452,8 @@ export default function MessagingWorkspace({ mode, isGuest = false }: MessagingW
         });
       }
       const sent = await sendMessage(client, activeId, body, undefined, uploaded);
+      // The file now belongs to a stored message and must never be removed.
+      uploaded = null;
       if (attachmentToSend) clearPendingAttachment();
       setMessages((current) => current.some((message) => message.id === sent.id)
         ? current
@@ -459,8 +467,15 @@ export default function MessagingWorkspace({ mode, isGuest = false }: MessagingW
       const message = sendError instanceof Error ? sendError.message : "Your message could not be sent.";
       if (message === INAPPROPRIATE_LANGUAGE_MESSAGE) {
         setComposerError(message);
-      } else if (sendError instanceof ChatAttachmentUploadError || ATTACHMENT_ERROR_MESSAGES.has(message)) {
+      } else if (
+        attachmentToSend
+        || sendError instanceof ChatAttachmentUploadError
+        || ATTACHMENT_ERROR_MESSAGES.has(message)
+      ) {
+        // The chosen file stays in the tray, so the error is shown next to it
+        // and the send can be retried as-is.
         setAttachmentError(message);
+        setAttachmentSendFailed(Boolean(attachmentToSend));
       } else {
         setError(message);
       }
@@ -625,6 +640,16 @@ export default function MessagingWorkspace({ mode, isGuest = false }: MessagingW
                     <path d="M10 8v3.6M10 14.2v.1" />
                   </svg>
                   <span>{attachmentError}</span>
+                  {attachmentSendFailed && pendingAttachment && activeConversation.status === "open" && !replyGate.blocked ? (
+                    <button
+                      type="button"
+                      className={styles.composerErrorRetry}
+                      onClick={() => void handleSend()}
+                      disabled={sending}
+                    >
+                      Try again
+                    </button>
+                  ) : null}
                 </div>
               ) : null}
 
