@@ -12,6 +12,19 @@ import {
   containsProfanity,
 } from "../src/lib/chatProfanity";
 import {
+  CHAT_ATTACHMENT_EMPTY_ERROR,
+  CHAT_ATTACHMENT_MAX_BYTES,
+  CHAT_ATTACHMENT_SIZE_ERROR,
+  CHAT_ATTACHMENT_TYPES,
+  CHAT_ATTACHMENT_TYPE_ERROR,
+  attachmentTypeLabel,
+  buildChatAttachmentPath,
+  chatAttachmentDisplayName,
+  formatFileSize,
+  validateChatAttachment,
+} from "../src/lib/chatAttachments";
+import {
+  ATTACHMENT_NOT_UPLOADED_MESSAGE,
   DEFAULT_CUSTOMER_MESSAGE_LIMIT,
   INAPPROPRIATE_LANGUAGE_MESSAGE,
   REPLY_REQUIRED_MESSAGE,
@@ -352,4 +365,177 @@ test("send_chat_message rejects profane customer messages before storing them", 
   );
   // Historical messages are never rewritten.
   assert.doesNotMatch(profanityMigration, /update public\.chat_messages/i);
+});
+
+const attachmentMigration = readFileSync(
+  new URL("../supabase/migrations/20261001200000_chat_message_attachments.sql", import.meta.url),
+  "utf8",
+);
+
+test("chat attachments accept JPG, JPEG, PNG, PDF, DOC and DOCX up to 10 MB", () => {
+  const accepted: Array<[string, string, string]> = [
+    ["photo.jpg", "image/jpeg", "image/jpeg"],
+    ["photo.JPEG", "image/jpeg", "image/jpeg"],
+    ["scan.png", "image/png", "image/png"],
+    ["id.pdf", "application/pdf", "application/pdf"],
+    ["letter.doc", "", "application/msword"],
+    [
+      "contract.docx",
+      "application/octet-stream",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ],
+  ];
+  for (const [name, type, mimeType] of accepted) {
+    const result = validateChatAttachment({ name, type, size: 1024 });
+    assert.ok(result.ok, `${name} should be accepted`);
+    assert.equal(result.ok && result.mimeType, mimeType);
+  }
+  assert.ok(validateChatAttachment({ name: "max.pdf", type: "application/pdf", size: CHAT_ATTACHMENT_MAX_BYTES }).ok);
+  assert.equal(CHAT_ATTACHMENT_MAX_BYTES, 10 * 1024 * 1024);
+});
+
+test("chat attachments reject other types, mismatched types, empty and oversized files", () => {
+  const rejected: Array<[{ name: string; type: string; size: number }, string]> = [
+    [{ name: "clip.gif", type: "image/gif", size: 10 }, CHAT_ATTACHMENT_TYPE_ERROR],
+    [{ name: "app.exe", type: "", size: 10 }, CHAT_ATTACHMENT_TYPE_ERROR],
+    [{ name: "noextension", type: "application/pdf", size: 10 }, CHAT_ATTACHMENT_TYPE_ERROR],
+    [{ name: "fake.pdf", type: "text/html", size: 10 }, CHAT_ATTACHMENT_TYPE_ERROR],
+    [{ name: "photo.webp", type: "image/webp", size: 10 }, CHAT_ATTACHMENT_TYPE_ERROR],
+    [{ name: "empty.png", type: "image/png", size: 0 }, CHAT_ATTACHMENT_EMPTY_ERROR],
+    [{ name: "big.pdf", type: "application/pdf", size: CHAT_ATTACHMENT_MAX_BYTES + 1 }, CHAT_ATTACHMENT_SIZE_ERROR],
+  ];
+  for (const [file, error] of rejected) {
+    assert.deepEqual(validateChatAttachment(file), { ok: false, error }, file.name);
+  }
+});
+
+test("attachment names and sizes are formatted for display", () => {
+  assert.equal(formatFileSize(500), "500 B");
+  assert.equal(formatFileSize(2048), "2 KB");
+  assert.equal(formatFileSize(1536 * 1024), "1.5 MB");
+  assert.equal(formatFileSize(CHAT_ATTACHMENT_MAX_BYTES), "10 MB");
+  assert.equal(attachmentTypeLabel("application/pdf"), "PDF");
+  assert.equal(
+    attachmentTypeLabel("application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+    "DOCX",
+  );
+  assert.equal(chatAttachmentDisplayName("my/receipt.pdf", "pdf"), "myreceipt.pdf");
+  const trimmed = chatAttachmentDisplayName(`${"a".repeat(300)}.docx`, "docx");
+  assert.equal(trimmed.length, 255);
+  assert.ok(trimmed.endsWith(".docx"));
+  assert.equal(
+    buildChatAttachmentPath("conversation-1", "user-1", "png", "object-1"),
+    "conversation-1/user-1/object-1.png",
+  );
+});
+
+test("attachment messages use the attachment RPC and map file metadata", async () => {
+  const { client, calls } = clientWithResults([{ data: [{
+    id: "message-2",
+    conversation_id: "conversation-1",
+    sender_id: "customer-1",
+    sender_role: "customer",
+    sender_name: "Guest customer",
+    message_type: "text",
+    body: "",
+    created_at: "2026-10-01T02:00:00.000Z",
+    edited_at: null,
+    attachment_path: "conversation-1/customer-1/object-1.pdf",
+    attachment_name: "valid-id.pdf",
+    attachment_mime_type: "application/pdf",
+    attachment_size_bytes: 2048,
+  }], error: null }]);
+
+  const message = await sendMessage(
+    client,
+    "conversation-1",
+    "",
+    "22222222-2222-4222-8222-222222222222",
+    { path: "conversation-1/customer-1/object-1.pdf", name: "valid-id.pdf" },
+  );
+  assert.deepEqual(calls[0], {
+    name: "send_chat_attachment_message",
+    args: {
+      p_conversation_id: "conversation-1",
+      p_body: "",
+      p_client_message_id: "22222222-2222-4222-8222-222222222222",
+      p_attachment_path: "conversation-1/customer-1/object-1.pdf",
+      p_attachment_name: "valid-id.pdf",
+    },
+  });
+  assert.deepEqual(message.attachment, {
+    path: "conversation-1/customer-1/object-1.pdf",
+    name: "valid-id.pdf",
+    mimeType: "application/pdf",
+    sizeBytes: 2048,
+  });
+});
+
+test("text-only messages and older rows have no attachment", async () => {
+  const { client } = clientWithResults([{ data: [{
+    id: "message-3",
+    conversation_id: "conversation-1",
+    sender_id: "admin-1",
+    sender_role: "admin",
+    sender_name: "Maddy & Cassy Support",
+    message_type: "text",
+    body: "Hello",
+    created_at: "2026-10-01T02:00:00.000Z",
+    edited_at: null,
+  }], error: null }]);
+  const [message] = await listMessages(client, "conversation-1");
+  assert.equal(message.attachment, null);
+});
+
+test("attachment errors from the database become friendly messages", async () => {
+  for (const [code, expected] of [
+    ["CHAT_ATTACHMENT_TOO_LARGE", CHAT_ATTACHMENT_SIZE_ERROR],
+    ["CHAT_ATTACHMENT_INVALID", CHAT_ATTACHMENT_TYPE_ERROR],
+    ["CHAT_ATTACHMENT_NOT_FOUND", ATTACHMENT_NOT_UPLOADED_MESSAGE],
+    ["CHAT_REPLY_REQUIRED", REPLY_REQUIRED_MESSAGE],
+  ] as const) {
+    const { client } = clientWithResults([{ data: null, error: { message: code } }]);
+    await assert.rejects(
+      sendMessage(client, "conversation-1", "", undefined, { path: "p", name: "a.pdf" }),
+      { message: expected },
+    );
+  }
+});
+
+test("the attachment bucket is private and matches the client type and size rules", () => {
+  assert.match(attachmentMigration, /'chat-attachments',\s*\n\s*'chat-attachments',\s*\n\s*false,\s*\n\s*10485760,/);
+  for (const [extension, mimeType] of Object.entries(CHAT_ATTACHMENT_TYPES)) {
+    assert.ok(attachmentMigration.includes(`'${mimeType}'`), `bucket is missing ${mimeType}`);
+    assert.ok(
+      attachmentMigration.includes(`when '${extension}' then '${mimeType}'`),
+      `server type map is missing ${extension}`,
+    );
+  }
+});
+
+test("attachment storage access is limited to conversation participants", () => {
+  assert.match(attachmentMigration, /for select to authenticated\s*\n\s*using \(\s*\n\s*bucket_id = 'chat-attachments'\s*\n\s*and private\.can_read_chat_attachment\(name\)/);
+  assert.match(attachmentMigration, /for insert to authenticated\s*\n\s*with check \(\s*\n\s*bucket_id = 'chat-attachments'\s*\n\s*and private\.can_upload_chat_attachment\(name\)/);
+  assert.match(attachmentMigration, /return private\.can_access_chat_conversation\(v_conversation_id, v_uid\);/);
+  // Uploads land in the uploader's own folder.
+  assert.match(attachmentMigration, /split_part\(p_name, '\/', 2\) <> v_uid::text/);
+  assert.doesNotMatch(attachmentMigration, /to anon\b/);
+});
+
+test("attachment sends keep the profanity filter and count as one message", () => {
+  assert.match(
+    attachmentMigration,
+    /if not v_is_admin and v_body <> '' and private\.chat_message_has_profanity\(v_body\) then\s*\n\s*raise exception 'CHAT_INAPPROPRIATE_LANGUAGE'/,
+  );
+  assert.match(
+    attachmentMigration,
+    /not v_is_admin\s*\n\s*and v_existing_message_id is null\s*\n\s*and private\.count_pending_customer_messages\(p_conversation_id\)\s*\n?\s*>=\s*private\.chat_customer_message_limit\(\)/,
+  );
+  // The stored object is re-checked before the message is saved.
+  const objectCheck = attachmentMigration.indexOf("from storage.objects as stored_object");
+  const insertIndex = attachmentMigration.indexOf("insert into public.chat_messages as inserted_message");
+  assert.ok(objectCheck > 0 && objectCheck < insertIndex);
+  // Text-only sends are left untouched.
+  assert.doesNotMatch(attachmentMigration, /function public\.send_chat_message\(/);
+  assert.doesNotMatch(attachmentMigration, /update public\.chat_messages/i);
 });
