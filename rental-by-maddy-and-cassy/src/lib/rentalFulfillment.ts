@@ -76,6 +76,7 @@ export function computeAmountOwed(input: {
 
 export interface CompletionInput {
   status: BookingStatus;
+  pickedUp?: boolean;
   returned: boolean;
   itemCondition: "good" | "damaged" | null;
   charges: BookingCharge[];
@@ -90,6 +91,7 @@ export function getCompletionBlockers(input: CompletionInput): string[] {
   if (input.status !== "released") return ["The item must be marked as picked up first."];
 
   const blockers: string[] = [];
+  if (input.pickedUp === false) blockers.push("Record the actual pickup in the Pickup tab.");
   if (!input.returned) blockers.push("Record the item return in the Return tab.");
   if (!input.itemCondition) blockers.push("Record the item condition in the Item Condition tab.");
 

@@ -12,7 +12,6 @@ import {
 } from "@/src/services/bookingDetailService";
 import BookingItemsSummary from "@/components/booking-summary/BookingItemsSummary";
 import StatusBadge from "@/components/status-badge/StatusBadge";
-import NotificationList from "@/components/notification-list/NotificationList";
 import Spinner from "@/components/ui/Spinner";
 import formStyles from "@/components/ui/Form.module.css";
 import styles from "./bookingDetail.module.css";
@@ -57,16 +56,15 @@ const COMPLETED_BOOKING_STATUSES = new Set([
   "returned",
 ]);
 
-type BookingPanel = "overview" | "progress" | "documents" | "updates";
+type BookingPanel = "overview" | "progress" | "documents";
 
 const PANEL_HASHES: Record<BookingPanel, string> = {
   overview: "#booking-overview",
   progress: "#process-completion",
   documents: "#booking-documents",
-  updates: "#booking-notifications",
 };
 
-const PANEL_ORDER: BookingPanel[] = ["overview", "progress", "documents", "updates"];
+const PANEL_ORDER: BookingPanel[] = ["overview", "progress", "documents"];
 
 function getRequirementGuidance(status: string): string {
   switch (status) {
@@ -403,9 +401,6 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
            <Button id="booking-tab-documents" variant="none" type="button" role="tab" aria-controls="booking-documents" aria-selected={activePanel === "documents"} tabIndex={activePanel === "documents" ? 0 : -1} onKeyDown={(event) => handlePanelKeyDown(event, "documents")} onClick={() => selectPanel("documents")}>
              <span>03</span><strong>Documents</strong><small>Files &amp; records</small>
            </Button>
-           <Button id="booking-tab-updates" variant="none" type="button" role="tab" aria-controls="booking-notifications" aria-selected={activePanel === "updates"} tabIndex={activePanel === "updates" ? 0 : -1} onKeyDown={(event) => handlePanelKeyDown(event, "updates")} onClick={() => selectPanel("updates")}>
-             <span>04</span><strong>Updates</strong><small>Live messages</small>
-           </Button>
          </nav>
 
       <section className={styles.bookingStepper} aria-labelledby="booking-stepper-heading">
@@ -640,26 +635,6 @@ export function BookingDetailContent({ guestMode = false }: { guestMode?: boolea
             ))}
           </ul>
         )}
-      </section>
-      </div>
-
-      <div
-        id="booking-notifications"
-        role="tabpanel"
-        aria-labelledby="booking-tab-updates"
-        tabIndex={0}
-        className={styles.panelContent}
-        hidden={activePanel !== "updates"}
-      >
-      <section className={styles.resourceSection}>
-        <div className={styles.resourceHeading}>
-          <div>
-            <p className={styles.sectionEyebrow}>BOOKING UPDATES</p>
-            <h2>Notifications</h2>
-          </div>
-        </div>
-        <p className={styles.sectionIntro}>See review decisions, confirmation messages, and fulfillment updates in one place.</p>
-        <NotificationList uid={user.id} />
       </section>
       </div>
 

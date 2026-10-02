@@ -183,12 +183,20 @@ export async function completeRental(
   bookingId: string,
   note: string,
 ): Promise<{ alreadyCompleted: boolean; emailSent: boolean }> {
-  const result = await callApi<{ alreadyCompleted: boolean; emailSent: boolean }>(
-    `${base(bookingId)}/complete`,
-    "POST",
-    { note },
-    "The rental could not be completed. Please try again.",
-  );
+  let result: { alreadyCompleted: boolean; emailSent: boolean };
+  try {
+    result = await callApi<{ alreadyCompleted: boolean; emailSent: boolean }>(
+      `${base(bookingId)}/complete`,
+      "POST",
+      { note },
+      "The rental could not be completed. Please try again.",
+    );
+  } catch (error) {
+    if (error instanceof FulfillmentApiError && error.blockers.length > 0) {
+      throw new FulfillmentApiError(`${error.message} ${error.blockers.join(" ")}`, error.blockers);
+    }
+    throw error;
+  }
   return { alreadyCompleted: result.alreadyCompleted === true, emailSent: result.emailSent === true };
 }
 
