@@ -73,6 +73,7 @@ export async function GET(
         startDate: booking.startDate,
         endDate: booking.endDate,
         pickupConvenienceFee: booking.pickupConvenienceFee ?? 0,
+        sameDayFee: booking.sameDayFee ?? 0,
         fulfillmentMethod: booking.fulfillmentMethod,
         location: booking.location ?? null,
         cityMunicipality: booking.cityMunicipality ?? null,

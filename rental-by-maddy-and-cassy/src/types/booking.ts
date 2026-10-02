@@ -130,6 +130,8 @@ export interface Booking {
   birthDateSnapshot?: string;
   deliveryFee: number;
   pickupConvenienceFee?: number;
+  /** Same-day convenience fee snapshot (booked on the rental's Manila calendar day). */
+  sameDayFee?: number;
   totalAmount: number;
   balancePaymentPreference: BalancePaymentPreference;
   balancePreferenceUpdatedAt?: string;
@@ -276,6 +278,8 @@ export interface AgreementSnapshot {
   discountAmount: number;
   depositAmount: number;
   fees: number;
+  /** Same-day convenience fee; absent from snapshots signed before it existed. */
+  sameDayFee?: number;
   finalAmount: number;
   /** @deprecated kept only for reading legacy single-item snapshots written before the items array existed. */
   productName?: string;

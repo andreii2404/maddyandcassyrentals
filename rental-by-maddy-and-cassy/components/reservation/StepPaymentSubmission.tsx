@@ -255,10 +255,24 @@ export default function StepPaymentSubmission({
           <dt>Non-refundable deposit</dt>
           <dd>{money(pricing.depositAmount)}</dd>
         </div>
-        <div>
-          <dt>{pricing.fees > 0 ? "Outside-hours service fee" : "Online fees"}</dt>
-          <dd>{pricing.fees > 0 ? money(pricing.fees) : "Free"}</dd>
-        </div>
+        {pricing.fees > 0 ? (
+          <div>
+            <dt>Outside-hours service fee</dt>
+            <dd>{money(pricing.fees)}</dd>
+          </div>
+        ) : null}
+        {pricing.sameDayFee > 0 ? (
+          <div>
+            <dt>Same-day convenience fee</dt>
+            <dd>{money(pricing.sameDayFee)}</dd>
+          </div>
+        ) : null}
+        {pricing.fees <= 0 && pricing.sameDayFee <= 0 ? (
+          <div>
+            <dt>Online fees</dt>
+            <dd>Free</dd>
+          </div>
+        ) : null}
         <div className={styles.finalAmount}>
           <dt>Final amount</dt>
           <dd>{money(pricing.finalAmount)}</dd>

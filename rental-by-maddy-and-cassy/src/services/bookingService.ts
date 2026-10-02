@@ -198,6 +198,7 @@ function assembleBooking(
     deliveryFee: totals?.delivery_fee ?? fulfillment?.delivery_fee_snapshot ?? 0,
     pickupConvenienceFee:
       totals?.pickup_convenience_fee ?? fulfillment?.pickup_convenience_fee_snapshot ?? 0,
+    sameDayFee: totals?.same_day_fee ?? fulfillment?.same_day_fee_snapshot ?? 0,
     totalAmount: totals?.total_amount ?? 0,
     balancePaymentPreference:
       row.balance_payment_preference === "in_person" ? "in_person" : "online_gcash",

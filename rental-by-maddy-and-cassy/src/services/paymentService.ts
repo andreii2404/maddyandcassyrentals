@@ -20,6 +20,8 @@ export interface ReservationResumeState {
     startDate: string;
     endDate: string;
     pickupConvenienceFee: number;
+    /** Absent from responses served before the same-day fee existed. */
+    sameDayFee?: number;
     fulfillmentMethod: "pickup" | "delivery";
     location: string | null;
     cityMunicipality: string | null;

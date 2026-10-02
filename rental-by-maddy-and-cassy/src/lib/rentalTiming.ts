@@ -1,6 +1,8 @@
 export const RENTAL_DURATION_HOURS = 22;
 export const TURNAROUND_HOURS = 2;
 export const PICKUP_CONVENIENCE_FEE = 100;
+/** Flat fee when the rental date is the same Asia/Manila day the booking is made. */
+export const SAME_DAY_CONVENIENCE_FEE = 100;
 export const DEFAULT_PICKUP_TIME = "09:00";
 /** Minimum transportation allowance added to a delivery's selected time. */
 export const DELIVERY_TRANSPORT_ALLOWANCE_HOURS = 2;
@@ -140,6 +142,18 @@ export function pickupDateKey(date: Date): string {
   const month = parts.find((part) => part.type === "month")?.value;
   const day = parts.find((part) => part.type === "day")?.value;
   return year && month && day ? `${year}-${month}-${day}` : "";
+}
+
+/**
+ * Same-day convenience fee for a rental starting on `startDate`, booked at
+ * `bookedAt`: charged only when both fall on the same Asia/Manila calendar
+ * day. Mirrors private.apply_same_day_convenience_fee (migration
+ * 20261002160000), which enforces the fee when the booking is created.
+ */
+export function calculateSameDayFee(startDate: Date | null, bookedAt: Date = new Date()): number {
+  if (!startDate || Number.isNaN(startDate.getTime())) return 0;
+  const rentalDay = pickupDateKey(startDate);
+  return rentalDay !== "" && rentalDay === pickupDateKey(bookedAt) ? SAME_DAY_CONVENIENCE_FEE : 0;
 }
 
 /** Matches the 5-minute increments PickupTimeSelector already offers. */

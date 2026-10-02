@@ -102,6 +102,19 @@ export async function loginWithEmail(email: string, password: string): Promise<U
  */
 export async function startGuestCheckout(): Promise<User> {
   const supabase = createClient();
+
+  // Reuse a still-valid guest session rather than creating a second anonymous
+  // user that would orphan the first one's bookings and uploaded documents.
+  const { data: existing } = await supabase.auth.getUser();
+  if (existing.user?.is_anonymous) {
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (sessionData.session) {
+      await syncServerSession(sessionData.session.access_token, sessionData.session.refresh_token);
+      await ensureGuestProfile();
+      return existing.user;
+    }
+  }
+
   const { data, error } = await supabase.auth.signInAnonymously();
   if (error || !data.user || !data.session) {
     if (error?.message.toLowerCase().includes("anonymous sign-ins are disabled")) {
@@ -114,7 +127,33 @@ export async function startGuestCheckout(): Promise<User> {
     );
   }
   await syncServerSession(data.session.access_token, data.session.refresh_token);
+  await ensureGuestProfile();
   return data.user;
+}
+
+/**
+ * Makes sure the current guest session has its profile row. Guest checkout
+ * saves contact details onto that row, so a guest session whose profile is
+ * missing would otherwise fail at payment submission. Safe to call repeatedly.
+ */
+export async function ensureGuestProfile(): Promise<void> {
+  let response: Response;
+  try {
+    response = await fetch("/api/guest/profile", {
+      method: "POST",
+      credentials: "same-origin",
+    });
+  } catch {
+    throw new Error("Your guest checkout session could not be prepared. Check your connection and try again.");
+  }
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { error?: unknown } | null;
+    throw new Error(
+      typeof body?.error === "string"
+        ? body.error
+        : "Your guest checkout session could not be prepared. Please try again.",
+    );
+  }
 }
 
 export async function requestPasswordReset(

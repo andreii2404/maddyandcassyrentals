@@ -980,6 +980,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
               discountAmount={booking.specialDiscountAmount}
               depositAmount={booking.refundableDeposit}
               fees={booking.deliveryFee + (booking.pickupConvenienceFee ?? 0)}
+              sameDayFee={booking.sameDayFee ?? 0}
               grandTotal={booking.totalAmount}
             />
           </div>

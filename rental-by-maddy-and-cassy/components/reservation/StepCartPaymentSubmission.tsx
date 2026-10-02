@@ -255,10 +255,24 @@ export default function StepCartPaymentSubmission({
           <dt>Non-refundable deposit</dt>
           <dd>{money(currency, pricing.depositAmount)}</dd>
         </div>
-        <div>
-          <dt>{pricing.fees > 0 ? "Outside-hours service fee" : "Online fees"}</dt>
-          <dd>{pricing.fees > 0 ? money(currency, pricing.fees) : "Free"}</dd>
-        </div>
+        {pricing.fees > 0 ? (
+          <div>
+            <dt>Outside-hours service fee</dt>
+            <dd>{money(currency, pricing.fees)}</dd>
+          </div>
+        ) : null}
+        {pricing.sameDayFee > 0 ? (
+          <div>
+            <dt>Same-day convenience fee</dt>
+            <dd>{money(currency, pricing.sameDayFee)}</dd>
+          </div>
+        ) : null}
+        {pricing.fees <= 0 && pricing.sameDayFee <= 0 ? (
+          <div>
+            <dt>Online fees</dt>
+            <dd>Free</dd>
+          </div>
+        ) : null}
         <div className={styles.finalAmount}>
           <dt>Final Grand Total</dt>
           <dd>{money(currency, pricing.finalAmount)}</dd>

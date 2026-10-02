@@ -31,6 +31,7 @@ import PickupTimeSelector from "@/components/reservation/PickupTimeSelector";
 import formStyles from "@/components/ui/Form.module.css";
 import ReservationFooter from "@/components/reservation/ReservationFooter";
 import RentalScheduleNoticeModal from "@/components/reservation/RentalScheduleNoticeModal";
+import BookingAdvanceNotice from "@/components/reservation/BookingAdvanceNotice";
 import {
   HandoverTimeDetails,
   PriceBreakdown,
@@ -422,6 +423,8 @@ export default function StepCartRentalDetails({
           Pick one shared pickup date, time, and fulfillment method for every item in your cart.
         </p>
       </div>
+
+      <BookingAdvanceNotice applied={pricing.sameDayFee > 0} />
 
       <div className={styles.layout}>
         <div className={styles.mainColumn}>

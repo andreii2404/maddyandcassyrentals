@@ -83,6 +83,8 @@ export interface ReservationDraft extends CourierArrangement {
   pickupTime: string;
   /** Server-enforced outside-hours convenience fee for the selected timestamp. */
   pickupConvenienceFee: number;
+  /** Server-enforced same-day convenience fee: rental date is the day the booking is made. */
+  sameDayFee: number;
   fulfillmentMethod: FulfillmentMethod | null;
   /** Street/barangay/landmark line. Only required (and only sent) when fulfillmentMethod is "delivery". */
   customerLocation: string;
@@ -105,6 +107,7 @@ export function createEmptyDraft(): ReservationDraft {
     rentalEndDate: null,
     pickupTime: "",
     pickupConvenienceFee: 0,
+    sameDayFee: 0,
     fulfillmentMethod: null,
     customerLocation: "",
     cityMunicipality: "",

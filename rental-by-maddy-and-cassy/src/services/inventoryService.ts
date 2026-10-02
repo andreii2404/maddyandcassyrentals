@@ -127,6 +127,35 @@ function logSupabaseError(context: string, error: unknown): void {
   console.error(`${context}: ${JSON.stringify(extractSupabaseError(error))}`);
 }
 
+/**
+ * Saves the guest's contact details on their checkout profile. A guest session
+ * can exist without its profile row, which makes the RPC raise
+ * CUSTOMER_PROFILE_REQUIRED; in that case the profile is (re)created once and
+ * the save is retried, so the customer never has to refresh or lose their
+ * entered payment details.
+ */
+async function saveGuestCheckoutContact(
+  supabase: SupabaseClient<Database>,
+  customerSnapshot: BookingCustomerSnapshot,
+  context: string,
+): Promise<void> {
+  const save = () =>
+    supabase.rpc("save_guest_checkout_contact", {
+      p_customer_snapshot: toJson(customerSnapshot),
+    });
+
+  let { error } = await save();
+  if (error?.message.includes("CUSTOMER_PROFILE_REQUIRED")) {
+    const { ensureGuestProfile } = await import("@/src/services/authService");
+    await ensureGuestProfile();
+    ({ error } = await save());
+  }
+  if (error) {
+    logSupabaseError(`${context}: guest contact save failed`, error);
+    throw new Error(guestContactErrorMessage(error.message));
+  }
+}
+
 export interface SubmitBookingInput {
   productId: string;
   quantity?: number;
@@ -171,13 +200,7 @@ export async function submitBookingWithDateGuard(
   input: SubmitBookingInput,
 ): Promise<SubmitBookingResult> {
   if (input.isGuest) {
-    const { error: guestContactError } = await supabase.rpc("save_guest_checkout_contact", {
-      p_customer_snapshot: toJson(input.customerSnapshot),
-    });
-    if (guestContactError) {
-      logSupabaseError("submitBookingWithDateGuard: guest contact save failed", guestContactError);
-      throw new Error(guestContactErrorMessage(guestContactError.message));
-    }
+    await saveGuestCheckoutContact(supabase, input.customerSnapshot, "submitBookingWithDateGuard");
   }
 
   const bookingArgs = {
@@ -301,13 +324,7 @@ export async function submitMultiItemBookingWithDateGuard(
   input: SubmitMultiItemBookingInput,
 ): Promise<SubmitBookingResult> {
   if (input.isGuest) {
-    const { error: guestContactError } = await supabase.rpc("save_guest_checkout_contact", {
-      p_customer_snapshot: toJson(input.customerSnapshot),
-    });
-    if (guestContactError) {
-      logSupabaseError("submitMultiItemBookingWithDateGuard: guest contact save failed", guestContactError);
-      throw new Error(guestContactErrorMessage(guestContactError.message));
-    }
+    await saveGuestCheckoutContact(supabase, input.customerSnapshot, "submitMultiItemBookingWithDateGuard");
   }
 
   const isDelivery = input.fulfillmentMethod === "delivery";

@@ -19,6 +19,8 @@ export interface BookingItemsSummaryProps {
   discountAmount: number;
   depositAmount: number;
   fees: number;
+  /** Same-day convenience fee, shown as its own row when charged; not included in `fees`. */
+  sameDayFee?: number;
   grandTotal: number;
   /** True once an agreement exists -- unlocks the "pending" unit-assignment label instead of hiding it entirely. */
   unitsExpected?: boolean;
@@ -46,6 +48,7 @@ export default function BookingItemsSummary({
   discountAmount,
   depositAmount,
   fees,
+  sameDayFee = 0,
   grandTotal,
   unitsExpected = false,
 }: BookingItemsSummaryProps) {
@@ -116,6 +119,12 @@ export default function BookingItemsSummary({
           <dt>Fees</dt>
           <dd>{money(currency, fees)}</dd>
         </div>
+        {sameDayFee > 0 ? (
+          <div className={styles.totalItem}>
+            <dt>Same-day convenience fee</dt>
+            <dd>{money(currency, sameDayFee)}</dd>
+          </div>
+        ) : null}
         <div className={styles.grandTotal}>
           <dt>Grand Total</dt>
           <dd>{money(currency, grandTotal)}</dd>

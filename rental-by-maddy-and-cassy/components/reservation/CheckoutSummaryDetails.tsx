@@ -146,12 +146,24 @@ export function PriceBreakdown({ lines, pricing, fulfillmentMethod, pickupTime }
                   </dt>
                   <dd>{formatPeso(pricing.fees)}</dd>
                 </div>
-              ) : (
+              ) : null}
+
+              {pricing.sameDayFee > 0 ? (
+                <div>
+                  <dt>
+                    Same-day convenience fee
+                    <small>Added because your rental starts today. Advance bookings have no fee.</small>
+                  </dt>
+                  <dd>{formatPeso(pricing.sameDayFee)}</dd>
+                </div>
+              ) : null}
+
+              {pricing.fees <= 0 && pricing.sameDayFee <= 0 ? (
                 <div>
                   <dt>Additional fees</dt>
                   <dd>None</dd>
                 </div>
-              )}
+              ) : null}
             </dl>
 
             {pricing.catalogDiscountAmount > 0 ? (

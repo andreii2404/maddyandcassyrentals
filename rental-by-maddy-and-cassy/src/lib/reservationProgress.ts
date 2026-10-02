@@ -29,6 +29,7 @@ interface StoredReservationProgress {
     rentalEndDate?: string | null;
     pickupTime: string;
     pickupConvenienceFee: number;
+    sameDayFee?: number;
     fulfillmentMethod: ReservationDraft["fulfillmentMethod"];
     customerLocation: string;
     cityMunicipality: string;
@@ -113,6 +114,7 @@ export function serializeReservationProgress(input: {
       rentalEndDate: input.draft.rentalEndDate?.toISOString() ?? null,
       pickupTime: input.draft.pickupTime,
       pickupConvenienceFee: input.draft.pickupConvenienceFee,
+      sameDayFee: input.draft.sameDayFee,
       fulfillmentMethod: input.draft.fulfillmentMethod,
       customerLocation: input.draft.customerLocation,
       cityMunicipality: input.draft.cityMunicipality,
@@ -204,6 +206,7 @@ export function restoreReservationProgress(
         rentalEndDate: restoredRentalEndDate,
         pickupTime: text(draft.pickupTime),
         pickupConvenienceFee: Math.max(0, Number(draft.pickupConvenienceFee) || 0),
+        sameDayFee: Math.max(0, Number(draft.sameDayFee) || 0),
         fulfillmentMethod,
         customerLocation: text(draft.customerLocation),
         cityMunicipality: text(draft.cityMunicipality),

@@ -617,6 +617,7 @@ export type Database = {
           delivery_courier_other: string | null
           delivery_fee_snapshot: number
           pickup_convenience_fee_snapshot: number
+          same_day_fee_snapshot: number
           delivery_notes: string | null
           method: Database["public"]["Enums"]["fulfillment_method"]
           postal_code: string | null
@@ -642,6 +643,7 @@ export type Database = {
           delivery_courier_other?: string | null
           delivery_fee_snapshot?: number
           pickup_convenience_fee_snapshot?: number
+          same_day_fee_snapshot?: number
           delivery_notes?: string | null
           method: Database["public"]["Enums"]["fulfillment_method"]
           postal_code?: string | null
@@ -667,6 +669,7 @@ export type Database = {
           delivery_courier_other?: string | null
           delivery_fee_snapshot?: number
           pickup_convenience_fee_snapshot?: number
+          same_day_fee_snapshot?: number
           delivery_notes?: string | null
           method?: Database["public"]["Enums"]["fulfillment_method"]
           postal_code?: string | null
@@ -2445,6 +2448,7 @@ export type Database = {
           deposit_total: number | null
           promotion_code: string | null
           promotion_discount_amount: number | null
+          same_day_fee: number | null
           rental_days: number | null
           rental_subtotal: number | null
           special_discount_total: number | null

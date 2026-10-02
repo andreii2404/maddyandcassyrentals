@@ -48,6 +48,7 @@ import {
 } from "@/src/lib/reservationProgress";
 import type { RewardProgress } from "@/src/lib/promotions";
 import {
+  calculateSameDayFee,
   DELIVERY_TRANSPORT_ALLOWANCE_HOURS,
   formatManilaDateTime,
   formatManilaPickupTime,
@@ -304,6 +305,7 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
         rentalEndDate: new Date(new Date(booking.endDate).getTime() - 22 * 60 * 60 * 1000),
         pickupTime: manilaTimeInputValue(booking.startDate),
         pickupConvenienceFee: booking.pickupConvenienceFee ?? 0,
+        sameDayFee: booking.sameDayFee ?? 0,
         fulfillmentMethod: booking.fulfillmentMethod,
         customerLocation: booking.location ?? current.customerLocation,
         cityMunicipality: booking.cityMunicipality ?? "",
@@ -387,6 +389,22 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
   const updateDraft = useCallback((patch: Partial<ReservationDraft>) => {
     setDraft((current) => ({ ...current, ...patch }));
   }, []);
+
+  // Until the booking exists, the same-day fee follows the live Manila date so
+  // the quoted total matches what the server enforces when it creates the
+  // booking (re-checked periodically in case the day rolls over). Once the
+  // booking exists, its own snapshot (restored on resume) is kept instead.
+  useEffect(() => {
+    if (bookingId) return;
+    const syncSameDayFee = () =>
+      setDraft((current) => {
+        const sameDayFee = calculateSameDayFee(current.startDate);
+        return current.sameDayFee === sameDayFee ? current : { ...current, sameDayFee };
+      });
+    syncSameDayFee();
+    const timer = window.setInterval(syncSameDayFee, 30000);
+    return () => window.clearInterval(timer);
+  }, [bookingId, draft.startDate]);
 
   // Confirm before leaving an in-progress checkout (steps 1–5); the gate screens and the
   // final confirmation step have nothing to lose.
@@ -510,6 +528,7 @@ function CheckoutFlowInner({ products, isGuest }: CheckoutFlowClientProps & { is
     fees: agreementBooking
       ? agreementBooking.deliveryFee + (agreementBooking.pickupConvenienceFee ?? 0)
       : pricing.fees,
+    sameDayFee: agreementBooking ? agreementBooking.sameDayFee ?? 0 : pricing.sameDayFee,
     finalAmount: agreementBooking?.totalAmount ?? pricing.finalAmount,
   };
 

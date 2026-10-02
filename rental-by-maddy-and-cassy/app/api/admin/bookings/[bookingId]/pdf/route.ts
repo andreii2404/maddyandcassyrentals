@@ -127,6 +127,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ book
             : []),
           { label: "Non-refundable deposit", value: `PHP ${booking.refundableDeposit.toLocaleString("en-PH")}` },
           { label: "Delivery / convenience fees", value: `PHP ${(booking.deliveryFee + (booking.pickupConvenienceFee ?? 0)).toLocaleString("en-PH")}` },
+          ...((booking.sameDayFee ?? 0) > 0
+            ? [{ label: "Same-day convenience fee", value: `PHP ${(booking.sameDayFee ?? 0).toLocaleString("en-PH")}` }]
+            : []),
           { label: "Total amount", value: `PHP ${booking.totalAmount.toLocaleString("en-PH")}` },
         ],
       },

@@ -18,6 +18,8 @@ export interface AgreementDocumentData {
   discountAmount: number;
   depositAmount: number;
   fees: number;
+  /** Same-day convenience fee, shown as its own row; not included in `fees`. */
+  sameDayFee?: number;
   finalAmount: number;
 }
 
@@ -215,6 +217,12 @@ export default function AgreementDocument({
             <div className={styles.totalsRow}>
               <dt>Other applicable charges</dt>
               <dd>{money(data.currency, data.fees)}</dd>
+            </div>
+          ) : null}
+          {(data.sameDayFee ?? 0) > 0 ? (
+            <div className={styles.totalsRow}>
+              <dt>Same-day convenience fee</dt>
+              <dd>{money(data.currency, data.sameDayFee ?? 0)}</dd>
             </div>
           ) : null}
           <div className={styles.finalRow}>

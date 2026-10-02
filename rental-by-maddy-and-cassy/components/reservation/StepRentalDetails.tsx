@@ -32,6 +32,7 @@ import formStyles from "@/components/ui/Form.module.css";
 import { Button } from "@/components/ui/Button";
 import ReservationFooter from "@/components/reservation/ReservationFooter";
 import RentalScheduleNoticeModal from "@/components/reservation/RentalScheduleNoticeModal";
+import BookingAdvanceNotice from "@/components/reservation/BookingAdvanceNotice";
 import CourierArrangementFields from "@/components/reservation/CourierArrangementFields";
 import styles from "./StepRentalDetails.module.css";
 import { PHILIPPINE_PROVINCES } from "@/src/data/philippineLocations";
@@ -374,6 +375,8 @@ export default function StepRentalDetails({
         </p>
       </div>
 
+      <BookingAdvanceNotice applied={pricing.sameDayFee > 0} />
+
       <div className={styles.layout}>
         <div className={styles.mainColumn}>
           <section className={`${styles.stepSection} ${styles.dateSection}`}>
@@ -625,6 +628,15 @@ export default function StepRentalDetails({
                 </>
               ) : null}
             </dl>
+
+            {pricing.sameDayFee > 0 ? (
+              <dl className={styles.summaryList}>
+                <div>
+                  <dt>Same-day convenience fee</dt>
+                  <dd>{product.currency}{pricing.sameDayFee.toLocaleString()}</dd>
+                </div>
+              </dl>
+            ) : null}
 
             <div className={styles.summaryTotal}>
               <span>Current total</span>

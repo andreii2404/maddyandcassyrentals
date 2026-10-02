@@ -376,6 +376,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
       discountAmount: booking.specialDiscountAmount,
       depositAmount: booking.refundableDeposit,
       fees: booking.deliveryFee + (booking.pickupConvenienceFee ?? 0),
+      sameDayFee: booking.sameDayFee ?? 0,
       finalAmount: booking.totalAmount,
     };
 

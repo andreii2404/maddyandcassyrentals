@@ -27,7 +27,10 @@ export interface ReservationPricing {
   discountAmount: number;
   rentalSubtotal: number;
   depositAmount: number;
+  /** Outside-hours (before 9:00 AM / after 7:00 PM) handover fee. */
   fees: number;
+  /** Same-day convenience fee -- a separate line item, never folded into `fees`. */
+  sameDayFee: number;
   finalAmount: number;
 }
 
@@ -54,6 +57,7 @@ export function calculateMultiItemReservationPricing(
   lines: { product: Pick<Product, "id" | "name" | "listPricePerDay" | "pricePerDay" | "refundableDeposit">; quantity: number }[],
   draft: Pick<ReservationDraft, "startDate" | "endDate"> & {
     pickupConvenienceFee?: number;
+    sameDayFee?: number;
     customerInfo: Pick<ReservationDraft["customerInfo"], "birthDate">;
   },
   rewardProgress: RewardProgress = { completedRentals: 0, loyaltyRewardUsed: false },
@@ -97,7 +101,8 @@ export function calculateMultiItemReservationPricing(
     lines.reduce((sum, { product, quantity }) => sum + product.refundableDeposit * Math.max(1, Math.floor(quantity || 1)), 0),
   );
   const fees = currency(Math.max(0, draft.pickupConvenienceFee || 0));
-  const finalAmount = currency(rentalSubtotal + depositAmount + fees);
+  const sameDayFee = currency(Math.max(0, draft.sameDayFee || 0));
+  const finalAmount = currency(rentalSubtotal + depositAmount + fees + sameDayFee);
 
   const totalUnits = linePricing.reduce((sum, line) => sum + line.quantity, 0);
 
@@ -117,6 +122,7 @@ export function calculateMultiItemReservationPricing(
     rentalSubtotal,
     depositAmount,
     fees,
+    sameDayFee,
     finalAmount,
   };
 }
@@ -125,6 +131,7 @@ export function calculateReservationPricing(
   product: Pick<Product, "id" | "name" | "listPricePerDay" | "pricePerDay" | "refundableDeposit">,
   draft: Pick<ReservationDraft, "quantity" | "startDate" | "endDate"> & {
     pickupConvenienceFee?: number;
+    sameDayFee?: number;
     customerInfo: Pick<ReservationDraft["customerInfo"], "birthDate">;
   },
   rewardProgress: RewardProgress = { completedRentals: 0, loyaltyRewardUsed: false },
@@ -149,6 +156,7 @@ export function calculateReservationPricing(
     rentalSubtotal: multiItem.rentalSubtotal,
     depositAmount: multiItem.depositAmount,
     fees: multiItem.fees,
+    sameDayFee: multiItem.sameDayFee,
     finalAmount: multiItem.finalAmount,
   };
 }
