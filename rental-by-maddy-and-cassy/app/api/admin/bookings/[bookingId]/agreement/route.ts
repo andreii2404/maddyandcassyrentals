@@ -9,6 +9,12 @@ import { createAdminClient } from "@/src/lib/supabase/admin";
 import { generateAndSaveFinalAgreement } from "@/src/lib/server/customerDocuments";
 import { getBookingById } from "@/src/services/bookingService";
 import { bookingTrackingPath } from "@/src/lib/bookingAccess";
+import {
+  BUSINESS_SIGNATURE_CONTENT_TYPE,
+  BUSINESS_SIGNATURE_METHOD,
+  businessSignatureStoragePath,
+  decodeBusinessSignatureDataUrl,
+} from "@/src/lib/businessSignature";
 import type { AgreementDoc, AgreementSignature } from "@/src/types/booking";
 
 export const runtime = "nodejs";
@@ -49,7 +55,7 @@ export async function POST(
     const { user } = await requireActiveAdmin();
     const { bookingId } = await params;
     const body = (await request.json().catch(() => null)) as
-      | { signerName?: unknown; acknowledged?: unknown }
+      | { signerName?: unknown; acknowledged?: unknown; signatureDataUrl?: unknown }
       | null;
     const signerName = typeof body?.signerName === "string" ? body.signerName.trim() : "";
 
@@ -58,6 +64,10 @@ export async function POST(
     }
     if (body?.acknowledged !== true) {
       return errorResponse("Confirm that you are authorized to countersign this agreement.", 400);
+    }
+    const signatureBytes = decodeBusinessSignatureDataUrl(body?.signatureDataUrl);
+    if (!signatureBytes) {
+      return errorResponse("Draw the Admin / Business Signature before finalizing the agreement.", 400);
     }
 
     const admin = createAdminClient();
@@ -109,27 +119,56 @@ export async function POST(
     }
 
     const now = new Date().toISOString();
-    let businessSignature = signatureRows?.find((signature) => signature.signer_role === "business");
-    if (!businessSignature) {
-      const { data, error } = await admin
-        .from("agreement_signatures")
-        .insert({
-          agreement_version_id: currentVersion.id,
-          signer_user_id: user.id,
-          signer_role: "business",
-          signer_name: signerName,
-          signature_data: {
-            method: "typed_admin_countersignature",
-            authorized: true,
-          },
-          signed_at: now,
-          ip_address: getClientIp(request),
-          user_agent: request.headers.get("user-agent"),
-        })
-        .select("*")
-        .single();
-      if (error || !data) throw new Error(error?.message ?? "BUSINESS_SIGNATURE_NOT_SAVED");
-      businessSignature = data;
+    const signaturePath = businessSignatureStoragePath(user.id, bookingId);
+    const { error: uploadError } = await admin.storage
+      .from("customer-documents")
+      .upload(signaturePath, Buffer.from(signatureBytes), {
+        contentType: BUSINESS_SIGNATURE_CONTENT_TYPE,
+        upsert: false,
+        cacheControl: "0",
+      });
+    if (uploadError) throw new Error(`Failed to store the business signature: ${uploadError.message}`);
+
+    const signatureFields = {
+      signer_user_id: user.id,
+      signer_name: signerName,
+      signature_path: signaturePath,
+      signature_data: { method: BUSINESS_SIGNATURE_METHOD, authorized: true },
+      signed_at: now,
+      ip_address: getClientIp(request),
+      user_agent: request.headers.get("user-agent"),
+    };
+
+    // An earlier attempt may have saved the business row but failed before the
+    // agreement was finalized. Replace it with this submission so the drawn
+    // signature on file is always the one the administrator just confirmed.
+    const existingBusinessSignature = signatureRows?.find((signature) => signature.signer_role === "business");
+    const { data: savedSignature, error: signatureError } = existingBusinessSignature
+      ? await admin
+          .from("agreement_signatures")
+          .update(signatureFields)
+          .eq("id", existingBusinessSignature.id)
+          .select("*")
+          .single()
+      : await admin
+          .from("agreement_signatures")
+          .insert({
+            ...signatureFields,
+            agreement_version_id: currentVersion.id,
+            signer_role: "business",
+          })
+          .select("*")
+          .single();
+    if (signatureError || !savedSignature) {
+      await admin.storage.from("customer-documents").remove([signaturePath]);
+      throw new Error(signatureError?.message ?? "BUSINESS_SIGNATURE_NOT_SAVED");
+    }
+    const businessSignature = savedSignature;
+    if (
+      existingBusinessSignature?.signature_path &&
+      existingBusinessSignature.signature_path !== signaturePath
+    ) {
+      await admin.storage.from("customer-documents").remove([existingBusinessSignature.signature_path]);
     }
 
     const signatures = [...(signatureRows ?? []).filter((signature) => signature.signer_role !== "business"), businessSignature]
@@ -191,7 +230,11 @@ export async function POST(
         p_entity_id: agreementRow.id,
         p_booking_id: booking.id,
         p_previous_values: { status: agreementRow.status },
-        p_new_values: { status: "completed", signerName: businessSignature.signer_name },
+        p_new_values: {
+          status: "completed",
+          signerName: businessSignature.signer_name,
+          signatureMethod: BUSINESS_SIGNATURE_METHOD,
+        },
       }),
     ]);
 

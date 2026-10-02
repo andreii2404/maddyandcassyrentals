@@ -199,6 +199,7 @@ export async function reviewAdminCancellationRequest(
 export async function countersignBookingAgreement(
   bookingId: string,
   signerName: string,
+  signatureDataUrl: string,
 ): Promise<void> {
   const response = await fetch(
     `/api/admin/bookings/${encodeURIComponent(bookingId)}/agreement`,
@@ -206,7 +207,7 @@ export async function countersignBookingAgreement(
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ signerName, acknowledged: true }),
+      body: JSON.stringify({ signerName, acknowledged: true, signatureDataUrl }),
     },
   );
 

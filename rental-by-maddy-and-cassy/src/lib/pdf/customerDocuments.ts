@@ -66,6 +66,8 @@ export interface AgreementPdfInput extends CustomerDocumentBase {
   paymentReference: string;
   confirmedAt: string;
   businessSignerName?: string;
+  businessSignatureBytes?: Uint8Array;
+  businessSignatureContentType?: string;
   businessSignedAt?: string;
 }
 
@@ -526,6 +528,61 @@ async function embedSignature(
   }
 }
 
+const SIGNATURE_BOX_HEIGHT = 84;
+const SIGNATURE_BOX_PADDING = 8;
+
+/**
+ * Draws a labelled signature box whose top edge is at `top`. The drawn image is
+ * scaled to fit inside the box; with no usable image the typed name stands in.
+ */
+function drawSignatureBox(
+  page: PDFPage,
+  bold: PDFFont,
+  title: string,
+  image: PDFImage | null,
+  fallbackName: string,
+  x: number,
+  top: number,
+  width: number,
+): void {
+  page.drawText(safeText(title), { x, y: top + 14, size: 10, font: bold, color: ROSE });
+  page.drawRectangle({
+    x,
+    y: top - SIGNATURE_BOX_HEIGHT,
+    width,
+    height: SIGNATURE_BOX_HEIGHT,
+    borderColor: BORDER,
+    borderWidth: 0.8,
+  });
+  if (image) {
+    const scale = Math.min(
+      (width - SIGNATURE_BOX_PADDING * 2) / image.width,
+      (SIGNATURE_BOX_HEIGHT - SIGNATURE_BOX_PADDING * 2) / image.height,
+      1,
+    );
+    const drawnWidth = image.width * scale;
+    const drawnHeight = image.height * scale;
+    page.drawImage(image, {
+      x: x + (width - drawnWidth) / 2,
+      y: top - SIGNATURE_BOX_HEIGHT + (SIGNATURE_BOX_HEIGHT - drawnHeight) / 2,
+      width: drawnWidth,
+      height: drawnHeight,
+    });
+  } else {
+    const name = safeText(fallbackName);
+    const maxWidth = width - SIGNATURE_BOX_PADDING * 2;
+    let size = 16;
+    while (size > 7 && bold.widthOfTextAtSize(name, size) > maxWidth) size -= 1;
+    page.drawText(name, {
+      x: x + SIGNATURE_BOX_PADDING,
+      y: top - SIGNATURE_BOX_HEIGHT / 2 - 6,
+      size,
+      font: bold,
+      color: INK,
+    });
+  }
+}
+
 export async function createFinalAgreementPdf(
   input: AgreementPdfInput,
 ): Promise<Uint8Array> {
@@ -636,56 +693,49 @@ export async function createFinalAgreementPdf(
     thickness: 0.7,
     color: BORDER,
   });
-  y2 -= 29;
-  pageTwo.drawText("CUSTOMER ELECTRONIC SIGNATURE", {
-    x: MARGIN,
-    y: y2,
-    size: 9,
-    font: bold,
-    color: MUTED,
-  });
-  y2 -= 18;
+  // Room for the "Customer Signature" / "Authorized Business Signature" titles,
+  // which sit just above their boxes.
+  y2 -= 43;
+  const rightColumnX = MARGIN + half + 20;
 
-  const signature = await embedSignature(pdf, input.signatureBytes, input.signatureContentType);
-  if (signature) {
-    const scale = Math.min(230 / signature.width, 80 / signature.height, 1);
-    pageTwo.drawImage(signature, {
-      x: MARGIN,
-      y: y2 - signature.height * scale,
-      width: signature.width * scale,
-      height: signature.height * scale,
-    });
-  } else {
-    pageTwo.drawText(safeText(input.typedFullName), {
-      x: MARGIN,
-      y: y2 - 34,
-      size: 18,
-      font: bold,
-      color: INK,
-    });
-  }
-  y2 -= 96;
-  drawField(pageTwo, regular, bold, "Legally signed by", input.typedFullName, MARGIN, y2, half);
-  drawField(pageTwo, regular, bold, "Signed at", input.signedAt, MARGIN + half + 20, y2, half);
+  const customerSignatureImage = await embedSignature(pdf, input.signatureBytes, input.signatureContentType);
+  drawSignatureBox(pageTwo, bold, "Customer Signature", customerSignatureImage, input.typedFullName, MARGIN, y2, half);
   if (input.businessSignerName) {
-    y2 -= 68;
-    pageTwo.drawLine({
-      start: { x: MARGIN, y: y2 },
-      end: { x: PAGE_WIDTH - MARGIN, y: y2 },
-      thickness: 0.7,
-      color: BORDER,
-    });
-    y2 -= 27;
-    pageTwo.drawText("BUSINESS COUNTERSIGNATURE", {
-      x: MARGIN,
-      y: y2,
-      size: 9,
-      font: bold,
-      color: MUTED,
-    });
-    y2 -= 24;
-    drawField(pageTwo, regular, bold, "Authorized business signer", input.businessSignerName, MARGIN, y2, half);
-    drawField(pageTwo, regular, bold, "Countersigned at", input.businessSignedAt || input.confirmedAt, MARGIN + half + 20, y2, half);
+    const businessSignatureImage = await embedSignature(
+      pdf,
+      input.businessSignatureBytes,
+      input.businessSignatureContentType,
+    );
+    drawSignatureBox(
+      pageTwo,
+      bold,
+      "Authorized Business Signature",
+      businessSignatureImage,
+      input.businessSignerName,
+      rightColumnX,
+      y2,
+      half,
+    );
+  }
+
+  y2 -= SIGNATURE_BOX_HEIGHT + 22;
+  const signedByY = drawField(pageTwo, regular, bold, "Legally signed by", input.typedFullName, MARGIN, y2, half);
+  const businessSignerY = input.businessSignerName
+    ? drawField(pageTwo, regular, bold, "Authorized business signer", input.businessSignerName, rightColumnX, y2, half)
+    : signedByY;
+  y2 = Math.min(signedByY, businessSignerY);
+  drawField(pageTwo, regular, bold, "Signed at", input.signedAt, MARGIN, y2, half);
+  if (input.businessSignerName) {
+    drawField(
+      pageTwo,
+      regular,
+      bold,
+      "Countersigned at",
+      input.businessSignedAt || input.confirmedAt,
+      rightColumnX,
+      y2,
+      half,
+    );
   }
   addFooter(
     pageTwo,

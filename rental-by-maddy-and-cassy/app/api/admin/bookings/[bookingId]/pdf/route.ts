@@ -45,6 +45,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ book
 
     const { booking, emergencyContact, agreement, statusHistory, documents } = details;
     const customerSignature = agreement?.signatures?.find((s) => s.signerRole === "customer");
+    const businessSignature = agreement?.signatures?.find((s) => s.signerRole === "business");
 
     // Once the agreement snapshot exists it is the frozen, signed record of
     // what was rented -- unit codes/serials must come from there, not live
@@ -171,6 +172,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ book
       })),
       ...(customerSignature?.signaturePath
         ? [{ label: "Customer signature", bucket: "customer-documents", path: customerSignature.signaturePath }]
+        : []),
+      ...(businessSignature?.signaturePath
+        ? [{ label: "Authorized business signature", bucket: "customer-documents", path: businessSignature.signaturePath }]
         : []),
     ];
 

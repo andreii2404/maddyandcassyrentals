@@ -178,6 +178,21 @@ export async function generateAndSaveFinalAgreement(
     }
   }
 
+  // The administrator's drawn signature is mandatory for a finalized agreement,
+  // so unlike the customer's it never silently falls back to a typed name.
+  let businessSignatureBytes: Uint8Array | undefined;
+  let businessSignatureContentType: string | undefined;
+  if (businessSignature?.signaturePath) {
+    const { data, error } = await admin.storage
+      .from("customer-documents")
+      .download(businessSignature.signaturePath);
+    if (error || !data) {
+      throw new Error(`The business signature could not be loaded: ${error?.message ?? "file not found"}`);
+    }
+    businessSignatureBytes = new Uint8Array(await data.arrayBuffer());
+    businessSignatureContentType = data.type;
+  }
+
   const bytes = await createFinalAgreementPdf({
     bookingRef: booking.bookingRef,
     customerName: booking.customerSnapshot.fullName || customerSignature?.signerName || "Customer",
@@ -198,6 +213,8 @@ export async function generateAndSaveFinalAgreement(
     paymentReference: input.paymentReference,
     confirmedAt: formatManilaDate(new Date(), true),
     businessSignerName: businessSignature?.signerName,
+    businessSignatureBytes,
+    businessSignatureContentType,
     businessSignedAt: businessSignature ? formatManilaDate(businessSignature.signedAt, true) : undefined,
   });
   await savePrivatePdf(admin, "agreements", input.storagePath, bytes);
