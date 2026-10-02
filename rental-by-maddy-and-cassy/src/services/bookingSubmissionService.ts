@@ -305,7 +305,7 @@ export async function submitBookingDocuments(bookingId: string, draft: Reservati
     !requirements.emergencyContact.relationship.trim() ||
     !requirements.emergencyContact.phone.trim() ||
     !requirements.emergencyContact.facebookLink.trim() ||
-    !requirements.emergencyContact.idFile
+    (!requirements.emergencyContact.idFile && !requirements.reusedDocumentIds.emergencyId)
   ) {
     throw new Error("Missing required rental information or documents.");
   }
@@ -328,12 +328,15 @@ export async function submitBookingDocuments(bookingId: string, draft: Reservati
     throw new Error("Complete and sign the rental agreement before submitting.");
   }
 
-  const signatureBlob = dataUrlToBlob(agreement.signatureDataUrl);
-  const signatureFile = new File(
-    [signatureBlob],
-    `signature.${extensionFromContentType(signatureBlob.type)}`,
-    { type: signatureBlob.type || "image/png" },
-  );
+  let signatureFile = agreement.signatureMethod === "uploaded" ? agreement.signatureFile : null;
+  if (!signatureFile) {
+    const signatureBlob = dataUrlToBlob(agreement.signatureDataUrl);
+    signatureFile = new File(
+      [signatureBlob],
+      `signature.${extensionFromContentType(signatureBlob.type)}`,
+      { type: signatureBlob.type || "image/png" },
+    );
+  }
   const submissionId = crypto.randomUUID();
 
   const overallController = new AbortController();
@@ -392,20 +395,23 @@ export async function submitBookingDocuments(bookingId: string, draft: Reservati
       requirements.selfieFile
         ? uploadDocument("selfie", requirements.selfieFile, "Selfie with ID")
         : Promise.resolve(null),
-      uploadDocument("emergencyId", requirements.emergencyContact.idFile, "Emergency contact ID"),
+      requirements.emergencyContact.idFile
+        ? uploadDocument("emergencyId", requirements.emergencyContact.idFile, "Emergency contact ID")
+        : Promise.resolve(null),
       uploadDocument("signature", signatureFile, "Electronic signature"),
     ]);
     const uploadedFiles = {
       ...(idOne ? { idOne } : {}),
       ...(idTwo ? { idTwo } : {}),
       ...(selfie ? { selfie } : {}),
-      emergencyId,
+      ...(emergencyId ? { emergencyId } : {}),
       signature,
     };
     const reusedDocuments = {
       ...(requirements.reusedDocumentIds.idOne ? { idOne: requirements.reusedDocumentIds.idOne } : {}),
       ...(requirements.reusedDocumentIds.idTwo ? { idTwo: requirements.reusedDocumentIds.idTwo } : {}),
       ...(requirements.reusedDocumentIds.selfie ? { selfie: requirements.reusedDocumentIds.selfie } : {}),
+      ...(requirements.reusedDocumentIds.emergencyId ? { emergencyId: requirements.reusedDocumentIds.emergencyId } : {}),
     };
 
     const submitResponse = await fetchWithTimeout(

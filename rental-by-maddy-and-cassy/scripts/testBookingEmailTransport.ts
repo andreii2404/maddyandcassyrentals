@@ -43,6 +43,27 @@ test("sends booking email through the configured Supabase Edge Function", async 
   });
 });
 
+test("sends a new Supabase secret key only through the apikey header", () => {
+  const request = buildSupabaseEmailRequest(
+    {
+      supabaseUrl: "https://project.supabase.co",
+      functionName: DEFAULT_SUPABASE_EMAIL_FUNCTION_NAME,
+      serviceKey: "sb_secret_test-key",
+    },
+    {
+      to: "customer@example.com",
+      subject: "Payment verified",
+      html: "<p>Verified</p>",
+      text: "Verified",
+    },
+  );
+
+  assert.deepEqual(request.init.headers, {
+    apikey: "sb_secret_test-key",
+    "Content-Type": "application/json",
+  });
+});
+
 test("queues the booking email in the schema used by send-booking-emails", () => {
   assert.deepEqual(
     buildEmailNotificationQueueRow(

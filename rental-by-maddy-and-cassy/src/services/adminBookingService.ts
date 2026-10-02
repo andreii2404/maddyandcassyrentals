@@ -71,8 +71,8 @@ export const ADMIN_BOOKING_ACTIONS: Record<BookingStatus, AdminBookingAction[]> 
   ],
   released: [{
     status: "returned",
-    label: "Complete Return",
-    description: "Confirm that the item was returned and close the rental successfully.",
+    label: "Complete Rental",
+    description: "Open the fulfillment steps to record pickup, return and item condition before closing the rental.",
   }],
   returned: [],
   cancelled: [],

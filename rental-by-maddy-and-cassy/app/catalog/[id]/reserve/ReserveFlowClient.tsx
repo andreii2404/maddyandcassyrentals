@@ -6,6 +6,8 @@ import Link from "next/link";
 import type { Product } from "@/types/product";
 import type { UnitCounts } from "@/lib/availability";
 import { useAuth } from "@/hooks/useAuth";
+import { useAgreementProfileName } from "@/hooks/useAgreementProfileName";
+import { patchAgreementDraft } from "@/src/lib/patchAgreementDraft";
 import { createClient } from "@/src/lib/supabase/client";
 import Spinner from "@/components/ui/Spinner";
 import ReservationStepper from "@/components/reservation/ReservationStepper";
@@ -35,7 +37,7 @@ import {
   assertUnitAssignmentsComplete,
   getBookingUnitAssignments,
 } from "@/src/services/unitAssignmentService";
-import type { AgreementUnitAssignment } from "@/src/types/booking";
+import type { AgreementLineItem, Booking } from "@/src/types/booking";
 import {
   reservationProgressKey,
   restoreReservationProgress,
@@ -90,6 +92,7 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
   const documentSubmissionInFlightRef = useRef(false);
   const [prefilled, setPrefilled] = useState(false);
   const [progressHydrated, setProgressHydrated] = useState(false);
+  useAgreementProfileName(step === 5, progressHydrated, user!.id, isGuest, setDraft);
   const [progressRestored, setProgressRestored] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [rewardProgress, setRewardProgress] = useState<RewardProgress>({
@@ -98,7 +101,10 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
   });
   const [unitsReady, setUnitsReady] = useState(false);
   const [unitsCheckError, setUnitsCheckError] = useState<string | null>(null);
-  const [assignedUnits, setAssignedUnits] = useState<AgreementUnitAssignment[]>([]);
+  const [agreementBooking, setAgreementBooking] = useState<Booking | null>(null);
+  const [assignedUnitsByBookingItemId, setAssignedUnitsByBookingItemId] = useState<
+    Map<string, AgreementLineItem["units"]>
+  >(new Map());
 
   const progressKey = reservationProgressKey(user!.id, product.id);
 
@@ -292,7 +298,7 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
       }
       if (cancelled) return;
       const booking = resumeState.booking;
-      if (booking.productId !== product.id) {
+      if (!booking.items.some((item) => item.productId === product.id)) {
         setCheckingPayment(false);
         setPaymentError("This reservation belongs to a different rental item.");
         return;
@@ -340,20 +346,25 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
       try {
         const supabase = createClient();
         const booking = await getBookingById(supabase, bookingId!);
-        const item = booking?.items[0];
-        if (!booking || !item) throw new Error("This booking could not be found.");
+        if (!booking || booking.items.length === 0) throw new Error("This booking could not be found.");
         const assignments = await getBookingUnitAssignments(supabase, bookingId!);
         assertUnitAssignmentsComplete(
-          [{ bookingItemId: item.bookingItemId, quantity: item.quantity }],
+          booking.items.map((item) => ({ bookingItemId: item.bookingItemId, quantity: item.quantity })),
           assignments,
         );
         if (cancelled) return;
-        setAssignedUnits(
-          activeUnitAssignments(assignments.get(item.bookingItemId)).map((assignment) => ({
-            unitCode: assignment.unitCode,
-            serialNumber: assignment.serialNumber,
-          })),
-        );
+        const byBookingItemId = new Map<string, AgreementLineItem["units"]>();
+        for (const item of booking.items) {
+          byBookingItemId.set(
+            item.bookingItemId,
+            activeUnitAssignments(assignments.get(item.bookingItemId)).map((assignment) => ({
+              unitCode: assignment.unitCode,
+              serialNumber: assignment.serialNumber,
+            })),
+          );
+        }
+        setAgreementBooking(booking);
+        setAssignedUnitsByBookingItemId(byBookingItemId);
         setUnitsReady(true);
       } catch (error) {
         if (cancelled) return;
@@ -414,7 +425,6 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
         await submitManualPayment(activeBookingId, {
           referenceNumber: draft.manualPayment.referenceNumber.trim(),
           accountName: draft.manualPayment.accountName.trim(),
-          accountNumber: draft.manualPayment.accountNumber.trim(),
           paymentOption: draft.paymentOption,
           proofFile: draft.manualPayment.proofFile,
         });
@@ -467,32 +477,50 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
   const pricing = calculateReservationPricing(product, draft, rewardProgress, isGuest);
   const schedule = getDraftRentalSchedule(draft);
   const isComplete = step === STEP_LABELS.length;
+  const agreementItems: AgreementLineItem[] = agreementBooking
+    ? agreementBooking.items.map((item) => ({
+        productName: item.productName,
+        brand: item.brand,
+        quantity: item.quantity,
+        pricePerDay: item.dailyRate,
+        rentalDays: agreementBooking.dayCount,
+        lineTotal: item.lineRentalSubtotal,
+        includedAccessories: item.included,
+        units: assignedUnitsByBookingItemId.get(item.bookingItemId) ?? [],
+      }))
+    : [
+        {
+          productName: bookingColor ? `${product.name} — ${bookingColor}` : product.name,
+          brand: product.brand ?? "",
+          quantity: draft.quantity,
+          pricePerDay: product.pricePerDay,
+          rentalDays: pricing.rentalDays,
+          lineTotal: pricing.productSubtotal,
+          includedAccessories: product.included,
+          units: [],
+        },
+      ];
   const agreementData = {
     bookingRef: bookingNumber ?? "Created before payment",
     customerName: draft.customerInfo.fullName || "-",
-    items: [
-      {
-        productName: bookingColor ? `${product.name} — ${bookingColor}` : product.name,
-        brand: product.brand ?? "",
-        quantity: draft.quantity,
-        pricePerDay: product.pricePerDay,
-        rentalDays: pricing.rentalDays,
-        lineTotal: pricing.productSubtotal,
-        includedAccessories: product.included,
-        units: assignedUnits,
-      },
-    ],
-    startDate: draft.startDate ?? new Date(),
-    endDate: draft.endDate ?? new Date(),
-    dayCount: getDayCount(draft.startDate, draft.endDate),
-    fulfillmentMethod: draft.fulfillmentMethod ?? "pickup",
-    customerLocation: draft.fulfillmentMethod ? formatCustomerLocation(draft) || "-" : "-",
-    currency: product.currency,
-    subtotal: pricing.productSubtotal,
-    discountAmount: pricing.discountAmount,
-    depositAmount: pricing.depositAmount,
-    fees: pricing.fees,
-    finalAmount: pricing.finalAmount,
+    items: agreementItems,
+    startDate: agreementBooking ? new Date(agreementBooking.startDate) : draft.startDate ?? new Date(),
+    endDate: agreementBooking ? new Date(agreementBooking.endDate) : draft.endDate ?? new Date(),
+    dayCount: agreementBooking?.dayCount ?? getDayCount(draft.startDate, draft.endDate),
+    fulfillmentMethod: agreementBooking?.fulfillmentMethod ?? draft.fulfillmentMethod ?? "pickup",
+    customerLocation: agreementBooking
+      ? [agreementBooking.location, agreementBooking.cityMunicipality, agreementBooking.province]
+          .filter(Boolean)
+          .join(", ") || "-"
+      : draft.fulfillmentMethod ? formatCustomerLocation(draft) || "-" : "-",
+    currency: agreementBooking?.productSnapshot.currency ?? product.currency,
+    subtotal: agreementBooking?.rentalSubtotal ?? pricing.rentalSubtotal,
+    discountAmount: agreementBooking?.specialDiscountAmount ?? pricing.discountAmount,
+    depositAmount: agreementBooking?.refundableDeposit ?? pricing.depositAmount,
+    fees: agreementBooking
+      ? agreementBooking.deliveryFee + (agreementBooking.pickupConvenienceFee ?? 0)
+      : pricing.fees,
+    finalAmount: agreementBooking?.totalAmount ?? pricing.finalAmount,
   };
 
   if (product.colorOptions.length > 0 && !bookingColor) {
@@ -710,7 +738,8 @@ function ReserveFlowInner({ product, units, isGuest }: ReserveFlowClientProps & 
           <StepAgreement
             agreementData={agreementData}
             agreement={draft.agreement}
-            onUpdate={(patch) => updateDraft({ agreement: { ...draft.agreement, ...patch } })}
+            isGuest={isGuest}
+            onUpdate={(patch) => setDraft((current) => patchAgreementDraft(current, patch))}
             onBack={() => goToStep(4)}
             onContinue={() => void handleDocumentSubmission()}
             submitting={submittingDocuments}

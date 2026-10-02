@@ -554,6 +554,8 @@ export type Database = {
       booking_emergency_contacts: {
         Row: {
           address: string | null
+          facebook_link: string | null
+          id_document_id: string | null
           booking_id: string
           created_at: string
           full_name: string
@@ -563,6 +565,8 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          facebook_link?: string | null
+          id_document_id?: string | null
           booking_id: string
           created_at?: string
           full_name: string
@@ -572,6 +576,8 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          facebook_link?: string | null
+          id_document_id?: string | null
           booking_id?: string
           created_at?: string
           full_name?: string

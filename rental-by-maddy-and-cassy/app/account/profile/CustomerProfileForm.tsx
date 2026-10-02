@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/Button";
 import formStyles from "@/components/ui/Form.module.css";
 import Spinner from "@/components/ui/Spinner";
 import styles from "./profile.module.css";
+import ProfileSavedSignature from "./ProfileSavedSignature";
 import {
   getMaxBirthDate,
   isAtLeastMinimumAge,
@@ -326,6 +327,8 @@ function CustomerProfileEditor({
             </div>
           </div>
         </section>
+
+        <ProfileSavedSignature />
 
         <div className={styles.actions}>
           <p className={styles.actionsHint}>

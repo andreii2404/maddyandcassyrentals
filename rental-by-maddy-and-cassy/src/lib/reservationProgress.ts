@@ -32,11 +32,11 @@ interface StoredReservationProgress {
     manualPayment: {
       referenceNumber: string;
       accountName: string;
-      accountNumber: string;
     };
     requirements: {
       facebookLink: string;
       instagramLink: string;
+      reusedDocumentIds?: Partial<ReservationDraft["requirements"]["reusedDocumentIds"]>;
       emergencyContact: {
         fullName: string;
         relationship: string;
@@ -111,11 +111,11 @@ export function serializeReservationProgress(input: {
       manualPayment: {
         referenceNumber: input.draft.manualPayment.referenceNumber,
         accountName: input.draft.manualPayment.accountName,
-        accountNumber: input.draft.manualPayment.accountNumber,
       },
       requirements: {
         facebookLink: input.draft.requirements.facebookLink,
         instagramLink: input.draft.requirements.instagramLink,
+        reusedDocumentIds: input.draft.requirements.reusedDocumentIds,
         emergencyContact: {
           fullName: input.draft.requirements.emergencyContact.fullName,
           relationship: input.draft.requirements.emergencyContact.relationship,
@@ -210,12 +210,17 @@ export function restoreReservationProgress(
           ...empty.manualPayment,
           referenceNumber: text(manualPayment.referenceNumber),
           accountName: text(manualPayment.accountName),
-          accountNumber: text(manualPayment.accountNumber),
         },
         requirements: {
           ...empty.requirements,
           facebookLink: text(requirements.facebookLink),
           instagramLink: text(requirements.instagramLink),
+          reusedDocumentIds: {
+            idOne: typeof requirements.reusedDocumentIds?.idOne === "string" ? requirements.reusedDocumentIds.idOne : null,
+            idTwo: typeof requirements.reusedDocumentIds?.idTwo === "string" ? requirements.reusedDocumentIds.idTwo : null,
+            selfie: typeof requirements.reusedDocumentIds?.selfie === "string" ? requirements.reusedDocumentIds.selfie : null,
+            emergencyId: typeof requirements.reusedDocumentIds?.emergencyId === "string" ? requirements.reusedDocumentIds.emergencyId : null,
+          },
           emergencyContact: {
             ...empty.requirements.emergencyContact,
             fullName: text(emergency.fullName),

@@ -29,6 +29,7 @@ export async function loadCompletionInputs(
   const payments = paymentsResult.data ?? [];
   return {
     status: booking.status,
+    pickedUp: record?.pickedUp ?? false,
     returned: record?.returned ?? false,
     itemCondition: record?.itemCondition ?? null,
     charges: (chargesResult.data ?? []).map(mapCharge),

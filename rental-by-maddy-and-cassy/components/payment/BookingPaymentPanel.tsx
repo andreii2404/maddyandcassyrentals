@@ -9,11 +9,7 @@ import GcashRecipientCard from "@/components/payment/GcashRecipientCard";
 import {
   ACCOUNT_NAME_MAX_LENGTH,
   isValidAccountName,
-  isValidPaymentAccountNumber,
   isValidReferenceNumber,
-  normalizePaymentAccountInput,
-  PAYMENT_ACCOUNT_MAX_DIGITS,
-  PAYMENT_ACCOUNT_MIN_DIGITS,
   REFERENCE_NUMBER_MAX_LENGTH,
   sanitizeAccountNameInput,
   sanitizeReferenceNumberInput,
@@ -33,7 +29,7 @@ function money(value: number): string {
 
 type PaymentErrors = Partial<Record<string, string>>;
 
-const FIELD_ORDER = ["panel-pay-reference", "panel-pay-account-name", "panel-pay-account-number", "panel-pay-proof"];
+const FIELD_ORDER = ["panel-pay-reference", "panel-pay-account-name", "panel-pay-proof"];
 
 export default function BookingPaymentPanel({
   booking,
@@ -51,7 +47,6 @@ export default function BookingPaymentPanel({
   const submitLock = useRef(false);
   const [referenceNumber, setReferenceNumber] = useState("");
   const [accountName, setAccountName] = useState("");
-  const [accountNumber, setAccountNumber] = useState("");
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<PaymentErrors>({});
   const [touched, setTouched] = useState<Partial<Record<string, boolean>>>({});
@@ -124,13 +119,6 @@ export default function BookingPaymentPanel({
     return null;
   }
 
-  function validateAccountNumberField(value: string): string | null {
-    if (!isValidPaymentAccountNumber(value)) {
-      return `Enter a valid payment account or mobile number (${PAYMENT_ACCOUNT_MIN_DIGITS}-${PAYMENT_ACCOUNT_MAX_DIGITS} digits).`;
-    }
-    return null;
-  }
-
   function setFieldError(field: string, message: string | null) {
     setErrors((prev) => {
       if (!message) {
@@ -161,14 +149,11 @@ export default function BookingPaymentPanel({
     if (referenceError) nextErrors["panel-pay-reference"] = referenceError;
     const accountNameError = validateAccountNameField(accountName);
     if (accountNameError) nextErrors["panel-pay-account-name"] = accountNameError;
-    const accountNumberError = validateAccountNumberField(accountNumber);
-    if (accountNumberError) nextErrors["panel-pay-account-number"] = accountNumberError;
     if (!proofFile) nextErrors["panel-pay-proof"] = "Upload a screenshot or proof of payment.";
     setErrors(nextErrors);
     setTouched({
       "panel-pay-reference": true,
       "panel-pay-account-name": true,
-      "panel-pay-account-number": true,
       "panel-pay-proof": true,
     });
     if (Object.keys(nextErrors).length > 0) {
@@ -185,13 +170,11 @@ export default function BookingPaymentPanel({
       await submitManualPayment(booking.id, {
         referenceNumber: referenceNumber.trim(),
         accountName: accountName.trim(),
-        accountNumber: accountNumber.trim(),
         paymentOption: paymentStatus === "partially_paid" ? "balance" : "full",
         proofFile,
       });
       setReferenceNumber("");
       setAccountName("");
-      setAccountNumber("");
       setProofFile(null);
       setErrors({});
       setTouched({});
@@ -372,30 +355,6 @@ export default function BookingPaymentPanel({
             />
             {errors["panel-pay-account-name"] ? (
               <p className={formStyles.errorText}>{errors["panel-pay-account-name"]}</p>
-            ) : null}
-          </div>
-          <div className={formStyles.field}>
-            <label className={formStyles.label} htmlFor="panel-pay-account-number">
-              Payment account / mobile number<span className={formStyles.required}>*</span>
-            </label>
-            <input
-              id="panel-pay-account-number"
-              className={`${formStyles.input} ${errors["panel-pay-account-number"] ? formStyles.inputError : ""}`}
-              inputMode="numeric"
-              autoComplete="off"
-              maxLength={PAYMENT_ACCOUNT_MAX_DIGITS}
-              value={accountNumber}
-              aria-invalid={Boolean(errors["panel-pay-account-number"])}
-              onChange={(event) => {
-                const value = normalizePaymentAccountInput(event.target.value);
-                setAccountNumber(value);
-                handleFieldChange("panel-pay-account-number", validateAccountNumberField(value));
-              }}
-              onBlur={() => handleFieldBlur("panel-pay-account-number", validateAccountNumberField(accountNumber))}
-              disabled={submitting}
-            />
-            {errors["panel-pay-account-number"] ? (
-              <p className={formStyles.errorText}>{errors["panel-pay-account-number"]}</p>
             ) : null}
           </div>
           <FileUploadField

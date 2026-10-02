@@ -19,6 +19,10 @@ import {
   sendAdminSignedAgreementEmail,
   updateAdminBookingStatus,
 } from "@/src/services/adminBookingService";
+import { completeRental, getFulfillmentData } from "@/src/services/fulfillmentService";
+import type { FulfillmentData, FulfillmentPanelContext } from "@/src/types/fulfillment";
+import { isFulfillmentMode, PAYMENT_AWAITING_REVIEW_STATUSES } from "@/src/lib/rentalFulfillment";
+import RentalFulfillment from "@/components/admin/fulfillment/RentalFulfillment";
 import { getUserProfile } from "@/src/services/userService";
 import { getBookingPayments, getBookingReceipts } from "@/src/services/paymentService";
 import type { BookingStatus, UserProfile } from "@/src/types/database";
@@ -94,6 +98,7 @@ interface DetailState {
   profile: UserProfile | null;
   payments: PaymentRecord[];
   receipts: BookingReceipt[];
+  fulfillment: FulfillmentData;
 }
 
 type AdminReviewStep =
@@ -103,6 +108,7 @@ type AdminReviewStep =
   | "payment"
   | "agreement"
   | "final"
+  | "fulfillment"
   | "history";
 
 type ReviewState = "complete" | "pending" | "attention" | "not-started";
@@ -114,6 +120,7 @@ const REVIEW_STEPS: { id: AdminReviewStep; label: string }[] = [
   { id: "payment", label: "Payment & Documents" },
   { id: "agreement", label: "Rental Agreement" },
   { id: "final", label: "Final Review" },
+  { id: "fulfillment", label: "Fulfillment" },
   { id: "history", label: "Status History" },
 ];
 
@@ -158,12 +165,13 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
         setError("The selected booking could not be found.");
         return;
       }
-      const [profile, payments, receipts] = await Promise.all([
+      const [profile, payments, receipts, fulfillment] = await Promise.all([
         getUserProfile(details.booking.customerId),
         getBookingPayments(supabase, bookingId),
         getBookingReceipts(supabase, bookingId),
+        getFulfillmentData(supabase, bookingId),
       ]);
-      setState({ details, profile, payments, receipts });
+      setState({ details, profile, payments, receipts, fulfillment });
       setError(null);
     } catch {
       setError("The booking details could not be loaded. Please refresh and try again.");
@@ -280,7 +288,12 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
       }
 
       const noteToSend = isDeclineAction ? formatDeclineNote(declineReason, note) : note;
-      const updateResult = await updateAdminBookingStatus(bookingId, selectedStatus, noteToSend);
+      const updateResult = selectedStatus === "returned"
+        ? await completeRental(bookingId, noteToSend).then((result) => ({
+            emailRequired: true,
+            emailSent: result.emailSent,
+          }))
+        : await updateAdminBookingStatus(bookingId, selectedStatus, noteToSend);
       await loadDetails();
       setSelectedStatus("");
       setNote("");
@@ -464,6 +477,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   const { booking, emergencyContact, agreement, statusHistory, documents } = state.details;
   const cancellationRequest = booking.cancellationRequest;
   const { profile, payments, receipts } = state;
+  const fulfillment = state.fulfillment;
   const customer = booking.customerSnapshot;
   // customerSnapshot is assembled straight from the customer's profile row
   // (see assembleBooking in bookingService.ts) -- for a guest checkout that's
@@ -495,6 +509,28 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
   const accountTypeLabel = booking.isGuestCheckout ? "Guest checkout" : "Registered account";
   const fulfillmentLabel = formatStatus(booking.fulfillmentMethod);
   const handoverPaymentReady = amountPaid >= booking.totalAmount - 0.01 || booking.payLaterAllowed;
+  const showFulfillment = fulfillment.available && isFulfillmentMode({
+    status: booking.status,
+    approvalEmailStatus: fulfillment.email.approvalEmailStatus,
+  });
+  const fulfillmentContext: FulfillmentPanelContext = {
+    bookingId,
+    bookingRef: booking.bookingRef,
+    status: booking.status,
+    customerName: fullName,
+    customerEmail: email,
+    isGuest: booking.isGuestCheckout,
+    totalAmount: booking.totalAmount,
+    verifiedPaid: amountPaid,
+    pendingPaymentReviews: payments.filter((payment) =>
+      (PAYMENT_AWAITING_REVIEW_STATUSES as readonly string[]).includes(payment.status),
+    ).length,
+    payLaterAllowed: booking.payLaterAllowed,
+    handoverPaymentReady,
+    releasedAt: booking.releasedAt,
+    data: fulfillment,
+    onChanged: loadDetails,
+  };
   const canCountersignAgreement = Boolean(
     agreement?.status === "awaiting_business_signature" &&
     customerSignature &&
@@ -598,10 +634,20 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
     payment: paymentAttention ? "attention" : amountPaid > 0 ? "complete" : payments.length ? "pending" : "not-started",
     agreement: agreementAttention ? "attention" : booking.agreementStatus === "completed" ? "complete" : agreement ? "pending" : "not-started",
     final: isClosedRecord || FINAL_REVIEW_STATUSES.includes(booking.status) ? "complete" : remainingChecks === 0 ? "pending" : "not-started",
+    fulfillment: booking.status === "returned" ? "complete" : "pending",
     history: statusHistory.length > 0 ? "complete" : "not-started",
   };
 
+  const visibleReviewSteps = REVIEW_STEPS.filter((step) => step.id !== "fulfillment" || showFulfillment);
+
   function jumpToNextStep() {
+    if (primaryAction?.status === "returned" && showFulfillment) {
+      setActiveStep("fulfillment");
+      window.setTimeout(() => {
+        document.getElementById("admin-workspace-nav")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 0);
+      return;
+    }
     setActiveStep("final");
     if (primaryAction) {
       setSelectedStatus(primaryAction.status);
@@ -621,7 +667,16 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
         key={action.status}
         type="button"
         className={`${styles.actionChoice} ${action.tone === "danger" ? styles.dangerChoice : ""} ${selected ? styles.actionChoiceSelected : ""}`}
-        onClick={() => { setSelectedStatus(action.status); setNote(""); setDeclineReason(""); }}
+        onClick={() => {
+          if (action.status === "returned" && showFulfillment) {
+            setActiveStep("fulfillment");
+            window.setTimeout(() => document.getElementById("booking-tab-fulfillment")?.scrollIntoView({ behavior: "smooth", block: "center" }), 0);
+            return;
+          }
+          setSelectedStatus(action.status);
+          setNote("");
+          setDeclineReason("");
+        }}
         aria-pressed={selected}
         disabled={updating || blockedByBalance || blockedByApproval}
       >
@@ -811,7 +866,7 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
       ) : null}
 
       <nav id="admin-workspace-nav" className={styles.stepNav} aria-label="Booking review steps" role="tablist">
-        {REVIEW_STEPS.map((step, index) => {
+        {visibleReviewSteps.map((step, index) => {
           const status = stepState[step.id];
           const done = status === "complete";
           const current = activeStep === step.id;
@@ -1232,9 +1287,24 @@ export default function AdminBookingDetail({ bookingId }: { bookingId: string })
           </div>
         </section>
 
+        {showFulfillment ? (
+          <section id="booking-step-fulfillment" className={styles.detailSection} role="tabpanel" aria-labelledby="booking-tab-fulfillment" hidden={activeStep !== "fulfillment"}>
+            <div className={styles.detailSectionHeader}>
+              <span className={styles.sectionNumber}>07</span>
+              <div><strong>Rental Fulfillment</strong><small>Record pickup, return, item condition, charges and completion</small></div>
+              <span className={`${styles.sectionHeaderStatus} ${booking.status === "returned" ? styles.sectionHeaderReady : styles.sectionHeaderPending}`}>
+                {booking.status === "returned" ? "Completed" : "In progress"}
+              </span>
+            </div>
+            <div className={styles.detailBody}>
+              <RentalFulfillment key={fulfillment.record?.updatedAt ?? "no-fulfillment-record"} ctx={fulfillmentContext} />
+            </div>
+          </section>
+        ) : null}
+
         <section id="booking-step-history" className={styles.detailSection} role="tabpanel" aria-labelledby="booking-tab-history" hidden={activeStep !== "history"}>
           <div className={styles.detailSectionHeader}>
-            <span className={styles.sectionNumber}>07</span>
+            <span className={styles.sectionNumber}>{showFulfillment ? "08" : "07"}</span>
             <div><strong>Status Activity</strong><small>{statusHistory.length} recorded update{statusHistory.length === 1 ? "" : "s"}</small></div>
             <span className={styles.sectionHeaderStatus}>Audit trail</span>
           </div>

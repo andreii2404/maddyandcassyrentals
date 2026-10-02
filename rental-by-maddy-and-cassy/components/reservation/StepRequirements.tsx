@@ -95,6 +95,7 @@ export default function StepRequirements({
   const [errors, setErrors] = useState<RequirementsErrors>({});
   const [savedDocuments, setSavedDocuments] = useState<SavedDocument[] | null>(null);
   const [replacing, setReplacing] = useState<Partial<Record<ReusableSlot, boolean>>>({});
+  const [replacingEmergency, setReplacingEmergency] = useState(false);
   const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
 
   // Latest draft values for the one-time prefill that runs when the saved
@@ -109,7 +110,15 @@ export default function StepRequirements({
     let active = true;
     fetch("/api/account/verification-documents", { credentials: "same-origin" })
       .then((response) => (response.ok ? response.json() : null))
-      .then((body: { documents?: SavedDocument[] } | null) => {
+      .then((body: {
+        documents?: SavedDocument[];
+        emergencyContact?: {
+          fullName: string;
+          relationship: string;
+          phone: string;
+          facebookLink: string;
+        } | null;
+      } | null) => {
         if (!active) return;
         const documents = body?.documents ?? [];
         setSavedDocuments(documents);
@@ -126,8 +135,26 @@ export default function StepRequirements({
             changed = true;
           }
         }
-        if (changed) {
-          onUpdate({ reusedDocumentIds: reused });
+
+        const savedEmergency = documents.find((doc) => doc.documentType === "authorization_letter");
+        if (savedEmergency && !current.emergencyContact.idFile && !reused.emergencyId) {
+          reused.emergencyId = savedEmergency.documentId;
+          changed = true;
+        }
+
+        const emergencyContact = body?.emergencyContact;
+        const nextEmergencyContact = emergencyContact
+          ? {
+              ...current.emergencyContact,
+              fullName: current.emergencyContact.fullName || emergencyContact.fullName,
+              relationship: current.emergencyContact.relationship || emergencyContact.relationship,
+              phone: current.emergencyContact.phone || emergencyContact.phone,
+              facebookLink: current.emergencyContact.facebookLink || emergencyContact.facebookLink,
+            }
+          : current.emergencyContact;
+        const emergencyChanged = nextEmergencyContact !== current.emergencyContact;
+        if (changed || emergencyChanged) {
+          onUpdate({ reusedDocumentIds: reused, emergencyContact: nextEmergencyContact });
         }
 
         // Load small previews for image documents so customers can confirm
@@ -227,7 +254,7 @@ export default function StepRequirements({
     ) {
       nextErrors["ec-facebook"] = "Enter the emergency contact's valid Facebook link.";
     }
-    if (!requirements.emergencyContact.idFile) {
+    if (!requirements.emergencyContact.idFile && !requirements.reusedDocumentIds.emergencyId) {
       nextErrors["ec-idFile"] = "Emergency contact's government-issued ID is required.";
     }
 
@@ -244,7 +271,11 @@ export default function StepRequirements({
 
   const reusedCount = REUSABLE_FIELDS.filter(
     (field) => !requirements[field.fileKey] && requirements.reusedDocumentIds[field.slot],
-  ).length;
+  ).length + (requirements.reusedDocumentIds.emergencyId && !requirements.emergencyContact.idFile ? 1 : 0);
+  const savedEmergency = savedDocuments?.find((doc) => doc.documentType === "authorization_letter") ?? null;
+  const showSavedEmergency = Boolean(
+    savedEmergency && requirements.reusedDocumentIds.emergencyId && !requirements.emergencyContact.idFile && !replacingEmergency,
+  );
 
   return (
     <div className={styles.wrapper}>
@@ -452,14 +483,66 @@ export default function StepRequirements({
         </div>
       </div>
 
-      <FileUploadField
-        id="ec-idFile"
-        label="Emergency contact's government-issued ID"
-        required
-        errorMessage={errors["ec-idFile"]}
-        value={requirements.emergencyContact.idFile}
-        onChange={(file) => updateEmergencyContact({ idFile: file })}
-      />
+      {showSavedEmergency && savedEmergency ? (
+        <div id="ec-idFile" className={styles.savedDocCard}>
+          <div className={styles.savedDocPreview}><span aria-hidden="true">🪪</span></div>
+          <div className={styles.savedDocInfo}>
+            <p className={styles.savedDocLabel}>Emergency contact&apos;s government-issued ID</p>
+            <p className={styles.savedDocMeta}>{savedEmergency.filename || "Previously uploaded"}</p>
+            <span className={styles.verifiedBadge}>✓ Verified</span>
+            <p className={styles.savedDocMeta}>Verified {formatDate(savedEmergency.verifiedAt)}</p>
+          </div>
+          <Button
+            variant="none"
+            type="button"
+            className={styles.replaceButton}
+            onClick={() => {
+              setReplacingEmergency(true);
+              onUpdate({
+                reusedDocumentIds: { ...requirements.reusedDocumentIds, emergencyId: null },
+                emergencyContact: { ...requirements.emergencyContact, idFile: null },
+              });
+              clearFieldError("ec-idFile");
+            }}
+          >
+            Replace ID
+          </Button>
+        </div>
+      ) : (
+        <>
+          <FileUploadField
+            id="ec-idFile"
+            label="Emergency contact's government-issued ID"
+            required
+            errorMessage={errors["ec-idFile"]}
+            value={requirements.emergencyContact.idFile}
+            onChange={(file) => {
+              onUpdate({
+                reusedDocumentIds: { ...requirements.reusedDocumentIds, emergencyId: null },
+                emergencyContact: { ...requirements.emergencyContact, idFile: file },
+              });
+              if (file) clearFieldError("ec-idFile");
+            }}
+          />
+          {savedEmergency ? (
+            <Button
+              variant="none"
+              type="button"
+              className={styles.cancelReplaceButton}
+              onClick={() => {
+                setReplacingEmergency(false);
+                onUpdate({
+                  reusedDocumentIds: { ...requirements.reusedDocumentIds, emergencyId: savedEmergency.documentId },
+                  emergencyContact: { ...requirements.emergencyContact, idFile: null },
+                });
+                clearFieldError("ec-idFile");
+              }}
+            >
+              Cancel replacement — keep verified ID
+            </Button>
+          ) : null}
+        </>
+      )}
 
       <div className={styles.privacyNotice}>
         <strong>Privacy notice</strong>

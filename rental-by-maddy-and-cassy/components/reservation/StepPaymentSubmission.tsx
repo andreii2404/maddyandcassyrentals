@@ -14,11 +14,7 @@ import { scrollToFirstError } from "@/src/lib/formScroll";
 import {
   ACCOUNT_NAME_MAX_LENGTH,
   isValidAccountName,
-  isValidPaymentAccountNumber,
   isValidReferenceNumber,
-  normalizePaymentAccountInput,
-  PAYMENT_ACCOUNT_MAX_DIGITS,
-  PAYMENT_ACCOUNT_MIN_DIGITS,
   REFERENCE_NUMBER_MAX_LENGTH,
   sanitizeAccountNameInput,
   sanitizeReferenceNumberInput,
@@ -30,7 +26,7 @@ import styles from "./StepPaymentSubmission.module.css";
 
 type PaymentErrors = Partial<Record<string, string>>;
 
-const FIELD_ORDER = ["pay-reference", "pay-account-name", "pay-account-number", "pay-proof"];
+const FIELD_ORDER = ["pay-reference", "pay-account-name", "pay-proof"];
 
 function money(value: number): string {
   return `PHP ${value.toLocaleString("en-PH", {
@@ -98,13 +94,6 @@ export default function StepPaymentSubmission({
     return null;
   }
 
-  function validateAccountNumberField(value: string): string | null {
-    if (!isValidPaymentAccountNumber(value)) {
-      return `Enter a valid payment account or mobile number (${PAYMENT_ACCOUNT_MIN_DIGITS}-${PAYMENT_ACCOUNT_MAX_DIGITS} digits).`;
-    }
-    return null;
-  }
-
   function setFieldError(field: string, message: string | null) {
     setErrors((prev) => {
       if (!message) {
@@ -139,13 +128,11 @@ export default function StepPaymentSubmission({
     if (referenceError) nextErrors["pay-reference"] = referenceError;
     const accountNameError = validateAccountNameField(draft.manualPayment.accountName);
     if (accountNameError) nextErrors["pay-account-name"] = accountNameError;
-    const accountNumberError = validateAccountNumberField(draft.manualPayment.accountNumber);
-    if (accountNumberError) nextErrors["pay-account-number"] = accountNumberError;
     if (!draft.manualPayment.proofFile) {
       nextErrors["pay-proof"] = "Upload a screenshot or proof of payment.";
     }
     setErrors(nextErrors);
-    setTouched({ "pay-reference": true, "pay-account-name": true, "pay-account-number": true, "pay-proof": true });
+    setTouched({ "pay-reference": true, "pay-account-name": true, "pay-proof": true });
     if (Object.keys(nextErrors).length > 0) {
       scrollToFirstError(FIELD_ORDER, nextErrors);
     }
@@ -344,28 +331,6 @@ export default function StepPaymentSubmission({
         </div>
       </div>
 
-      <div className={formStyles.field}>
-        <label className={formStyles.label} htmlFor="pay-account-number">
-          Payment account / mobile number<span className={formStyles.required}>*</span>
-        </label>
-        <input
-          id="pay-account-number"
-          className={`${formStyles.input} ${errors["pay-account-number"] ? formStyles.inputError : ""}`}
-          inputMode="numeric"
-          autoComplete="off"
-          maxLength={PAYMENT_ACCOUNT_MAX_DIGITS}
-          value={draft.manualPayment.accountNumber}
-          aria-invalid={Boolean(errors["pay-account-number"])}
-          onChange={(event) => {
-            const value = normalizePaymentAccountInput(event.target.value);
-            onManualPaymentUpdate({ accountNumber: value });
-            handleFieldChange("pay-account-number", validateAccountNumberField(value));
-          }}
-          onBlur={() => handleFieldBlur("pay-account-number", validateAccountNumberField(draft.manualPayment.accountNumber))}
-          disabled={opening}
-        />
-        {errors["pay-account-number"] ? <p className={formStyles.errorText}>{errors["pay-account-number"]}</p> : null}
-      </div>
 
       <FileUploadField
         id="pay-proof"

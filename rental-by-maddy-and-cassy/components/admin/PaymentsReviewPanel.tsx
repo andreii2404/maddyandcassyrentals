@@ -188,7 +188,7 @@ export default function PaymentsReviewPanel({
         {payments.length === 0 ? <p className={styles.empty}>No payment submissions yet.</p> : null}
         {[...needsReview, ...reviewed].map((payment) => {
           const isSaving = activeId === payment.id;
-          const metadata = payment.providerMetadata as { accountName?: string; accountNumber?: string };
+          const metadata = payment.providerMetadata as { accountName?: string };
           const actionable = payment.status === "submitted" || payment.status === "under_review";
           return (
             <article key={payment.id} className={`${styles.card} ${styles[payment.status] ?? ""}`}>
@@ -202,7 +202,7 @@ export default function PaymentsReviewPanel({
 
               <dl className={styles.facts}>
                 <div><dt>Reference Number</dt><dd>{payment.externalReference || "-"}</dd></div>
-                <div><dt>Paid From</dt><dd>{metadata.accountName || "-"}{metadata.accountNumber ? ` (${metadata.accountNumber})` : ""}</dd></div>
+                <div><dt>Paid From</dt><dd>{metadata.accountName || "-"}</dd></div>
                 <div><dt>Submitted Date &amp; Time</dt><dd>{formatDate(payment.submittedAt)}</dd></div>
               </dl>
 

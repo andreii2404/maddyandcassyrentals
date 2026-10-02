@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import { requireUser, RequestSecurityError } from "@/src/lib/server/requestSecurity";
+import { createAdminClient } from "@/src/lib/supabase/admin";
+import {
+  selectLatestEligibleEmergencyContact,
+  selectReusableVerificationDocuments,
+} from "@/src/lib/customerReservationPrefill";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const REUSABLE_TYPES = ["government_id", "secondary_id", "selfie_with_id"] as const;
+const REUSABLE_TYPES = ["government_id", "secondary_id", "selfie_with_id", "authorization_letter"] as const;
 type ReusableType = (typeof REUSABLE_TYPES)[number];
 
 export interface ReusableVerificationDocument {
@@ -14,6 +19,13 @@ export interface ReusableVerificationDocument {
   mimeType: string | null;
   sizeBytes: number | null;
   verifiedAt: string;
+}
+
+export interface ReusableEmergencyContact {
+  fullName: string;
+  relationship: string;
+  phone: string;
+  facebookLink: string;
 }
 
 /**
@@ -31,62 +43,103 @@ export async function GET() {
     const { supabase, user } = await requireUser();
     // Guest sessions have no booking history to reuse from.
     if (user.is_anonymous) {
-      return NextResponse.json({ documents: [] });
+      return NextResponse.json({ documents: [], emergencyContact: null });
     }
 
     const { data: documents, error } = await supabase
       .from("customer_documents")
       .select(
-        "id, document_type, original_filename, mime_type, file_size_bytes, created_at, expires_at",
+        "id, document_type, original_filename, mime_type, file_size_bytes, created_at, expires_at, status",
       )
       .eq("owner_user_id", user.id)
       .eq("status", "active")
       .in("document_type", [...REUSABLE_TYPES]);
     if (error) throw new Error(error.message);
-    if (!documents?.length) {
-      return NextResponse.json({ documents: [] });
-    }
+    const now = new Date();
 
-    const now = Date.now();
-    const unexpired = documents.filter(
-      (doc) => !doc.expires_at || Date.parse(doc.expires_at) > now,
-    );
-    if (!unexpired.length) {
-      return NextResponse.json({ documents: [] });
-    }
-
-    const { data: approvals, error: approvalsError } = await supabase
-      .from("booking_requirement_submissions")
-      .select("customer_document_id")
-      .eq("review_status", "approved")
-      .in(
-        "customer_document_id",
-        unexpired.map((doc) => doc.id),
-      );
+    const { data: approvals, error: approvalsError } = documents.length
+      ? await supabase
+          .from("booking_requirement_submissions")
+          .select("customer_document_id")
+          .eq("review_status", "approved")
+          .in(
+            "customer_document_id",
+            documents.map((doc) => doc.id),
+          )
+      : { data: [], error: null };
     if (approvalsError) throw new Error(approvalsError.message);
 
-    const approvedIds = new Set(
+    const approvedIds = new Set<string>(
       (approvals ?? []).map((approval) => approval.customer_document_id),
     );
 
+    const reusableDocuments = selectReusableVerificationDocuments(
+      (documents ?? []).map((doc) => ({
+        id: doc.id,
+        documentType: doc.document_type,
+        status: doc.status,
+        expiresAt: doc.expires_at,
+        createdAt: doc.created_at,
+      })),
+      approvedIds,
+      now,
+    );
+
     const latestByType = new Map<ReusableType, ReusableVerificationDocument>();
-    for (const doc of unexpired) {
-      if (!approvedIds.has(doc.id)) continue;
-      const type = doc.document_type as ReusableType;
+    for (const doc of reusableDocuments) {
+      const type = doc.documentType as ReusableType;
+      const source = documents?.find((candidate) => candidate.id === doc.id);
+      if (!source) continue;
       const existing = latestByType.get(type);
-      if (!existing || Date.parse(doc.created_at) > Date.parse(existing.verifiedAt)) {
+      if (!existing || Date.parse(doc.createdAt) > Date.parse(existing.verifiedAt)) {
         latestByType.set(type, {
           documentId: doc.id,
           documentType: type,
-          filename: doc.original_filename,
-          mimeType: doc.mime_type,
-          sizeBytes: doc.file_size_bytes,
-          verifiedAt: doc.created_at,
+          filename: source.original_filename,
+          mimeType: source.mime_type,
+          sizeBytes: source.file_size_bytes,
+          verifiedAt: doc.createdAt,
         });
       }
     }
 
-    return NextResponse.json({ documents: Array.from(latestByType.values()) });
+    const admin = createAdminClient();
+    const { data: bookings, error: bookingsError } = await admin
+      .from("bookings")
+      .select("id, status, created_at")
+      .eq("customer_id", user.id)
+      .in("status", ["pending", "approved", "confirmed", "ready_for_release", "released", "returned"])
+      .order("created_at", { ascending: false })
+      .limit(20);
+    if (bookingsError) throw new Error(bookingsError.message);
+
+    const bookingIds = (bookings ?? []).map((booking) => booking.id);
+    let emergencyContact: ReusableEmergencyContact | null = null;
+    if (bookingIds.length) {
+      const { data: contacts, error: contactsError } = await admin
+        .from("booking_emergency_contacts")
+        .select("booking_id, full_name, relationship, phone_number, facebook_link")
+        .in("booking_id", bookingIds);
+      if (contactsError) throw new Error(contactsError.message);
+
+      const contactByBookingId = new Map(
+        (contacts ?? []).map((contact) => [contact.booking_id, {
+          fullName: contact.full_name,
+          relationship: contact.relationship,
+          phone: contact.phone_number,
+          facebookLink: contact.facebook_link ?? "",
+        }]),
+      );
+      emergencyContact = selectLatestEligibleEmergencyContact(
+        (bookings ?? []).map((booking) => ({
+          status: booking.status,
+          createdAt: booking.created_at,
+          emergencyContact: contactByBookingId.get(booking.id) ?? null,
+        })),
+      );
+    }
+
+    return NextResponse.json({ documents: Array.from(latestByType.values()), emergencyContact });
   } catch (error) {
     if (error instanceof RequestSecurityError) {
       return NextResponse.json({ error: error.message }, { status: error.status });

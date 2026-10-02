@@ -6,6 +6,10 @@ export interface EmailSendResult {
   sent: boolean;
   providerId?: string;
   reason?: "not_configured" | "invalid_recipient" | "provider_error";
+  providerStatus?: number;
+  providerError?: string;
+  detail?: string;
+  retryAfterSeconds?: number;
 }
 
 export interface EmailMessage {
@@ -22,6 +26,18 @@ export interface EmailMessage {
 
 function isEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function readRetryAfterSeconds(headers: Headers): number | undefined {
+  const value = headers.get("retry-after")?.trim();
+  if (!value) return undefined;
+
+  if (/^\d+$/.test(value)) return Number(value);
+
+  const retryAt = Date.parse(value);
+  return Number.isNaN(retryAt)
+    ? undefined
+    : Math.max(0, Math.ceil((retryAt - Date.now()) / 1000));
 }
 
 /** Sends one email through Resend. Never throws; technical errors are only logged. */

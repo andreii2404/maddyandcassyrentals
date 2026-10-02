@@ -28,13 +28,12 @@ import styles from "./fulfillment.module.css";
 
 interface ChargesPaymentsPanelProps {
   ctx: FulfillmentPanelContext;
-  onNotifyCharge: (chargeId: string) => void;
 }
 
 const ADD_ALLOWED_STATUSES = ["confirmed", "ready_for_release", "released"];
 const CLOSED_STATUSES = ["returned", "cancelled", "rejected"];
 
-export default function ChargesPaymentsPanel({ ctx, onNotifyCharge }: ChargesPaymentsPanelProps) {
+export default function ChargesPaymentsPanel({ ctx }: ChargesPaymentsPanelProps) {
   const { showToast } = useToast();
   const { charges, adminNames } = ctx.data;
   const owed = computeAmountOwed({ totalAmount: ctx.totalAmount, verifiedPaid: ctx.verifiedPaid, charges });
@@ -212,9 +211,6 @@ export default function ChargesPaymentsPanel({ ctx, onNotifyCharge }: ChargesPay
                         Mark as paid
                       </Button>
                     ) : null}
-                    <Button variant="secondary" size="sm" type="button" disabled={busy} onClick={() => onNotifyCharge(charge.id)}>
-                      Notify customer
-                    </Button>
                     <Button variant="danger" size="sm" type="button" disabled={busy} onClick={() => { setVoidReason(""); setVoidTarget(charge); }}>
                       Void
                     </Button>

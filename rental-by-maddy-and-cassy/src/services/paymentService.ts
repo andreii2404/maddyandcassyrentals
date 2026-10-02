@@ -38,7 +38,6 @@ export interface ReservationResumeState {
 export interface ManualPaymentSubmissionInput {
   referenceNumber: string;
   accountName: string;
-  accountNumber: string;
   paymentOption: "deposit_50" | "full" | "balance";
   proofFile: File;
 }
@@ -50,7 +49,6 @@ export async function submitManualPayment(
   const formData = new FormData();
   formData.append("referenceNumber", input.referenceNumber);
   formData.append("accountName", input.accountName);
-  formData.append("accountNumber", input.accountNumber);
   formData.append("paymentOption", input.paymentOption);
   formData.append("proof", input.proofFile);
 

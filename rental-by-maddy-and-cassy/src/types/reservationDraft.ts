@@ -17,6 +17,7 @@ export interface ReusedDocumentIds {
   idOne: string | null;
   idTwo: string | null;
   selfie: string | null;
+  emergencyId: string | null;
 }
 
 export interface RequirementsDraft {
@@ -47,7 +48,6 @@ export interface CustomerInfoDraft {
 export interface ManualPaymentDraft {
   referenceNumber: string;
   accountName: string;
-  accountNumber: string;
   proofFile: File | null;
 }
 
@@ -119,14 +119,13 @@ export function createEmptyDraft(): ReservationDraft {
     manualPayment: {
       referenceNumber: "",
       accountName: "",
-      accountNumber: "",
       proofFile: null,
     },
     requirements: {
       idOneFile: null,
       idTwoFile: null,
       selfieFile: null,
-      reusedDocumentIds: { idOne: null, idTwo: null, selfie: null },
+      reusedDocumentIds: { idOne: null, idTwo: null, selfie: null, emergencyId: null },
       facebookLink: "",
       instagramLink: "",
       emergencyContact: {

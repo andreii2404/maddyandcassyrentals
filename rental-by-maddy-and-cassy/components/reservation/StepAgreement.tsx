@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { AgreementDraft } from "@/src/types/reservationDraft";
+import { canApplySavedSignature } from "@/src/lib/savedSignature";
+import { loadSavedSignature, saveSavedSignature } from "@/src/services/savedSignatureService";
 import AgreementDocument, { type AgreementDocumentData } from "./AgreementDocument";
 import SignaturePad from "@/components/signature-pad/SignaturePad";
 import formStyles from "@/components/ui/Form.module.css";
@@ -25,6 +27,7 @@ interface StepAgreementProps {
    */
   unitsReady?: boolean;
   unitsCheckError?: string | null;
+  isGuest?: boolean;
 }
 
 const CONFIRMATION_GROUPS: Array<{
@@ -68,9 +71,58 @@ export default function StepAgreement({
   submitting = false,
   unitsReady = true,
   unitsCheckError = null,
+  isGuest = false,
 }: StepAgreementProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [savedSignatureError, setSavedSignatureError] = useState<string | null>(null);
+  const [savingSignature, setSavingSignature] = useState(false);
   const expandDialogRef = useRef<HTMLDivElement>(null);
+  const agreementRef = useRef(agreement);
+  const onUpdateRef = useRef(onUpdate);
+  const changedLocallyRef = useRef(false);
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const saveNumberRef = useRef(0);
+
+  useEffect(() => {
+    agreementRef.current = agreement;
+    onUpdateRef.current = onUpdate;
+  }, [agreement, onUpdate]);
+
+  useEffect(() => {
+    if (isGuest) return;
+    let active = true;
+    void loadSavedSignature()
+      .then((dataUrl) => {
+        if (!active || !dataUrl) return;
+        if (canApplySavedSignature(agreementRef.current.signatureDataUrl, changedLocallyRef.current)) {
+          onUpdateRef.current({ signatureMethod: "uploaded", signatureDataUrl: dataUrl, signatureFile: null });
+        }
+      })
+      .catch(() => {
+        if (active) setSavedSignatureError("Your saved signature could not be loaded. You can still sign here.");
+      });
+    return () => { active = false; };
+  }, [isGuest]);
+
+  function handleSignatureChange(signatureDataUrl: string | null, signatureFile: File | null) {
+    changedLocallyRef.current = true;
+    setSavedSignatureError(null);
+    onUpdate({ signatureDataUrl, signatureFile });
+    if (!signatureFile || isGuest) return;
+
+    const saveNumber = ++saveNumberRef.current;
+    setSavingSignature(true);
+    saveQueueRef.current = saveQueueRef.current.then(async () => {
+      await saveSavedSignature(signatureFile);
+      if (saveNumber === saveNumberRef.current) setSavedSignatureError(null);
+    }).catch((error: unknown) => {
+      if (saveNumber === saveNumberRef.current) {
+        setSavedSignatureError(error instanceof Error ? error.message : "Your signature could not be saved.");
+      }
+    }).finally(() => {
+      if (saveNumber === saveNumberRef.current) setSavingSignature(false);
+    });
+  }
 
   useEffect(() => {
     if (!isExpanded) return;
@@ -176,9 +228,14 @@ export default function StepAgreement({
           <SignaturePad
             method={agreement.signatureMethod}
             signatureDataUrl={agreement.signatureDataUrl}
-            onMethodChange={(signatureMethod) => onUpdate({ signatureMethod })}
-            onSignatureChange={(signatureDataUrl) => onUpdate({ signatureDataUrl })}
+            onMethodChange={(signatureMethod) => {
+              changedLocallyRef.current = true;
+              setSavedSignatureError(null);
+              onUpdate({ signatureMethod, signatureDataUrl: null, signatureFile: null });
+            }}
+            onSignatureChange={handleSignatureChange}
           />
+          {savedSignatureError ? <p className={formStyles.errorText} role="alert">{savedSignatureError}</p> : null}
 
           <div className={formStyles.field}>
             <label className={formStyles.label} htmlFor="typedFullName">
@@ -210,10 +267,10 @@ export default function StepAgreement({
 
       <ReservationFooter
         onBack={onBack}
-        primaryLabel={submitting ? "Submitting…" : !unitsReady && !unitsCheckError ? "Confirming assigned units…" : "Sign & Submit Agreement"}
+        primaryLabel={submitting ? "Submitting…" : savingSignature && agreement.signatureMethod === "uploaded" ? "Saving signature…" : !unitsReady && !unitsCheckError ? "Confirming assigned units…" : "Sign & Submit Agreement"}
         primaryLoading={submitting}
         primaryLoadingText="Submitting…"
-        primaryDisabled={!canContinue || submitting}
+        primaryDisabled={!canContinue || submitting || (savingSignature && agreement.signatureMethod === "uploaded")}
         onContinue={onContinue}
       />
     </div>

@@ -10,7 +10,7 @@
     "render:pdf-samples": "tsx scripts/renderCustomerDocumentSamples.ts",
     "migrate:inventory": "tsx scripts/migrateFirebaseInventory.ts",
     "test:payments": "tsx --test scripts/testPayments.ts scripts/testPaymentVerificationEmail.ts",
-    "test:checkout": "tsx --test scripts/testCheckout.ts scripts/testReservationSubmissionUi.ts",
+    "test:checkout": "tsx --test scripts/testCheckout.ts scripts/testReservationSubmissionUi.ts scripts/testAgreementSignature.ts scripts/testSavedSignature.ts",
     "test:bookings": "tsx --test scripts/testBookingManagement.ts scripts/testBookingErrorHandling.ts",
     "test:calendar": "tsx --test scripts/testBookingCalendar.ts",
     "test:documents": "tsx --test scripts/testDocumentResubmission.ts",
